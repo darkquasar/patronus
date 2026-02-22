@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+
+# Claude Code local settings (user-specific, may contain API keys/tokens)
+.claude/settings.local.json
+.claude/todos.json
+.claude/worktrees/
