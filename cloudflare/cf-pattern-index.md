@@ -15,6 +15,7 @@
 | 003 | Job Orchestrator | Long-running jobs, workflow lifecycle, cancellation/pause/resume, progress tracking |
 | 004 | Query Architecture | D1 schema design, Drizzle ORM, API pagination, aggregation endpoints, search modes |
 | 005 | Testing Architecture | Writing tests for Workers/Queues/Workflows, Vitest pool setup, test isolation |
+| 006 | Standalone OpenAPI Spec | API documentation, serving OpenAPI YAML, Swagger UI, spec-to-code sync |
 
 ---
 
@@ -27,9 +28,10 @@
 004 (Query Arch) ──uses──▶ 002 (Idempotent writes under retries)
 005 (Testing) ──validates──▶ 001 (Async boundaries)
 005 (Testing) ──validates──▶ 002 (Message contracts & dedupe)
+006 (OpenAPI Spec) ──documents──▶ 004 (Query Architecture endpoints)
 ```
 
-**Rule of thumb:** If you load 001, always also load 002. If you load 003, load 001 + 002. Pattern 004 is mostly standalone but references 002 for write idempotency. Pattern 005 is standalone but cross-references 001 and 002 for what to test.
+**Rule of thumb:** If you load 001, always also load 002. If you load 003, load 001 + 002. Pattern 004 is mostly standalone but references 002 for write idempotency. Pattern 005 is standalone but cross-references 001 and 002 for what to test. Pattern 006 is standalone but documents endpoints that should follow 004's API surface conventions.
 
 ---
 
@@ -145,6 +147,25 @@ These hard numbers recur across all patterns. Refer here instead of re-reading e
 
 ---
 
+### Pattern 006 — Standalone OpenAPI Spec (YAML-First API Documentation)
+
+**Core invariant:** The YAML file is the single source of truth for API documentation. No runtime YAML parsing — convert to a JS module at build time.
+
+**What it solves:** Serving hand-authored, high-quality OpenAPI documentation from a Worker without bundling a YAML parser, while keeping spec and code in sync.
+
+**Five components:**
+1. **YAML spec file** — hand-authored source of truth (`src/openapi/v1.yaml`)
+2. **Generator script** — converts YAML → JS template-literal module at build time
+3. **Spec-serving route** — `GET /openapi.yaml` returns the string with `Content-Type: text/yaml`
+4. **Swagger UI route** — `GET /ui` renders interactive docs via `@hono/swagger-ui`
+5. **Sync checker** — build-time/CI script that detects YAML↔JS drift
+
+**Key trade-off:** Manual synchronization between spec and route handlers (mitigated by CI sync checks), in exchange for full editorial control over documentation quality.
+
+**Optional:** A curated agent-facing spec subset optimized for LLM context windows.
+
+---
+
 ## Decision triggers (condensed)
 
 Use these to quickly determine which patterns apply:
@@ -157,3 +178,6 @@ Use these to quickly determine which patterns apply:
 - **"We're getting duplicate side effects"** → 002
 - **"We're hitting memory limits"** → 001
 - **"We're hitting D1 performance issues"** → 004
+- **"We need API documentation or Swagger UI"** → 006
+- **"We want a hand-authored OpenAPI spec"** → 006
+- **"We're building an API for AI agents or MCP"** → 006 (curated agent spec)
