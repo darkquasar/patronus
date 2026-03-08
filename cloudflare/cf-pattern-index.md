@@ -16,6 +16,7 @@
 | 004 | Query Architecture | D1 schema design, Drizzle ORM, API pagination, aggregation endpoints, search modes |
 | 005 | Testing Architecture | Writing tests for Workers/Queues/Workflows, Vitest pool setup, test isolation |
 | 006 | Standalone OpenAPI Spec | API documentation, serving OpenAPI YAML, Swagger UI, spec-to-code sync |
+| 007 | MCP Containers for Debugging | Troubleshooting deployed Workers, WebSocket protocol inspection, wire-format diagnostics |
 
 ---
 
@@ -29,9 +30,10 @@
 005 (Testing) ──validates──▶ 001 (Async boundaries)
 005 (Testing) ──validates──▶ 002 (Message contracts & dedupe)
 006 (OpenAPI Spec) ──documents──▶ 004 (Query Architecture endpoints)
+007 (MCP Containers) ──complements──▶ 005 (Testing — network-level debugging)
 ```
 
-**Rule of thumb:** If you load 001, always also load 002. If you load 003, load 001 + 002. Pattern 004 is mostly standalone but references 002 for write idempotency. Pattern 005 is standalone but cross-references 001 and 002 for what to test. Pattern 006 is standalone but documents endpoints that should follow 004's API surface conventions.
+**Rule of thumb:** If you load 001, always also load 002. If you load 003, load 001 + 002. Pattern 004 is mostly standalone but references 002 for write idempotency. Pattern 005 is standalone but cross-references 001 and 002 for what to test. Pattern 006 is standalone but documents endpoints that should follow 004's API surface conventions. Pattern 007 is standalone and complements 005 for debugging deployed services.
 
 ---
 
@@ -166,6 +168,20 @@ These hard numbers recur across all patterns. Refer here instead of re-reading e
 
 ---
 
+### Pattern 007 — MCP Containers for Remote Debugging and Troubleshooting
+
+**Core invariant:** See the actual wire format before interpreting it. Capture raw before parsing.
+
+**What it solves:** Debugging deployed Workers when browser DevTools, curl, or local Node.js cannot isolate the problem — especially WebSocket protocols, streaming responses, and double-encoded payloads.
+
+**Workflow:** Initialize ephemeral container → install dependencies in scratch directory → write diagnostic script → execute with timeout → analyze raw output → iterate.
+
+**Key rules:** Always set timeouts, install in `/tmp` not the working directory, log raw bytes before parsing, never persist secrets in the container.
+
+**When to use:** Bug only reproduces against the deployed service, need to inspect exact WebSocket frame sequences, need to eliminate browser-side caching/rendering variables.
+
+---
+
 ## Decision triggers (condensed)
 
 Use these to quickly determine which patterns apply:
@@ -181,3 +197,6 @@ Use these to quickly determine which patterns apply:
 - **"We need API documentation or Swagger UI"** → 006
 - **"We want a hand-authored OpenAPI spec"** → 006
 - **"We're building an API for AI agents or MCP"** → 006 (curated agent spec)
+- **"The bug only happens in production"** → 007
+- **"We need to see what the WebSocket actually sends"** → 007
+- **"Browser shows wrong data but we don't know if it's client or server"** → 007
