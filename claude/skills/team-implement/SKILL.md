@@ -1,3 +1,8 @@
+---
+name: team-implement
+description: "/team-implement — Spec-Driven Team Implementation. Use when the user wants to implement a feature from existing research (spec.md + plan.md). Spawns parallel teammate agents, each owning a concern boundary. Requires explicit invocation."
+---
+
 # /team-implement — Spec-Driven Team Implementation
 
 You are executing a **spec-driven team implementation**. Research has already been done by someone else. Your job is to read the specs, understand the architecture, define concern boundaries, and spin up a team of agents to build it.
@@ -20,7 +25,7 @@ The user will provide a research domain path (a directory containing spec docume
 3. **Read `CLAUDE.md`** — you will enforce its team protocol.
 4. **Read `tasks/lessons.md`** if it exists — internalize past mistakes.
 
-If there is no `spec.md` or `plan.md`, STOP and tell the user: "This domain has no spec or plan. Run research first before using /team-implement."
+If there is no `spec.md` or `plan.md`, STOP and tell the user: "This domain has no spec or plan. Run `/team-research` first before using `/team-implement`."
 
 ---
 
@@ -44,42 +49,7 @@ Look for `tasks.md` in the research domain directory. This is the implementation
 1. Enter plan mode.
 2. Analyze `spec.md` and `plan.md` to extract every discrete implementation task.
 3. Group tasks by concern boundary (the domains that will become teammate assignments).
-4. Write `tasks.md` in the research domain directory with this structure:
-
-```markdown
-# <Domain Name> — Implementation Tasks
-
-**Source**: spec.md, plan.md (this directory)
-**Created**: <date>
-**Status**: Not started
-
----
-
-## Concern: <boundary-name> (e.g., "Storage Layer", "API Routes", "UI Components")
-
-### Tasks
-
-- [ ] `<task-id>` — <clear description of what to build>
-  - Files: <expected files to create or modify>
-  - Acceptance: <how to verify this is done>
-  - Refs: <which section of spec.md or plan.md defines this>
-
-- [ ] `<task-id>` — <next task>
-  ...
-
-## Concern: <next-boundary-name>
-
-### Tasks
-
-- [ ] ...
-```
-
-Each task must have:
-- A short ID (e.g., `A1`, `B3`, `C2`)
-- Clear description of WHAT to build (not HOW)
-- Expected files to create or modify
-- Acceptance criteria (testable/verifiable)
-- Reference back to the spec/plan section that defines it
+4. Write `tasks.md` in the research domain directory. See [TASKS-TEMPLATE.md](TASKS-TEMPLATE.md) for the format.
 
 **Present `tasks.md` to the user for review before proceeding.** Do not spawn teammates until the user approves the task breakdown.
 
@@ -99,116 +69,17 @@ From `tasks.md`, identify 2-5 concern boundaries that become teammates. Each bou
 
 ## Phase 4: Spawn the Team
 
-Follow CLAUDE.md Section 2A Steps 1-4 exactly:
+Follow CLAUDE.md Section 2A Steps 1-4 exactly. You MUST use **Team Mode** (not naive subagent spawning):
 
 1. **Create team** via `TeamCreate`.
 2. **Create tasks** via `TaskCreate` for every item in `tasks.md`, with `addBlockedBy`/`addBlocks` for dependency ordering.
-3. **Create worktrees** — one per teammate, branching from current HEAD.
-4. **Spawn teammates** in parallel using the prompt template below.
+3. **Create worktrees manually** — one per teammate, branching from current HEAD:
+   ```bash
+   git worktree add .claude/worktrees/<teammate-name> -b team/<team-name>/<teammate-name> HEAD
+   ```
+4. **Spawn teammates** using the `Task` tool **with `team_name` and `name` parameters** (this is what makes them Team members, not subagents). Do NOT use `isolation: "worktree"` — you already created worktrees manually. Spawn ALL teammates in a **single message with parallel `Task` calls**. Use the template in [TEAMMATE-TEMPLATE.md](TEAMMATE-TEMPLATE.md).
 
-### Teammate Spawn Prompt Template
-
-```
-You are "<teammate-name>" on team "<team-name>".
-
-FIRST ACTION — run this immediately:
-  cd <absolute-path-to-project>/.claude/worktrees/<teammate-name>
-Confirm the cd succeeded before doing anything else. All your work happens in this directory.
-
-You are on branch: team/<team-name>/<teammate-name>
-
-## Your Concern Boundary
-
-<description of what this teammate owns — the domain, not the tasks>
-
-## Reference Files (READ THESE FIRST)
-
-- `<path-to-research-dir>/spec.md` — the specification you are implementing
-- `<path-to-research-dir>/plan.md` — the implementation plan
-- `<path-to-research-dir>/tasks.md` — your assigned tasks (look for your concern section)
-- `CLAUDE.md` — project conventions (read Section 2B for your operating instructions)
-- `tasks/lessons.md` — past mistakes to avoid (if it exists)
-
-## Your Responsibilities
-
-<list of concern-level responsibilities — NOT task-by-task prescriptions>
-
-## Peer Branches
-
-<list of peer branches they may need to pull from>
-
-## Code Provenance — MANDATORY
-
-Every file you CREATE or SIGNIFICANTLY MODIFY must include a provenance header.
-This is non-negotiable. Add it as the FIRST thing in the file, before any imports or code.
-
-The header links each file back to the research documents that drove the change, creating a traceable trail from spec to implementation.
-
-Pick the correct comment syntax for the file type:
-
-For TypeScript / JavaScript / Java / C# / Go / Rust (.ts, .tsx, .js, .jsx, .java, .cs, .go, .rs):
-
-/**
- * @spec <relative-path-to-spec.md>
- * @plan <relative-path-to-plan.md>
- * @tasks <task-ids that drove changes, e.g., "A1, A2, A3">
- * @changed <date> — <one-line summary of what changed>
- */
-
-For Python (.py):
-
-# @spec <relative-path-to-spec.md>
-# @plan <relative-path-to-plan.md>
-# @tasks <task-ids>
-# @changed <date> — <summary>
-
-For SQL migration files (.sql):
-
--- @spec <relative-path-to-spec.md>
--- @plan <relative-path-to-plan.md>
--- @tasks <task-ids>
--- @changed <date> — <summary>
-
-For CSS / SCSS (.css, .scss):
-
-/* @spec <relative-path-to-spec.md>
- * @plan <relative-path-to-plan.md>
- * @tasks <task-ids>
- * @changed <date> — <summary>
- */
-
-For TOML / YAML / Shell / Dockerfile config files (.toml, .yaml, .yml, .sh, Dockerfile):
-
-# @spec <relative-path-to-spec.md>
-# @plan <relative-path-to-plan.md>
-# @tasks <task-ids>
-# @changed <date> — <summary>
-
-For HTML / JSX templates (.html):
-
-<!-- @spec <relative-path-to-spec.md>
-     @plan <relative-path-to-plan.md>
-     @tasks <task-ids>
-     @changed <date> — <summary> -->
-
-Rules:
-- If the file ALREADY has a provenance header, APPEND a new @changed line. Do not replace existing @changed entries — they form a changelog.
-- If you only make a trivial change (fixing a typo, adjusting whitespace), skip the header update.
-- The @spec and @plan paths are relative to the project root.
-- Use the actual task IDs from tasks.md.
-
-## Workflow
-
-1. Read all reference files first. Understand the spec before writing any code.
-2. Read existing source files you'll be modifying — understand patterns and conventions.
-3. Use TaskUpdate to mark your tasks `in_progress` as you start them.
-4. Commit after each logical unit of work (small, atomic commits with clear messages).
-5. Use TaskUpdate to mark tasks `completed` when done, with proof it works.
-6. Use SendMessage to report progress or flag blockers to the Team Lead.
-7. Check TaskList after completing work for any new assignments.
-
-Read CLAUDE.md Section 2B for your full operating instructions.
-```
+**Why Team Mode, not subagents**: Teammates work in isolated git worktrees on dedicated branches. The Team Lead merges their branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
 
 ### Critical Spawn Rules
 
@@ -241,7 +112,9 @@ When all teammates report completion:
    - Tests (e.g., `npm test`, `pytest`, `cargo test`)
    - Any spec-defined verification steps
 5. **Update `tasks.md`** — mark all completed tasks with `[x]`.
-6. **Cleanup** — remove worktrees, delete teammate branches, `TeamDelete`.
+6. **Write `provenance.md`** — in the research domain directory, list every created/modified file with task IDs and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
+7. **Rename the research domain folder** — prefix the folder name with `done-` to signal that the research has been implemented (e.g., `research/phase-08/skills-tools-model/` → `research/phase-08/done-skills-tools-model/`). Use `mv` to rename in place.
+8. **Cleanup** — remove worktrees, delete teammate branches, `TeamDelete`.
 
 ---
 
@@ -267,7 +140,7 @@ Provide a summary to the user:
 - <test results>
 
 ### Provenance
-All modified files include @spec/@plan/@tasks/@changed headers linking back to the research documents.
+See `<research-domain>/provenance.md` for full file-to-spec traceability.
 
 ### Next steps
 - <anything the spec deferred or flagged as future work>
@@ -281,7 +154,7 @@ All modified files include @spec/@plan/@tasks/@changed headers linking back to t
 2. **Never prescribe code to teammates.** Define boundaries, point to specs, let them write.
 3. **Maximum 5 teammates.** Prefer fewer when the work allows it.
 4. **No two teammates should edit the same file.** Resolve overlaps before spawning.
-5. **Every created/modified file gets a provenance header** in the appropriate comment syntax.
+5. **Write `provenance.md`** in the research domain directory listing every created/modified file. Do NOT add provenance headers to source files. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
 6. **Run verification before declaring done.** A description of a test is not a test.
 7. **Follow CLAUDE.md Section 2A to the letter** for team lifecycle (create, spawn, coordinate, merge, cleanup).
 8. **Present `tasks.md` to user for approval** before spawning any teammates.
