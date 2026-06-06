@@ -1,0 +1,30 @@
+apiVersion: patronus/v1
+kind: Recipe
+name: memory-engram
+capability: memory                         # fallback recipe for memory (binary-only, no Docker)
+summary: "Engram memory layer (binary-only, no Docker) — for locked-down/airgapped/Windows cases."
+upstream: github.com/edg-l/engram
+license: MIT
+
+delivery:
+  primary: github-release                  # Model A floor — fetch+verify per-OS/arch asset + sha256
+  installTo: "~/.patronus/bin/"
+  fallbacks:                               # opt-in only via --prefer-system-pkg, if present
+    brew: false                            # not (currently) in Homebrew
+    scoop: false                           # aspirational; flip to a real ref once packaged
+    winget: false
+    npm: false                             # not an npm package
+  # TODO: pin per-OS/arch asset URLs + sha256 checksums (recipe trust model, §9.3 = pinned).
+  assets: []
+
+scope:
+  global: "~/.patronus/share/engram"
+
+# Engram is NOT self-wiring — Patronus performs the MCP-config MERGE itself.
+wire:
+  selfWiring: false
+  mcp:
+    transport: stdio
+    command: "{installPath}"
+    args: []
+  tools: [claude, codex, opencode]

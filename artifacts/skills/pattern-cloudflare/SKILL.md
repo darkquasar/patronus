@@ -1,8 +1,13 @@
+---
+name: pattern-cloudflare
+description: "Cloudflare Workers design patterns (Queues, Workflows, D1, testing, OpenAPI, MCP debugging). Load this index first to route to the full pattern file(s) for the task at hand."
+---
+
 # Cloudflare Workers Pattern Index
 
 > **Purpose:** Load this file first. Use it to decide which full pattern file(s) to fetch for the task at hand. Each entry provides enough context to reason about applicability without reading the full document.
 >
-> **Pattern files location:** `cloudflare/pattern-NNN.md`
+> **Pattern files location:** `patterns/pattern-NNN.md`
 
 ---
 

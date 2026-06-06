@@ -1,0 +1,22 @@
+apiVersion: patronus/v1
+kind: Instruction
+role: instruction
+name: agent-principles
+description: "Ambient house rules for how an AI coding agent should think and work — mindset, workflow, task management, and core principles. Appended into CLAUDE.md/AGENTS.md."
+version: 1.0.0
+entry: INSTRUCTIONS.md       # the portable body appended as a delimited section
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+
+# Install behavior (realized by the Phase 3 install engine via the adapters'
+# Instruction layout, action: appendSection):
+#  - APPEND the body into the target instructions file (CLAUDE.md / AGENTS.md)
+#    inside a fenced, idempotent block keyed by {name}:
+#      <!-- patronus:start agent-principles --> … <!-- patronus:end agent-principles -->
+#    Re-install replaces ONLY that block; the user's other prose is never touched.
+#  - TODO(phase3): if the target file does NOT exist at the chosen scope
+#    (local or global), CREATE it first, then write the fenced block.
+#  - TODO(phase3): fencing applies to prose targets (markdown). For structural
+#    config files (JSON) where comment fences are impractical, skip the fence and
+#    perform a structural MERGE instead (same rule as the Mcp/Hook MERGE family).

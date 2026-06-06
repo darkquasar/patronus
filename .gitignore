@@ -3,3 +3,10 @@
 
 # Claude Code
 .claude/
+
+# Patronus CI output (published to GitHub Releases)
+/registry/
+
+# Go build artifacts
+/patronus
+/dist/

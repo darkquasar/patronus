@@ -1,6 +1,13 @@
+---
+name: pattern-mcp
+description: "Configuring remote MCP (Model Context Protocol) servers — transport selection, authentication, scoping, and common failure modes. Load this first; see patterns/mcp-server-catalog.md for a catalog of ready-to-add servers."
+---
+
 # Claude Code MCP Server Configuration Guide
 
 > **Purpose:** Definitive guide for configuring remote MCP (Model Context Protocol) servers in Claude Code. Covers transport selection, authentication, scoping, and common failure modes. Born from hard-won debugging across multiple sessions.
+>
+> **Server catalog:** `patterns/mcp-server-catalog.md` lists ready-to-add servers (Cloudflare, GitHub, Atlassian, and more).
 
 ---
 
@@ -110,7 +117,7 @@ claude mcp remove <server-name> --scope user
 
 ## Server catalog
 
-For a catalog of known MCP servers organized by vendor, see [`mcp/README.md`](../mcp/README.md).
+For a catalog of known MCP servers organized by vendor, see [`patterns/mcp-server-catalog.md`](patterns/mcp-server-catalog.md).
 
 ---
 

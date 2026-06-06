@@ -2,7 +2,7 @@
 
 > **Purpose:** Registry of remote MCP (Model Context Protocol) servers for use with Claude Code and other MCP clients. Only includes servers with verified remote HTTP/SSE endpoints — no local stdio-only servers.
 >
-> **Setup guide:** See [`claude/mcp-server-configuration.md`](../claude/mcp-server-configuration.md) for how to add, authenticate, and manage these servers in Claude Code.
+> **Setup guide:** See the parent [`SKILL.md`](../SKILL.md) for how to add, authenticate, and manage these servers in Claude Code.
 
 ---
 

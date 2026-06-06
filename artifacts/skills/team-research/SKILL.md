@@ -13,7 +13,7 @@ You are executing a **spec-driven team research** phase. Your job is to deeply i
 
 You do NOT produce `tasks.md` — that's `/team-implement`'s job.
 
-**You are the Team Lead. Follow CLAUDE.md Section 2A exactly.**
+**You are the Team Lead.** Your job is to orchestrate, not to do the manual labor: you plan, spawn, assign, coordinate, merge, and clean up. The full team-lifecycle protocol you follow is in the [Team Lifecycle Protocol](#team-lifecycle-protocol) section at the end of this skill — read it before Phase 3.
 
 ---
 
@@ -32,7 +32,7 @@ The user will provide a research question, problem space, or feature area. If th
 
 Before creating any team, YOU do the initial reconnaissance. This prevents spawning agents into a void.
 
-1. **Read `CLAUDE.md`** — internalize the project's architecture, conventions, and constraints.
+1. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's architecture, conventions, and constraints.
 2. **Read `tasks/lessons.md`** if it exists — avoid past mistakes.
 3. **Read the project structure** — understand what exists, what frameworks are in use, where the code lives.
 4. **Read existing research** — check for prior research in the `research/` directory that overlaps with or informs this domain. Don't duplicate work that's already been done.
@@ -69,7 +69,7 @@ Present the research plan to the user for approval before proceeding.
 
 ## Phase 3: Spawn the Research Team
 
-Follow CLAUDE.md Section 2A Steps 1-4 exactly. You MUST use **Team Mode** (not naive subagent spawning):
+Follow Steps 1-4 of the [Team Lifecycle Protocol](#team-lifecycle-protocol) exactly. You MUST use **Team Mode** (not naive subagent spawning):
 
 1. **Create team** via `TeamCreate`.
 2. **Create tasks** via `TaskCreate` — one per research stream, plus synthesis tasks for the deliverables.
@@ -169,9 +169,59 @@ Run `/team-implement <research-dir>` to begin implementation.
 4. **Every finding needs evidence.** Opinions without evidence don't go in the spec.
 5. **The Team Lead writes the deliverables.** Researchers produce raw findings; synthesis is your job.
 6. **The output is three files: `research.md`, `spec.md`, `plan.md`.** No `tasks.md` — that's `/team-implement`'s responsibility. Do not proceed past Phase 5 without all three files written and committed.
-7. **Follow CLAUDE.md Section 2A to the letter** for team lifecycle (create, spawn, coordinate, merge, cleanup).
+7. **Follow the [Team Lifecycle Protocol](#team-lifecycle-protocol) to the letter** for team lifecycle (create, spawn, coordinate, merge, cleanup).
 8. **Touch the actual code/system.** "I believe X works this way" is not a finding. "I read X at line Y and confirmed Z" is.
 9. **Existing research is prior art.** Check `research/` before investigating something that may already be answered.
 10. **Capture lessons before cleanup.** Surprising discoveries, constraint corrections, and process mistakes go in `tasks/lessons.md`. Routine findings stay in `research.md`.
+
+---
+
+## Team Lifecycle Protocol
+
+This is the team-lifecycle protocol the Team Lead follows end-to-end. **Team Mode** means `TeamCreate` + spawning via the `Task` tool **with** `team_name` and `name` parameters — NOT naive subagent spawning. Members work in isolated git worktrees on dedicated branches; the Team Lead merges those branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
+
+**Team sizing:** Maximum 4 members per team — coordination overhead dominates beyond that. Use 2 for focused parallel work, 3–4 for broader builds with distinct domains. Every member must own a clearly separable domain (files, modules, layers); if two members would edit the same files, merge them into one.
+
+### Step 1: Plan & Create Team
+1. Enter plan mode. Identify the parallel work streams (max 4). Each stream becomes a member.
+2. `TeamCreate` to initialize the team.
+3. `TaskCreate` to define all work items upfront with clear descriptions and acceptance criteria.
+4. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering constraints.
+
+### Step 2: Set Up Worktrees (MANDATORY before spawning)
+Determine the parent branch (the branch you are on now — typically `main` or a feature branch). Create one worktree + branch per member:
+```bash
+# Repeat for each member (max 4)
+git worktree add .claude/worktrees/<member-name> -b team/<team-name>/<member-name> HEAD
+```
+Naming convention: `team/<team-name>/<member-name>` (e.g., `team/auth-feature/backend`).
+
+### Step 3: Spawn Members
+Use the `Task` tool with `team_name` and `name` parameters. **Do NOT use `isolation: "worktree"`** — you already created the worktrees manually. Spawn ALL members in a **single message with parallel `Task` calls** for maximum concurrency. Each spawn prompt must direct the member to `cd` into its worktree as its first action and confirm the `cd` before doing anything else. (See the spawn template referenced by this skill.)
+
+### Step 4: Assign & Coordinate
+- `TaskUpdate` with `owner` to assign tasks to members.
+- `SendMessage` to unblock, redirect, or share context between members. When a member completes work another depends on, notify the downstream member to pull.
+- Monitor `TaskList` for progress. Do NOT do the members' work — your job is orchestration.
+
+### Step 5: Merge (Orchestrator Only)
+When all members have committed and all tasks are complete:
+1. **Shut down all members first** — `SendMessage` with `type: "shutdown_request"` for each. Wait for confirmation.
+2. **Merge each branch into the parent** sequentially, from the main project directory (NOT a worktree), resolving conflicts as you go:
+   ```bash
+   git merge team/<team-name>/<member-name> --no-ff -m "Merge <member-name> work: <summary>"
+   # ... repeat for each member
+   ```
+   Use `--no-ff` to preserve branch history. If a merge conflicts, resolve it manually — do not force or skip.
+3. **Verify the merged result** — run tests, check for regressions, confirm everything integrates.
+
+### Step 6: Cleanup
+After successful merge and verification:
+```bash
+git worktree remove .claude/worktrees/<member-name>   # repeat per member
+git branch -d team/<team-name>/<member-name>          # repeat per member
+rmdir .claude/worktrees 2>/dev/null
+```
+Then `TeamDelete` to clean up team metadata. **If something goes wrong during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a member needs to rebase.
 
 $ARGUMENTS
