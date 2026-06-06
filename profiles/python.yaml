@@ -1,0 +1,13 @@
+apiVersion: patronus/v1
+kind: Profile
+name: python
+summary: "STUB — Python project agent environment. Items to be sourced (see todo)."
+status: stub
+layers:
+  instructions: [agent-principles]         # generic agent house rules; TODO: + Python-specific conventions
+  capabilities: [team-research, team-implement]
+  memory: memory-ai-memory
+  # context / harness / observability / guardrails / sandbox: TODO — sourced later
+todo:
+  - "Source Python house-style + conventions instructions from <upstream-TBD>."
+  - "Source Python harness (pytest/ruff/mypy loop) from <upstream-TBD>."

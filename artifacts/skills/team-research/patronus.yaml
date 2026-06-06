@@ -1,0 +1,11 @@
+apiVersion: patronus/v1
+kind: Skill
+role: capability
+name: team-research
+description: "Spec-Driven Team Research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md + spec.md + plan.md."
+version: 1.0.0
+entry: SKILL.md
+files: []
+targets: [claude, codex, opencode]
+defaults:
+  scope: project

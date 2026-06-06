@@ -1,0 +1,15 @@
+apiVersion: patronus/v1
+kind: Recipe
+name: github
+capability: tools                  # L5 Tools / Integrations
+summary: "GitHub MCP server (hosted) — issues, PRs, code search."
+upstream: github.com/github/github-mcp-server
+license: MIT
+
+# REMOTE (http) MCP: nothing to download, so NO delivery block — install is a single config MERGE.
+wire:
+  selfWiring: false
+  mcp:
+    transport: http
+    url: "https://api.githubcopilot.com/mcp/"
+  tools: [claude, codex, opencode]

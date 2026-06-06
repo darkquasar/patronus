@@ -1,0 +1,13 @@
+apiVersion: patronus/v1
+kind: Profile
+name: golang
+summary: "STUB — Go project agent environment. Items to be sourced (see todo)."
+status: stub                               # installer warns + no-ops unpopulated layers
+layers:                                    # keys are §1A layer names
+  instructions: [agent-principles]         # generic agent house rules; TODO: + Go-specific conventions
+  capabilities: [team-research, team-implement]   # only existing in-repo artifacts
+  memory: memory-ai-memory                 # capability default recipe
+  # context / harness / observability / guardrails / sandbox: TODO — sourced later
+todo:
+  - "Source Go house-style + conventions instructions from <upstream-TBD>."
+  - "Source Go harness (test/vet/lint loop) from <upstream-TBD>."

@@ -1,0 +1,31 @@
+apiVersion: patronus/v1
+kind: Recipe
+name: memory-ai-memory
+capability: memory                         # default recipe for the memory capability (L3)
+summary: "Multi-agent memory layer — MCP + CLI, SQLite+FTS5+optional vectors, git-markdown source of truth."
+upstream: github.com/akitaonrails/ai-memory
+license: MIT
+
+delivery:
+  primary: docker                          # blessed path: daemon on 127.0.0.1:49374 (multi-platform image)
+  fallbacks:
+    cargo: ai-memory                       # native binary build (Docker-free)
+    aur: ai-memory
+
+scope:
+  marker: ".ai-memory.toml"                # per-repo isolation marker; stable-UUID project scoping
+  global: "~/.local/share/ai-memory"
+
+# ai-memory wires ITSELF into each agent — Patronus orchestrates its installers.
+wire:
+  selfWiring: true
+  postInstall:
+    - "ai-memory install-mcp   --client {tool} --apply"
+    - "ai-memory install-hooks --agent  {tool} --apply"
+  tools: [claude, codex, opencode]
+
+# Optional durable bootstrap facts pre-loaded into the store at install (L1->L3 bridge).
+seed: []
+
+# TODO(§5c open): verify the Docker-free cargo/native path on Windows; if it fails,
+# auto-fall-back to memory-engram on Windows before making this the unconditional default.

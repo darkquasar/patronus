@@ -1,0 +1,14 @@
+apiVersion: patronus/v1
+kind: Profile
+name: cloudflare
+summary: "Cloudflare project agent environment. Partly real — ships the pattern-cloudflare context skill; remaining layers stubbed."
+status: stub                               # still warns: instructions/harness/etc. not yet sourced
+layers:
+  instructions: [agent-principles]                # role: instruction — generic agent house rules
+  capabilities: [team-research, team-implement]   # role: capability
+  context: [pattern-cloudflare]                   # role: pattern — the populated L4 slot
+  memory: memory-ai-memory
+  # harness / guardrails / observability / sandbox: TODO — sourced later
+todo:
+  - "Source Cloudflare house-style + conventions instructions from <upstream-TBD>."
+  - "Source a Cloudflare harness (wrangler typegen / deploy checks) from <upstream-TBD>."

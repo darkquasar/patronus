@@ -1,0 +1,18 @@
+apiVersion: patronus/v1
+kind: Recipe
+name: sandbox
+capability: sandbox                         # L6 Sandbox / Execution safety
+summary: "Secure agent execution sandbox (openshell-style) — constrained FS/network/exec."
+upstream: TODO                              # §9.4 open: confirm the exact openshell-style upstream repo
+license: TODO
+
+delivery:
+  primary: github-release
+  installTo: "~/.patronus/bin/"
+  # TODO: pin per-OS/arch asset URLs + sha256 once the upstream is chosen.
+  assets: []
+
+# wire may inject a hook/wrapper rather than an MCP server; finalized once upstream is chosen.
+wire:
+  selfWiring: false
+  tools: [claude, codex, opencode]
