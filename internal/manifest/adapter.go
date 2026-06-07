@@ -10,7 +10,7 @@ type Adapter struct {
 	Kind       Kind                   `yaml:"kind,omitempty"`
 	Tool       string                 `yaml:"tool"`
 	Detect     AdapterDetect          `yaml:"detect"`
-	Layout     map[string]interface{} `yaml:"layout,omitempty"`
+	Layout     Layout                 `yaml:"layout,omitempty"`
 }
 
 // AdapterDetect holds the positive-ID markers for each scope.

@@ -64,6 +64,29 @@ func DefaultRole(k Kind) Role {
 	}
 }
 
+// Capability returns the human-facing "what does installing this add" label for
+// an artifact kind/role, used in the dry-run summary table's capability column.
+// A pattern-role Skill reads as "pattern" rather than the generic "skill".
+func Capability(k Kind, r Role) string {
+	if k == KindSkill && r == RolePattern {
+		return "pattern"
+	}
+	switch k {
+	case KindSkill:
+		return "skill"
+	case KindAgent:
+		return "agent"
+	case KindCommand:
+		return "command"
+	case KindHook:
+		return "hook"
+	case KindInstruction:
+		return "instruction"
+	default:
+		return string(k)
+	}
+}
+
 // decodeFile reads path and YAML-decodes it into v leniently (unknown fields are
 // ignored, keeping the parser forward-compatible with later schema additions).
 func decodeFile(path string, v any) error {

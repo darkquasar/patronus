@@ -17,6 +17,7 @@ func newRootCmd() *cobra.Command {
 
 	root.AddCommand(newListCmd())
 	root.AddCommand(newScanCmd())
+	root.AddCommand(newInstallCmd())
 	addStubCommands(root)
 	return root
 }
