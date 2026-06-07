@@ -98,7 +98,7 @@ func (d FileDiff) Unified() string {
 }
 
 // ChangeSet is an ordered, deduped/composed set of diffs plus whether this run
-// is a dry run (this phase always sets DryRun true).
+// is a dry run (DryRun false only on a real --deploy apply).
 type ChangeSet struct {
 	Diffs  []FileDiff `json:"diffs"`
 	DryRun bool       `json:"dryRun"`
@@ -116,9 +116,7 @@ func (cs *ChangeSet) Counts() map[Action]int {
 	return out
 }
 
-// Applier realizes a ChangeSet on disk. Stubbed in Phase 2 (dry-run only); the
-// real writer lands in Phase 3 and consumes the same ChangeSet the planner
-// produced.
-type Applier interface {
-	Apply(cs *ChangeSet) error
-}
+// The writer that realizes a ChangeSet on disk lives in internal/install
+// (Phase 3). Following Go convention we let the consumer define any interface it
+// needs rather than declaring a speculative one here; the concrete
+// install.Applier consumes the same ChangeSet the planner produced.
