@@ -30,6 +30,8 @@
 | Extensibility | **Tool recipes / templates** | A declarative manifest defines an external binary to fetch + verify + install + wire into each tool's MCP config. Memory layer and "secure agent sandbox" (openshell-style) are recipes. |
 | Package management | **Self-contained floor + pluggable PM backends** | Patronus ships a minimal fetch-verify-shim core (works on every OS with zero prerequisites) as the default. System PMs (brew/scoop/winget/npm) are *opt-in accelerators* a recipe can declare — never a hard dependency. See §2c. |
 | Product model | **Layers → installed via artifacts/recipes/profiles** | Patronus's thesis is a taxonomy of the layers a modern agent environment needs (§1A). Each layer is filled by an artifact or recipe; **profiles** bundle selections across all layers into one reproducible install. |
+| Change model | **One `FileDiff` (before→after) spine** | Adapter, planner, renderer, and the (Phase-3) applier all speak `diff.FileDiff`. Dry-run, conflict classification, verbose unified diffs, JSON, and state/revert (§6d) derive from this one abstraction — no parallel code paths. See §6b. |
+| Go dependencies | **Minimal & maintained** | `spf13/cobra` (CLI), `gopkg.in/yaml.v3` (manifests + agent frontmatter), `github.com/pelletier/go-toml/v2` (Codex TOML), `znkr.io/diff` v1.x (unified diffs — the maintained successor to the abandoned `hexops/gotextdiff`). No diff *algorithm* reinvented; equality is stdlib `bytes.Equal`. |
 
 ---
 
@@ -217,11 +219,14 @@ patronus/
 │
 ├── cmd/patronus/                   # the Go binary entrypoint
 ├── internal/
-│   ├── manifest/                    # parse patronus.yaml / recipe.yaml / adapter.yaml
-│   ├── adapter/                     # apply adapter transforms (artifact → per-tool files)
+│   ├── manifest/                    # parse patronus.yaml / recipe.yaml / adapter.yaml (typed Layout schema)
+│   ├── toolpath/                    # marker→abs-path resolution (env overrides, ~ expand); shared by scan+plan
+│   ├── diff/                        # FileDiff (before→after) change-set abstraction; classify, Unified()
+│   ├── adapter/                     # apply adapter transforms (artifact → per-tool FileDiffs), pure
 │   ├── scan/                        # system scanner (detect Claude/Codex/OpenCode, std + non-std)
-│   ├── plan/                        # compute change set; render dry-run tree + table
-│   ├── install/                     # write files, merge configs, never-overwrite-unconfirmed
+│   ├── plan/                        # compute change set (compose+classify); → diff.ChangeSet
+│   ├── render/                      # dry-run summary table + tree + verbose unified diffs; JSON
+│   ├── install/                     # (Phase 3) Applier: write files, merge configs, never-overwrite-unconfirmed
 │   ├── recipe/                      # fetch/verify/install external binaries + MCP wiring
 │   └── registry/                    # fetch index.json + tarballs from GitHub Releases
 ├── .github/workflows/
@@ -313,9 +318,11 @@ layout:
     bodyIs: systemPrompt    # portable body becomes the agent system prompt
     required: [name, description]
   Mcp:                      # MERGE primitive called by recipes (§5c), not a standalone installable
-    project: { file: ".mcp.json", format: json, path: "mcpServers.{name}",
-               typeField: { stdio: "stdio", http: "http" } }
+    project: { file: ".mcp.json", format: json, path: "mcpServers.{name}" }
     user:    { file: "~/.claude.json", format: json, path: "mcpServers.{name}" }
+    transports:             # per-transport ORDERED key template (§9.9) — not a flat type field
+      stdio: { keys: { type: "stdio", command: "{command}", args: "{args}", env: "{env}" } }
+      http:  { keys: { type: "http", url: "{url}", headers: "{headers}" } }
   Hook:                     # MERGE family (like Mcp) — bind a command to a tool event
     global:  { file: "~/.claude/settings.json", format: json, path: "hooks.{event}", action: merge }
     project: { file: ".claude/settings.json",   format: json, path: "hooks.{event}", action: merge }
@@ -329,14 +336,16 @@ layout:
     # AGENTS.md concat; OpenCode may instead push a glob into the config `instructions: []`.
 ```
 ```yaml
-# adapters/opencode.yaml (excerpt) — note the type-name translation
+# adapters/opencode.yaml (excerpt) — note the type-name translation + array command
 tool: opencode
 layout:
   Mcp:
-    project: { file: "opencode.json", format: jsonc, path: "mcp.{name}",
-               typeField: { stdio: "local", http: "remote" },   # <-- translation
-               commandShape: array }                            # command:[...] not command+args
+    project: { file: "opencode.json", format: jsonc, path: "mcp.{name}" }
+    transports:
+      stdio: { keys: { type: "local",  command: "{commandArray}", environment: "{env}" } }  # type local + command:[...]
+      http:  { keys: { type: "remote", url: "{url}", headers: "{headers}" } }                # type remote
 ```
+> The ordered key template is the §9.9 fix: Codex's `transports.stdio.keys` simply **omits** `type` (so no type field is emitted), Claude/OpenCode carry a literal `type` value, and `{commandArray}` substitutes a JSON array. See §6c / §9.9.
 
 ### 5c. Recipe (`recipes/<name>.yaml`) — fetch external binary + wire it
 
@@ -483,56 +492,73 @@ patronus lock                                 # write/refresh patronus.lock (pin
 --profile <name>                   # install a curated bundle across layers (§5d)
 --recipe <name>                    # pick a specific recipe for a capability (e.g. memory-engram)
 --prefer-system-pkg                # use brew/scoop/winget if present (else github-release floor)
---dry-run                          # show ASCII tree + change table, write NOTHING
+--deploy                           # actually write changes to disk — the EXPLICIT write opt-in
+--dry-run                          # explicitly plan only (this is the default; no-op without --deploy)
+--verbose, -v                      # also show per-artifact unified diffs above the summary table
 --yes                              # assume yes (CI/non-interactive); still respects --no-overwrite
 --force                            # overwrite existing (otherwise per-file confirm)
 ```
+> **Safe by default.** `install` is a **dry run unless `--deploy` is passed** — the absence of `--deploy` (or an explicit `--dry-run`) writes nothing, so no one deploys live by mistake. `--deploy` and `--dry-run` are mutually exclusive.
+>
+> **Phase 2 status:** `--tool`, `--global/--local`, `--dry-run`, `--deploy`, and `--verbose` are live; the plan is always computed and rendered. Because the apply path is not built yet, **`--deploy` prints the plan and then refuses** (exit 1, nothing written) rather than risk a partial write — it becomes a real write in Phase 3. `--profile`, `--recipe`, `--prefer-system-pkg`, `--yes`, `--force` arrive with the apply path and recipe engine (Phases 3–4).
 
 ### 6a. System scanner (`internal/scan`)
 - Detects each tool at **global** and **local** scope using the `detect:` markers in adapters.
 - Detects **non-standard but unambiguous** configs: e.g. a `skills/<x>/SKILL.md` tree outside the standard dir, a stray `config.toml` containing `[mcp_servers.*]` (Codex), an `opencode.json` with `$schema: opencode.ai`. Heuristic = content signature, not just path. Honors `CODEX_HOME`, `OPENCODE_CONFIG_DIR`, `XDG_CONFIG_HOME`.
 - Emits a structured inventory the planner consumes.
 
-### 6b. Planner + dry-run (`internal/plan`)
-Every install computes a **change set** before touching disk. The example below is `patronus install --profile cloudflare --tool claude --global` — it exercises every install action (§5a): CREATE (skill + pattern skill), APPEND (instruction), MERGE (hook + MCP), and the ai-memory self-wiring path. `--dry-run` renders:
+### 6b. Diff abstraction, planner + dry-run (`internal/diff`, `internal/plan`, `internal/render`)
 
-**ASCII file/folder tree** of what will exist after:
-```
-~/.claude/
-├── skills/
-│   ├── team-research/
-│   │   └── SKILL.md              (new)        # CREATE — role: capability
-│   └── pattern-cloudflare/
-│       ├── SKILL.md              (new)        # CREATE — role: pattern (the load-first index)
-│       └── patterns/
-│           ├── pattern-001.md    (new)
-│           └── … pattern-007.md  (new)
-├── CLAUDE.md                     (appended)   # APPEND — instruction block (if any L1 item in profile)
-└── settings.json                (modified)    # MERGE — + hooks.* (ai-memory install-hooks)
-~/.claude.json                    (modified)   # MERGE — + mcpServers.memory (ai-memory install-mcp)
-```
-> ai-memory is the default memory recipe (Docker, self-wiring), so there is **no** `~/.patronus/bin/` entry — it wires itself via the two MERGEs above. The engram fallback would instead show a `~/.patronus/bin/engram (fetch)` FETCH row.
+**The diff abstraction (`internal/diff`) is the spine.** Every layer — the adapter transform engine, the planner, the dry-run renderer, and the (Phase 3) applier — speaks in **`FileDiff`s**: a target path with its `Before` and `After` bytes plus metadata (`Artifact`, `Capability`, `Tool`, `Scope`, `Role`, `Note`). One type flows from *compute* to *apply*, so conflict classification, SKIP detection, rendering, JSON output, and eventual disk writes all derive from a single source of truth — and `remove`/`update` become straightforward later.
 
-**Change table:**
-```
-┌──────────────────────────────────────────────┬──────────┬──────────┬───────────────┐
-│ Path                                          │ Action   │ Scope    │ Tool          │
-├──────────────────────────────────────────────┼──────────┼──────────┼───────────────┤
-│ ~/.claude/skills/team-research/SKILL.md       │ CREATE   │ global   │ claude        │
-│ ~/.claude/skills/pattern-cloudflare/SKILL.md  │ CREATE   │ global   │ claude        │
-│ ~/.claude/skills/pattern-cloudflare/patterns/ │ CREATE   │ global   │ claude        │
-│ ~/.claude/CLAUDE.md  (patronus section)       │ APPEND   │ global   │ claude        │
-│ ~/.claude/settings.json  (hooks.*)            │ MERGE    │ global   │ claude        │
-│ ~/.claude.json  (mcpServers.memory)           │ MERGE    │ global   │ claude        │
-└──────────────────────────────────────────────┴──────────┴──────────┴───────────────┘
-```
-Actions: `CREATE` (write a new file), `APPEND` (insert/replace a delimited section in prose — §5b, never touches the user's other text), `MERGE` (config edit — never blind overwrite), `FETCH` (download+verify a recipe binary), `CONFLICT` (exists & differs → needs confirm/`--force`), `SKIP` (identical, idempotent). A multi-tool install (`--tool all`) repeats the applicable rows per tool, e.g. `~/.codex/config.toml ([mcp_servers...]) MERGE codex` and `.opencode/agent/<name>.md CONFLICT opencode`.
+- `diff.Classify(intended, before, after, exists)` assigns the terminal action: `CREATE` → absent→CREATE / identical→SKIP / differs→CONFLICT; `APPEND`/`MERGE` fold the existing content into `After` by construction, so they are non-destructive and never CONFLICT (equal→SKIP, else keep the action).
+- `FileDiff.Unified()` renders a `---/+++/@@` unified diff of Before vs After for the verbose view, via **`znkr.io/diff`** (v1.x, maintained, the actively-supported successor to the stale `hexops/gotextdiff`).
+- `diff.Applier` is the Phase-3 write interface; Phase 2 is **dry-run only** (no `Apply` implementation ships).
 
-### 6c. Never-overwrite-unconfirmed (`internal/install`)
-- Config files (`.mcp.json`, `config.toml`, `opencode.json`, `~/.claude.json`) are **merged**, not replaced — parse, set the one key, re-serialize preserving comments where possible (JSONC/TOML).
-- Artifact files that already exist and **differ** → `CONFLICT`: interactive per-file prompt (overwrite / skip / show diff), or fail under `--yes` without `--force`.
+**The planner (`internal/plan.Compute`)** takes the registry catalog + scan inventory + selected names + flags, resolves tools (a specific `--tool` must be targeted; `all`/empty → the artifact's targets **detected** at scope, ordered claude→opencode→codex, falling back to all targeted if none detected) and scope (flag, else artifact default; `project`→`local`), drives the adapter engine per (artifact×tool×scope), **composes** diffs that land on the same path (e.g. codex+opencode both appending to a shared project `AGENTS.md` → one combined `After`), classifies each against the real filesystem, and returns a `diff.ChangeSet`. It performs read-only fs access only.
+
+**Dry-run output (`internal/render.PrintPlan`)** — fixed order in every case: the **artifact-centric summary table first**, then the **ASCII tree**, then (only with `--verbose`) the **per-artifact unified diffs**, then a footer tally. Example (`patronus install pattern-cloudflare --tool claude --global`):
+
+```
+┌────────────────────┬───────────────────────────────────────────────┬───────────┬────────────┬────────┬────────┐
+│ Artifact           │ Impacted path(s)                              │ Operation │ Capability │ Tool   │ Scope  │
+├────────────────────┼───────────────────────────────────────────────┼───────────┼────────────┼────────┼────────┤
+│ pattern-cloudflare │ ~/.claude/skills/pattern-cloudflare/ (8 files)│ CREATE    │ pattern    │ claude │ global │
+└────────────────────┴───────────────────────────────────────────────┴───────────┴────────────┴────────┴────────┘
+
+~/
+└── .claude/
+    └── skills/
+        └── pattern-cloudflare/
+            ├── SKILL.md          (new)  # CREATE — role: pattern
+            └── patterns/
+                ├── pattern-001.md (new) # CREATE — role: pattern
+                └── … pattern-007.md (new)
+
+Plan: 8 CREATE
+(dry run — no files were written)
+```
+
+The summary table columns are exactly the user-facing view: **Artifact** (the patronus item being installed) · **Impacted path(s)** (the local file/folder it lands on; many files sharing a root collapse to `<dir>/ (N files)`) · **Operation** · **Capability** (what's added: skill/pattern/instruction/agent/command/mcp/hook) · **Tool** · **Scope**. `--verbose` appends the full `---/+++/@@` body per artifact **after the tree**. `--json` emits the `ChangeSet` (paths + actions + metadata; `Before`/`After` bytes are intentionally excluded).
+
+Actions: `CREATE` (write a new file), `APPEND` (insert/replace a delimited section in prose — §5b, never touches the user's other text), `MERGE` (config edit — never blind overwrite), `FETCH` (download+verify a recipe binary — Phase 4), `CONFLICT` (a CREATE whose target exists & differs → needs confirm/`--force`), `SKIP` (identical, idempotent). A multi-tool install (`--tool all`) repeats the applicable rows per tool, except where the same absolute path is shared, which composes into one row labeled `tool-a+tool-b`.
+
+### 6c. Never-overwrite-unconfirmed (`internal/adapter` merge fns now; `internal/install` writer in Phase 3)
+- Config merging is implemented as **pure functions** in `internal/adapter` (`MergeConfig`) that compute the would-be bytes in memory — so the planner can classify MERGE/CONFLICT/SKIP and the verbose view can diff them **without writing to disk**. The Phase-3 applier reuses the identical functions to write.
+- Config files (`.mcp.json`, `config.toml`, `opencode.json`, `~/.claude.json`) are **merged**, not replaced — parse, set the one dotted key (`setDotted`, preserving sibling keys), re-serialize. JSON via `encoding/json` (stdlib sorts keys → deterministic output); TOML via **`github.com/pelletier/go-toml/v2`**. **JSONC comments are stripped to parse and the file is re-emitted as plain JSON this phase** — lossless comment round-trip is deferred to the Phase-3 writer; dry-run only needs correct merged bytes for classification.
+- The MCP transport object is built from the adapter's **per-transport ordered key templates** (§9.9 fix): literal templates (`type: "stdio"`/`"local"`/`"remote"`) emit verbatim, placeholder templates (`{command}`, `{args}`, `{commandArray}`, …) substitute the recipe-supplied value with its native type, and an absent key is simply omitted — which is exactly how Codex carries **no** `type` field.
+- Artifact files that already exist and **differ** → `CONFLICT`: interactive per-file prompt (overwrite / skip / show diff), or fail under `--yes` without `--force`. *(Phase 3 — the apply path.)*
 - Identical content → `SKIP` (installs are idempotent).
-- Patronus records what it installed in `~/.patronus/state.json` (+ `.patronus/state.json` local) so `remove`/`update` are clean and don't clobber user edits.
+- Patronus records what it installed in a **state file** so `remove`/`update`/revert are clean and don't clobber user edits — see §6d.
+
+### 6d. State file — Terraform-style tracking & revert (designed now, built in Phase 3/5)
+Patronus needs durable knowledge of *what it installed* to support clean `remove`, idempotent `update`, and **revert to any prior state** — the same role Terraform's state file plays. The design:
+- **Location:** `~/.patronus/state.json` (global) + `.patronus/state.json` (local), mirroring the global/local scope split.
+- **Content:** per installed item — the artifact/recipe name + version, the resolved tool(s) and scope, and for each `FileDiff` the target path, action, and a **checksum of the bytes Patronus wrote** (not the user's surrounding prose). For APPEND, the fenced section is keyed by name so only Patronus's block is tracked; for MERGE, the specific dotted keys written are recorded.
+- **Why a checksum, not the full content:** lets a later `scan`/`plan` detect three states per tracked file — *unchanged* (matches recorded checksum → safe to remove/update), *user-edited* (differs → warn before touching), and *orphaned* (recorded but the source artifact is gone → offer cleanup).
+- **Revert:** because the change set is the same `diff.ChangeSet` abstraction (§6b), a revert is computed as the **inverse** of a recorded apply — delete CREATEd files, remove APPENDed sections by their markers, and restore MERGEd keys to their pre-install value (the prior value is captured in state at apply time). No new machinery beyond the diff spine.
+- **Relationship to the lockfile (L11, §5d):** `patronus.lock` pins *what a profile resolved to* (versions + checksums, for reproducibility across machines); `state.json` records *what is actually installed here* (for local lifecycle). They are complementary — lock is the desired spec, state is the realized fact.
+- **Sequencing:** the schema is fixed now so the `FileDiff` carries enough to populate it; state is **written** by the Phase-3 applier and consumed by `remove`/`update` (Phase 8) and the lockfile work (Phase 5). Phase 2 writes nothing.
 
 ---
 
@@ -548,17 +574,19 @@ Actions: `CREATE` (write a new file), `APPEND` (insert/replace a delimited secti
 
 ## 8. Phased delivery
 
-| Phase | Deliverable |
-|---|---|
-| **0** | Repo restructure: move **existing** `team-research`/`team-implement` from `claude/skills/` (the git-tracked copies — *not* the gitignored `.claude/skills/` working copy) into `artifacts/skills/` (no new artifact *content*); make those skills **self-contained** by inlining the team-lifecycle protocol they currently borrow from the swarm `CLAUDE.md` (see §9.1); migrate the `cloudflare/` pattern set into `artifacts/skills/pattern-cloudflare/` as a `role: pattern` skill (index→`SKILL.md`, `pattern-00N.md`→`patterns/`; invoked `/pattern-cloudflare`); move `templates/` → `reference/templates/`; write `adapters/{claude,codex,opencode}.yaml`; add `golang`/`python`/`cloudflare` profile **stubs**. |
-| **1** | Go skeleton: `cmd/patronus`, `manifest`, `scan`, `list`. `patronus scan` + `patronus list` working against a **local** registry. |
-| **2** | `adapter` + `plan` + `--dry-run` (ASCII tree + change table). Claude adapter first (SKILL.md passthrough is easiest), then OpenCode (also SKILL.md-native), then Codex (TOML subagents — hardest). |
-| **3** | `install` with merge-not-overwrite, conflict prompts, `state.json`, `--global/--local`. |
-| **4** | `recipe` engine: fetch+verify+install + wiring (incl. **self-wiring** + **delivery backends**). Ship **memory** (ai-memory default, engram fallback) + `sandbox`. |
-| **5** | **Profiles** (§5d): combined cross-layer change set + `patronus.lock`. Ship 1–2 starter profiles. |
-| **6** | CI: `build-registry.yml` + `release.yml` → GitHub Releases. Install scripts, Homebrew tap, Scoop manifest. |
-| **7** | Tier-2 layers as recipes/artifacts: observability, harness, context, guardrails, sandbox hardening. |
-| **8** | `update` / `remove`, non-standard-config detection hardening, R2/CDN registry option, `--prefer-system-pkg`. |
+**Status legend:** ✅ Done · 🔵 In progress · ⚪ Planned. Updated as part of each phase's PR.
+
+| Phase | Status | Deliverable |
+|---|---|---|
+| **0** | ✅ Done | Repo restructure: move **existing** `team-research`/`team-implement` from `claude/skills/` (the git-tracked copies — *not* the gitignored `.claude/skills/` working copy) into `artifacts/skills/` (no new artifact *content*); make those skills **self-contained** by inlining the team-lifecycle protocol they currently borrow from the swarm `CLAUDE.md` (see §9.1); migrate the `cloudflare/` pattern set into `artifacts/skills/pattern-cloudflare/` as a `role: pattern` skill (index→`SKILL.md`, `pattern-00N.md`→`patterns/`; invoked `/pattern-cloudflare`); move `templates/` → `reference/templates/`; write `adapters/{claude,codex,opencode}.yaml`; add `golang`/`python`/`cloudflare` profile **stubs**. |
+| **1** | ✅ Done | Go skeleton: `cmd/patronus`, `manifest`, `scan`, `list`. `patronus scan` + `patronus list` working against a **local** registry. |
+| **2** | ✅ Done | **Diff spine + adapter + plan + dry-run.** New `internal/diff` (FileDiff before→after, Classify, Unified via `znkr.io/diff`); `internal/toolpath` (extracted path resolution); typed adapter `Layout` schema with polymorphic decode + per-transport ordered key templates (resolves §9.9); `internal/adapter` transform engine — Skill (passthrough) + Instruction (appendSection) drive end-to-end, Command + Agent (claude/opencode/codex reshape) + full **MCP MERGE** (json/jsonc/toml, all 3 tools incl. Codex shape-by-key) implemented as pure in-memory fns (unit-tested; no shipping driver yet); `internal/plan.Compute` (tool/scope resolution, cross-tool path compose, fs classification); `internal/render` dry-run = **summary table + tree + footer** (in that order), `--verbose` appends per-artifact unified diffs after the tree, `--json` emits the ChangeSet; real `patronus install` with `--tool/--global/--local/--deploy/--dry-run/--verbose`. **Safe by default: dry run unless `--deploy`; `--deploy` currently shows the plan then refuses (apply is Phase 3) so nothing is ever written this phase.** State-file & revert designed (§6d), built in Phase 3. |
+| **3** | ⚪ Planned | `install --deploy` apply path: the `diff.Applier` that writes the Phase-2 change set — merge-not-overwrite, conflict prompts, **write `state.json`** (§6d), `--global/--local`, `--yes/--force`. (`--deploy` flips from "refuse" to a real write.) |
+| **4** | ⚪ Planned | `recipe` engine: fetch+verify+install + wiring (incl. **self-wiring** + **delivery backends**). Ship **memory** (ai-memory default, engram fallback) + `sandbox`. |
+| **5** | ⚪ Planned | **Profiles** (§5d): combined cross-layer change set + `patronus.lock`. Ship 1–2 starter profiles. |
+| **6** | ⚪ Planned | CI: `build-registry.yml` + `release.yml` → GitHub Releases. Install scripts, Homebrew tap, Scoop manifest. |
+| **7** | ⚪ Planned | Tier-2 layers as recipes/artifacts: observability, harness, context, guardrails, sandbox hardening. |
+| **8** | ⚪ Planned | `update` / `remove`, non-standard-config detection hardening, R2/CDN registry option, `--prefer-system-pkg`. |
 
 **Tier-1 focus (per your call):** Instructions (L1) + Capabilities (L2) + Memory (L3) land in Phases 0–4. Tier-2 layers (harness, observability, context, …) are Phase 7 recipes/artifacts — designed now, built after the core proves out.
 
@@ -586,5 +614,5 @@ Actions: `CREATE` (write a new file), `APPEND` (insert/replace a delimited secti
 6. ~~Layer↔installable mapping~~ **RESOLVED:** plain-markdown → artifact, binary/Docker/bigger-than-file → recipe (§0.3, §2b).
 7. ~~First profiles~~ **RESOLVED:** `golang`, `python`, `cloudflare` — shipped as stubs (§0.2, §5d).
 8. **Upstream sources for content:** the specific repos/locations to source instructions, harnesses, and profile content from (the `TODO`/`<upstream-TBD>` markers). Needed before profiles move from stub → populated.
-9. **Adapter MCP schema is too thin for Codex.** The §5b adapter models stdio-vs-http as a flat `typeField` map (`{stdio, http}` → Claude; `{local, remote}` → OpenCode). But **Codex TOML has no `type` field** — it distinguishes stdio from http by *which keys are present* (`command/args/env` vs `url/bearer_token_env_var/http_headers`). A `typeField` map can't express "shape-by-key-presence." Redesign the adapter `Mcp` block to carry a per-transport **key template** (the set of keys each transport emits), not just a renamed type value, before building the Codex adapter (§8 Phase 2 — the hardest one). *(TODO: schema redesign.)*
+9. **Adapter MCP schema is too thin for Codex.** ✅ **RESOLVED (Phase 2).** The §5b adapter modeled stdio-vs-http as a flat `typeField` map, which couldn't express Codex TOML's "shape-by-key-presence" (no `type` field; stdio vs http distinguished by *which keys are present* — `command/args/env` vs `url/bearer_token_env_var/http_headers`). **Fix shipped:** each transport now declares an **ordered key template** (`transports.<t>.keys`) decoded into an order-preserving `OrderedMap` (`internal/manifest/layout.go`). `buildTransportObject` (`internal/adapter/mcp.go`) renders it — literal values emit verbatim (Claude `type:"stdio"`, OpenCode `type:"local"/"remote"`), placeholders substitute typed values (OpenCode `command:{commandArray}` → JSON array), and a key absent from the template is never emitted (Codex omits `type`). Unit-tested across all three tools, both transports.
 ```

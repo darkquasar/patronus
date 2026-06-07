@@ -14,7 +14,6 @@ type stub struct {
 }
 
 var stubs = []stub{
-	{"install", "Install artifact(s), recipe(s), or a profile", "3"},
 	{"update", "Refresh installed items", "8"},
 	{"remove", "Cleanly uninstall tracked items", "8"},
 	{"init", "Scaffold a fresh project/global config", "3"},
