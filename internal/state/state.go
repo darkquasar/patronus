@@ -30,7 +30,7 @@ type State struct {
 	Items   []Item `json:"items"`
 }
 
-// Item is one installed artifact at one tool+scope.
+// Item is one installed artifact or recipe at one tool+scope.
 type Item struct {
 	Artifact    string      `json:"artifact"`
 	ItemVersion string      `json:"itemVersion,omitempty"` // the artifact's own version
@@ -38,6 +38,15 @@ type Item struct {
 	Scope       string      `json:"scope"`
 	InstalledAt string      `json:"installedAt,omitempty"` // RFC3339; supplied by caller (pkg stays clockless)
 	Files       []FileState `json:"files"`
+
+	// --- recipe forward-compat for Phase 8 (captured now, unused now) ---
+	// SelfWired marks a recipe that installed itself via post-install commands
+	// (e.g. ai-memory). PostInstall records the exact commands run so a future
+	// revert can attempt the inverse (best-effort) or at least warn that the
+	// wiring is not cleanly reversible. Mirrors how Prior/Section were captured
+	// in Phase 3 for a Phase-8 reader.
+	SelfWired   bool     `json:"selfWired,omitempty"`
+	PostInstall []string `json:"postInstall,omitempty"`
 }
 
 // FileState records one written file. Checksum is the sha256 of the bytes
@@ -106,25 +115,42 @@ func Merge(s *State, newItems []Item) *State {
 	return s
 }
 
-// FromChangeSet translates the diffs that were actually applied into state items,
-// grouped by (artifact, tool, scope). now is an RFC3339 timestamp supplied by
-// the caller (this package takes no clock so it stays deterministic in tests).
-// Only the listed diffs should be the ones Apply reported as Applied.
+// FromChangeSet translates installed diffs into state items, grouped by
+// (artifact, tool, scope). now is an RFC3339 timestamp supplied by the caller
+// (this package takes no clock so it stays deterministic in tests). Pass the
+// diffs that were actually realized: the applier's Applied (CREATE/APPEND/MERGE/
+// FETCH) plus any EXEC diffs the cmd layer ran (self-wiring post-install) — EXEC
+// diffs are recorded on their recipe's Item as SelfWired + PostInstall rather
+// than as files.
 func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 	type key struct{ artifact, tool, scope string }
 	order := []key{}
 	byKey := map[key]*Item{}
 
-	for _, d := range applied {
-		if d.IsDir {
-			continue
-		}
+	get := func(d diff.FileDiff) *Item {
 		k := key{d.Artifact, d.Tool, d.Scope}
 		it, ok := byKey[k]
 		if !ok {
 			it = &Item{Artifact: d.Artifact, Tool: d.Tool, Scope: d.Scope, InstalledAt: now}
 			byKey[k] = it
 			order = append(order, k)
+		}
+		return it
+	}
+
+	for _, d := range applied {
+		if d.IsDir {
+			continue
+		}
+		it := get(d)
+		if d.Action == diff.Exec {
+			// Self-wiring command: not a file, recorded as forward-compat revert
+			// data on the recipe's item.
+			it.SelfWired = true
+			if d.Exec != nil {
+				it.PostInstall = append(it.PostInstall, d.Exec.Display)
+			}
+			continue
 		}
 		it.Files = append(it.Files, fileState(d))
 	}
@@ -143,6 +169,17 @@ func fileState(d diff.FileDiff) FileState {
 		Action:   string(d.Action),
 		Checksum: checksum(d.After),
 	}
+	// FETCH writes a binary, not d.After bytes; record the placed binary's sha so
+	// a later scan can tell "unchanged" from "user-replaced." Prefer the digest
+	// the applier stamped after placing (the extracted member for an archive);
+	// fall back to the pinned download sha for a raw-binary asset / planning.
+	if d.Action == diff.Fetch && d.Fetch != nil {
+		sum := d.Fetch.PlacedSHA256
+		if sum == "" {
+			sum = d.Fetch.SHA256
+		}
+		fs.Checksum = "sha256:" + normalizeHexState(sum)
+	}
 	// Capture the revert inputs only where they exist / are needed.
 	if d.Action == diff.Append && d.Section != nil {
 		fs.Section = d.Section.Name
@@ -152,6 +189,15 @@ func fileState(d diff.FileDiff) FileState {
 		fs.Prior = d.Before
 	}
 	return fs
+}
+
+// normalizeHexState strips an optional "sha256:" prefix so a pinned digest is
+// stored uniformly with the computed-checksum form.
+func normalizeHexState(s string) string {
+	if len(s) > 7 && s[:7] == "sha256:" {
+		return s[7:]
+	}
+	return s
 }
 
 func checksum(b []byte) string {

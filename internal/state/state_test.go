@@ -126,7 +126,9 @@ func TestFromChangeSetGroupsAndCaptures(t *testing.T) {
 }
 
 func TestChecksumStable(t *testing.T) {
-	if checksum([]byte("x")) != checksum([]byte("x")) {
+	a := checksum([]byte("x"))
+	b := checksum([]byte("x"))
+	if a != b {
 		t.Error("checksum not stable")
 	}
 	if checksum([]byte("x")) == checksum([]byte("y")) {

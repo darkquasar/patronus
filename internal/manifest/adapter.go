@@ -6,11 +6,11 @@ import "fmt"
 // it (§5b). Phase 1 consumes only Tool + Detect; Layout is held opaque for the
 // Phase 2 transform engine.
 type Adapter struct {
-	APIVersion string                 `yaml:"apiVersion,omitempty"`
-	Kind       Kind                   `yaml:"kind,omitempty"`
-	Tool       string                 `yaml:"tool"`
-	Detect     AdapterDetect          `yaml:"detect"`
-	Layout     Layout                 `yaml:"layout,omitempty"`
+	APIVersion string        `yaml:"apiVersion,omitempty"`
+	Kind       Kind          `yaml:"kind,omitempty"`
+	Tool       string        `yaml:"tool"`
+	Detect     AdapterDetect `yaml:"detect"`
+	Layout     Layout        `yaml:"layout,omitempty"`
 }
 
 // AdapterDetect holds the positive-ID markers for each scope.

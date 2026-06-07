@@ -162,3 +162,103 @@ func TestInstallJSON(t *testing.T) {
 		t.Errorf("raw content leaked into json:\n%s", out)
 	}
 }
+
+// --- Phase 4: recipe dispatch + self-wiring EXEC -----------------------------
+
+func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
+	// github is a remote http MCP recipe: pure MERGE, no fetch.
+	out, _, err := runInstall(t, "github", "--tool", "claude", "--local", "--dry-run")
+	if err != nil {
+		t.Fatalf("install github failed: %v", err)
+	}
+	for _, want := range []string{"github", ".mcp.json", "MERGE", "mcp"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestInstallRecipeFetchDryRun(t *testing.T) {
+	// engram is a github-release recipe: FETCH the binary + MERGE per tool.
+	out, _, err := runInstall(t, "memory-engram", "--tool", "all", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("install memory-engram failed: %v", err)
+	}
+	for _, want := range []string{"memory-engram", "FETCH", "engram", "MERGE"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// fakeRunner records the argvs it was asked to run and never spawns a process.
+type fakeRunner struct{ ran [][]string }
+
+func (f *fakeRunner) Run(argv []string) error {
+	f.ran = append(f.ran, argv)
+	return nil
+}
+
+func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
+	home := t.TempDir()
+	proj := t.TempDir()
+	res := toolpath.New(func(k string) (string, bool) {
+		if k == "HOME" {
+			return home, true
+		}
+		return "", false
+	}, home, proj)
+
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{
+		Path: "ai-memory install-mcp --client claude --apply", Action: diff.Exec,
+		Artifact: "memory-ai-memory", Capability: "self-wire", Tool: "claude", Scope: "global",
+		Exec: &diff.ExecSpec{
+			Command: []string{"ai-memory", "install-mcp", "--client", "claude", "--apply"},
+			Display: "ai-memory install-mcp --client claude --apply",
+		},
+	}}}
+
+	cmd := newInstallCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	runner := &fakeRunner{}
+	if err := runDeployWith(cmd, cs, res, deployOptions{home: home, projectDir: proj}, runner); err != nil {
+		t.Fatalf("deploy failed: %v", err)
+	}
+
+	// The post-install command ran exactly once with the right argv.
+	if len(runner.ran) != 1 || runner.ran[0][1] != "install-mcp" {
+		t.Fatalf("runner.ran = %v", runner.ran)
+	}
+	// State records the recipe as self-wired with the command.
+	sb, err := os.ReadFile(filepath.Join(home, ".patronus", "state.json"))
+	if err != nil {
+		t.Fatalf("state not written: %v", err)
+	}
+	for _, want := range []string{`"selfWired": true`, "install-mcp --client claude --apply"} {
+		if !strings.Contains(string(sb), want) {
+			t.Errorf("state missing %q:\n%s", want, sb)
+		}
+	}
+}
+
+func TestRunExecsStopsOnFailure(t *testing.T) {
+	cmd := newInstallCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
+		{Action: diff.Exec, Exec: &diff.ExecSpec{Command: []string{"a"}, Display: "a"}},
+		{Action: diff.Exec, Exec: &diff.ExecSpec{Command: []string{"b"}, Display: "b"}},
+	}}
+	ran, err := runExecs(cmd, cs, failRunner{})
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+	if len(ran) != 0 {
+		t.Errorf("no command should be recorded as run, got %v", ran)
+	}
+}
+
+type failRunner struct{}
+
+func (failRunner) Run([]string) error { return os.ErrPermission }

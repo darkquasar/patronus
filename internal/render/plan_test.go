@@ -81,8 +81,8 @@ func TestPlanSectionOrder(t *testing.T) {
 	out := buf.String()
 
 	table := strings.Index(out, "Capability") // table header
-	tree := strings.Index(out, "└──")          // tree glyph
-	diffs := strings.Index(out, "@@")          // unified diff hunk
+	tree := strings.Index(out, "└──")         // tree glyph
+	diffs := strings.Index(out, "@@")         // unified diff hunk
 	if table < 0 || tree < 0 || diffs < 0 {
 		t.Fatalf("missing a section (table=%d tree=%d diffs=%d):\n%s", table, tree, diffs, out)
 	}
@@ -208,10 +208,10 @@ func TestCommonDir(t *testing.T) {
 
 func TestSplitSegments(t *testing.T) {
 	cases := map[string][]string{
-		"~/.claude/x":  {"~", ".claude", "x"},
-		"/etc/hosts":   {"/etc", "hosts"},
-		"rel/path.md":  {"rel", "path.md"},
-		"":             nil,
+		"~/.claude/x": {"~", ".claude", "x"},
+		"/etc/hosts":  {"/etc", "hosts"},
+		"rel/path.md": {"rel", "path.md"},
+		"":            nil,
 	}
 	for in, want := range cases {
 		got := splitSegments(in)

@@ -4,10 +4,10 @@ import "testing"
 
 func TestClassifyCreate(t *testing.T) {
 	cases := []struct {
-		name           string
-		before, after  []byte
-		exists         bool
-		want           Action
+		name          string
+		before, after []byte
+		exists        bool
+		want          Action
 	}{
 		{"absent", nil, []byte("x"), false, Create},
 		{"identical", []byte("x"), []byte("x"), true, Skip},

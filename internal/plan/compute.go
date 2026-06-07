@@ -76,13 +76,22 @@ func Compute(req Request) (*diff.ChangeSet, error) {
 		}
 	}
 
+	return Finalize(raw, readExisting)
+}
+
+// Finalize is the shared tail of the change-set spine: it composes diffs that
+// land on the same path, classifies each against the real filesystem, and sorts
+// the result deterministically. Both producers feed it — plan.Compute (artifacts)
+// and recipe.Compute (recipes) — so artifact and recipe installs converge on one
+// classified diff.ChangeSet rather than two parallel paths (the brief's
+// "one spine" requirement). read supplies current target bytes for classification.
+func Finalize(raw []diff.FileDiff, read adapter.ReadExisting) (*diff.ChangeSet, error) {
 	composed := composeByPath(raw)
-	classified, err := classify(composed, readExisting)
+	classified, err := classify(composed, read)
 	if err != nil {
 		return nil, err
 	}
 	sortDiffs(classified)
-
 	return &diff.ChangeSet{Diffs: classified, DryRun: true}, nil
 }
 
@@ -175,6 +184,16 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 	byPath := map[string]*diff.FileDiff{}
 
 	for _, d := range diffs {
+		// FETCH/EXEC are per-recipe intents (a download, a command) that must
+		// not be folded together even if their Path collides (EXEC rows carry no
+		// real path). Pass each through under a unique key so all are preserved.
+		if d.Action == diff.Fetch || d.Action == diff.Exec {
+			key := string(d.Action) + "\x00" + d.Path + "\x00" + d.Note
+			cp := d
+			byPath[key] = &cp
+			order = append(order, key)
+			continue
+		}
 		prev, ok := byPath[d.Path]
 		if !ok {
 			cp := d
@@ -238,6 +257,12 @@ func splitTools(s string) []string {
 func classify(diffs []diff.FileDiff, read adapter.ReadExisting) ([]diff.FileDiff, error) {
 	for i := range diffs {
 		d := &diffs[i]
+		// FETCH and EXEC are not file-content edits: FETCH is pre-classified by
+		// the recipe engine (sha-vs-disk), and EXEC is a display-only command
+		// row. Neither compares Before/After bytes, so skip the fs read here.
+		if d.Action == diff.Fetch || d.Action == diff.Exec {
+			continue
+		}
 		before, exists, err := read(d.Path)
 		if err != nil {
 			return nil, err

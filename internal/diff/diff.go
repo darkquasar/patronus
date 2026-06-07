@@ -22,6 +22,8 @@ const (
 	Create   Action = "CREATE"   // Before absent, After is new content
 	Append   Action = "APPEND"   // delimited-section insert/replace (non-destructive)
 	Merge    Action = "MERGE"    // structural config edit (never blind overwrite)
+	Fetch    Action = "FETCH"    // download+verify a recipe binary and place it (Phase 4)
+	Exec     Action = "EXEC"     // run a self-wiring recipe's post-install command (Phase 4)
 	Conflict Action = "CONFLICT" // target exists & differs from a CREATE's After
 	Skip     Action = "SKIP"     // After == Before; idempotent, nothing to do
 )
@@ -49,6 +51,44 @@ type FileDiff struct {
 	// planner uses it to re-fold multiple appends that land on the same file
 	// (e.g. codex + opencode both targeting a shared AGENTS.md) into one After.
 	Section *SectionEdit `json:"-"`
+
+	// Fetch, when set, describes a FETCH: a binary to download, verify, and
+	// place. It lives only on Action==Fetch diffs (Path is the placement dest;
+	// Before/After are empty — the bytes are streamed at apply time, never held
+	// in the change set). Excluded from JSON; Note carries the display label.
+	Fetch *FetchSpec `json:"-"`
+
+	// Exec, when set, describes a self-wiring recipe's post-install command.
+	// It lives only on Action==Exec diffs, which are display-only in the change
+	// set: install.Applier skips them, and the cmd layer (runDeploy) runs them
+	// via os/exec on --deploy. Excluded from JSON; Note carries the display.
+	Exec *ExecSpec `json:"-"`
+}
+
+// FetchSpec is the input to a FETCH apply: download URL, expected sha256, the
+// final placement path, and (for archive assets) the archive format and the
+// member path to extract. Archive is "" for a raw-binary asset.
+type FetchSpec struct {
+	URL        string
+	SHA256     string
+	Dest       string
+	Archive    string // "" | "tar.gz" | "tgz" | "zip"
+	BinaryPath string // member path within the archive (when Archive != "")
+	Label      string // human label, e.g. "engram v0.4 (darwin/arm64)"
+
+	// PlacedSHA256 is the sha256 of the binary actually written to Dest, stamped
+	// by the applier after extraction. For a raw-binary asset this equals SHA256;
+	// for an archive it is the extracted member's digest (which SHA256, the
+	// archive's, is not). State records this so a later scan can detect whether
+	// the placed binary was replaced.
+	PlacedSHA256 string
+}
+
+// ExecSpec is one self-wiring post-install command. Command is the argv; Display
+// is the human-readable form shown in the dry run.
+type ExecSpec struct {
+	Command []string
+	Display string
 }
 
 // SectionEdit captures the inputs of an appendSection edit so it can be re-applied
@@ -91,7 +131,9 @@ func Classify(intended Action, before, after []byte, exists bool) Action {
 // verbose dry-run view. It returns "" when there is nothing to show (SKIP, or a
 // supporting-dir summary row). For a CREATE the whole content shows as added.
 func (d FileDiff) Unified() string {
-	if d.IsDir || d.Action == Skip {
+	// FETCH/EXEC carry no text Before/After (a binary download / a command), so
+	// there is no unified diff to show — the renderer surfaces them via Note.
+	if d.IsDir || d.Action == Skip || d.Action == Fetch || d.Action == Exec {
 		return ""
 	}
 	return textdiff.Unified(string(d.Before), string(d.After))
