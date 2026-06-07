@@ -471,6 +471,52 @@ layers:
 ```
 This makes `cloudflare` the first profile to demonstrate a populated non-Tier-1 layer end-to-end. `patronus install --profile golang --tool claude --global` computes one combined change set across every *populated* item (full `--dry-run` tree + table) and warns about `status: stub`. A **lockfile** (`patronus.lock`, L11) pins exact versions/checksums of everything a profile resolved to, so a teammate or fresh machine reproduces the identical environment. Profiles compose (`extends: <name>`).
 
+### 5e. Sourced references — installing & locking out-of-tree items (§9.10)
+
+The §5d resolver dispatches a **bare name** by looking it up in *the* registry (the Patronus repo / official Release). That covers curated items, but a user may want to install — and **lock + share** — a skill/recipe/artifact they author and host **themselves** (a private git repo, a URL, a local path, a company R2 bucket). The single-registry model can't name, resolve, or lock such an item. §5e fixes that **without new packaging**, because every installable is already a self-describing folder:
+
+- an **artifact** is a directory containing a `patronus.yaml` (+ its `entry` body and `files:`),
+- a **recipe** is a `*.yaml` manifest (which itself points at pinned `delivery.assets`).
+
+So an out-of-tree item needs only a *location*. The contract is uniform: **point Patronus at where the manifest lives → it fetches and parses that manifest → it then fetches what the manifest declares** (a skill's body + `files:` dir; a recipe's assets via the existing §2c FETCH floor + `internal/archive`). Nothing about the adapter/recipe engines changes — only *where the manifest came from*.
+
+**Sourced-reference grammar.** A profile slot (or a positional `install` arg) accepts either a bare name (registry, unchanged) **or** a qualified source:
+
+```yaml
+layers:
+  context:
+    - pattern-cloudflare                                  # registry (bare name — unchanged)
+    - git:github.com/me/agent-kit@v2#pattern-internal     # git repo, ref v2, item subdir/name
+    - https://example.com/recipes/foo-mcp.yaml            # direct manifest URL
+    - file:../local-skills/my-skill                       # local path (dev / airgapped)
+  memory: memory-engram                                   # registry default still works
+```
+
+Resolution rules:
+- `git:<host>/<owner>/<repo>[@<ref>][#<item>]` — clone/fetch at `ref` (default branch if omitted); `#item` selects the artifact dir / recipe file inside the repo (omittable when the repo *is* a single item). `ref` SHOULD be a tag or commit for reproducibility.
+- `https://…/<manifest>.yaml` — fetch the manifest directly; its relative `entry`/`files:`/`delivery` are resolved against the manifest's base URL.
+- `file:<path>` — read from a local path (developing a skill before publishing; airgapped installs).
+- A bare name with **no scheme** = the registry, exactly as today.
+
+**Multi-registry resolver.** The existing `registry.Registry` interface (one method, `Catalog`) already abstracts "where items come from." §5e adds a **resolver chain**: the official registry plus any user-declared sources, searched in order. A `MultiRegistry` (or a per-reference resolver) implements the *same* interface, so the planner and profile resolver are unchanged. The source qualifier in the reference also resolves the **namespace/collision** problem that `checkNameUniqueness` (a single flat namespace) otherwise imposes — `git:…#pattern-internal` is unambiguous even if some registry also ships a `pattern-internal`.
+
+**Lock provenance (the reason this touches Phase 5, not just Phase 6).** `patronus.lock` (§5d, §6d) today is conceived as `{name, version, sha256}`. For a teammate's `patronus install` to *reproduce* an out-of-tree item, the lock must also record **where it came from**. So every lock entry gains a **`source`** field:
+
+```jsonc
+// patronus.lock (entry shape)
+{
+  "name": "pattern-internal",
+  "source": "git:github.com/me/agent-kit@v2#pattern-internal",  // "registry" for in-tree items
+  "resolvedRef": "git:…@<commit-sha>",                          // the concrete commit a mutable ref resolved to
+  "version": "2.0.0",
+  "sha256": "…"                                                  // of the fetched manifest + content
+}
+```
+
+With `source` + `resolvedRef` + `sha256`, a fresh machine refetches from the *same* origin at the *same* commit, verifies the digest, and reproduces the identical item — the reproducibility guarantee extended beyond the curated catalog. **This field is added when the lock format is first written (Phase 5)**; in-tree items simply carry `source: "registry"`. Retrofitting provenance into an already-shipped lock would be a breaking format change, so it is designed in from version 1 even though full `git:`/`url:` *fetching* lands with the remote registry (Phase 6). Phase 5 may accept only `registry` + `file:` sources at first; the lock schema is forward-compatible with `git:`/`url:` regardless.
+
+**Trust.** Sourced items are fetched + **sha256-verified** exactly like §2c recipe binaries — the lock's `sha256` is the integrity anchor. `git:`/`url:` fetches over HTTPS; a mutable `git:` ref is pinned to its resolved commit in `resolvedRef` so "latest" can't silently change what a shared lock reproduces. (Signature verification beyond sha256 is a later hardening, tracked with the §2c trust model.)
+
 ---
 
 ## 6. The Go binary — commands & behavior
@@ -561,7 +607,7 @@ Patronus needs durable knowledge of *what it installed* to support clean `remove
 - **Why a checksum, not full content:** lets a later `scan`/`plan` distinguish *unchanged* (matches checksum → safe to remove/update), *user-edited* (differs → warn), and *orphaned* (recorded but source gone → offer cleanup).
 - **Forward-compat captured now (read in Phase 8):** for APPEND the fenced **section name**, and for APPEND/MERGE the **pre-install file bytes** (`Prior`), are recorded at apply time — these are the only revert inputs that cannot be reconstructed later (they exist only before the write). CREATE records no prior (its revert is a delete). Phase 3 **writes** these fields but never reads them.
 - **Revert (Phase 8):** because everything flows through the `diff.ChangeSet` spine (§6b), revert is the **inverse** of a recorded apply — delete CREATEd files, remove APPENDed sections by marker, restore MERGEd files to `Prior`. No new machinery, just a read of state back into the same shape.
-- **Relationship to the lockfile (L11, §5d):** `patronus.lock` pins *what a profile resolved to* (versions + checksums, for reproducibility across machines); `state.json` records *what is actually installed here* (for local lifecycle). Lock is the desired spec, state is the realized fact.
+- **Relationship to the lockfile (L11, §5d):** `patronus.lock` pins *what a profile resolved to* (versions + checksums + **`source` provenance**, §5e, for reproducibility across machines — incl. out-of-tree `git:`/`url:`/`file:` items); `state.json` records *what is actually installed here* (for local lifecycle). Lock is the desired spec, state is the realized fact. Comparing them surfaces drift not just in *version* but in *origin*.
 
 ---
 
@@ -586,8 +632,8 @@ Patronus needs durable knowledge of *what it installed* to support clean `remove
 | **2** | ✅ Done | **Diff spine + adapter + plan + dry-run.** New `internal/diff` (FileDiff before→after, Classify, Unified via `znkr.io/diff`); `internal/toolpath` (extracted path resolution); typed adapter `Layout` schema with polymorphic decode + per-transport ordered key templates (resolves §9.9); `internal/adapter` transform engine — Skill (passthrough) + Instruction (appendSection) drive end-to-end, Command + Agent (claude/opencode/codex reshape) + full **MCP MERGE** (json/jsonc/toml, all 3 tools incl. Codex shape-by-key) implemented as pure in-memory fns (unit-tested; no shipping driver yet); `internal/plan.Compute` (tool/scope resolution, cross-tool path compose, fs classification); `internal/render` dry-run = **summary table + tree + footer** (in that order), `--verbose` appends per-artifact unified diffs after the tree, `--json` emits the ChangeSet; real `patronus install` with `--tool/--global/--local/--deploy/--dry-run/--verbose`. **Safe by default: dry run unless `--deploy`; `--deploy` currently shows the plan then refuses (apply is Phase 3) so nothing is ever written this phase.** State-file & revert designed (§6d), built in Phase 3. |
 | **3** | ✅ Done | **`install --deploy` apply path + record-only state.** `internal/install.Applier` writes the Phase-2 change set with **atomic per-file writes** (temp + rename) and **Terraform-style partial-on-failure** (no rollback; re-run is idempotent → SKIP); CONFLICT prompts (overwrite/skip/diff), `--force`, `--yes` (never silent overwrite). `internal/state` records what was written to `~/.patronus/state.json` (global) + `<project>/.patronus/state.json` (local): per-file sha256 of the bytes we wrote, plus the **pre-install bytes + section name for APPEND/MERGE** so Phase-8 revert is a pure read. **Record-only this phase — no `remove`/revert yet.** `--deploy` flips from "refuse" to a real write; default stays dry-run. |
 | **4** | ✅ Done | **`recipe` engine: fetch+verify+wire, on the one change-set spine.** New `diff` actions **FETCH** (download+sha256-verify+place a binary, archive-aware) and **EXEC** (self-wiring post-install command); standalone `internal/archive` tar.gz/zip extractor (reused by the Phase-6 remote registry); typed `Delivery.Assets` + per-GOOS/GOARCH `ResolveAsset`; `McpLayout.ResolveTarget` (routes Claude global MCP → `~/.claude.json` user target); `internal/recipe.Compute` is the **first real caller of `adapter.MergeConfig`** — it produces FETCH + MCP MERGE (incl. OpenCode `commandArray` + `{installPath}` substitution) + EXEC rows; `install.Applier` gains an injectable `Fetcher` and a FETCH case (Terraform-style on verify failure); `plan.Finalize` is the shared compose/classify/sort tail so artifact + recipe diffs converge on one `ChangeSet`; cmd dispatches by registry lookup, runs EXEC on `--deploy` via an injectable runner, and records recipes in `state.json` (FETCH binary sha + `selfWired`/`postInstall`). `--recipe`/`--prefer-system-pkg` flags added (`--prefer-system-pkg` is a Phase-8 warn-and-fall-through stub). **Shipped end-to-end:** `memory-engram` (real github-release fetch+verify+extract+wire across all 3 tools, idempotent), `memory-ai-memory` (docker self-wiring EXEC), `github` (remote http MCP, wire-only MERGE). `sandbox` plans honestly but stays unfetched until its upstream (§9.4) is pinned. *(Engram upstream corrected to `Gentleman-Programming/engram` — the stale `edg-l/engram` ref does not exist.)* |
-| **5** | ⚪ Planned | **Profiles** (§5d): combined cross-layer change set + `patronus.lock`. Ship 1–2 starter profiles. |
-| **6** | ⚪ Planned | CI: `build-registry.yml` + `release.yml` → GitHub Releases. Install scripts, Homebrew tap, Scoop manifest. |
+| **5** | ⚪ Planned | **Profiles** (§5d): combined cross-layer change set + `patronus.lock` (with the **`source` provenance** field from v1, §5e). Sourced-reference grammar accepted at least for `registry` + `file:`. Ship 1–2 starter profiles. |
+| **6** | ⚪ Planned | CI: `build-registry.yml` + `release.yml` → GitHub Releases. Install scripts, Homebrew tap, Scoop manifest. **Multi-registry resolver + full `git:`/`url:` sourced-reference fetching (§5e)** — the remote registry and out-of-tree fetch share the same fetch+verify+`internal/archive` path. |
 | **7** | ⚪ Planned | Tier-2 layers as recipes/artifacts: observability, harness, context, guardrails, sandbox hardening. |
 | **8** | ⚪ Planned | `update` / `remove` / **revert** (reads the §6d state recorded since Phase 3 — delete CREATEs, un-APPEND sections, restore MERGE `Prior`), non-standard-config detection hardening, R2/CDN registry option, `--prefer-system-pkg`. |
 
@@ -618,4 +664,6 @@ Patronus needs durable knowledge of *what it installed* to support clean `remove
 7. ~~First profiles~~ **RESOLVED:** `golang`, `python`, `cloudflare` — shipped as stubs (§0.2, §5d).
 8. **Upstream sources for content:** the specific repos/locations to source instructions, harnesses, and profile content from (the `TODO`/`<upstream-TBD>` markers). Needed before profiles move from stub → populated.
 9. **Adapter MCP schema is too thin for Codex.** ✅ **RESOLVED (Phase 2).** The §5b adapter modeled stdio-vs-http as a flat `typeField` map, which couldn't express Codex TOML's "shape-by-key-presence" (no `type` field; stdio vs http distinguished by *which keys are present* — `command/args/env` vs `url/bearer_token_env_var/http_headers`). **Fix shipped:** each transport now declares an **ordered key template** (`transports.<t>.keys`) decoded into an order-preserving `OrderedMap` (`internal/manifest/layout.go`). `buildTransportObject` (`internal/adapter/mcp.go`) renders it — literal values emit verbatim (Claude `type:"stdio"`, OpenCode `type:"local"/"remote"`), placeholders substitute typed values (OpenCode `command:{commandArray}` → JSON array), and a key absent from the template is never emitted (Codex omits `type`). Unit-tested across all three tools, both transports.
+
+10. **Third-party / out-of-tree sources + lock provenance.** ✅ **DECIDED (design); build with the lock in Phase 5, full resolution Phase 6.** The original model is **single-registry**: every installable must live in the one catalog (the Patronus repo locally, the official GitHub Release in Phase 6), the planner/profile resolver dispatch by "look the bare name up in *the* registry" (§5d, §6b), and `checkNameUniqueness` assumes a flat namespace. That cannot install — or lock — a skill/recipe/artifact a user authors and hosts themselves. **Decision: support sourced references, leaning on the fact that every installable is already a self-describing folder** — an artifact is a directory with a `patronus.yaml`, a recipe is a `*.yaml` manifest. So an out-of-tree item needs no new packaging: *point at where its manifest lives, fetch+parse it, then fetch what it declares* (a skill's `entry`/`files:`, a recipe's `delivery.assets`). See the new **§5e** for the sourced-reference grammar, the multi-registry resolver, and the **lock-provenance** requirement. The provenance field is added to the lock format **now** (Phase 5) even though full `git:`/`url:` fetching lands in Phase 6 — because retrofitting provenance into an existing lock format is a breaking change, so the lock must carry `source` from its first version.
 ```
