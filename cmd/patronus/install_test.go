@@ -58,6 +58,41 @@ func TestInstallMutuallyExclusiveScope(t *testing.T) {
 	}
 }
 
+func TestInstallProfileCloudflareDryRun(t *testing.T) {
+	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("profile install failed: %v\n%s", err, errOut)
+	}
+	// The cloudflare profile spans instructions + capabilities + context + memory;
+	// every populated slot's item should appear in the combined plan.
+	for _, want := range []string{"agent-principles", "team-research", "team-implement", "pattern-cloudflare", "memory-ai-memory"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("profile plan missing %q:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(out, "dry run") {
+		t.Errorf("expected dry-run footer:\n%s", out)
+	}
+	// status: stub profile must warn (on stderr).
+	if !strings.Contains(errOut, "stub") {
+		t.Errorf("expected stub warning on stderr:\n%s", errOut)
+	}
+}
+
+func TestInstallProfileAndPositionalMutuallyExclusive(t *testing.T) {
+	_, _, err := runInstall(t, "team-research", "--profile", "golang")
+	if err == nil {
+		t.Error("expected error for --profile with positional names")
+	}
+}
+
+func TestInstallNoTargetSpecified(t *testing.T) {
+	_, _, err := runInstall(t)
+	if err == nil {
+		t.Error("expected error when neither names nor --profile given")
+	}
+}
+
 func TestInstallUnknownArtifact(t *testing.T) {
 	_, _, err := runInstall(t, "does-not-exist")
 	if err == nil {
