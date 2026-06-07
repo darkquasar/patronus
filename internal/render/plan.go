@@ -36,7 +36,7 @@ func PrintPlan(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver, verbose boo
 // for that group are listed compactly (a directory + count when many files
 // share a root).
 func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
-	type key struct{ artifact, op, capability, tool, scope string }
+	type key struct{ artifact, op, capability, tool, scope, uniq string }
 	type group struct {
 		key   key
 		paths []string
@@ -48,7 +48,12 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 		if d.IsDir {
 			continue
 		}
-		k := key{d.Artifact, string(d.Action), d.Capability, d.Tool, d.Scope}
+		k := key{d.Artifact, string(d.Action), d.Capability, d.Tool, d.Scope, ""}
+		// EXEC rows are distinct commands, not files sharing a directory — keep
+		// each on its own row instead of collapsing them via summarizePaths.
+		if d.Action == diff.Exec {
+			k.uniq = d.Path
+		}
 		g, ok := groups[k]
 		if !ok {
 			g = &group{key: k}
@@ -103,7 +108,7 @@ func printVerboseDiffs(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 func printPlanFooter(w io.Writer, cs *diff.ChangeSet) {
 	c := cs.Counts()
 	parts := []string{}
-	for _, a := range []diff.Action{diff.Create, diff.Append, diff.Merge, diff.Conflict, diff.Skip} {
+	for _, a := range []diff.Action{diff.Create, diff.Append, diff.Merge, diff.Fetch, diff.Exec, diff.Conflict, diff.Skip} {
 		if c[a] > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", c[a], a))
 		}
@@ -124,8 +129,8 @@ func PrintChangeTree(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 	}
 	root := newTreeNode()
 	for _, d := range cs.Diffs {
-		if d.IsDir {
-			continue
+		if d.IsDir || d.Action == diff.Exec {
+			continue // EXEC is a command, not a file path — shown in the table only
 		}
 		root.insert(splitSegments(displayPath(r, d.Path)), d)
 	}
@@ -331,6 +336,10 @@ func annotation(a diff.Action) string {
 		return "(modified)"
 	case diff.Skip:
 		return "(skip)"
+	case diff.Fetch:
+		return "(download)"
+	case diff.Exec:
+		return "(run)"
 	case diff.Conflict:
 		return "(conflict!)"
 	default:

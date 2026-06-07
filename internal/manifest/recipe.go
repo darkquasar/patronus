@@ -24,7 +24,37 @@ type Delivery struct {
 	Primary   string                 `yaml:"primary" json:"primary"`                         // github-release | docker | cargo | ...
 	Fallbacks map[string]interface{} `yaml:"fallbacks,omitempty" json:"fallbacks,omitempty"` // values mix bool(false) and string refs
 	InstallTo string                 `yaml:"installTo,omitempty" json:"installTo,omitempty"`
-	Assets    []interface{}          `yaml:"assets,omitempty" json:"assets,omitempty"`
+	Binary    string                 `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
+	Assets    []Asset                `yaml:"assets,omitempty" json:"assets,omitempty"`
+}
+
+// Asset is one pinned per-OS/arch github-release artifact (§2c floor, §9.3
+// pinned trust model). Archive/BinaryPath are set when the asset is a
+// tar.gz/zip rather than a bare binary; the FETCH step extracts BinaryPath.
+type Asset struct {
+	OS         string `yaml:"os" json:"os"`     // GOOS: linux | darwin | windows
+	Arch       string `yaml:"arch" json:"arch"` // GOARCH: amd64 | arm64
+	URL        string `yaml:"url" json:"url"`
+	SHA256     string `yaml:"sha256" json:"sha256"`                             // hex digest; pinned
+	Archive    string `yaml:"archive,omitempty" json:"archive,omitempty"`       // "" | tar.gz | tgz | zip
+	BinaryPath string `yaml:"binaryPath,omitempty" json:"binaryPath,omitempty"` // member to extract from the archive
+}
+
+// ResolveAsset returns the asset matching the given GOOS/GOARCH (injected so the
+// caller — and tests — control the host). It errors clearly when no asset is
+// pinned for the host, which is also how the ai-memory "experimental Windows"
+// caveat (§5c) surfaces: a missing windows asset is an explicit, actionable error
+// rather than a silent failure.
+func (d *Delivery) ResolveAsset(goos, goarch string) (*Asset, error) {
+	for i := range d.Assets {
+		if d.Assets[i].OS == goos && d.Assets[i].Arch == goarch {
+			return &d.Assets[i], nil
+		}
+	}
+	if len(d.Assets) == 0 {
+		return nil, fmt.Errorf("delivery: no assets pinned (upstream not yet resolved)")
+	}
+	return nil, fmt.Errorf("delivery: no asset for %s/%s", goos, goarch)
 }
 
 // RecipeScope captures per-repo isolation markers and the global store location.

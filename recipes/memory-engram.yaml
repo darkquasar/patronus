@@ -3,28 +3,71 @@ kind: Recipe
 name: memory-engram
 capability: memory                         # fallback recipe for memory (binary-only, no Docker)
 summary: "Engram memory layer (binary-only, no Docker) — for locked-down/airgapped/Windows cases."
-upstream: github.com/edg-l/engram
+# NOTE: DESIGN.md §1/§5c names the upstream `edg-l/engram`, but that repo does not
+# exist. The real match for DESIGN's description (agent-agnostic Go binary,
+# SQLite+FTS5, MCP server + CLI, no Docker) is Gentleman-Programming/engram, pinned
+# below. This is the recipe that exercises the §2c github-release floor end to end.
+upstream: github.com/Gentleman-Programming/engram
 license: MIT
 
 delivery:
   primary: github-release                  # Model A floor — fetch+verify per-OS/arch asset + sha256
   installTo: "~/.patronus/bin/"
+  binary: engram                           # installed filename (engram[.exe])
   fallbacks:                               # opt-in only via --prefer-system-pkg, if present
     brew: false                            # not (currently) in Homebrew
     scoop: false                           # aspirational; flip to a real ref once packaged
     winget: false
     npm: false                             # not an npm package
-  # TODO: pin per-OS/arch asset URLs + sha256 checksums (recipe trust model, §9.3 = pinned).
-  assets: []
+  # Pinned to v1.16.1 (§9.3 trust model = pinned). sha256 from the release's
+  # checksums.txt; each archive holds a bare `engram` binary at its root.
+  assets:
+    - os: linux
+      arch: amd64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_linux_amd64.tar.gz"
+      sha256: "d95202f1927d142cfe0d764f4c4bc7aa2171e85b99faea6aedfcc902b73dbdf7"
+      archive: tar.gz
+      binaryPath: engram
+    - os: linux
+      arch: arm64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_linux_arm64.tar.gz"
+      sha256: "56a2cb3cb7e03dc7fc27eefbd1e2aa5ef9a0d999e16b920e392bfa3103d27827"
+      archive: tar.gz
+      binaryPath: engram
+    - os: darwin
+      arch: amd64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_darwin_amd64.tar.gz"
+      sha256: "0a3275034b5e4140e3abd5c5378a8a7abef7b0b0007c0b5c4599c09f3d1989c2"
+      archive: tar.gz
+      binaryPath: engram
+    - os: darwin
+      arch: arm64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_darwin_arm64.tar.gz"
+      sha256: "b0cbb6c545469ea6306f95292e4e8a02cb1a8f4fcb0dc5ac99be93a8c5bfc6c2"
+      archive: tar.gz
+      binaryPath: engram
+    - os: windows
+      arch: amd64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_windows_amd64.zip"
+      sha256: "f99b91b34d8265d4c3480d2b9f994b7fc4a040affa155a4b41d49c79e0f9757c"
+      archive: zip
+      binaryPath: engram.exe
+    - os: windows
+      arch: arm64
+      url: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_windows_arm64.zip"
+      sha256: "a92fba6e0bbdf5968b298ff87853eae60706b1e49e67e3c787a39a0505699259"
+      archive: zip
+      binaryPath: engram.exe
 
 scope:
   global: "~/.patronus/share/engram"
 
 # Engram is NOT self-wiring — Patronus performs the MCP-config MERGE itself.
+# `engram mcp` launches the MCP server over stdio.
 wire:
   selfWiring: false
   mcp:
     transport: stdio
     command: "{installPath}"
-    args: []
+    args: ["mcp"]
   tools: [claude, codex, opencode]

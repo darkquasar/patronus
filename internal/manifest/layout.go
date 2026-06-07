@@ -1,6 +1,10 @@
 package manifest
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
 
 // Layout is an adapter's per-kind on-disk transform rules (§5b). Each field is a
 // pointer so "the tool does not handle this kind" (absent) is distinguishable
@@ -194,4 +198,29 @@ func (l *McpLayout) ForScope(scope string) FileTarget {
 		return l.Global
 	}
 	return l.Project
+}
+
+// ResolveTarget picks the MCP config FileTarget for a scope, accounting for
+// tools (notably Claude) whose *global* MCP registration lives in the `user`
+// file (~/.claude.json) rather than a `global` block. Claude's adapter declares
+// only `project` (.mcp.json) + `user` (~/.claude.json) — no `global` — so a
+// global-scope wiring must fall back to `user`. This keeps the tool quirk in
+// adapter data + this one method instead of an `if tool=="claude"` in the engine.
+//
+//	local/project -> Project
+//	global        -> Global if usable, else User if usable, else an error.
+func (l *McpLayout) ResolveTarget(scope string) (FileTarget, error) {
+	if scope != "global" {
+		if !l.Project.OK() {
+			return FileTarget{}, fmt.Errorf("mcp: no project target")
+		}
+		return l.Project, nil
+	}
+	if l.Global.OK() {
+		return l.Global, nil
+	}
+	if l.User.OK() {
+		return l.User, nil
+	}
+	return FileTarget{}, fmt.Errorf("mcp: no global or user target")
 }
