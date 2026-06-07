@@ -1,17 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/scan"
+	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -23,6 +29,8 @@ func newInstallCmd() *cobra.Command {
 		deploy  bool
 		dryRun  bool
 		verbose bool
+		force   bool
+		yes     bool
 	)
 
 	cmd := &cobra.Command{
@@ -92,9 +100,7 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 
-			// The footer's "dry run" note reflects intent: only a successful
-			// --deploy (Phase 3) would write. Today --deploy still can't write,
-			// so this stays a dry run in practice — see the refusal below.
+			// DryRun drives the footer wording; only a real --deploy writes.
 			cs.DryRun = !deploy
 
 			if jsonOutput {
@@ -102,13 +108,11 @@ func newInstallCmd() *cobra.Command {
 			}
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
 
-			// --deploy is the explicit opt-in to write. The applier is not built
-			// yet (Phase 3), so refuse rather than risk a partial write. Without
-			// --deploy this is always a safe dry run.
-			if deploy {
-				return fmt.Errorf("--deploy: apply is not yet implemented (Phase 3); plan shown above, nothing was written")
+			// Without --deploy this is a safe dry run: plan shown, nothing written.
+			if !deploy {
+				return nil
 			}
-			return nil
+			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, home: toolpath.HomeDir(env), projectDir: wd})
 		},
 	}
 
@@ -118,6 +122,8 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually write changes to disk (default: dry run only)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "also show per-artifact unified diffs")
+	cmd.Flags().BoolVar(&force, "force", false, "with --deploy: overwrite conflicting files without prompting")
+	cmd.Flags().BoolVar(&yes, "yes", false, "with --deploy: assume non-interactive (conflicts are skipped, never overwritten)")
 	return cmd
 }
 
@@ -128,4 +134,100 @@ func adapterMap(adapters []*manifest.Adapter) map[string]*manifest.Adapter {
 		m[ad.Tool] = ad
 	}
 	return m
+}
+
+// deployOptions carries the inputs runDeploy needs beyond the change set.
+type deployOptions struct {
+	force      bool
+	yes        bool
+	home       string // for ~/.patronus/state.json
+	projectDir string // for <project>/.patronus/state.json
+}
+
+// runDeploy writes the change set to disk and records what was installed. It is
+// Terraform-style: a mid-apply failure stops, records the successful writes in
+// state, and returns the error.
+func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions) error {
+	out := cmd.OutOrStdout()
+
+	app := &install.Applier{
+		Force:    opts.force,
+		Conflict: conflictPrompt(cmd, res, opts.yes),
+	}
+	result, applyErr := app.Apply(cs)
+
+	// Record whatever succeeded BEFORE surfacing any error (state must reflect
+	// reality even on partial failure).
+	if stateErr := recordState(result.Applied, opts); stateErr != nil {
+		// A state-write failure shouldn't mask an apply failure, but report it.
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to write state: %v\n", stateErr)
+	}
+
+	fmt.Fprintf(out, "\nApplied: %d written, %d skipped\n", len(result.Applied), len(result.Skipped))
+	if applyErr != nil {
+		return applyErr
+	}
+	return nil
+}
+
+// recordState groups applied diffs by scope and upserts them into the matching
+// scope's state file (~/.patronus for global, <project>/.patronus for local).
+func recordState(applied []diff.FileDiff, opts deployOptions) error {
+	if len(applied) == 0 {
+		return nil
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	byScope := map[string][]diff.FileDiff{}
+	for _, d := range applied {
+		byScope[d.Scope] = append(byScope[d.Scope], d)
+	}
+	for scope, diffs := range byScope {
+		path := statePath(scope, opts)
+		s, err := state.Load(path)
+		if err != nil {
+			return err
+		}
+		state.Merge(s, state.FromChangeSet(diffs, now))
+		if err := state.Save(path, s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// statePath returns the state file for a scope.
+func statePath(scope string, opts deployOptions) string {
+	if scope == "global" {
+		return filepath.Join(opts.home, ".patronus", "state.json")
+	}
+	return filepath.Join(opts.projectDir, ".patronus", "state.json")
+}
+
+// conflictPrompt builds the interactive resolver for CONFLICT files. In
+// non-interactive mode (--yes) it returns nil, which the Applier treats as
+// "skip every conflict" — never a silent overwrite.
+func conflictPrompt(cmd *cobra.Command, res toolpath.Resolver, yes bool) install.ConflictFunc {
+	if yes {
+		return nil
+	}
+	in := bufio.NewReader(cmd.InOrStdin())
+	out := cmd.OutOrStdout()
+	return func(d diff.FileDiff) (install.Resolution, error) {
+		fmt.Fprintf(out, "\nCONFLICT: %s already exists and differs.\n", res.CollapseHome(d.Path))
+		fmt.Fprint(out, "  [s]kip (default) / [o]verwrite / [d]iff: ")
+		line, err := in.ReadString('\n')
+		if err != nil && line == "" {
+			return install.Skip, nil
+		}
+		switch strings.TrimSpace(strings.ToLower(line)) {
+		case "o", "overwrite":
+			return install.Overwrite, nil
+		case "d", "diff":
+			fmt.Fprintln(out, d.Unified())
+			return conflictPrompt(cmd, res, false)(d) // re-prompt after showing the diff
+		default:
+			return install.Skip, nil
+		}
+	}
 }
