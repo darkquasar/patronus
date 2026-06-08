@@ -1,63 +1,79 @@
-# golangci-lint configuration — a curated, debuggability-focused linter set.
+# golangci-lint v2 configuration — a curated, debuggability-focused linter set.
 #
 # Philosophy: catch the bugs that hide (unchecked errors, lost error context,
 # leaked resources, nil ambiguity) and keep the code readable, WITHOUT the
-# dogmatic style linters (wsl, funlen, gocyclo, nlreturn, exhaustruct) that
-# generate churn and fight Go's idioms. The goal is code a human can debug.
+# dogmatic style linters (wsl, funlen, gocyclo, nlreturn) that fight Go's idioms.
+# The goal is code a human can debug. Requires golangci-lint v2 (built with Go
+# 1.25+); the CI action pins v2 accordingly.
 #
 # Run locally:  golangci-lint run ./...
-# (Installs via: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
-
-run:
-  timeout: 5m
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    # --- correctness / bug-catchers ---
-    - govet # stdlib vet checks
-    - staticcheck # the gold-standard analyzer (already used)
-    - errcheck # every returned error is handled — #1 silent-failure source
-    - errorlint # %w wrapping + errors.Is/As, preserves the error chain
-    - bodyclose # HTTP response bodies are closed (matters in the fetch path)
-    - noctx # HTTP requests carry a context
-    - nilerr # don't `return nil` after checking err != nil
-    - nilnil # don't `return nil, nil` ambiguously
-    - rowserrcheck # sql rows .Err() checked (future-proofing)
-    - ineffassign # assignments that are never used
-    - unconvert # needless type conversions
-    - unparam # unused function parameters
-    - unused # unused code
-
-    # --- readability / human-debuggability ---
-    - revive # golint successor: doc comments, naming, early returns
-    - misspell # spelling in comments/strings
-    - godot # doc comments end in a period
-    - whitespace # leading/trailing whitespace
-    - gofmt # canonical formatting
-    - goimports # import grouping/order
-
-linters-settings:
-  errcheck:
-    # Don't require checking errors on these fire-and-forget cleanup calls.
-    exclude-functions:
-      - (io.Closer).Close
-      - (*os.File).Close
-  revive:
+    - bodyclose
+    - errcheck
+    - errorlint
+    - godot
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - nilnil
+    - noctx
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    staticcheck:
+      # Keep the bug-catching SA* checks; drop the QF* "quickfix" family — they are
+      # opinionated rewrites (De Morgan's law, etc.), not correctness issues, and
+      # churning readable code for them works against debuggability.
+      checks:
+        - all
+        - -QF1001
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+    revive:
+      rules:
+        - name: exported
+        - name: error-return
+        - name: error-strings
+        - name: context-as-argument
+        - name: early-return
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: exported # exported symbols carry doc comments
-      - name: error-return
-      - name: error-strings # error strings are lowercase, no trailing punctuation
-      - name: context-as-argument
-      - name: early-return
-
+      - linters:
+          - bodyclose
+          - errcheck
+          - unparam
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  # Tests may be looser: they intentionally ignore some errors and use long bodies.
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - bodyclose
-        - unparam
   max-issues-per-linter: 0
   max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

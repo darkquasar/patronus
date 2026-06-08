@@ -1,0 +1,63 @@
+# golangci-lint configuration — a curated, debuggability-focused linter set.
+#
+# Philosophy: catch the bugs that hide (unchecked errors, lost error context,
+# leaked resources, nil ambiguity) and keep the code readable, WITHOUT the
+# dogmatic style linters (wsl, funlen, gocyclo, nlreturn, exhaustruct) that
+# generate churn and fight Go's idioms. The goal is code a human can debug.
+#
+# Run locally:  golangci-lint run ./...
+# (Installs via: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    # --- correctness / bug-catchers ---
+    - govet # stdlib vet checks
+    - staticcheck # the gold-standard analyzer (already used)
+    - errcheck # every returned error is handled — #1 silent-failure source
+    - errorlint # %w wrapping + errors.Is/As, preserves the error chain
+    - bodyclose # HTTP response bodies are closed (matters in the fetch path)
+    - noctx # HTTP requests carry a context
+    - nilerr # don't `return nil` after checking err != nil
+    - nilnil # don't `return nil, nil` ambiguously
+    - rowserrcheck # sql rows .Err() checked (future-proofing)
+    - ineffassign # assignments that are never used
+    - unconvert # needless type conversions
+    - unparam # unused function parameters
+    - unused # unused code
+
+    # --- readability / human-debuggability ---
+    - revive # golint successor: doc comments, naming, early returns
+    - misspell # spelling in comments/strings
+    - godot # doc comments end in a period
+    - whitespace # leading/trailing whitespace
+    - gofmt # canonical formatting
+    - goimports # import grouping/order
+
+linters-settings:
+  errcheck:
+    # Don't require checking errors on these fire-and-forget cleanup calls.
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+  revive:
+    rules:
+      - name: exported # exported symbols carry doc comments
+      - name: error-return
+      - name: error-strings # error strings are lowercase, no trailing punctuation
+      - name: context-as-argument
+      - name: early-return
+
+issues:
+  # Tests may be looser: they intentionally ignore some errors and use long bodies.
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - bodyclose
+        - unparam
+  max-issues-per-linter: 0
+  max-same-issues: 0

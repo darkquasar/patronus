@@ -414,7 +414,9 @@ type execRunner struct {
 }
 
 func (r execRunner) Run(argv []string) error {
-	c := exec.Command(argv[0], argv[1:]...)
+	// Bind the command to the cobra context so a cancelled run (Ctrl-C, timeout)
+	// also tears down the self-wiring post-install process.
+	c := exec.CommandContext(r.cmd.Context(), argv[0], argv[1:]...)
 	c.Stdout = r.cmd.OutOrStdout()
 	c.Stderr = r.cmd.ErrOrStderr()
 	return c.Run()
