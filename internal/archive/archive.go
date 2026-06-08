@@ -13,10 +13,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"path"
+	"sort"
 	"strings"
+	"time"
 )
 
 // Supported format identifiers.
@@ -86,6 +89,51 @@ func ExtractFile(r io.Reader, format, memberPath string) ([]byte, error) {
 	return nil, fmt.Errorf("archive: member %q not found", memberPath)
 }
 
+// CreateTarGz packs files (member path → bytes) into a gzip-compressed tar. It
+// is the inverse of Extract and the surface `patronus build` uses to produce a
+// portable-source tarball per artifact. Members are emitted in sorted path order
+// with a zeroed mod-time, so identical input yields byte-identical output — the
+// determinism the published index.json's per-tarball sha256 depends on.
+func CreateTarGz(files map[string][]byte) ([]byte, error) {
+	// Re-key by cleaned path so output member names are normalized and lookups
+	// below are unambiguous regardless of how the caller spelled them.
+	cleaned := make(map[string][]byte, len(files))
+	names := make([]string, 0, len(files))
+	for name, data := range files {
+		cn := path.Clean(name)
+		cleaned[cn] = data
+		names = append(names, cn)
+	}
+	sort.Strings(names)
+
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for _, name := range names {
+		data := cleaned[name]
+		hdr := &tar.Header{
+			Name:     name,
+			Mode:     0o644,
+			Size:     int64(len(data)),
+			Typeflag: tar.TypeReg,
+			ModTime:  time.Time{}, // zero time → deterministic output
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			return nil, fmt.Errorf("archive: tar header %q: %w", name, err)
+		}
+		if _, err := tw.Write(data); err != nil {
+			return nil, fmt.Errorf("archive: tar write %q: %w", name, err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		return nil, fmt.Errorf("archive: tar close: %w", err)
+	}
+	if err := gz.Close(); err != nil {
+		return nil, fmt.Errorf("archive: gzip close: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 func extractTarGz(r io.Reader) (map[string][]byte, error) {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
@@ -97,7 +145,7 @@ func extractTarGz(r io.Reader) (map[string][]byte, error) {
 	tr := tar.NewReader(gz)
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

@@ -57,7 +57,7 @@ func TestLockBuildsFromRealCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l, err := lock.FromResolved(cat, res, "2026-06-07T00:00:00Z")
+	l, err := lock.FromResolved(cat, res, "2026-06-07T00:00:00Z", "v0.6.0")
 	if err != nil {
 		t.Fatal(err)
 	}

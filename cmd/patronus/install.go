@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/profile"
@@ -38,6 +40,7 @@ func newInstallCmd() *cobra.Command {
 		recipeSel       string
 		profileSel      string
 		preferSystemPkg bool
+		regSel          registrySel
 	)
 
 	cmd := &cobra.Command{
@@ -90,23 +93,46 @@ func newInstallCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			root, err := registry.DiscoverRoot(wd)
+			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
+
+			// Reality-follows-lock: when installing a profile that has a committed
+			// patronus.lock, and the user did NOT explicitly pin a registry version,
+			// pin to the registry tag the lock recorded — so a teammate reproduces
+			// against the same registry snapshot the lock was generated from.
+			if profileSel != "" && regSel.version == "" {
+				if tag := lockRegistryVersion(wd, profileSel); tag != "" {
+					regSel.version = tag
+					fmt.Fprintf(cmd.ErrOrStderr(), "using registry %s from patronus.lock\n", tag)
+				}
+			}
+
+			home := toolpath.HomeDir(os.LookupEnv)
+			reg, root, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
 			if err != nil {
 				return err
 			}
 
+			// adapters/ comes from the checkout when local; loadAdapters falls back to
+			// the embedded adapters when root is "" (installed-binary / remote case).
 			adapters, err := loadAdapters(filepath.Join(root, "adapters"))
 			if err != nil {
 				return err
 			}
 
-			reg := registry.NewLocalRegistry(root)
+			// Load the catalog. When the user is installing ONLY out-of-tree sources
+			// (git:/https:/file:) and no profile, the registry is not actually needed,
+			// so a fetch failure (e.g. offline, no cache) degrades to an empty catalog
+			// rather than blocking a self-contained sourced install.
 			cat, err := reg.Catalog(cmd.Context())
 			if err != nil {
-				return err
+				// Only tolerate a registry failure when every name is a self-contained
+				// sourced reference (git:/https:/file:) and there's no profile to resolve.
+				if profileSel != "" || !allSourced(names) {
+					return err
+				}
+				warnf("registry unavailable (%v); proceeding with sourced references only", err)
+				cat = &registry.Catalog{}
 			}
-
-			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
 			// --profile expands to the profile's resolved item names, which then flow
 			// through the SAME artifact-vs-recipe dispatch a plain install uses.
@@ -124,12 +150,17 @@ func newInstallCmd() *cobra.Command {
 				}
 			}
 
-			// A positional name may be a sourced reference (file:, registry, ...).
-			// Resolve any file: entries into the catalog so they dispatch like an
-			// in-tree item; bare names are left untouched. (git:/https: parse but are
-			// rejected at resolution until Phase 6.)
-			names, err = mergeSourcedNames(cat, names)
+			// A positional name may be a sourced reference (file:, git:, https:, ...).
+			// Resolve any sourced entries into the catalog so they dispatch like an
+			// in-tree item; bare names are left untouched.
+			names, err = mergeSourcedNames(cmd.Context(), cat, names, home)
 			if err != nil {
+				return err
+			}
+
+			// For a remote registry, fetch+unpack the selected artifacts' source so
+			// the local adapter path can transform them (no-op for local/recipes).
+			if err := materializeSelected(cmd.Context(), reg, cat, names); err != nil {
 				return err
 			}
 
@@ -182,6 +213,7 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&yes, "yes", false, "with --deploy: assume non-interactive (conflicts are skipped, never overwritten)")
 	cmd.Flags().StringVar(&recipeSel, "recipe", "", "pick a specific recipe for a capability (e.g. memory-engram)")
 	cmd.Flags().StringVar(&profileSel, "profile", "", "install a curated bundle across layers (§5d)")
+	addRegistryFlags(cmd, &regSel)
 	cmd.Flags().BoolVar(&preferSystemPkg, "prefer-system-pkg", false, "use brew/scoop/winget if present (Phase 8; currently falls through to github-release)")
 	return cmd
 }
@@ -265,12 +297,15 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 }
 
 // mergeSourcedNames resolves each name as a sourced reference. Bare (registry)
-// names pass through unchanged. A file: reference is loaded into the catalog so it
-// dispatches exactly like an in-tree item, and its dispatch name becomes the
-// resolved manifest's name. git:/https: references parse but are rejected here
-// until Phase 6. Names already present in the catalog (the common case) take the
-// registry path with zero overhead.
-func mergeSourcedNames(cat *registry.Catalog, names []string) ([]string, error) {
+// names pass through unchanged. A file:/git:/https: reference is fetched+loaded
+// into the catalog so it dispatches exactly like an in-tree item, and its dispatch
+// name becomes the resolved manifest's name. Names already present in the catalog
+// (the common case) take the registry path with zero overhead.
+func mergeSourcedNames(ctx context.Context, cat *registry.Catalog, names []string, home string) ([]string, error) {
+	rs := &source.Resolver{
+		Fetcher:  fetcherForCommands,
+		CacheDir: filepath.Join(home, ".patronus", "cache", "sources"),
+	}
 	out := make([]string, 0, len(names))
 	for _, n := range names {
 		ref, err := source.Parse(n)
@@ -281,7 +316,7 @@ func mergeSourcedNames(cat *registry.Catalog, names []string) ([]string, error) 
 			out = append(out, ref.Name)
 			continue
 		}
-		resolved, err := source.Resolve(ref)
+		resolved, err := rs.Resolve(ctx, ref)
 		if err != nil {
 			return nil, err
 		}
@@ -297,6 +332,36 @@ func mergeSourcedNames(cat *registry.Catalog, names []string) ([]string, error) 
 		}
 	}
 	return out, nil
+}
+
+// allSourced reports whether every name is an out-of-tree sourced reference (a
+// scheme like git:/https:/file:), so a plain install of them needs no registry.
+func allSourced(names []string) bool {
+	if len(names) == 0 {
+		return false
+	}
+	for _, n := range names {
+		ref, err := source.Parse(n)
+		if err != nil || ref.Scheme == source.Registry {
+			return false
+		}
+	}
+	return true
+}
+
+// lockRegistryVersion reads <wd>/patronus.lock and returns the registry tag it
+// recorded, but only when the lock was generated for the same profile (so an
+// unrelated lock in the cwd never silently pins the install). Returns "" when
+// there is no lock, it doesn't parse, or it targets a different profile.
+func lockRegistryVersion(wd, profileName string) string {
+	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+	if err != nil {
+		return ""
+	}
+	if l.Profile != "" && l.Profile != profileName {
+		return ""
+	}
+	return l.RegistryVersion
 }
 
 // contains reports whether ss includes s.
@@ -349,7 +414,9 @@ type execRunner struct {
 }
 
 func (r execRunner) Run(argv []string) error {
-	c := exec.Command(argv[0], argv[1:]...)
+	// Bind the command to the cobra context so a cancelled run (Ctrl-C, timeout)
+	// also tears down the self-wiring post-install process.
+	c := exec.CommandContext(r.cmd.Context(), argv[0], argv[1:]...)
 	c.Stdout = r.cmd.OutOrStdout()
 	c.Stderr = r.cmd.ErrOrStderr()
 	return c.Run()

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/adapter/builtin"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
@@ -44,10 +45,17 @@ func newScanCmd() *cobra.Command {
 	}
 }
 
+// loadAdapters reads the adapter definitions from a checkout's adapters/ dir. When
+// that dir is absent or empty (the installed-binary case, which has no checkout),
+// it falls back to the adapters embedded in the binary — kept in lockstep with the
+// adapter engine via internal/adapter/builtin.
 func loadAdapters(dir string) ([]*manifest.Adapter, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
 	if err != nil {
 		return nil, err
+	}
+	if len(matches) == 0 {
+		return builtin.Adapters()
 	}
 	var out []*manifest.Adapter
 	for _, path := range matches {

@@ -10,11 +10,13 @@ import (
 
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/profile"
-	"github.com/darkquasar/patronus/internal/registry"
 )
 
 func newLockCmd() *cobra.Command {
-	var profileSel string
+	var (
+		profileSel string
+		regSel     registrySel
+	)
 
 	cmd := &cobra.Command{
 		Use:   "lock --profile <name>",
@@ -37,11 +39,15 @@ func newLockCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			root, err := registry.DiscoverRoot(wd)
+			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
+
+			// Resolve against the same registry install would use (local checkout in
+			// dev, or the remote registry pinned to --registry-version), and record
+			// that registry tag in the lock so a teammate reproduces against it.
+			reg, _, err := resolveRegistry(cmd.Context(), wd, regSel, homeDir(), warnf)
 			if err != nil {
 				return err
 			}
-			reg := registry.NewLocalRegistry(root)
 			cat, err := reg.Catalog(cmd.Context())
 			if err != nil {
 				return err
@@ -52,11 +58,11 @@ func newLockCmd() *cobra.Command {
 				return err
 			}
 			for _, w := range res.Warnings {
-				fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
+				warnf("%s", w)
 			}
 
 			now := time.Now().UTC().Format(time.RFC3339)
-			l, err := lock.FromResolved(cat, res, now)
+			l, err := lock.FromResolved(cat, res, now, registryVersionOf(reg))
 			if err != nil {
 				return err
 			}
@@ -73,5 +79,6 @@ func newLockCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&profileSel, "profile", "", "profile to lock (required)")
+	addRegistryFlags(cmd, &regSel)
 	return cmd
 }

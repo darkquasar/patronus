@@ -1,0 +1,50 @@
+apiVersion: patronus/v1
+kind: Adapter
+tool: codex
+
+# Honors CODEX_HOME for the global base (default ~/.codex). The scanner
+# resolves env overrides; markers here use the canonical default paths.
+detect:
+  global: ["~/.codex/", "~/.codex/config.toml"]
+  project: [".codex/", "AGENTS.md"]   # AGENTS.md is weak/shared — see scanner notes
+
+layout:
+  Skill:
+    global: "~/.codex/skills/{name}/SKILL.md"
+    project: ".agents/skills/{name}/SKILL.md"
+    nameSource: dir
+    frontmatter: passthrough
+    required: [name, description]
+
+  Agent:
+    global: "~/.codex/agents/{name}.toml"
+    project: ".codex/agents/{name}.toml"
+    format: toml
+    required: [name, description, developer_instructions]
+    # The portable agent body becomes developer_instructions (see artifact overrides).
+    bodyIs: developer_instructions
+
+  Command:
+    global: "~/.codex/prompts/{name}.md"   # deprecated upstream; supported for parity
+    project: null
+
+  # Codex TOML has NO `type` field — stdio vs http is distinguished by WHICH KEYS
+  # are present (§9.9 fix). Each transport declares its own key template.
+  Mcp:
+    global: { file: "~/.codex/config.toml", format: toml, path: "mcp_servers.{name}" }
+    project: { file: ".codex/config.toml", format: toml, path: "mcp_servers.{name}" }
+    transports:
+      stdio:
+        keys: { command: "{command}", args: "{args}", env: "{env}" }
+      http:
+        keys: { url: "{url}", bearer_token_env_var: "{bearerTokenEnvVar}", http_headers: "{headers}" }
+
+  Hook:
+    # TODO: Codex hook/event model — confirm settings surface before authoring hook artifacts.
+    global: null
+    project: null
+
+  Instruction:
+    # Codex concatenates AGENTS.md root->leaf natively; .override.md wins at global.
+    global: { file: "~/.codex/AGENTS.md", action: appendSection }
+    project: { file: "AGENTS.md", action: appendSection }

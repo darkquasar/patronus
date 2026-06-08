@@ -1,0 +1,79 @@
+# golangci-lint v2 configuration — a curated, debuggability-focused linter set.
+#
+# Philosophy: catch the bugs that hide (unchecked errors, lost error context,
+# leaked resources, nil ambiguity) and keep the code readable, WITHOUT the
+# dogmatic style linters (wsl, funlen, gocyclo, nlreturn) that fight Go's idioms.
+# The goal is code a human can debug. Requires golangci-lint v2 (built with Go
+# 1.25+); the CI action pins v2 accordingly.
+#
+# Run locally:  golangci-lint run ./...
+version: "2"
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - errcheck
+    - errorlint
+    - godot
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - nilnil
+    - noctx
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    staticcheck:
+      # Keep the bug-catching SA* checks; drop the QF* "quickfix" family — they are
+      # opinionated rewrites (De Morgan's law, etc.), not correctness issues, and
+      # churning readable code for them works against debuggability.
+      checks:
+        - all
+        - -QF1001
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+    revive:
+      rules:
+        - name: exported
+        - name: error-return
+        - name: error-strings
+        - name: context-as-argument
+        - name: early-return
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - errcheck
+          - unparam
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

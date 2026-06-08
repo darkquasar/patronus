@@ -86,7 +86,7 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 			{Name: "team-research", Slot: "capabilities", Kind: profile.KindArtifact, Source: "registry"},
 		},
 	}
-	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z")
+	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z", "")
 	if err != nil {
 		t.Fatal(err)
 	}

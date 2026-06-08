@@ -10,6 +10,7 @@ func newRootCmd() *cobra.Command {
 		Use:           "patronus",
 		Short:         "Meta-scaffolder for AI coding environments",
 		Long:          "Patronus installs artifacts, recipes, and profiles onto Claude Code, Codex, and OpenCode — at the global or local-repo scope.",
+		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: false,
 	}
@@ -19,6 +20,8 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newScanCmd())
 	root.AddCommand(newInstallCmd())
 	root.AddCommand(newLockCmd())
+	root.AddCommand(newBuildCmd())
+	root.AddCommand(newUpdateCmd())
 	addStubCommands(root)
 	return root
 }

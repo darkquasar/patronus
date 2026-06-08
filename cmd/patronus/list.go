@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -16,22 +16,24 @@ func newListCmd() *cobra.Command {
 		recipes   bool
 		profiles  bool
 		layers    bool
+		regSel    registrySel
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List the catalog of artifacts, recipes, and profiles",
-		Long:  "Reads the local registry (on-disk manifests in the current Patronus repo) and lists installable items. With no type flag, all three sections are shown.",
+		Long:  "Lists installable items from the registry — the local checkout when run inside a Patronus repo, otherwise the cached remote registry (a cold cache bootstrap-fetches once). With no type flag, all three sections are shown.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
 			}
-			root, err := registry.DiscoverRoot(wd)
+			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
+			reg, _, err := resolveRegistry(cmd.Context(), wd, regSel, homeDir(), warnf)
 			if err != nil {
 				return err
 			}
-			cat, err := registry.NewLocalRegistry(root).Catalog(context.Background())
+			cat, err := reg.Catalog(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -53,6 +55,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&recipes, "recipes", false, "show recipes")
 	cmd.Flags().BoolVar(&profiles, "profiles", false, "show profiles")
 	cmd.Flags().BoolVar(&layers, "layers", false, "expand profile layers (with --profiles)")
+	addRegistryFlags(cmd, &regSel)
 	return cmd
 }
 

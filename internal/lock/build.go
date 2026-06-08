@@ -18,13 +18,15 @@ import (
 
 // FromResolved builds a deterministic Lock from a resolved profile. now is the
 // caller's RFC3339 timestamp (the only non-deterministic input; the package takes
-// no clock). Entries are sorted by name so re-locking an unchanged profile yields
-// byte-identical output modulo the timestamp.
-func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock, error) {
+// no clock). registryVersion is the registry release tag the catalog came from
+// ("" for a local checkout). Entries are sorted by name so re-locking an unchanged
+// profile yields byte-identical output modulo the timestamp.
+func FromResolved(cat *registry.Catalog, r *profile.Resolved, now, registryVersion string) (*Lock, error) {
 	l := &Lock{
-		Version:   Version,
-		Profile:   r.Profile.Name,
-		Generated: now,
+		Version:         Version,
+		Profile:         r.Profile.Name,
+		RegistryVersion: registryVersion,
+		Generated:       now,
 	}
 	for _, it := range r.Items {
 		e := Entry{

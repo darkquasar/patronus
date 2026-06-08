@@ -1,0 +1,30 @@
+{
+  "//": "Reference Scoop manifest for Patronus — a SHAPE reference, not a live bucket. Publishing means placing this in a scoop bucket repo with per-release version/url/hash filled in; autoupdate keeps it current.",
+  "version": "0.0.0",
+  "description": "Meta-scaffolder for AI coding environments (Claude Code, Codex, OpenCode)",
+  "homepage": "https://github.com/darkquasar/patronus",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/darkquasar/patronus/releases/download/v0.0.0/patronus-windows-amd64.exe",
+      "hash": "REPLACE_WITH_WINDOWS_AMD64_SHA256",
+      "bin": [["patronus-windows-amd64.exe", "patronus"]]
+    },
+    "arm64": {
+      "url": "https://github.com/darkquasar/patronus/releases/download/v0.0.0/patronus-windows-arm64.exe",
+      "hash": "REPLACE_WITH_WINDOWS_ARM64_SHA256",
+      "bin": [["patronus-windows-arm64.exe", "patronus"]]
+    }
+  },
+  "checkver": "github",
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/darkquasar/patronus/releases/download/v$version/patronus-windows-amd64.exe"
+      },
+      "arm64": {
+        "url": "https://github.com/darkquasar/patronus/releases/download/v$version/patronus-windows-arm64.exe"
+      }
+    }
+  }
+}
