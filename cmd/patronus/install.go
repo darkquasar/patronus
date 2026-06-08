@@ -15,10 +15,12 @@ import (
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
+	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/scan"
+	"github.com/darkquasar/patronus/internal/source"
 	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
@@ -34,6 +36,7 @@ func newInstallCmd() *cobra.Command {
 		force           bool
 		yes             bool
 		recipeSel       string
+		profileSel      string
 		preferSystemPkg bool
 	)
 
@@ -48,13 +51,24 @@ func newInstallCmd() *cobra.Command {
 			"(MERGE), and/or run a self-wiring tool's post-install commands (EXEC).\n\n" +
 			"SAFE BY DEFAULT: install is a dry run unless you pass --deploy. The absence of --deploy\n" +
 			"(or an explicit --dry-run) means nothing is written, fetched, or executed.",
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if global && local {
 				return fmt.Errorf("--global and --local are mutually exclusive")
 			}
 			if deploy && dryRun {
 				return fmt.Errorf("--deploy and --dry-run are mutually exclusive")
+			}
+			// Exactly one of {positional names, --profile} selects what to install.
+			if profileSel != "" {
+				if len(args) > 0 {
+					return fmt.Errorf("--profile and positional names are mutually exclusive")
+				}
+				if recipeSel != "" {
+					return fmt.Errorf("--profile and --recipe are mutually exclusive")
+				}
+			} else if len(args) == 0 && recipeSel == "" {
+				return fmt.Errorf("specify one or more artifact/recipe names, or --profile <name>")
 			}
 			scope := ""
 			switch {
@@ -66,7 +80,7 @@ func newInstallCmd() *cobra.Command {
 
 			// --recipe explicitly selects a recipe by name. In Phase 4 the
 			// positional name already is the selection; --recipe is accepted for
-			// forward-compat (profiles, Phase 5) and folded into the name list.
+			// forward-compat and folded into the name list.
 			names := args
 			if recipeSel != "" && !contains(names, recipeSel) {
 				names = append(names, recipeSel)
@@ -92,6 +106,33 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 
+			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
+
+			// --profile expands to the profile's resolved item names, which then flow
+			// through the SAME artifact-vs-recipe dispatch a plain install uses.
+			if profileSel != "" {
+				res, err := profile.Resolve(cat, profileSel)
+				if err != nil {
+					return err
+				}
+				for _, w := range res.Warnings {
+					warnf("%s", w)
+				}
+				names = res.Names()
+				if len(names) == 0 {
+					return fmt.Errorf("profile %q resolved to no installable items", profileSel)
+				}
+			}
+
+			// A positional name may be a sourced reference (file:, registry, ...).
+			// Resolve any file: entries into the catalog so they dispatch like an
+			// in-tree item; bare names are left untouched. (git:/https: parse but are
+			// rejected at resolution until Phase 6.)
+			names, err = mergeSourcedNames(cat, names)
+			if err != nil {
+				return err
+			}
+
 			inv, err := scan.Scan(scan.Options{ProjectDir: wd, Adapters: adapters})
 			if err != nil {
 				return err
@@ -109,7 +150,7 @@ func newInstallCmd() *cobra.Command {
 				tool:            tool,
 				scope:           scope,
 				preferSystemPkg: preferSystemPkg,
-				warnf:           func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) },
+				warnf:           warnf,
 			})
 			if err != nil {
 				return err
@@ -140,6 +181,7 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&force, "force", false, "with --deploy: overwrite conflicting files without prompting")
 	cmd.Flags().BoolVar(&yes, "yes", false, "with --deploy: assume non-interactive (conflicts are skipped, never overwritten)")
 	cmd.Flags().StringVar(&recipeSel, "recipe", "", "pick a specific recipe for a capability (e.g. memory-engram)")
+	cmd.Flags().StringVar(&profileSel, "profile", "", "install a curated bundle across layers (§5d)")
 	cmd.Flags().BoolVar(&preferSystemPkg, "prefer-system-pkg", false, "use brew/scoop/winget if present (Phase 8; currently falls through to github-release)")
 	return cmd
 }
@@ -220,6 +262,41 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	}
 
 	return plan.Finalize(raw, read)
+}
+
+// mergeSourcedNames resolves each name as a sourced reference. Bare (registry)
+// names pass through unchanged. A file: reference is loaded into the catalog so it
+// dispatches exactly like an in-tree item, and its dispatch name becomes the
+// resolved manifest's name. git:/https: references parse but are rejected here
+// until Phase 6. Names already present in the catalog (the common case) take the
+// registry path with zero overhead.
+func mergeSourcedNames(cat *registry.Catalog, names []string) ([]string, error) {
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		ref, err := source.Parse(n)
+		if err != nil {
+			return nil, err
+		}
+		if ref.Scheme == source.Registry {
+			out = append(out, ref.Name)
+			continue
+		}
+		resolved, err := source.Resolve(ref)
+		if err != nil {
+			return nil, err
+		}
+		switch {
+		case resolved.Artifact != nil:
+			cat.Artifacts = append(cat.Artifacts, *resolved.Artifact)
+			out = append(out, resolved.Artifact.Manifest.Name)
+		case resolved.Recipe != nil:
+			cat.Recipes = append(cat.Recipes, *resolved.Recipe)
+			out = append(out, resolved.Recipe.Manifest.Name)
+		default:
+			return nil, fmt.Errorf("source %q resolved to nothing", n)
+		}
+	}
+	return out, nil
 }
 
 // contains reports whether ss includes s.

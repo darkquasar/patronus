@@ -10,3 +10,6 @@
 # Go build artifacts
 /patronus
 /dist/
+
+# Local planning doc — kept out of version control
+DESIGN.md

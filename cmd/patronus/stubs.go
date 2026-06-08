@@ -17,7 +17,6 @@ var stubs = []stub{
 	{"update", "Refresh installed items", "8"},
 	{"remove", "Cleanly uninstall tracked items", "8"},
 	{"init", "Scaffold a fresh project/global config", "3"},
-	{"lock", "Write/refresh patronus.lock (pin versions + checksums)", "5"},
 }
 
 func addStubCommands(root *cobra.Command) {
