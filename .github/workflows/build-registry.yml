@@ -1,0 +1,46 @@
+# build-registry — produces the publishable registry (index.json + portable-source
+# tarballs) from the in-repo artifacts/recipes/profiles.
+#
+# On a main push that touches catalog content it builds and uploads the registry as
+# a workflow artifact (for inspection) but does NOT publish — there is no Release
+# without a tag, and the registry's stable-URL model is one index.json per Release.
+# On a tag it also attaches the registry to the GitHub Release.
+name: build-registry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/**"
+      - "recipes/**"
+      - "profiles/**"
+      - "cmd/patronus/build.go"
+      - "internal/registry/**"
+    tags: ["v*"]
+
+permissions:
+  contents: write # needed to attach assets to a Release on tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Build registry
+        run: go run ./cmd/patronus build --out registry/ --registry-version "${GITHUB_REF_NAME}"
+      - name: Upload registry artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry
+          path: registry/
+      - name: Attach registry to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            registry/index.json
+            registry/index.json.sha256
+            registry/*.tar.gz

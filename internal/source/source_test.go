@@ -94,17 +94,19 @@ func TestResolveRegistryNoop(t *testing.T) {
 	}
 }
 
-func TestResolveGitRejected(t *testing.T) {
+func TestFreeResolveGitNeedsResolver(t *testing.T) {
+	// The back-compat free Resolve handles only registry/file; git: must go
+	// through a Resolver with a fetcher.
 	r, _ := Parse("git:github.com/me/repo@v1")
-	if _, err := Resolve(r); err == nil || !strings.Contains(err.Error(), "Phase 6") {
-		t.Fatalf("want Phase 6 rejection, got %v", err)
+	if _, err := Resolve(r); err == nil || !strings.Contains(err.Error(), "fetcher") {
+		t.Fatalf("want needs-fetcher error, got %v", err)
 	}
 }
 
-func TestResolveHTTPSRejected(t *testing.T) {
+func TestFreeResolveHTTPSNeedsResolver(t *testing.T) {
 	r, _ := Parse("https://example.com/x.yaml")
-	if _, err := Resolve(r); err == nil || !strings.Contains(err.Error(), "Phase 6") {
-		t.Fatalf("want Phase 6 rejection, got %v", err)
+	if _, err := Resolve(r); err == nil || !strings.Contains(err.Error(), "fetcher") {
+		t.Fatalf("want needs-fetcher error, got %v", err)
 	}
 }
 

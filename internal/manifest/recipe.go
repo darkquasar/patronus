@@ -85,17 +85,37 @@ func LoadRecipe(path string) (*Recipe, error) {
 	if err := decodeFile(path, &r); err != nil {
 		return nil, err
 	}
-	if r.APIVersion != APIVersion {
-		return nil, fmt.Errorf("%s: unexpected apiVersion %q (want %q)", path, r.APIVersion, APIVersion)
-	}
-	if r.Kind != KindRecipe {
-		return nil, fmt.Errorf("%s: expected kind Recipe, got %q", path, r.Kind)
-	}
-	if r.Name == "" {
-		return nil, fmt.Errorf("%s: missing name", path)
-	}
-	if r.Capability == "" {
-		return nil, fmt.Errorf("%s: missing capability", path)
+	if err := validateRecipe(&r); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return &r, nil
+}
+
+// DecodeRecipe parses+validates a recipe manifest from raw YAML bytes — used for
+// an https: sourced manifest that never lands on a local path.
+func DecodeRecipe(data []byte) (*Recipe, error) {
+	var r Recipe
+	if err := decodeBytes(data, &r); err != nil {
+		return nil, err
+	}
+	if err := validateRecipe(&r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func validateRecipe(r *Recipe) error {
+	if r.APIVersion != APIVersion {
+		return fmt.Errorf("unexpected apiVersion %q (want %q)", r.APIVersion, APIVersion)
+	}
+	if r.Kind != KindRecipe {
+		return fmt.Errorf("expected kind Recipe, got %q", r.Kind)
+	}
+	if r.Name == "" {
+		return fmt.Errorf("missing name")
+	}
+	if r.Capability == "" {
+		return fmt.Errorf("missing capability")
+	}
+	return nil
 }

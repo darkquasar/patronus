@@ -51,7 +51,7 @@ type Item struct {
 
 // FileState records one written file. Checksum is the sha256 of the bytes
 // Patronus wrote (not the user's surrounding prose), which lets a later command
-// tell "untouched since we wrote it" from "user-edited."
+// tell whether a file is untouched-since-write or user-edited.
 type FileState struct {
 	Path     string `json:"path"`
 	Action   string `json:"action"` // CREATE | APPEND | MERGE

@@ -94,8 +94,15 @@ func decodeFile(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(data, v); err != nil {
+	if err := decodeBytes(data, v); err != nil {
 		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	return nil
+}
+
+// decodeBytes YAML-decodes data into v with the same lenient rules as decodeFile.
+// It is the seam embedded adapters and out-of-tree (https:) manifests parse
+// through, where the bytes don't come from a local path.
+func decodeBytes(data []byte, v any) error {
+	return yaml.Unmarshal(data, v)
 }

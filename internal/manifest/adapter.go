@@ -30,3 +30,16 @@ func LoadAdapter(path string) (*Adapter, error) {
 	}
 	return &a, nil
 }
+
+// DecodeAdapter validates an adapter from raw YAML bytes — used when the adapter
+// is embedded in the binary (the no-checkout case) rather than read from disk.
+func DecodeAdapter(data []byte) (*Adapter, error) {
+	var a Adapter
+	if err := decodeBytes(data, &a); err != nil {
+		return nil, err
+	}
+	if a.Tool == "" {
+		return nil, fmt.Errorf("adapter: missing tool")
+	}
+	return &a, nil
+}

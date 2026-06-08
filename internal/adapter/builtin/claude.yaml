@@ -1,0 +1,54 @@
+apiVersion: patronus/v1
+kind: Adapter
+tool: claude
+
+# How the scanner positively IDs Claude Code at each scope.
+detect:
+  global: ["~/.claude/", "~/.claude.json"]
+  project: [".claude/", "CLAUDE.md", ".mcp.json"]
+
+# Per-kind on-disk layout. Phase 1 consumes only `tool` + `detect`;
+# the layout block is authored now for the Phase 2 adapter engine.
+layout:
+  Skill:
+    global: "~/.claude/skills/{name}/SKILL.md"
+    project: ".claude/skills/{name}/SKILL.md"
+    nameSource: dir            # command name comes from the directory name
+    frontmatter: passthrough   # SKILL.md is Claude-native — no reshaping
+
+  Agent:
+    global: "~/.claude/agents/{name}.md"
+    project: ".claude/agents/{name}.md"
+    bodyIs: systemPrompt       # portable body becomes the agent system prompt
+    required: [name, description]
+
+  Command:
+    global: "~/.claude/commands/{name}.md"
+    project: ".claude/commands/{name}.md"
+
+  # MERGE primitive called by the recipe engine (not a standalone artifact kind).
+  # Claude carries an explicit `type` field, so transports map by key template.
+  Mcp:
+    project:
+      file: ".mcp.json"
+      format: json
+      path: "mcpServers.{name}"
+    user:
+      file: "~/.claude.json"
+      format: json
+      path: "mcpServers.{name}"
+    transports:
+      stdio:
+        keys: { type: "stdio", command: "{command}", args: "{args}", env: "{env}" }
+      http:
+        keys: { type: "http", url: "{url}", headers: "{headers}" }
+
+  Hook:
+    global: { file: "~/.claude/settings.json", format: json, path: "hooks.{event}", action: merge }
+    project: { file: ".claude/settings.json", format: json, path: "hooks.{event}", action: merge }
+
+  Instruction:
+    global: { file: "~/.claude/CLAUDE.md", action: appendSection }
+    project: { file: "CLAUDE.md", action: appendSection }
+    # appendSection inserts/replaces ONLY a fenced block keyed by {name}:
+    #   <!-- patronus:start {name} --> … <!-- patronus:end {name} -->

@@ -25,10 +25,14 @@ const Version = 1
 
 // Lock is the full patronus.lock document.
 type Lock struct {
-	Version   int     `json:"version"`
-	Profile   string  `json:"profile,omitempty"`   // the profile this lock was generated from
-	Generated string  `json:"generated,omitempty"` // RFC3339, caller-supplied (pkg stays clockless)
-	Entries   []Entry `json:"entries"`
+	Version int    `json:"version"`
+	Profile string `json:"profile,omitempty"` // the profile this lock was generated from
+	// RegistryVersion is the registry release tag this lock resolved against, so a
+	// teammate's `install` reproduces against the SAME registry snapshot (§5e/§6).
+	// Empty for a local-checkout/dev resolution.
+	RegistryVersion string  `json:"registryVersion,omitempty"`
+	Generated       string  `json:"generated,omitempty"` // RFC3339, caller-supplied (pkg stays clockless)
+	Entries         []Entry `json:"entries"`
 }
 
 // Entry pins one resolved item with full provenance (§5e).

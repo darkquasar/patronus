@@ -29,13 +29,27 @@ func LoadArtifact(path string) (*Artifact, error) {
 	if err := decodeFile(path, &a); err != nil {
 		return nil, err
 	}
+	return finishArtifact(&a)
+}
+
+// DecodeArtifact parses+validates an artifact manifest from raw YAML bytes — used
+// for an https: sourced manifest that never lands on a local path.
+func DecodeArtifact(data []byte) (*Artifact, error) {
+	var a Artifact
+	if err := decodeBytes(data, &a); err != nil {
+		return nil, err
+	}
+	return finishArtifact(&a)
+}
+
+func finishArtifact(a *Artifact) (*Artifact, error) {
 	if a.Role == "" {
 		a.Role = DefaultRole(a.Kind)
 	}
 	if err := a.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, err
 	}
-	return &a, nil
+	return a, nil
 }
 
 // Validate performs Phase-1-light checks: schema version, a valid artifact kind,
