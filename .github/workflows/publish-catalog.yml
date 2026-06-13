@@ -1,0 +1,92 @@
+# publish-catalog — publishes the catalog to the Cloudflare R2 registry.
+#
+# Runs on a push to main (or a tag) that touches catalog content, builds the
+# registry, and syncs it to R2 with an IMMUTABILITY GUARD: each item tarball lives
+# at a write-once key catalog/<name>/<version>/...; this job refuses to overwrite
+# an existing version with different bytes (that would break every lock pinning it).
+# The discovery index.json is the one mutable file — always overwritten, served
+# no-cache.
+#
+# Credentials come from the protected `production` GitHub environment (branch-
+# restricted to main + v*; fork PRs get no secrets), so only reviewed code on a
+# trusted ref can publish. The client read path is anonymous HTTPS — these write
+# credentials never ship in the binary.
+name: publish-catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/**"
+      - "recipes/**"
+      - "profiles/**"
+      - "adapters/**"
+      - "cmd/patronus/build.go"
+      - "internal/registry/**"
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production # branch-restricted (main + v*); holds the R2 secrets
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: patronus-registry
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Build registry (R2-layout catalog/ tree)
+        run: go run ./cmd/patronus build --out registry/
+
+      - name: Publish item tarballs (immutable; check-before-put)
+        run: |
+          set -euo pipefail
+          cd registry
+          # Each item tarball key is WRITE-ONCE. For every built tarball:
+          #   - if the key is absent → PUT it (record its sha256 as object metadata)
+          #   - if present with the SAME sha → skip (already published, identical)
+          #   - if present with a DIFFERENT sha → FAIL (immutability violation)
+          #   - if present but with NO recorded sha → skip with a warning (assume
+          #     intentionally immutable; pre-guard upload)
+          find catalog -type f -name '*.tar.gz' | while read -r key; do
+            local_sha="$(sha256sum "$key" | cut -d' ' -f1)"
+            if meta="$(aws s3api head-object --endpoint-url "$R2_ENDPOINT" \
+                  --bucket "$BUCKET" --key "$key" 2>/dev/null)"; then
+              remote_sha="$(echo "$meta" | jq -r '.Metadata.sha256 // empty')"
+              if [ -z "$remote_sha" ]; then
+                echo "WARN: $key already exists without sha metadata; skipping (assumed immutable)"
+                continue
+              fi
+              if [ "$remote_sha" != "$local_sha" ]; then
+                echo "IMMUTABILITY VIOLATION: $key exists with sha $remote_sha but build produced $local_sha" >&2
+                exit 1
+              fi
+              echo "skip (already published, identical): $key"
+              continue
+            fi
+            echo "put (new): $key"
+            aws s3api put-object --endpoint-url "$R2_ENDPOINT" --bucket "$BUCKET" \
+              --key "$key" --body "$key" --content-type application/gzip \
+              --metadata "sha256=$local_sha"
+          done
+
+      - name: Publish discovery index (mutable; no-cache)
+        run: |
+          set -euo pipefail
+          cd registry
+          for f in catalog/index.json catalog/index.json.sha256; do
+            ct="application/json"
+            [ "$f" = "catalog/index.json.sha256" ] && ct="text/plain"
+            aws s3api put-object --endpoint-url "$R2_ENDPOINT" --bucket "$BUCKET" \
+              --key "$f" --body "$f" --content-type "$ct" \
+              --cache-control "no-cache, max-age=0"
+          done

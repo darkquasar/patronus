@@ -22,96 +22,67 @@ type Fetcher interface {
 	Fetch(ctx context.Context, url string) (io.ReadCloser, error)
 }
 
-// DefaultOwner / DefaultRepo are the official registry's GitHub coordinates.
-const (
-	DefaultOwner = "darkquasar"
-	DefaultRepo  = "patronus"
-)
+// DefaultRegistryURL is the official catalog's public base URL (a Cloudflare R2
+// bucket fronted by a custom domain). The client fetches the discovery index and
+// item tarballs from here over anonymous HTTPS; it is overridable per command via
+// --registry-url, or the PATRONUS_REGISTRY_URL env var, for forks/mirrors/tests.
+const DefaultRegistryURL = "https://registry.patronus.quasarops.com"
 
-// RemoteRegistry reads a published index.json (one per GitHub Release) and serves
-// it behind the Registry interface, so the planner/profile-resolver are unchanged
-// from the local case. It caches the index under CacheDir and materializes an
-// item's portable source on demand (Materialize), at which point the entry is
-// indistinguishable from a local-checkout entry.
+// RemoteRegistry reads the published discovery index.json from an R2 base URL and
+// serves it behind the Registry interface, so the planner/profile-resolver are
+// unchanged from the local case. It caches the index under CacheDir and
+// materializes an item's portable source on demand (Materialize), at which point
+// the entry is indistinguishable from a local-checkout entry.
 //
-// Refresh policy is apt-style EXPLICIT-ONLY (DESIGN §6, Phase-6 decision): a warm
-// cache is never auto-refreshed by Catalog; only a cold cache bootstraps a single
-// fetch, and `patronus update` (Refresh) forces a re-fetch. This keeps day-to-day
-// commands offline and free of per-invocation network round-trips.
+// There is no registry-wide version: each item versions independently and the
+// catalog is content-addressed by name/version at immutable R2 keys (the npm/pip
+// model). Reproducibility comes from the per-item version+sha pinned in
+// patronus.lock, not from any tag on the registry as a whole.
+//
+// Refresh policy is apt-style EXPLICIT-ONLY: a warm cache is never auto-refreshed
+// by Catalog; only a cold cache bootstraps a single fetch, and `patronus update`
+// (Refresh) forces a re-fetch. This keeps day-to-day commands offline and free of
+// per-invocation round-trips.
 type RemoteRegistry struct {
 	Fetcher  Fetcher
 	CacheDir string // ~/.patronus/cache
-	Owner    string // "" => DefaultOwner
-	Repo     string // "" => DefaultRepo
-	Version  string // "" => latest; else a pinned release tag
-	BaseURL  string // "" => GitHub Releases; override for a fork/mirror
+	BaseURL  string // "" => DefaultRegistryURL; override for a fork/mirror/test
 	Warnf    func(string, ...any)
-
-	// resolvedTag is the concrete registry tag the last-loaded index reported. For
-	// an unpinned ("latest") registry this is how a caller learns which tag it
-	// actually resolved to (e.g. to record in patronus.lock).
-	resolvedTag string
 }
 
-// ResolvedVersion returns the concrete registry tag of the most recently loaded
-// index — the requested Version when pinned, or the tag "latest" actually
-// resolved to once Catalog/Refresh has run.
-func (r *RemoteRegistry) ResolvedVersion() string {
-	if r.Version != "" {
-		return r.Version
+// NewRemoteRegistry builds a registry that fetches from baseURL ("" =>
+// DefaultRegistryURL), caching under cacheDir.
+func NewRemoteRegistry(f Fetcher, cacheDir, baseURL string) *RemoteRegistry {
+	return &RemoteRegistry{Fetcher: f, CacheDir: cacheDir, BaseURL: baseURL}
+}
+
+// Base returns the resolved registry base URL (trimmed of a trailing slash). It is
+// exported so the install command can reconstruct an item's immutable R2 URL from
+// a lock entry's name/version (per-item reality-follows-lock).
+func (r *RemoteRegistry) Base() string {
+	b := r.BaseURL
+	if b == "" {
+		b = DefaultRegistryURL
 	}
-	return r.resolvedTag
+	return strings.TrimRight(b, "/")
 }
 
-// NewRemoteRegistry builds a registry for the given release version ("" = latest)
-// using the official GitHub coordinates and the given cache dir.
-func NewRemoteRegistry(f Fetcher, cacheDir, version string) *RemoteRegistry {
-	return &RemoteRegistry{Fetcher: f, CacheDir: cacheDir, Version: version}
-}
-
-func (r *RemoteRegistry) owner() string {
-	if r.Owner != "" {
-		return r.Owner
-	}
-	return DefaultOwner
-}
-
-func (r *RemoteRegistry) repo() string {
-	if r.Repo != "" {
-		return r.Repo
-	}
-	return DefaultRepo
-}
-
-// indexURL returns the stable download URL for this version's index.json. A
-// pinned tag uses releases/download/<tag>/; latest uses releases/latest/download/
-// (no GitHub API token required).
+// indexURL is the discovery index location under the registry base.
 func (r *RemoteRegistry) indexURL() string {
-	if r.BaseURL != "" {
-		return strings.TrimRight(r.BaseURL, "/") + "/index.json"
-	}
-	if r.Version == "" {
-		return fmt.Sprintf("https://github.com/%s/%s/releases/latest/download/index.json", r.owner(), r.repo())
-	}
-	return fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/index.json", r.owner(), r.repo(), r.Version)
+	return r.Base() + "/catalog/index.json"
 }
 
-// cacheKey is the on-disk filename for this version's cached index. Pinned tags
-// are immutable so they cache forever; the unpinned "latest" caches under a
-// single file refreshed only by bootstrap or update.
+// cacheKey is the on-disk filename for the cached discovery index, keyed on the
+// base URL so a --registry-url fork/mirror caches separately from the official
+// registry rather than clobbering it.
 func (r *RemoteRegistry) cacheKey() string {
-	v := r.Version
-	if v == "" {
-		v = "latest"
-	}
-	// Sanitize a tag into a safe filename.
-	v = strings.ReplaceAll(v, "/", "_")
-	return filepath.Join(r.CacheDir, "index-"+v+".json")
+	h := sha256.Sum256([]byte(r.Base()))
+	return filepath.Join(r.CacheDir, "index-"+hex.EncodeToString(h[:])[:16]+".json")
 }
 
-// Catalog returns the catalog for this version. A warm cache is read with ZERO
-// network; a cold cache bootstrap-fetches once and caches it (so the next call is
-// offline). On a fetch failure with no cache, the error is returned.
+// Catalog returns the catalog. A warm cache is read with ZERO network; a cold
+// cache bootstrap-fetches once and caches it (so the next call is offline). On a
+// fetch failure with no cache, the error is returned.
 func (r *RemoteRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 	path := r.cacheKey()
 	if data, err := os.ReadFile(path); err == nil {
@@ -119,7 +90,6 @@ func (r *RemoteRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 		if err != nil {
 			return nil, err
 		}
-		r.resolvedTag = ix.RegistryVersion
 		return ix.ToCatalog(), nil
 	} else if !os.IsNotExist(err) {
 		return nil, err
@@ -130,7 +100,6 @@ func (r *RemoteRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.resolvedTag = ix.RegistryVersion
 	return ix.ToCatalog(), nil
 }
 
@@ -147,12 +116,10 @@ func (r *RemoteRegistry) Refresh(ctx context.Context) (*Catalog, error) {
 			if lerr != nil {
 				return nil, lerr
 			}
-			r.resolvedTag = cached.RegistryVersion
 			return cached.ToCatalog(), nil
 		}
 		return nil, err
 	}
-	r.resolvedTag = ix.RegistryVersion
 	return ix.ToCatalog(), nil
 }
 
@@ -220,7 +187,9 @@ func (r *RemoteRegistry) fetchIndexSHA(ctx context.Context) (sum string, ok bool
 // Materialize ensures an artifact entry's portable source is unpacked on disk and
 // sets e.Source.LocalDir to it, so the existing plan.Compute/adapter path runs
 // against it unchanged. Idempotent: a previously-materialized item is reused
-// without a second fetch. A sha256 mismatch writes nothing.
+// without a second fetch — safe because an R2 name/version key is immutable, so a
+// cached items/<name>-<version>/ never goes stale. A sha256 mismatch writes
+// nothing.
 func (r *RemoteRegistry) Materialize(ctx context.Context, e *ArtifactEntry) (string, error) {
 	if e.Source.LocalDir != "" {
 		return e.Source.LocalDir, nil
@@ -230,7 +199,7 @@ func (r *RemoteRegistry) Materialize(ctx context.Context, e *ArtifactEntry) (str
 	}
 	dir := filepath.Join(r.CacheDir, "items", e.Manifest.Name+"-"+e.Manifest.Version)
 	if _, err := os.Stat(filepath.Join(dir, "patronus.yaml")); err == nil {
-		e.Source.LocalDir = dir // cache hit
+		e.Source.LocalDir = dir // cache hit (immutable version key → never stale)
 		return dir, nil
 	}
 

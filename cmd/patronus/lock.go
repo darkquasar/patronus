@@ -22,13 +22,14 @@ func newLockCmd() *cobra.Command {
 		Use:   "lock --profile <name>",
 		Short: "Write/refresh patronus.lock from a profile's current catalog resolution",
 		Long: "Re-resolves a profile against the catalog and writes patronus.lock — pinning\n" +
-			"each resolved item's name, source provenance, version, and sha256 so a teammate\n" +
-			"or fresh machine can reproduce the same environment (DESIGN §5d/§5e).\n\n" +
+			"each resolved item PER-ITEM (name, source provenance, version, content sha256,\n" +
+			"and the published tarball sha) so a teammate or fresh machine reproduces the\n" +
+			"exact same environment. There is no registry-wide version; reproducibility is\n" +
+			"per item, independent of the tool version (the npm/pip model).\n\n" +
 			"PROMOTE vs RESTORE: `patronus lock` is lock-follows-reality — it overwrites the\n" +
-			"lock with whatever the profile resolves to NOW. The reverse direction\n" +
-			"(reality-follows-lock: install reading the lock and refetching the pinned\n" +
-			"source@resolvedRef) lands with the remote registry in Phase 6; today\n" +
-			"`install --profile` resolves live from the catalog and does not read the lock.",
+			"lock with whatever the profile resolves to NOW. The reverse (reality-follows-\n" +
+			"lock) is `install --profile` against a committed lock: it fetches each item at\n" +
+			"its locked version from the registry's immutable key and verifies the sha.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if profileSel == "" {
@@ -41,9 +42,9 @@ func newLockCmd() *cobra.Command {
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
-			// Resolve against the same registry install would use (local checkout in
-			// dev, or the remote registry pinned to --registry-version), and record
-			// that registry tag in the lock so a teammate reproduces against it.
+			// Resolve against the same registry install would use (the local checkout
+			// in dev, or the remote R2 registry). The lock pins each item per-item
+			// (version + content sha + tarball sha) — there is no registry-wide tag.
 			reg, _, err := resolveRegistry(cmd.Context(), wd, regSel, homeDir(), warnf)
 			if err != nil {
 				return err
@@ -61,8 +62,15 @@ func newLockCmd() *cobra.Command {
 				warnf("%s", w)
 			}
 
+			// Hashing an artifact's content-fold reads its files from Source.LocalDir,
+			// so a remote registry must materialize the selected items first (no-op for
+			// a local checkout, where LocalDir is already set).
+			if err := materializeSelected(cmd.Context(), reg, cat, res.Names()); err != nil {
+				return err
+			}
+
 			now := time.Now().UTC().Format(time.RFC3339)
-			l, err := lock.FromResolved(cat, res, now, registryVersionOf(reg))
+			l, err := lock.FromResolved(cat, res, now)
 			if err != nil {
 				return err
 			}

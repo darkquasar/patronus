@@ -35,8 +35,8 @@ func sha(b []byte) string {
 	return "sha256:" + hex.EncodeToString(s[:])
 }
 
-// buildServed constructs an index + one artifact tarball and returns a fakeFetcher
-// serving them at the canonical latest URLs.
+// buildServed constructs a discovery index + one artifact tarball and returns a
+// fakeFetcher serving them at the R2 base URLs (DefaultRegistryURL/catalog/...).
 func buildServed(t *testing.T) (*fakeFetcher, string) {
 	t.Helper()
 	src := map[string][]byte{
@@ -47,18 +47,17 @@ func buildServed(t *testing.T) (*fakeFetcher, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tarURL := "https://github.com/darkquasar/patronus/releases/download/x/demo-1.0.0.tar.gz"
+	tarURL := DefaultRegistryURL + "/catalog/demo/1.0.0/demo-1.0.0.tar.gz"
 
 	ix := &Index{
-		SchemaVersion:   IndexSchemaVersion,
-		RegistryVersion: "v1.0.0",
+		SchemaVersion: IndexSchemaVersion,
 		Artifacts: []IndexArtifact{{
 			Manifest: &manifest.Artifact{Name: "demo", Version: "1.0.0", Kind: "Skill", Entry: "SKILL.md"},
 			Tarball:  Tarball{URL: tarURL, SHA256: sha(tgz)},
 		}},
 	}
 	data, _ := ix.Marshal()
-	idxURL := "https://github.com/darkquasar/patronus/releases/latest/download/index.json"
+	idxURL := DefaultRegistryURL + "/catalog/index.json"
 	f := &fakeFetcher{bodies: map[string][]byte{
 		idxURL:             data,
 		idxURL + ".sha256": []byte(sha(data) + "\n"),
@@ -98,7 +97,7 @@ func TestRemoteColdBootstrapThenWarm(t *testing.T) {
 
 func TestRemoteShaMismatchFatal(t *testing.T) {
 	f, _ := buildServed(t)
-	idxURL := "https://github.com/darkquasar/patronus/releases/latest/download/index.json"
+	idxURL := DefaultRegistryURL + "/catalog/index.json"
 	f.bodies[idxURL+".sha256"] = []byte("sha256:deadbeef\n") // wrong
 	r := NewRemoteRegistry(f, t.TempDir(), "")
 	if _, err := r.Catalog(context.Background()); err == nil {
@@ -108,7 +107,7 @@ func TestRemoteShaMismatchFatal(t *testing.T) {
 
 func TestRemoteShaSidecarAbsentFallsBack(t *testing.T) {
 	f, _ := buildServed(t)
-	idxURL := "https://github.com/darkquasar/patronus/releases/latest/download/index.json"
+	idxURL := DefaultRegistryURL + "/catalog/index.json"
 	delete(f.bodies, idxURL+".sha256") // absent → TLS-trust fallback
 	r := NewRemoteRegistry(f, t.TempDir(), "")
 	if _, err := r.Catalog(context.Background()); err != nil {
@@ -116,15 +115,23 @@ func TestRemoteShaSidecarAbsentFallsBack(t *testing.T) {
 	}
 }
 
-func TestRemotePinnedTagURL(t *testing.T) {
-	f := &fakeFetcher{bodies: map[string][]byte{}}
-	r := NewRemoteRegistry(f, t.TempDir(), "v0.6.0")
-	want := "https://github.com/darkquasar/patronus/releases/download/v0.6.0/index.json"
-	if r.indexURL() != want {
-		t.Fatalf("pinned URL = %q, want %q", r.indexURL(), want)
+func TestRemoteIndexURLAndBase(t *testing.T) {
+	// Default base.
+	r := NewRemoteRegistry(&fakeFetcher{}, t.TempDir(), "")
+	if r.Base() != DefaultRegistryURL {
+		t.Fatalf("default base = %q", r.Base())
 	}
-	if filepath.Base(r.cacheKey()) != "index-v0.6.0.json" {
-		t.Fatalf("cache key = %q", r.cacheKey())
+	if r.indexURL() != DefaultRegistryURL+"/catalog/index.json" {
+		t.Fatalf("index URL = %q", r.indexURL())
+	}
+	// Custom base (fork/mirror), trailing slash trimmed.
+	r2 := NewRemoteRegistry(&fakeFetcher{}, t.TempDir(), "https://mirror.example.com/")
+	if r2.Base() != "https://mirror.example.com" {
+		t.Fatalf("custom base = %q", r2.Base())
+	}
+	// Different bases cache to different files (no clobber).
+	if r.cacheKey() == r2.cacheKey() {
+		t.Fatal("distinct bases must have distinct cache keys")
 	}
 }
 

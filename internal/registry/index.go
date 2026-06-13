@@ -11,28 +11,31 @@ import (
 // binary can refuse a newer index rather than mis-parse it.
 const IndexSchemaVersion = 1
 
-// Index is the published, metadata-ONLY catalog — ONE per GitHub Release. It
-// embeds each item's FULL manifest inline so `list`, profile resolution, and
-// lock generation need only this one document; content (an artifact's portable
-// source) is fetched lazily, only at install time, via the per-item Tarball
-// pointer. This is what lets a user browse the catalog without downloading any
-// artifact bodies.
+// Index is the published, metadata-ONLY DISCOVERY catalog: "what items exist and
+// what is each one's latest version." It embeds each item's FULL manifest inline
+// so `list`, profile resolution, and lock generation need only this one document;
+// content (an artifact's portable source) is fetched lazily, only at install
+// time, via the per-item Tarball pointer.
+//
+// It is NOT a reproducibility anchor: the index is mutable (overwritten on every
+// catalog publish), and what makes an install reproducible is the per-ITEM
+// version + sha256 pinned in patronus.lock (the npm/pip model). There is no
+// registry-wide version — each item versions independently.
 //
 // Serialized as deterministic stdlib JSON (same family as state.json /
 // patronus.lock), so it is git-diffable and its sha256 is stable.
 type Index struct {
-	SchemaVersion   int             `json:"schemaVersion"`
-	RegistryVersion string          `json:"registryVersion"` // the Release tag, e.g. "v0.6.0"
-	Generated       string          `json:"generated"`       // RFC3339, set at build time
-	Artifacts       []IndexArtifact `json:"artifacts"`
-	Recipes         []IndexRecipe   `json:"recipes"`
-	Profiles        []IndexProfile  `json:"profiles"`
+	SchemaVersion int             `json:"schemaVersion"`
+	Generated     string          `json:"generated"` // RFC3339, set at build time
+	Artifacts     []IndexArtifact `json:"artifacts"`
+	Recipes       []IndexRecipe   `json:"recipes"`
+	Profiles      []IndexProfile  `json:"profiles"`
 }
 
-// Tarball points at an artifact's portable-source tarball, published as a Release
-// asset. The binary fetches+verifies it at install time and the existing adapter
-// engine transforms it per-tool locally (so the registry ships source, not
-// pre-baked per-tool output).
+// Tarball points at an artifact's portable-source tarball at its immutable R2 key
+// (catalog/<name>/<version>/<name>-<version>.tar.gz). The binary fetches+verifies
+// it at install time and the existing adapter engine transforms it per-tool
+// locally (so the registry ships source, not pre-baked per-tool output).
 type Tarball struct {
 	URL    string `json:"url"`
 	SHA256 string `json:"sha256"` // "sha256:" + hex over the tarball bytes

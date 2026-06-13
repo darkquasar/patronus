@@ -73,7 +73,9 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
 			Manifest: &manifest.Artifact{Name: "team-research", Version: "1.0.0", Entry: "SKILL.md"},
-			Source:   registry.Source{LocalDir: skillDir},
+			// LocalDir drives the content-fold hash; TarballURL/SHA256 mirror a
+			// remote-resolved entry so the lock pins the tarball bytes too.
+			Source: registry.Source{LocalDir: skillDir, TarballURL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:tarbytes"},
 		}},
 		Recipes: []registry.RecipeEntry{{
 			Manifest: &manifest.Recipe{Name: "memory-ai-memory", Capability: "memory"},
@@ -86,9 +88,12 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 			{Name: "team-research", Slot: "capabilities", Kind: profile.KindArtifact, Source: "registry"},
 		},
 	}
-	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z", "")
+	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if l.Version != 2 {
+		t.Errorf("lock version = %d, want 2", l.Version)
 	}
 	// Sorted by name: memory-ai-memory before team-research.
 	if l.Entries[0].Name != "memory-ai-memory" || l.Entries[1].Name != "team-research" {
@@ -102,8 +107,12 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 			t.Errorf("%s: empty sha256", e.Name)
 		}
 	}
-	if l.Entries[1].Version != "1.0.0" {
-		t.Errorf("artifact version = %q", l.Entries[1].Version)
+	art := l.Entries[1]
+	if art.Version != "1.0.0" {
+		t.Errorf("artifact version = %q", art.Version)
+	}
+	if art.TarballSha256 != "sha256:tarbytes" {
+		t.Errorf("artifact tarballSha256 = %q, want sha256:tarbytes", art.TarballSha256)
 	}
 }
 

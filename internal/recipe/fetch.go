@@ -8,6 +8,7 @@ package recipe
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +25,20 @@ type Fetcher interface {
 // HTTPFetcher fetches over HTTPS using the stdlib client.
 type HTTPFetcher struct {
 	Client *http.Client // nil => http.DefaultClient
+}
+
+// NewTLS13Fetcher returns an HTTPFetcher whose client requires TLS 1.3 as the
+// minimum. It is used ONLY for catalog/registry fetches — an endpoint we control
+// (registry.patronus.quasarops.com) — so we can enforce a modern TLS floor there.
+// Recipe-binary and git:/https: sourced-reference fetches keep the default client
+// (TLS 1.2+), because those point at third-party upstreams whose TLS config we
+// don't control and must not break.
+func NewTLS13Fetcher() HTTPFetcher {
+	return HTTPFetcher{Client: &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+		},
+	}}
 }
 
 // Fetch performs a GET and returns the response body (caller closes).
