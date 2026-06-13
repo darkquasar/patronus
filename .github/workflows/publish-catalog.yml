@@ -14,6 +14,14 @@
 name: publish-catalog
 
 on:
+  # Manual re-publish / re-sync. Safe by construction: workflow_dispatch can only
+  # be triggered by someone with write access to THIS repo (forks have their own
+  # Actions; PR authors cannot dispatch here), it runs the workflow from a ref you
+  # pick (default main), and the `production` environment's branch rules (main + v*)
+  # still gate the R2 secrets — so a dispatch is no more privileged than a push.
+  # Re-running with no catalog change is a no-op thanks to the immutability guard
+  # (every item key skips as already-published-identical).
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
