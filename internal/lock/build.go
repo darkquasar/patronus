@@ -18,15 +18,16 @@ import (
 
 // FromResolved builds a deterministic Lock from a resolved profile. now is the
 // caller's RFC3339 timestamp (the only non-deterministic input; the package takes
-// no clock). registryVersion is the registry release tag the catalog came from
-// ("" for a local checkout). Entries are sorted by name so re-locking an unchanged
-// profile yields byte-identical output modulo the timestamp.
-func FromResolved(cat *registry.Catalog, r *profile.Resolved, now, registryVersion string) (*Lock, error) {
+// no clock). Entries are sorted by name so re-locking an unchanged profile yields
+// byte-identical output modulo the timestamp. There is no registry-wide version:
+// each entry pins its own version + content sha, plus (for an artifact resolved
+// against the remote registry) the published tarball sha so a teammate can refetch
+// the exact bytes from the immutable name/version key.
+func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock, error) {
 	l := &Lock{
-		Version:         Version,
-		Profile:         r.Profile.Name,
-		RegistryVersion: registryVersion,
-		Generated:       now,
+		Version:   Version,
+		Profile:   r.Profile.Name,
+		Generated: now,
 	}
 	for _, it := range r.Items {
 		e := Entry{
@@ -41,6 +42,12 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now, registryVersi
 		}
 		e.SHA256 = sum
 		e.Version = version
+		// For an artifact resolved against the remote registry, the catalog entry
+		// carries the published tarball sha (Source.SHA256). Pin it so install can
+		// verify the exact bytes refetched from R2. Empty for local-checkout items.
+		if a := findArtifact(cat, it.Name); a != nil {
+			e.TarballSha256 = a.Source.SHA256
+		}
 		l.Entries = append(l.Entries, e)
 	}
 	sort.Slice(l.Entries, func(i, j int) bool { return l.Entries[i].Name < l.Entries[j].Name })

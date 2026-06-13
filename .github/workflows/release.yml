@@ -1,6 +1,10 @@
-# release — on a v* tag, cross-compiles the binary for every supported platform,
-# regenerates the registry, and publishes a GitHub Release with the binaries,
-# their checksums, and the registry assets (index.json + tarballs).
+# release — on a v* tag, cross-compiles the binary for every supported platform
+# and publishes a GitHub Release with the binaries and their checksums ONLY.
+#
+# The catalog is NOT shipped here: it lives in the R2 registry, published
+# independently by publish-catalog.yml. The tool and the catalog are separate
+# tracks on separate cadences (the npm/pip model) — a binary release never
+# re-ships catalog content, and a catalog change never re-ships the binary.
 #
 # The binaries are static (CGO_ENABLED=0) so they run on minimal Linux, native
 # Windows, and macOS with zero prerequisites — the "one binary, works anywhere"
@@ -61,14 +65,9 @@ jobs:
           merge-multiple: true
       - name: Checksums
         run: cd dist && sha256sum patronus-* > checksums.txt
-      - name: Build registry
-        run: go run ./cmd/patronus build --out registry/ --registry-version "${GITHUB_REF_NAME}"
-      - name: Publish Release
+      - name: Publish Release (binaries + checksums only)
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/patronus-*
             dist/checksums.txt
-            registry/index.json
-            registry/index.json.sha256
-            registry/*.tar.gz

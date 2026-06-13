@@ -95,17 +95,6 @@ func newInstallCmd() *cobra.Command {
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
-			// Reality-follows-lock: when installing a profile that has a committed
-			// patronus.lock, and the user did NOT explicitly pin a registry version,
-			// pin to the registry tag the lock recorded — so a teammate reproduces
-			// against the same registry snapshot the lock was generated from.
-			if profileSel != "" && regSel.version == "" {
-				if tag := lockRegistryVersion(wd, profileSel); tag != "" {
-					regSel.version = tag
-					fmt.Fprintf(cmd.ErrOrStderr(), "using registry %s from patronus.lock\n", tag)
-				}
-			}
-
 			home := toolpath.HomeDir(os.LookupEnv)
 			reg, root, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
 			if err != nil {
@@ -147,6 +136,13 @@ func newInstallCmd() *cobra.Command {
 				names = res.Names()
 				if len(names) == 0 {
 					return fmt.Errorf("profile %q resolved to no installable items", profileSel)
+				}
+
+				// Per-item reality-follows-lock: if a committed patronus.lock pins this
+				// profile's items, rewrite the catalog so each is fetched at its LOCKED
+				// version+sha from the registry's immutable key (not the index's latest).
+				if rr, ok := reg.(*registry.RemoteRegistry); ok {
+					applyLockPins(wd, profileSel, rr.Base(), cat, warnf)
 				}
 			}
 
@@ -349,19 +345,48 @@ func allSourced(names []string) bool {
 	return true
 }
 
-// lockRegistryVersion reads <wd>/patronus.lock and returns the registry tag it
-// recorded, but only when the lock was generated for the same profile (so an
-// unrelated lock in the cwd never silently pins the install). Returns "" when
-// there is no lock, it doesn't parse, or it targets a different profile.
-func lockRegistryVersion(wd, profileName string) string {
+// applyLockPins implements PER-ITEM reality-follows-lock: when a committed
+// patronus.lock pins this profile's items, it rewrites each matching catalog
+// artifact entry so the install fetches the LOCKED version+bytes from the
+// registry's immutable name/version key, rather than whatever the (mutable)
+// discovery index now advertises as latest. This is what makes a shared lock
+// reproduce the exact environment even as the catalog moves on.
+//
+// It is a no-op when there's no lock, the lock is for a different profile, or an
+// item isn't pinned — those follow the index latest, unchanged. base is the
+// RemoteRegistry base URL (used to reconstruct the immutable item URL).
+func applyLockPins(wd, profileName, base string, cat *registry.Catalog, warnf func(string, ...any)) {
 	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
-	if err != nil {
-		return ""
+	if err != nil || len(l.Entries) == 0 {
+		return // no lock → follow index latest
 	}
 	if l.Profile != "" && l.Profile != profileName {
-		return ""
+		return // an unrelated lock never silently pins this install
 	}
-	return l.RegistryVersion
+	pin := make(map[string]lock.Entry, len(l.Entries))
+	for _, e := range l.Entries {
+		pin[e.Name] = e
+	}
+	base = strings.TrimRight(base, "/")
+	for i := range cat.Artifacts {
+		a := &cat.Artifacts[i]
+		e, ok := pin[a.Manifest.Name]
+		if !ok || e.Version == "" || e.Kind != "artifact" {
+			continue
+		}
+		if e.Version != a.Manifest.Version {
+			warnf("pinning %s to %s from patronus.lock (index advertises %s)", e.Name, e.Version, a.Manifest.Version)
+			a.Manifest.Version = e.Version // so Materialize's cache key is the locked version
+		}
+		// Reconstruct the immutable R2 key from name/version; pin the lock's tarball
+		// sha so Materialize verifies the exact bytes. Clear LocalDir so a stale
+		// latest materialization (if any) is not reused.
+		a.Source.TarballURL = base + "/catalog/" + e.Name + "/" + e.Version + "/" + e.Name + "-" + e.Version + ".tar.gz"
+		if e.TarballSha256 != "" {
+			a.Source.SHA256 = e.TarballSha256
+		}
+		a.Source.LocalDir = ""
+	}
 }
 
 // contains reports whether ss includes s.

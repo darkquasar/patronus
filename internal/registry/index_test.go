@@ -8,12 +8,11 @@ import (
 
 func sampleIndex() *Index {
 	return &Index{
-		SchemaVersion:   IndexSchemaVersion,
-		RegistryVersion: "v0.6.0",
-		Generated:       "2026-06-08T00:00:00Z",
+		SchemaVersion: IndexSchemaVersion,
+		Generated:     "2026-06-08T00:00:00Z",
 		Artifacts: []IndexArtifact{{
 			Manifest: &manifest.Artifact{Name: "team-research", Version: "1.0.0", Kind: "Skill"},
-			Tarball:  Tarball{URL: "https://x/team-research-1.0.0.tar.gz", SHA256: "sha256:abc"},
+			Tarball:  Tarball{URL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:abc"},
 		}},
 		Recipes: []IndexRecipe{{
 			Manifest: &manifest.Recipe{Name: "memory-ai-memory", Capability: "memory"},
@@ -34,7 +33,7 @@ func TestIndexMarshalLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.RegistryVersion != "v0.6.0" || len(got.Artifacts) != 1 ||
+	if len(got.Artifacts) != 1 ||
 		got.Artifacts[0].Manifest.Name != "team-research" ||
 		got.Artifacts[0].Tarball.SHA256 != "sha256:abc" {
 		t.Fatalf("round trip mismatch: %+v", got)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,29 +26,25 @@ import (
 // engine, so the registry stays small and tool-agnostic.
 func newBuildCmd() *cobra.Command {
 	var (
-		out             string
-		registryVersion string
-		baseURL         string
+		out     string
+		baseURL string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "build",
-		Short: "Build the publishable registry (index.json + portable-source tarballs) — CI use",
-		Long: "Reads the local Patronus checkout and writes, into --out, one portable-source\n" +
-			"tarball per artifact (patronus.yaml + entry body + files/) plus a metadata-only\n" +
-			"index.json with every manifest inline and a tarball{url,sha256} pointer. This is\n" +
-			"what build-registry.yml publishes as GitHub Release assets.",
+		Short: "Build the publishable registry (catalog/ tree: index.json + per-item tarballs) — CI use",
+		Long: "Reads the local Patronus checkout and writes, into --out, an R2-layout catalog/\n" +
+			"tree: one portable-source tarball per artifact at catalog/<name>/<version>/ plus a\n" +
+			"metadata-only catalog/index.json (every manifest inline + a tarball{url,sha256}\n" +
+			"pointer) and its .sha256 sidecar. CI syncs this tree to the R2 bucket 1:1; the\n" +
+			"per-item tarball keys are immutable (write-once), the index is discovery-only.\n\n" +
+			"There is no registry-wide version — each item versions independently.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if registryVersion == "" {
-				registryVersion = os.Getenv("GITHUB_REF_NAME")
-			}
-			if registryVersion == "" {
-				registryVersion = "dev"
-			}
 			if baseURL == "" {
-				baseURL = fmt.Sprintf("https://github.com/darkquasar/patronus/releases/download/%s", registryVersion)
+				baseURL = registry.DefaultRegistryURL
 			}
+			baseURL = strings.TrimRight(baseURL, "/")
 
 			wd, err := os.Getwd()
 			if err != nil {
@@ -62,14 +59,14 @@ func newBuildCmd() *cobra.Command {
 				return err
 			}
 
-			if err := os.MkdirAll(out, 0o755); err != nil {
+			catalogDir := filepath.Join(out, "catalog")
+			if err := os.MkdirAll(catalogDir, 0o755); err != nil {
 				return err
 			}
 
 			ix := &registry.Index{
-				SchemaVersion:   registry.IndexSchemaVersion,
-				RegistryVersion: registryVersion,
-				Generated:       time.Now().UTC().Format(time.RFC3339),
+				SchemaVersion: registry.IndexSchemaVersion,
+				Generated:     time.Now().UTC().Format(time.RFC3339),
 			}
 
 			for i := range cat.Artifacts {
@@ -82,19 +79,21 @@ func newBuildCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				name := fmt.Sprintf("%s-%s.tar.gz", entry.Manifest.Name, entry.Manifest.Version)
-				if err := install.WriteFileAtomic(filepath.Join(out, name), tgz, 0o644); err != nil {
+				name, version := entry.Manifest.Name, entry.Manifest.Version
+				// Immutable content-addressed key: catalog/<name>/<version>/<name>-<version>.tar.gz
+				key := fmt.Sprintf("catalog/%s/%s/%s-%s.tar.gz", name, version, name, version)
+				if err := install.WriteFileAtomic(filepath.Join(out, filepath.FromSlash(key)), tgz, 0o644); err != nil {
 					return err
 				}
 				sum := sha256.Sum256(tgz)
 				ix.Artifacts = append(ix.Artifacts, registry.IndexArtifact{
 					Manifest: entry.Manifest,
 					Tarball: registry.Tarball{
-						URL:    baseURL + "/" + name,
+						URL:    baseURL + "/" + key,
 						SHA256: "sha256:" + hex.EncodeToString(sum[:]),
 					},
 				})
-				fmt.Fprintf(cmd.OutOrStdout(), "packaged %s\n", name)
+				fmt.Fprintf(cmd.OutOrStdout(), "packaged %s\n", key)
 			}
 			for i := range cat.Recipes {
 				ix.Recipes = append(ix.Recipes, registry.IndexRecipe{Manifest: cat.Recipes[i].Manifest})
@@ -107,24 +106,23 @@ func newBuildCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := install.WriteFileAtomic(filepath.Join(out, "index.json"), data, 0o644); err != nil {
+			if err := install.WriteFileAtomic(filepath.Join(catalogDir, "index.json"), data, 0o644); err != nil {
 				return err
 			}
 			sum := sha256.Sum256(data)
 			shaLine := []byte("sha256:" + hex.EncodeToString(sum[:]) + "\n")
-			if err := install.WriteFileAtomic(filepath.Join(out, "index.json.sha256"), shaLine, 0o644); err != nil {
+			if err := install.WriteFileAtomic(filepath.Join(catalogDir, "index.json.sha256"), shaLine, 0o644); err != nil {
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/index.json (%d artifacts, %d recipes, %d profiles) @ %s\n",
-				out, len(ix.Artifacts), len(ix.Recipes), len(ix.Profiles), registryVersion)
+			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/catalog/index.json (%d artifacts, %d recipes, %d profiles)\n",
+				out, len(ix.Artifacts), len(ix.Recipes), len(ix.Profiles))
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&out, "out", "registry", "output directory for the built registry")
-	cmd.Flags().StringVar(&registryVersion, "registry-version", "", "registry release tag (default: $GITHUB_REF_NAME or 'dev')")
-	cmd.Flags().StringVar(&baseURL, "base-url", "", "asset URL prefix for tarball links (default: GitHub Releases for this tag)")
+	cmd.Flags().StringVar(&out, "out", "registry", "output directory for the built registry tree")
+	cmd.Flags().StringVar(&baseURL, "base-url", "", "public base URL for tarball links (default: the official R2 registry)")
 	return cmd
 }
 

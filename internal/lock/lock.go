@@ -21,29 +21,34 @@ import (
 )
 
 // Version is the lock schema version, bumped when the on-disk shape changes.
-const Version = 1
+// v2 (Phase 7): dropped the registry-wide RegistryVersion (the registry is no
+// longer versioned as a whole — npm/pip model) and added per-entry TarballSha256.
+const Version = 2
 
-// Lock is the full patronus.lock document.
+// Lock is the full patronus.lock document. Reproducibility is PER-ITEM: each
+// entry pins its own version + sha, independent of the tool version and of any
+// registry-wide version (there is none).
 type Lock struct {
-	Version int    `json:"version"`
-	Profile string `json:"profile,omitempty"` // the profile this lock was generated from
-	// RegistryVersion is the registry release tag this lock resolved against, so a
-	// teammate's `install` reproduces against the SAME registry snapshot (§5e/§6).
-	// Empty for a local-checkout/dev resolution.
-	RegistryVersion string  `json:"registryVersion,omitempty"`
-	Generated       string  `json:"generated,omitempty"` // RFC3339, caller-supplied (pkg stays clockless)
-	Entries         []Entry `json:"entries"`
+	Version   int     `json:"version"`
+	Profile   string  `json:"profile,omitempty"`   // the profile this lock was generated from
+	Generated string  `json:"generated,omitempty"` // RFC3339, caller-supplied (pkg stays clockless)
+	Entries   []Entry `json:"entries"`
 }
 
-// Entry pins one resolved item with full provenance (§5e).
+// Entry pins one resolved item with full provenance. Two shas serve distinct
+// purposes: SHA256 is the manifest+content fold (drift detection — "did this
+// item change?"); TarballSha256 is the digest of the item's published tarball
+// BYTES, used to verify the exact artifact fetched from the registry's immutable
+// name/version key (per-item reality-follows-lock).
 type Entry struct {
-	Name        string `json:"name"`
-	Source      string `json:"source"`                // "registry" for in-tree; canonical ref otherwise
-	ResolvedRef string `json:"resolvedRef,omitempty"` // concrete commit a mutable ref resolved to (Phase 6)
-	Version     string `json:"version,omitempty"`     // the item's own version
-	SHA256      string `json:"sha256"`                // "sha256:" + hex over the manifest + content
-	Slot        string `json:"slot,omitempty"`        // §1A layer it filled (informational)
-	Kind        string `json:"kind,omitempty"`        // "artifact" | "recipe"
+	Name          string `json:"name"`
+	Source        string `json:"source"`                  // "registry" for in-tree; canonical ref otherwise
+	ResolvedRef   string `json:"resolvedRef,omitempty"`   // concrete commit a mutable ref resolved to
+	Version       string `json:"version,omitempty"`       // the item's own version
+	SHA256        string `json:"sha256"`                  // "sha256:" + hex over the manifest + content
+	TarballSha256 string `json:"tarballSha256,omitempty"` // "sha256:" + hex over the published tarball bytes
+	Slot          string `json:"slot,omitempty"`          // §1A layer it filled (informational)
+	Kind          string `json:"kind,omitempty"`          // "artifact" | "recipe"
 }
 
 // Load reads a lock file, returning an empty lock if the file is absent.
