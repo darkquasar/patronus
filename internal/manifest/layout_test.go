@@ -137,26 +137,6 @@ func TestLayoutAccessors(t *testing.T) {
 	}
 }
 
-func TestCapabilityLabels(t *testing.T) {
-	cases := []struct {
-		k    Kind
-		r    Role
-		want string
-	}{
-		{KindSkill, RoleCapability, "skill"},
-		{KindSkill, RolePattern, "pattern"},
-		{KindAgent, RoleCapability, "agent"},
-		{KindCommand, RoleCapability, "command"},
-		{KindHook, RoleGuardrail, "hook"},
-		{KindInstruction, RoleInstruction, "instruction"},
-	}
-	for _, c := range cases {
-		if got := Capability(c.k, c.r); got != c.want {
-			t.Errorf("Capability(%s,%s) = %q, want %q", c.k, c.r, got, c.want)
-		}
-	}
-}
-
 func TestLoadAdapterErrors(t *testing.T) {
 	if _, err := LoadAdapter(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
 		t.Error("expected error for missing adapter file")

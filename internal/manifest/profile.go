@@ -6,17 +6,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Profile is a curated bundle selecting items across §1A layers (§5d).
+// Profile is a curated bundle selecting items across §1A layers (§5). It expands
+// into other installables; it carries NO type (computed "expansion") and no
+// delivery/wire. Its role is lifecycle (L11) by nature.
 type Profile struct {
-	APIVersion string        `yaml:"apiVersion" json:"apiVersion"`
-	Kind       Kind          `yaml:"kind" json:"kind"`
-	Name       string        `yaml:"name" json:"name"`
-	Summary    string        `yaml:"summary" json:"summary"`
-	Status     string        `yaml:"status,omitempty" json:"status,omitempty"` // stub | (populated)
-	Extends    string        `yaml:"extends,omitempty" json:"extends,omitempty"`
-	Layers     ProfileLayers `yaml:"layers" json:"layers"`
-	Todo       []string      `yaml:"todo,omitempty" json:"todo,omitempty"`
+	Meta    `yaml:",inline" json:",inline"`
+	Summary string        `yaml:"summary,omitempty" json:"summary,omitempty"`
+	Status  string        `yaml:"status,omitempty" json:"status,omitempty"` // stub | (populated)
+	Extends string        `yaml:"extends,omitempty" json:"extends,omitempty"`
+	Layers  ProfileLayers `yaml:"layers" json:"layers"`
+	Todo    []string      `yaml:"todo,omitempty" json:"todo,omitempty"`
 }
+
+// Header returns the profile's shared identity header (implements Installable).
+func (p *Profile) Header() Meta { return p.Meta }
 
 // ProfileLayers maps each §1A layer to its selected item(s). Single-recipe
 // layers (memory, sandbox) are scalars; the rest are lists.
@@ -60,14 +63,8 @@ func LoadProfile(path string) (*Profile, error) {
 	if err := decodeFile(path, &p); err != nil {
 		return nil, err
 	}
-	if p.APIVersion != APIVersion {
-		return nil, fmt.Errorf("%s: unexpected apiVersion %q (want %q)", path, p.APIVersion, APIVersion)
-	}
-	if p.Kind != KindProfile {
-		return nil, fmt.Errorf("%s: expected kind Profile, got %q", path, p.Kind)
-	}
-	if p.Name == "" {
-		return nil, fmt.Errorf("%s: missing name", path)
+	if err := validateMeta(p.Meta, FamilyProfile); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return &p, nil
 }

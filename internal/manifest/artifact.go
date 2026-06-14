@@ -2,21 +2,21 @@ package manifest
 
 import "fmt"
 
-// Artifact is an authored-in-repo, portable installable (§5a). Two orthogonal
-// axes describe it: Kind (on-disk shape) and Role (job / §1A layer).
+// Artifact is an authored-in-repo, portable installable (§5). It is the ONLY
+// family with a declared file Type — the same files + role could be a skill or a
+// command, so Type is the only signal and it drives the write action.
 type Artifact struct {
-	APIVersion  string                            `yaml:"apiVersion" json:"apiVersion"`
-	Kind        Kind                              `yaml:"kind" json:"kind"`
-	Role        Role                              `yaml:"role,omitempty" json:"role,omitempty"`
-	Name        string                            `yaml:"name" json:"name"`
-	Description string                            `yaml:"description" json:"description"`
-	Version     string                            `yaml:"version" json:"version"`
-	Entry       string                            `yaml:"entry,omitempty" json:"entry,omitempty"` // body file; omitted for Hook
-	Files       []string                          `yaml:"files,omitempty" json:"files,omitempty"` // supporting dirs copied verbatim
-	Targets     []string                          `yaml:"targets" json:"targets"`
-	Defaults    ArtifactDefaults                  `yaml:"defaults" json:"defaults"`
-	Overrides   map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Meta      `yaml:",inline" json:",inline"`
+	Type      ArtifactType                      `yaml:"type" json:"type"`                       // skill | agent | command | hook | instruction
+	Entry     string                            `yaml:"entry,omitempty" json:"entry,omitempty"` // body file; omitted for Hook
+	Files     []string                          `yaml:"files,omitempty" json:"files,omitempty"` // supporting dirs copied verbatim
+	Targets   []string                          `yaml:"targets" json:"targets"`
+	Defaults  ArtifactDefaults                  `yaml:"defaults" json:"defaults"`
+	Overrides map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
 }
+
+// Header returns the artifact's shared identity header (implements Installable).
+func (a *Artifact) Header() Meta { return a.Meta }
 
 // ArtifactDefaults holds install-time defaults the user may override.
 type ArtifactDefaults struct {
@@ -43,26 +43,20 @@ func DecodeArtifact(data []byte) (*Artifact, error) {
 }
 
 func finishArtifact(a *Artifact) (*Artifact, error) {
-	if a.Role == "" {
-		a.Role = DefaultRole(a.Kind)
-	}
 	if err := a.Validate(); err != nil {
 		return nil, err
 	}
 	return a, nil
 }
 
-// Validate performs Phase-1-light checks: schema version, a valid artifact kind,
-// and the universally-required identity fields.
+// Validate performs Phase-1-light checks: schema version, family, a valid
+// artifact type, and the universally-required identity fields.
 func (a *Artifact) Validate() error {
-	if a.APIVersion != APIVersion {
-		return fmt.Errorf("unexpected apiVersion %q (want %q)", a.APIVersion, APIVersion)
+	if err := validateMeta(a.Meta, FamilyArtifact); err != nil {
+		return err
 	}
-	if !artifactKinds[a.Kind] {
-		return fmt.Errorf("invalid artifact kind %q", a.Kind)
-	}
-	if a.Name == "" {
-		return fmt.Errorf("missing name")
+	if !artifactTypes[a.Type] {
+		return fmt.Errorf("invalid artifact type %q", a.Type)
 	}
 	if a.Description == "" {
 		return fmt.Errorf("missing description")
