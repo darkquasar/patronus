@@ -211,7 +211,7 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	}
 }
 
-func TestComputeSelfWiring_EmitsExec(t *testing.T) {
+func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: manifest.RoleMemory},

@@ -143,7 +143,7 @@ func TestLoadAdapterErrors(t *testing.T) {
 	}
 	// Present file without a tool field.
 	p := filepath.Join(t.TempDir(), "notool.yaml")
-	if err := os.WriteFile(p, []byte("apiVersion: patronus/v1\nkind: Adapter\n"), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte("apiVersion: patronus/v2\nfamily: adapter\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LoadAdapter(p); err == nil {
