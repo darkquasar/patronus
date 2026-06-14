@@ -11,12 +11,12 @@ import (
 // from a present-but-empty block. The YAML is polymorphic — string|object|null
 // per field — so several entry types implement custom UnmarshalYAML.
 type Layout struct {
-	Skill       *SkillLayout       `yaml:"Skill,omitempty"`
-	Agent       *AgentLayout       `yaml:"Agent,omitempty"`
-	Command     *CommandLayout     `yaml:"Command,omitempty"`
-	Mcp         *McpLayout         `yaml:"Mcp,omitempty"`
-	Hook        *HookLayout        `yaml:"Hook,omitempty"`
-	Instruction *InstructionLayout `yaml:"Instruction,omitempty"`
+	Skill       *SkillLayout       `yaml:"skill,omitempty"`
+	Agent       *AgentLayout       `yaml:"agent,omitempty"`
+	Command     *CommandLayout     `yaml:"command,omitempty"`
+	Mcp         *McpLayout         `yaml:"mcp,omitempty"`
+	Hook        *HookLayout        `yaml:"hook,omitempty"`
+	Instruction *InstructionLayout `yaml:"instruction,omitempty"`
 }
 
 // PathTarget is a layout entry that is EITHER a bare path string

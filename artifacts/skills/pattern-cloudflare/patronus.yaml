@@ -1,6 +1,7 @@
-apiVersion: patronus/v1
-kind: Skill
-role: pattern
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
 name: pattern-cloudflare
 description: "Cloudflare Workers design patterns (Queues, Workflows, D1, testing, OpenAPI, MCP debugging). Load-first index routing to seven full pattern files."
 version: 1.0.0

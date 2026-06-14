@@ -1,5 +1,6 @@
-apiVersion: patronus/v1
-kind: Profile
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: golang
 summary: "STUB — Go project agent environment. Items to be sourced (see todo)."
 status: stub                               # installer warns + no-ops unpopulated layers
