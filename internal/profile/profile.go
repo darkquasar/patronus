@@ -20,33 +20,17 @@ import (
 	"github.com/darkquasar/patronus/internal/source"
 )
 
-// ItemKind records whether a resolved name dispatches to the artifact path or the
-// recipe path.
-type ItemKind int
-
-const (
-	KindUnknown ItemKind = iota // not found in the catalog (becomes a warning, dropped)
-	KindArtifact
-	KindRecipe
-)
-
-func (k ItemKind) String() string {
-	switch k {
-	case KindArtifact:
-		return "artifact"
-	case KindRecipe:
-		return "recipe"
-	default:
-		return "unknown"
-	}
-}
+// familyUnknown is the not-found sentinel: classify returns it for a name absent
+// from the catalog (which becomes a warning and is dropped). The real families
+// live in manifest.Family (FamilyArtifact | FamilyRecipe).
+const familyUnknown manifest.Family = ""
 
 // ResolvedItem is one install target a profile expanded to.
 type ResolvedItem struct {
-	Name   string   // the catalog lookup key / install name
-	Slot   string   // §1A layer slot it filled (informational)
-	Kind   ItemKind // artifact | recipe
-	Source string   // canonical provenance for the lock ("registry" for in-tree)
+	Name   string          // the catalog lookup key / install name
+	Slot   string          // §1A layer slot it filled (informational)
+	Family manifest.Family // artifact | recipe — the dispatch discriminator
+	Source string          // canonical provenance for the lock ("registry" for in-tree)
 }
 
 // Resolved is the full resolution of a profile against a catalog.
@@ -91,8 +75,8 @@ func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
 			continue
 		}
 
-		kind := classify(cat, ref)
-		if kind == KindUnknown {
+		fam := classify(cat, ref)
+		if fam == familyUnknown {
 			out.Warnings = append(out.Warnings,
 				fmt.Sprintf("profile %q slot %q: %q not found in catalog — skipped (not yet sourced?)", name, e.slot, e.name))
 			continue
@@ -101,7 +85,7 @@ func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
 		out.Items = append(out.Items, ResolvedItem{
 			Name:   e.name,
 			Slot:   e.slot,
-			Kind:   kind,
+			Family: fam,
 			Source: ref.LockSource(),
 		})
 	}
@@ -211,25 +195,25 @@ func flattenLayers(l manifest.ProfileLayers) []slotEntry {
 // only the registry branch is exercised by shipped profiles. (file: items in a
 // profile slot still resolve via the install-arg path; here a bare-name lookup
 // covers the catalog cases.)
-func classify(cat *registry.Catalog, ref *source.Ref) ItemKind {
+func classify(cat *registry.Catalog, ref *source.Ref) manifest.Family {
 	if ref.Scheme != source.Registry {
 		// Non-registry sources are resolved+merged into the catalog by the install
 		// command before dispatch; treat as unknown here only if not yet merged.
 		if findRecipe(cat, ref.Raw) != nil {
-			return KindRecipe
+			return manifest.FamilyRecipe
 		}
 		if findArtifact(cat, ref.Raw) != nil {
-			return KindArtifact
+			return manifest.FamilyArtifact
 		}
-		return KindUnknown
+		return familyUnknown
 	}
 	if findRecipe(cat, ref.Name) != nil {
-		return KindRecipe
+		return manifest.FamilyRecipe
 	}
 	if findArtifact(cat, ref.Name) != nil {
-		return KindArtifact
+		return manifest.FamilyArtifact
 	}
-	return KindUnknown
+	return familyUnknown
 }
 
 // Names returns the resolved item names in order — the flat list the install

@@ -116,8 +116,9 @@ func TestResolveFileArtifact(t *testing.T) {
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	manifestYAML := `apiVersion: patronus/v1
-kind: Skill
+	manifestYAML := `apiVersion: patronus/v2
+family: artifact
+type: skill
 role: capability
 name: my-skill
 description: A local skill.
@@ -146,12 +147,13 @@ defaults:
 func TestResolveFileRecipe(t *testing.T) {
 	dir := t.TempDir()
 	recipePath := filepath.Join(dir, "foo-mcp.yaml")
-	recipeYAML := `apiVersion: patronus/v1
-kind: Recipe
+	recipeYAML := `apiVersion: patronus/v2
+family: recipe
 name: foo-mcp
-capability: tools
+role: tools
 summary: Local recipe.
 wire:
+  mode: mcp
   mcp:
     transport: http
     url: "https://example.com/mcp/"

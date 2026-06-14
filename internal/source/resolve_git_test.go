@@ -41,7 +41,7 @@ func hostTarball(t *testing.T, repo, ref string, members map[string]string) []by
 
 func TestResolveGitArtifactItem(t *testing.T) {
 	tgz := hostTarball(t, "agent-kit", "v2", map[string]string{
-		"pattern-internal/patronus.yaml": "apiVersion: patronus/v1\nkind: Skill\nrole: pattern\nname: pattern-internal\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n",
+		"pattern-internal/patronus.yaml": "apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: pattern-internal\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n",
 		"pattern-internal/SKILL.md":      "# internal",
 		"README.md":                      "ignore me",
 	})
@@ -67,7 +67,7 @@ func TestResolveGitArtifactItem(t *testing.T) {
 
 func TestResolveGitRecipeItem(t *testing.T) {
 	tgz := hostTarball(t, "kit", "main", map[string]string{
-		"foo-mcp.yaml": "apiVersion: patronus/v1\nkind: Recipe\nname: foo-mcp\ncapability: tools\nsummary: s\nwire:\n  mcp:\n    transport: http\n    url: https://x/\n",
+		"foo-mcp.yaml": "apiVersion: patronus/v2\nfamily: recipe\nname: foo-mcp\nrole: tools\nsummary: s\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x/\n",
 	})
 	url := "https://github.com/me/kit/archive/main.tar.gz"
 	rs := &Resolver{Fetcher: fakeFetcher{bodies: map[string][]byte{url: tgz}}, CacheDir: t.TempDir()}
@@ -93,7 +93,7 @@ func TestResolveGitMissingItem(t *testing.T) {
 }
 
 func TestResolveHTTPSArtifact(t *testing.T) {
-	manifestYAML := "apiVersion: patronus/v1\nkind: Skill\nrole: capability\nname: web-skill\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"
+	manifestYAML := "apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: web-skill\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"
 	base := "https://example.com/skills"
 	rs := &Resolver{Fetcher: fakeFetcher{bodies: map[string][]byte{
 		base + "/web-skill.yaml": []byte(manifestYAML),
@@ -114,7 +114,7 @@ func TestResolveHTTPSArtifact(t *testing.T) {
 }
 
 func TestResolveHTTPSRecipe(t *testing.T) {
-	recipeYAML := "apiVersion: patronus/v1\nkind: Recipe\nname: hosted-mcp\ncapability: tools\nsummary: s\nwire:\n  mcp:\n    transport: http\n    url: https://x/\n"
+	recipeYAML := "apiVersion: patronus/v2\nfamily: recipe\nname: hosted-mcp\nrole: tools\nsummary: s\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x/\n"
 	url := "https://example.com/hosted-mcp.yaml"
 	rs := &Resolver{Fetcher: fakeFetcher{bodies: map[string][]byte{url: []byte(recipeYAML)}}, CacheDir: t.TempDir()}
 	ref, _ := Parse(url)

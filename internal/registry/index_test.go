@@ -11,14 +11,14 @@ func sampleIndex() *Index {
 		SchemaVersion: IndexSchemaVersion,
 		Generated:     "2026-06-08T00:00:00Z",
 		Artifacts: []IndexArtifact{{
-			Manifest: &manifest.Artifact{Name: "team-research", Version: "1.0.0", Kind: "Skill"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Version: "1.0.0"}, Type: manifest.TypeSkill},
 			Tarball:  Tarball{URL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:abc"},
 		}},
 		Recipes: []IndexRecipe{{
-			Manifest: &manifest.Recipe{Name: "memory-ai-memory", Capability: "memory"},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: "memory"}},
 		}},
 		Profiles: []IndexProfile{{
-			Manifest: &manifest.Profile{Name: "cloudflare"},
+			Manifest: &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "cloudflare"}},
 		}},
 	}
 }

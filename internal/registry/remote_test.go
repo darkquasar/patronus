@@ -52,7 +52,7 @@ func buildServed(t *testing.T) (*fakeFetcher, string) {
 	ix := &Index{
 		SchemaVersion: IndexSchemaVersion,
 		Artifacts: []IndexArtifact{{
-			Manifest: &manifest.Artifact{Name: "demo", Version: "1.0.0", Kind: "Skill", Entry: "SKILL.md"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo", Version: "1.0.0"}, Type: manifest.TypeSkill, Entry: "SKILL.md"},
 			Tarball:  Tarball{URL: tarURL, SHA256: sha(tgz)},
 		}},
 	}

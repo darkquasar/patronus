@@ -25,13 +25,13 @@ func sampleChangeSet() *diff.ChangeSet {
 		Diffs: []diff.FileDiff{
 			{
 				Path: "/home/u/.claude/skills/team-research/SKILL.md", Action: diff.Create,
-				After: []byte("body"), Artifact: "team-research", Capability: "skill",
+				After: []byte("body"), Artifact: "team-research", Type: "skill",
 				Tool: "claude", Scope: "global", Role: "capability",
 			},
 			{
 				Path: "/home/u/.claude/CLAUDE.md", Action: diff.Append,
 				Before: []byte("old\n"), After: []byte("old\n\n<!-- patronus:start ap -->\nx\n<!-- patronus:end ap -->\n"),
-				Artifact: "agent-principles", Capability: "instruction",
+				Artifact: "agent-principles", Type: "instruction",
 				Tool: "claude", Scope: "global", Role: "instruction", Note: "patronus section: ap",
 			},
 		},
@@ -44,8 +44,8 @@ func TestSummaryTableContents(t *testing.T) {
 	out := buf.String()
 
 	for _, want := range []string{
-		"Artifact", "Impacted path(s)", "Operation", "Capability", "Tool", "Scope",
-		"team-research", "~/.claude/skills/team-research/SKILL.md", "CREATE", "skill",
+		"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope",
+		"team-research", "~/.claude/skills/team-research/SKILL.md", "CREATE", "skill", "capability",
 		"agent-principles", "~/.claude/CLAUDE.md", "APPEND", "instruction",
 	} {
 		if !strings.Contains(out, want) {
@@ -60,14 +60,14 @@ func TestSummaryTableContents(t *testing.T) {
 
 func TestSummaryTableGroupsManyFiles(t *testing.T) {
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
-		{Path: "/home/u/.claude/skills/p/SKILL.md", Action: diff.Create, Artifact: "p", Capability: "pattern", Tool: "claude", Scope: "global"},
-		{Path: "/home/u/.claude/skills/p/patterns/a.md", Action: diff.Create, Artifact: "p", Capability: "pattern", Tool: "claude", Scope: "global"},
-		{Path: "/home/u/.claude/skills/p/patterns/b.md", Action: diff.Create, Artifact: "p", Capability: "pattern", Tool: "claude", Scope: "global"},
+		{Path: "/home/u/.claude/skills/p/SKILL.md", Action: diff.Create, Artifact: "p", Type: "skill", Role: "context", Tool: "claude", Scope: "global"},
+		{Path: "/home/u/.claude/skills/p/patterns/a.md", Action: diff.Create, Artifact: "p", Type: "skill", Role: "context", Tool: "claude", Scope: "global"},
+		{Path: "/home/u/.claude/skills/p/patterns/b.md", Action: diff.Create, Artifact: "p", Type: "skill", Role: "context", Tool: "claude", Scope: "global"},
 	}}
 	var buf bytes.Buffer
 	PrintSummaryTable(&buf, cs, testResolver())
 	out := buf.String()
-	// 3 files in one (artifact, op, cap, tool, scope) group -> compacted.
+	// 3 files in one (artifact, op, type, role, tool, scope) group -> compacted.
 	if !strings.Contains(out, "files)") {
 		t.Errorf("expected file-count compaction:\n%s", out)
 	}
@@ -80,9 +80,9 @@ func TestPlanSectionOrder(t *testing.T) {
 	PrintPlan(&buf, sampleChangeSet(), testResolver(), true)
 	out := buf.String()
 
-	table := strings.Index(out, "Capability") // table header
-	tree := strings.Index(out, "└──")         // tree glyph
-	diffs := strings.Index(out, "@@")         // unified diff hunk
+	table := strings.Index(out, "Type") // table header
+	tree := strings.Index(out, "└──")   // tree glyph
+	diffs := strings.Index(out, "@@")   // unified diff hunk
 	if table < 0 || tree < 0 || diffs < 0 {
 		t.Fatalf("missing a section (table=%d tree=%d diffs=%d):\n%s", table, tree, diffs, out)
 	}
@@ -100,7 +100,7 @@ func TestDefaultPlanShowsTreeAndSummary(t *testing.T) {
 		t.Errorf("default plan missing tree:\n%s", out)
 	}
 	// ...alongside the summary table.
-	if !strings.Contains(out, "Capability") {
+	if !strings.Contains(out, "Type") {
 		t.Errorf("default plan missing summary table:\n%s", out)
 	}
 	// But NO unified-diff hunks in non-verbose mode.
@@ -127,7 +127,7 @@ func TestVerbosePlanShowsUnifiedDiff(t *testing.T) {
 		t.Errorf("expected unified diff hunk markers:\n%s", out)
 	}
 	// Summary table still present below.
-	if !strings.Contains(out, "Capability") {
+	if !strings.Contains(out, "Type") {
 		t.Errorf("summary table missing in verbose mode:\n%s", out)
 	}
 	// Footer tally + dry-run note.
@@ -244,8 +244,8 @@ func TestAnnotationAllActions(t *testing.T) {
 
 func TestSummaryConflictAndMergeRows(t *testing.T) {
 	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{
-		{Path: "/proj/.mcp.json", Action: diff.Merge, Artifact: "memrec", Capability: "mcp", Tool: "claude", Scope: "local", Before: []byte("{}"), After: []byte(`{"mcpServers":{}}`)},
-		{Path: "/proj/x.md", Action: diff.Conflict, Artifact: "c", Capability: "skill", Tool: "claude", Scope: "local", Before: []byte("a"), After: []byte("b")},
+		{Path: "/proj/.mcp.json", Action: diff.Merge, Artifact: "memrec", Type: "wire-only", Role: "tools", Tool: "claude", Scope: "local", Before: []byte("{}"), After: []byte(`{"mcpServers":{}}`)},
+		{Path: "/proj/x.md", Action: diff.Conflict, Artifact: "c", Type: "skill", Role: "capability", Tool: "claude", Scope: "local", Before: []byte("a"), After: []byte("b")},
 	}}
 	var buf bytes.Buffer
 	PrintPlan(&buf, cs, testResolver(), false)

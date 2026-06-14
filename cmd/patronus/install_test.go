@@ -127,7 +127,7 @@ func TestInstallDeployWritesFilesAndState(t *testing.T) {
 	skillPath := filepath.Join(home, ".claude", "skills", "s", "SKILL.md")
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
 		{Path: skillPath, Action: diff.Create, After: []byte("BODY"),
-			Artifact: "s", Capability: "skill", Tool: "claude", Scope: "global"},
+			Artifact: "s", Type: "skill", Tool: "claude", Scope: "global"},
 	}}
 
 	cmd := newInstallCmd()
@@ -246,10 +246,11 @@ func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
 
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{
 		Path: "ai-memory install-mcp --client claude --apply", Action: diff.Exec,
-		Artifact: "memory-ai-memory", Capability: "self-wire", Tool: "claude", Scope: "global",
+		Artifact: "memory-ai-memory", Type: "self-wire", Tool: "claude", Scope: "global",
 		Exec: &diff.ExecSpec{
-			Command: []string{"ai-memory", "install-mcp", "--client", "claude", "--apply"},
-			Display: "ai-memory install-mcp --client claude --apply",
+			Command:     []string{"ai-memory", "install-mcp", "--client", "claude", "--apply"},
+			Display:     "ai-memory install-mcp --client claude --apply",
+			SelfManaged: true,
 		},
 	}}}
 

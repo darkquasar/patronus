@@ -295,7 +295,7 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	newTgz := mustTarGz(t, map[string][]byte{
-		"patronus.yaml": []byte("apiVersion: patronus/v1\nkind: Skill\nrole: pattern\nname: pattern-cloudflare\ndescription: d\nversion: 1.1.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: pattern-cloudflare\ndescription: d\nversion: 1.1.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
 		"SKILL.md":      []byte("# v1.1.0 body — should NOT be installed"),
 	})
 	newURL := testRegistryBase + "/catalog/pattern-cloudflare/1.1.0/pattern-cloudflare-1.1.0.tar.gz"
@@ -334,7 +334,7 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 func TestGitSourceInstallEndToEnd(t *testing.T) {
 	// Build a GitHub-style source archive holding one artifact dir.
 	members := map[string]string{
-		"kit-v2/my-pattern/patronus.yaml": "apiVersion: patronus/v1\nkind: Skill\nrole: pattern\nname: my-pattern\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n",
+		"kit-v2/my-pattern/patronus.yaml": "apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: my-pattern\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n",
 		"kit-v2/my-pattern/SKILL.md":      "# my pattern",
 	}
 	files := map[string][]byte{}

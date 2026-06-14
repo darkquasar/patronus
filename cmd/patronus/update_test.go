@@ -43,7 +43,7 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	newTgz := mustTarGz(t, map[string][]byte{
-		"patronus.yaml": []byte("apiVersion: patronus/v1\nkind: Skill\nname: team-research\ndescription: d\nversion: 1.1.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: team-research\ndescription: d\nversion: 1.1.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
 		"SKILL.md":      []byte("# team-research v1.1.0 body"),
 	})
 	newURL := testRegistryBase + "/catalog/team-research/1.1.0/team-research-1.1.0.tar.gz"

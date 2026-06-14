@@ -12,6 +12,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/registry"
 )
@@ -34,7 +35,7 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 			Name:   it.Name,
 			Source: it.Source,
 			Slot:   it.Slot,
-			Kind:   it.Kind.String(),
+			Kind:   string(it.Family),
 		}
 		sum, version, err := hashItem(cat, it)
 		if err != nil {
@@ -57,15 +58,15 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 // hashItem computes the integrity sha256 and version for a resolved item by
 // looking it up in the catalog and hashing its manifest + content.
 func hashItem(cat *registry.Catalog, it profile.ResolvedItem) (sum, version string, err error) {
-	switch it.Kind {
-	case profile.KindArtifact:
+	switch it.Family {
+	case manifest.FamilyArtifact:
 		entry := findArtifact(cat, it.Name)
 		if entry == nil {
 			return "", "", fmt.Errorf("artifact not in catalog")
 		}
 		sum, err = hashArtifact(*entry)
 		return sum, entry.Manifest.Version, err
-	case profile.KindRecipe:
+	case manifest.FamilyRecipe:
 		entry := findRecipe(cat, it.Name)
 		if entry == nil {
 			return "", "", fmt.Errorf("recipe not in catalog")
@@ -75,7 +76,7 @@ func hashItem(cat *registry.Catalog, it profile.ResolvedItem) (sum, version stri
 		// SHAs) is the reproducibility anchor. Left empty, forward-compatible.
 		return sum, "", err
 	default:
-		return "", "", fmt.Errorf("unknown item kind %v", it.Kind)
+		return "", "", fmt.Errorf("unknown item family %q", it.Family)
 	}
 }
 

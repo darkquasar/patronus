@@ -72,20 +72,20 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
-			Manifest: &manifest.Artifact{Name: "team-research", Version: "1.0.0", Entry: "SKILL.md"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Version: "1.0.0"}, Entry: "SKILL.md"},
 			// LocalDir drives the content-fold hash; TarballURL/SHA256 mirror a
 			// remote-resolved entry so the lock pins the tarball bytes too.
 			Source: registry.Source{LocalDir: skillDir, TarballURL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:tarbytes"},
 		}},
 		Recipes: []registry.RecipeEntry{{
-			Manifest: &manifest.Recipe{Name: "memory-ai-memory", Capability: "memory"},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: "memory"}},
 		}},
 	}
 	r := &profile.Resolved{
-		Profile: &manifest.Profile{Name: "p"},
+		Profile: &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}},
 		Items: []profile.ResolvedItem{
-			{Name: "memory-ai-memory", Slot: "memory", Kind: profile.KindRecipe, Source: "registry"},
-			{Name: "team-research", Slot: "capabilities", Kind: profile.KindArtifact, Source: "registry"},
+			{Name: "memory-ai-memory", Slot: "memory", Family: manifest.FamilyRecipe, Source: "registry"},
+			{Name: "team-research", Slot: "capabilities", Family: manifest.FamilyArtifact, Source: "registry"},
 		},
 	}
 	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z")
@@ -123,7 +123,7 @@ func TestHashArtifactStableAndSensitive(t *testing.T) {
 	mustWrite(t, filepath.Join(skillDir, "patterns", "p1.md"), "pat")
 
 	entry := registry.ArtifactEntry{
-		Manifest: &manifest.Artifact{Name: "s", Version: "1.0.0", Entry: "SKILL.md", Files: []string{"patterns"}},
+		Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "s", Version: "1.0.0"}, Entry: "SKILL.md", Files: []string{"patterns"}},
 		Source:   registry.Source{LocalDir: skillDir},
 	}
 	h1, err := hashArtifact(entry)
@@ -144,7 +144,7 @@ func TestHashArtifactStableAndSensitive(t *testing.T) {
 }
 
 func TestHashRecipeStableAndSensitive(t *testing.T) {
-	e1 := registry.RecipeEntry{Manifest: &manifest.Recipe{Name: "r", Capability: "memory", Summary: "a"}}
+	e1 := registry.RecipeEntry{Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "r", Role: "memory"}, Summary: "a"}}
 	h1, err := hashRecipe(e1)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestHashRecipeStableAndSensitive(t *testing.T) {
 	if h2, _ := hashRecipe(e1); h1 != h2 {
 		t.Fatal("hashRecipe not stable")
 	}
-	e2 := registry.RecipeEntry{Manifest: &manifest.Recipe{Name: "r", Capability: "memory", Summary: "b"}}
+	e2 := registry.RecipeEntry{Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "r", Role: "memory"}, Summary: "b"}}
 	if h3, _ := hashRecipe(e2); h3 == h1 {
 		t.Fatal("hashRecipe insensitive to manifest change")
 	}
