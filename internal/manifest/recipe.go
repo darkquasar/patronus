@@ -77,9 +77,9 @@ func (d *Delivery) ResolveAsset(goos, goarch string) (*Asset, error) {
 		}
 	}
 	if len(d.Assets) == 0 {
-		return nil, fmt.Errorf("delivery: no assets pinned (upstream not yet resolved)")
+		return nil, fmt.Errorf("deliver: no assets pinned (upstream not yet resolved)")
 	}
-	return nil, fmt.Errorf("delivery: no asset for %s/%s", goos, goarch)
+	return nil, fmt.Errorf("deliver: no asset for %s/%s", goos, goarch)
 }
 
 // RecipeScope captures per-repo isolation markers and the global store location.
