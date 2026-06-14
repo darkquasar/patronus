@@ -47,7 +47,8 @@ func skillArtifact(t *testing.T, name string, targets []string, scope string) re
 	}
 	return registry.ArtifactEntry{
 		Manifest: &manifest.Artifact{
-			Kind: manifest.KindSkill, Name: name, Role: manifest.RoleCapability,
+			Meta:  manifest.Meta{Family: manifest.FamilyArtifact, Name: name, Role: manifest.RoleCapability},
+			Type:  manifest.TypeSkill,
 			Entry: "SKILL.md", Targets: targets, Defaults: manifest.ArtifactDefaults{Scope: scope},
 		},
 		Source: registry.Source{LocalDir: src},
@@ -62,7 +63,8 @@ func instructionArtifact(t *testing.T, name string, targets []string) registry.A
 	}
 	return registry.ArtifactEntry{
 		Manifest: &manifest.Artifact{
-			Kind: manifest.KindInstruction, Name: name, Role: manifest.RoleInstruction,
+			Meta:  manifest.Meta{Family: manifest.FamilyArtifact, Name: name, Role: manifest.RoleInstruction},
+			Type:  manifest.TypeInstruction,
 			Entry: "INSTRUCTIONS.md", Targets: targets, Defaults: manifest.ArtifactDefaults{Scope: "local"},
 		},
 		Source: registry.Source{LocalDir: src},

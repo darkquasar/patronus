@@ -1,7 +1,7 @@
-apiVersion: patronus/v1
-kind: Recipe
+apiVersion: patronus/v2
+family: recipe
 name: memory-engram
-capability: memory                         # fallback recipe for memory (binary-only, no Docker)
+role: memory                               # L3 — fallback recipe for memory (binary-only, no Docker)
 summary: "Engram memory layer (binary-only, no Docker) — for locked-down/airgapped/Windows cases."
 # NOTE: DESIGN.md §1/§5c names the upstream `edg-l/engram`, but that repo does not
 # exist. The real match for DESIGN's description (agent-agnostic Go binary,
@@ -10,15 +10,11 @@ summary: "Engram memory layer (binary-only, no Docker) — for locked-down/airga
 upstream: github.com/Gentleman-Programming/engram
 license: MIT
 
-delivery:
-  primary: github-release                  # Model A floor — fetch+verify per-OS/arch asset + sha256
+deliver:
+  source: github-release                   # Model A floor — fetch+verify per-OS/arch asset + sha256
   installTo: "~/.patronus/bin/"
   binary: engram                           # installed filename (engram[.exe])
-  fallbacks:                               # opt-in only via --prefer-system-pkg, if present
-    brew: false                            # not (currently) in Homebrew
-    scoop: false                           # aspirational; flip to a real ref once packaged
-    winget: false
-    npm: false                             # not an npm package
+  fallbacks: []                            # opt-in only via --prefer-system-pkg; not in any system PM today
   # Pinned to v1.16.1 (§9.3 trust model = pinned). sha256 from the release's
   # checksums.txt; each archive holds a bare `engram` binary at its root.
   assets:
@@ -63,9 +59,9 @@ scope:
   global: "~/.patronus/share/engram"
 
 # Engram is NOT self-wiring — Patronus performs the MCP-config MERGE itself.
-# `engram mcp` launches the MCP server over stdio.
+# `engram mcp` launches the MCP server over stdio. Shape (computed) = fetch+wire.
 wire:
-  selfWiring: false
+  mode: mcp
   mcp:
     transport: stdio
     command: "{installPath}"

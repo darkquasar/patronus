@@ -45,15 +45,19 @@ type FileDiff struct {
 	Before []byte `json:"-"`
 	After  []byte `json:"-"`
 
-	// Display / grouping metadata.
-	Artifact   string `json:"artifact,omitempty"`   // source artifact name
-	Version    string `json:"version,omitempty"`    // the source item's own version (recorded in state for update)
-	Capability string `json:"capability,omitempty"` // what's added: skill|instruction|mcp|...
-	Tool       string `json:"tool,omitempty"`
-	Scope      string `json:"scope,omitempty"`
-	Role       string `json:"role,omitempty"`
-	Note       string `json:"note,omitempty"`
-	IsDir      bool   `json:"isDir,omitempty"`
+	// Display / grouping metadata. Type and Role are the two ontology axes the
+	// summary table shows as columns: Type is the item's SHAPE (an artifact's
+	// declared type — skill|agent|command|hook|instruction — or a recipe's
+	// computed Shape() — wire-only|fetch+wire|fetch+run), Role is the layer it
+	// fills (capability|context|memory|tools|...).
+	Artifact string `json:"artifact,omitempty"` // source artifact/recipe name
+	Version  string `json:"version,omitempty"`  // the source item's own version (recorded in state for update)
+	Type     string `json:"type,omitempty"`     // shape: artifact type or recipe Shape()
+	Tool     string `json:"tool,omitempty"`
+	Scope    string `json:"scope,omitempty"`
+	Role     string `json:"role,omitempty"` // the layer it fills
+	Note     string `json:"note,omitempty"`
+	IsDir    bool   `json:"isDir,omitempty"`
 
 	// Intended, when set on a SKIP, is the action this diff WOULD perform if the
 	// skip were overridden. The Phase-8 remove path uses it for drift: a file
@@ -99,11 +103,15 @@ type FetchSpec struct {
 	PlacedSHA256 string
 }
 
-// ExecSpec is one self-wiring post-install command. Command is the argv; Display
-// is the human-readable form shown in the dry run.
+// ExecSpec is one wire.run command. Command is the argv; Display is the
+// human-readable form shown in the dry run. SelfManaged is true when the command
+// comes from a wire.mode:self recipe (the recipe's own installer wires it), which
+// is what remove reports as "not auto-revertable"; false for a wire.mode:run
+// command that Patronus itself runs.
 type ExecSpec struct {
-	Command []string
-	Display string
+	Command     []string
+	Display     string
+	SelfManaged bool
 }
 
 // SectionEdit captures the inputs of an appendSection edit so it can be re-applied

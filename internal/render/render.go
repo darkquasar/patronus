@@ -52,11 +52,11 @@ func printArtifacts(w io.Writer, entries []registry.ArtifactEntry) {
 		return
 	}
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tKIND\tROLE\tTARGETS\tDESCRIPTION")
+	fmt.Fprintln(tw, "  NAME\tTYPE\tROLE\tTARGETS\tDESCRIPTION")
 	for _, e := range entries {
 		m := e.Manifest
 		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\n",
-			m.Name, m.Kind, m.Role, joinList(m.Targets), truncate(m.Description, descWidth))
+			m.Name, m.Type, m.Role, joinList(m.Targets), truncate(m.Description, descWidth))
 	}
 	tw.Flush()
 	fmt.Fprintln(w)
@@ -70,10 +70,10 @@ func printRecipes(w io.Writer, entries []registry.RecipeEntry) {
 		return
 	}
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tCAPABILITY\tSUMMARY")
+	fmt.Fprintln(tw, "  NAME\tTYPE\tROLE\tSUMMARY")
 	for _, e := range entries {
 		m := e.Manifest
-		fmt.Fprintf(tw, "  %s\t%s\t%s\n", m.Name, m.Capability, truncate(m.Summary, descWidth))
+		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n", m.Name, m.Shape(), m.Role, truncate(m.Summary, descWidth))
 	}
 	tw.Flush()
 	fmt.Fprintln(w)

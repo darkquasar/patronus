@@ -13,8 +13,8 @@ import (
 )
 
 // transformAgent reshapes a portable Agent (markdown with YAML frontmatter +
-// body) into the per-tool format declared by the adapter's Agent layout. No
-// kind: Agent artifact ships today, so there is no end-to-end driver; the
+// body) into the per-tool format declared by the adapter's agent layout. No
+// type: agent artifact ships today, so there is no end-to-end driver; the
 // reshape logic and its unit tests live here for the recipe/profile work that
 // will introduce agents.
 func (e *Engine) transformAgent(art *manifest.Artifact, ad *manifest.Adapter, scope, srcDir string) ([]diff.FileDiff, error) {

@@ -75,7 +75,7 @@ flowchart TB
         L1a["<b>Static, human-authored</b>"]
         L1b["Source of truth: a file YOU write<br/>(CLAUDE.md / AGENTS.md)"]
         L1c["Changes when: you edit it"]
-        L1d["Installed as: a translated <b>Artifact</b><br/>(kind: Instruction → appended section)"]
+        L1d["Installed as: a translated <b>Artifact</b><br/>(type: instruction → appended section)"]
     end
 
     subgraph L2["L2 — Capabilities"]
@@ -83,7 +83,7 @@ flowchart TB
         L2a["<b>Invocable behaviors</b>"]
         L2b["Skills (/command), subagents, commands"]
         L2c["Changes when: you add/version a skill"]
-        L2d["Installed as: a translated <b>Artifact</b><br/>(kind: Skill / Agent / Command → created)"]
+        L2d["Installed as: a translated <b>Artifact</b><br/>(type: skill / agent / command → created)"]
     end
 
     subgraph L3["L3 — Memory"]
@@ -150,6 +150,54 @@ flowchart TB
 
 ---
 
+## The ontology — family / type / role
+
+Every installable is described by **three orthogonal axes**, each answering one question
+with no overlap — so the dry-run summary table shows exactly one axis per column:
+
+```mermaid
+flowchart TB
+    Root["INSTALLABLE<br/>anything patronus can add to an environment"]
+
+    Root --> Axes["described by THREE orthogonal axes"]
+
+    Axes --> FAM["<b>1 · FAMILY</b><br/>how it's delivered + installed<br/>(the dispatch axis — always present)"]
+    Axes --> TYP["<b>2 · TYPE</b><br/>its on-disk shape<br/>(declared for artifacts, computed otherwise)"]
+    Axes --> ROL["<b>3 · ROLE</b><br/>which layer it fills<br/>(universal — every installable has exactly one)"]
+
+    FAM --> FA["artifact → transform<br/>CREATE / APPEND / MERGE"]
+    FAM --> FR["recipe → deliver and/or wire<br/>FETCH / MERGE / EXEC"]
+    FAM --> FP["profile → expand<br/>into other installables"]
+
+    TYP --> TA["artifact (DECLARED):<br/>skill · agent · command · hook · instruction"]
+    TYP --> TR["recipe (COMPUTED from deliver × wire):<br/>wire-only · fetch+wire · fetch+run"]
+    TYP --> TP["profile (COMPUTED): expansion"]
+
+    ROL --> RL["instruction L1 · capability L2 · memory L3<br/>context L4 · tools L5 · sandbox L6<br/>observability L7 · harness L8 · guardrail L9<br/>orchestration L10 · lifecycle L11"]
+
+    classDef root fill:#eee,stroke:#888,color:#000;
+    classDef fam fill:#e8f0fe,stroke:#4285f4,color:#000;
+    classDef typ fill:#e6f4ea,stroke:#34a853,color:#000;
+    classDef rol fill:#fef7e0,stroke:#fbbc04,color:#000;
+    class Root,Axes root
+    class FAM,FA,FR,FP fam
+    class TYP,TA,TR,TP typ
+    class ROL,RL rol
+```
+
+| Axis | Question it answers | Present on | Source |
+|---|---|---|---|
+| **family** | *How does it get installed?* | every installable | declared |
+| **type** | *What shape does it take?* | every installable | **declared** for artifacts; **computed** for recipes/profiles |
+| **role** | *Which layer / job is it?* | every installable | declared |
+
+`type` is **declared** only where the shape is otherwise ambiguous (an artifact's files
+could be a skill or a command — `type` is the only signal). For recipes it is **computed**
+from `deliver × wire` (so a recipe has no `type:` field to drift), and for profiles it is
+always `expansion`. Role names **are** layer names (L4's role is `context`).
+
+---
+
 ## Author once → translate per tool
 
 The same portable artifact installs onto three different tools, each with its own on-disk format.
@@ -173,25 +221,25 @@ flowchart LR
     class OutC,OutX,OutO out
 ```
 
-Each artifact has a **`kind`** (its on-disk shape) and a **`role`** (its job / which layer it fills):
+Each artifact declares a **`type`** (its on-disk shape) and a **`role`** (its job / which layer it fills):
 
 ```mermaid
 flowchart LR
-    subgraph Kinds["kind — on-disk shape (closed set)"]
-        K1["Skill → CREATE skills/{name}/"]
-        K2["Agent → CREATE agents/{name}"]
-        K3["Command → CREATE commands/{name}"]
-        K4["Hook → MERGE settings.json"]
-        K5["Instruction → APPEND CLAUDE.md"]
+    subgraph Types["type — on-disk shape (closed set)"]
+        K1["skill → CREATE skills/{name}/"]
+        K2["agent → CREATE agents/{name}"]
+        K3["command → CREATE commands/{name}"]
+        K4["hook → MERGE settings.json"]
+        K5["instruction → APPEND CLAUDE.md"]
     end
     subgraph Roles["role — job / layer (open set)"]
         R1["capability → L2"]
-        R2["pattern → L4"]
+        R2["context → L4"]
         R3["instruction → L1"]
         R4["guardrail → L9 (reserved)"]
         R5["harness → L8 (reserved)"]
     end
-    Kinds -. "one shape can serve<br/>many jobs" .- Roles
+    Types -. "one shape can serve<br/>many jobs" .- Roles
 ```
 
 ---
@@ -233,12 +281,12 @@ flowchart LR
 patronus/
 ├── artifacts/                  # AUTHOR ONCE — tool-agnostic source of truth
 │   ├── instructions/
-│   │   └── agent-principles/   # L1 — kind: Instruction (ambient house rules)
+│   │   └── agent-principles/   # L1 — type: instruction (ambient house rules)
 │   └── skills/
-│       ├── team-research/      # L2 — kind: Skill, role: capability
-│       ├── team-implement/     # L2 — kind: Skill, role: capability
-│       ├── pattern-cloudflare/ # L4 — kind: Skill, role: pattern
-│       └── pattern-mcp/        # L4 — kind: Skill, role: pattern
+│       ├── team-research/      # L2 — type: skill, role: capability
+│       ├── team-implement/     # L2 — type: skill, role: capability
+│       ├── pattern-cloudflare/ # L4 — type: skill, role: context
+│       └── pattern-mcp/        # L4 — type: skill, role: context
 ├── recipes/                    # external binaries to fetch + wire
 │   ├── memory-ai-memory.yaml   # L3 — default memory (self-wiring)
 │   ├── memory-engram.yaml      # L3 — fallback memory (binary-only)
@@ -293,11 +341,11 @@ or **MERGE** (a structural config edit that preserves sibling keys). The plan sh
 
 ```console
 $ patronus install agent-principles --tool claude --local
-┌──────────────────┬──────────────────┬───────────┬─────────────┬────────┬───────┐
-│ Artifact         │ Impacted path(s) │ Operation │ Capability  │ Tool   │ Scope │
-├──────────────────┼──────────────────┼───────────┼─────────────┼────────┼───────┤
-│ agent-principles │ ./CLAUDE.md      │ APPEND    │ instruction │ claude │ local │
-└──────────────────┴──────────────────┴───────────┴─────────────┴────────┴───────┘
+┌──────────────────┬──────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
+│ Artifact         │ Impacted path(s) │ Operation │ Type        │ Role        │ Tool   │ Scope │
+├──────────────────┼──────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
+│ agent-principles │ ./CLAUDE.md      │ APPEND    │ instruction │ instruction │ claude │ local │
+└──────────────────┴──────────────────┴───────────┴─────────────┴─────────────┴────────┴───────┘
 
 ./
 └── CLAUDE.md  (appended)  # APPEND — role: instruction
@@ -329,25 +377,25 @@ so you see precisely what will be created, appended, and run *before* anything h
 ```console
 $ patronus install --profile cloudflare --tool claude --local
 warning: profile "cloudflare" is a stub: layers marked TODO are not yet populated
-┌────────────────────┬───────────────────────────────────────────┬───────────┬─────────────┬────────┬───────┐
-│ Artifact           │ Impacted path(s)                          │ Operation │ Capability  │ Tool   │ Scope │
-├────────────────────┼───────────────────────────────────────────┼───────────┼─────────────┼────────┼───────┤
-│ pattern-cloudflare │ ./.claude/skills/pattern-cloudflare/ (8…) │ CREATE    │ pattern     │ claude │ local │
-│ team-implement     │ ./.claude/skills/team-implement/SKILL.md  │ CREATE    │ skill       │ claude │ local │
-│ team-research      │ ./.claude/skills/team-research/SKILL.md   │ CREATE    │ skill       │ claude │ local │
-│ agent-principles   │ ./CLAUDE.md                               │ APPEND    │ instruction │ claude │ local │
-│ memory-ai-memory   │ ai-memory install-hooks --agent claude    │ EXEC      │ self-wire   │ claude │ local │
-│ memory-ai-memory   │ ai-memory install-mcp   --client claude   │ EXEC      │ self-wire   │ claude │ local │
-└────────────────────┴───────────────────────────────────────────┴───────────┴─────────────┴────────┴───────┘
+┌────────────────────┬───────────────────────────────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
+│ Artifact           │ Impacted path(s)                          │ Operation │ Type        │ Role        │ Tool   │ Scope │
+├────────────────────┼───────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
+│ pattern-cloudflare │ ./.claude/skills/pattern-cloudflare/ (8…) │ CREATE    │ skill       │ context     │ claude │ local │
+│ team-implement     │ ./.claude/skills/team-implement/SKILL.md  │ CREATE    │ skill       │ capability  │ claude │ local │
+│ team-research      │ ./.claude/skills/team-research/SKILL.md   │ CREATE    │ skill       │ capability  │ claude │ local │
+│ agent-principles   │ ./CLAUDE.md                               │ APPEND    │ instruction │ instruction │ claude │ local │
+│ memory-ai-memory   │ ai-memory install-hooks --agent claude    │ EXEC      │ fetch+run   │ memory      │ claude │ local │
+│ memory-ai-memory   │ ai-memory install-mcp   --client claude   │ EXEC      │ fetch+run   │ memory      │ claude │ local │
+└────────────────────┴───────────────────────────────────────────┴───────────┴─────────────┴─────────────┴────────┴───────┘
 
 ./
 ├── .claude/
 │   └── skills/
 │       ├── pattern-cloudflare/          # L4 context — a whole pattern set
-│       │   ├── SKILL.md  (new)  # CREATE — role: pattern
+│       │   ├── SKILL.md  (new)  # CREATE — role: context
 │       │   └── patterns/
-│       │       ├── pattern-001.md  (new)  # CREATE — role: pattern
-│       │       └── … (006 more)  (new)  # CREATE — role: pattern
+│       │       ├── pattern-001.md  (new)  # CREATE — role: context
+│       │       └── … (006 more)  (new)  # CREATE — role: context
 │       ├── team-implement/              # L2 capability
 │       │   └── SKILL.md  (new)  # CREATE — role: capability
 │       └── team-research/               # L2 capability

@@ -1,5 +1,6 @@
-apiVersion: patronus/v1
-kind: Skill
+apiVersion: patronus/v2
+family: artifact
+type: skill
 role: capability
 name: team-research
 description: "Spec-Driven Team Research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md + spec.md + plan.md."

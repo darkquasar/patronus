@@ -62,12 +62,14 @@ func repoRoot(t *testing.T) string {
 // engramRecipe is a stdio github-release recipe (the floor), with a pinned asset.
 func engramRecipe() *manifest.Recipe {
 	return &manifest.Recipe{
-		APIVersion: manifest.APIVersion,
-		Kind:       manifest.KindRecipe,
-		Name:       "memory-engram",
-		Capability: "memory",
+		Meta: manifest.Meta{
+			APIVersion: manifest.APIVersion,
+			Family:     manifest.FamilyRecipe,
+			Name:       "memory-engram",
+			Role:       manifest.RoleMemory,
+		},
 		Delivery: &manifest.Delivery{
-			Primary:   "github-release",
+			Source:    manifest.SourceGithubRelease,
 			InstallTo: "~/.patronus/bin/",
 			Binary:    "engram",
 			Assets: []manifest.Asset{
@@ -76,6 +78,7 @@ func engramRecipe() *manifest.Recipe {
 			},
 		},
 		Wire: manifest.Wire{
+			Mode:  manifest.WireModeMcp,
 			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "{installPath}", Args: []string{"serve"}},
 			Tools: []string{"claude", "codex", "opencode"},
 		},
@@ -184,8 +187,9 @@ func TestComputeFetchSkipsWhenBinaryMatches(t *testing.T) {
 func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
-		Name: "github", Capability: "tools",
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "github", Role: manifest.RoleTools},
 		Wire: manifest.Wire{
+			Mode:  manifest.WireModeMcp,
 			Mcp:   &manifest.WireMcp{Transport: "http", URL: "https://api.example/mcp/"},
 			Tools: []string{"claude"},
 		},
@@ -207,14 +211,14 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	}
 }
 
-func TestComputeSelfWiring_EmitsExec(t *testing.T) {
+func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
-		Name: "memory-ai-memory", Capability: "memory",
-		Delivery: &manifest.Delivery{Primary: "docker"}, // no fetch
+		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: manifest.RoleMemory},
+		Delivery: &manifest.Delivery{Source: manifest.SourceDocker}, // no fetch
 		Wire: manifest.Wire{
-			SelfWiring: true,
-			PostInstall: []string{
+			Mode: manifest.WireModeSelf,
+			Run: []string{
 				"ai-memory install-mcp --client {tool} --apply",
 				"ai-memory install-hooks --agent {tool} --apply",
 			},

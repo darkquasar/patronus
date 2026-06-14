@@ -30,13 +30,15 @@ func PrintPlan(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver, verbose boo
 
 // PrintSummaryTable renders the artifact-centric summary:
 //
-//	Artifact | Impacted path(s) | Operation | Capability
+//	Artifact | Impacted path(s) | Operation | Type | Role | Tool | Scope
 //
-// Rows are grouped per (artifact, operation, capability); the impacted paths
-// for that group are listed compactly (a directory + count when many files
-// share a root).
+// Type and Role are the two ontology axes, one per column (no mixed-axis
+// "Capability" column): Type is the item's shape (artifact type or recipe
+// Shape()), Role is the layer it fills. Rows are grouped per
+// (artifact, operation, type, role, tool, scope); the impacted paths for that
+// group are listed compactly (a directory + count when many files share a root).
 func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
-	type key struct{ artifact, op, capability, tool, scope, uniq string }
+	type key struct{ artifact, op, typ, role, tool, scope, uniq string }
 	type group struct {
 		key   key
 		paths []string
@@ -48,7 +50,7 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 		if d.IsDir {
 			continue
 		}
-		k := key{d.Artifact, string(d.Action), d.Capability, d.Tool, d.Scope, ""}
+		k := key{d.Artifact, string(d.Action), d.Type, d.Role, d.Tool, d.Scope, ""}
 		// EXEC rows are distinct commands, not files sharing a directory — keep
 		// each on its own row instead of collapsing them via summarizePaths.
 		if d.Action == diff.Exec {
@@ -63,7 +65,7 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 		g.paths = append(g.paths, displayPath(r, d.Path))
 	}
 
-	headers := []string{"Artifact", "Impacted path(s)", "Operation", "Capability", "Tool", "Scope"}
+	headers := []string{"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope"}
 	var rows [][]string
 	for _, k := range order {
 		g := groups[k]
@@ -71,7 +73,8 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 			orDash(k.artifact),
 			summarizePaths(g.paths),
 			k.op,
-			orDash(k.capability),
+			orDash(k.typ),
+			orDash(k.role),
 			orDash(k.tool),
 			orDash(k.scope),
 		})

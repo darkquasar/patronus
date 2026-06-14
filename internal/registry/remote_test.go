@@ -40,7 +40,7 @@ func sha(b []byte) string {
 func buildServed(t *testing.T) (*fakeFetcher, string) {
 	t.Helper()
 	src := map[string][]byte{
-		"patronus.yaml": []byte("kind: Skill\nname: demo\nversion: 1.0.0\n"),
+		"patronus.yaml": []byte("family: artifact\ntype: skill\nname: demo\nversion: 1.0.0\n"),
 		"SKILL.md":      []byte("# demo body"),
 	}
 	tgz, err := archive.CreateTarGz(src)
@@ -52,7 +52,7 @@ func buildServed(t *testing.T) (*fakeFetcher, string) {
 	ix := &Index{
 		SchemaVersion: IndexSchemaVersion,
 		Artifacts: []IndexArtifact{{
-			Manifest: &manifest.Artifact{Name: "demo", Version: "1.0.0", Kind: "Skill", Entry: "SKILL.md"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo", Version: "1.0.0"}, Type: manifest.TypeSkill, Entry: "SKILL.md"},
 			Tarball:  Tarball{URL: tarURL, SHA256: sha(tgz)},
 		}},
 	}

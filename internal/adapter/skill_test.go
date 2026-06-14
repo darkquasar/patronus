@@ -39,7 +39,7 @@ func TestTransformSkillPassthrough(t *testing.T) {
 	}
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindSkill, Name: "team-research", Role: manifest.RoleCapability, Entry: "SKILL.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Role: manifest.RoleCapability}, Type: manifest.TypeSkill, Entry: "SKILL.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestTransformSkillWithFilesDir(t *testing.T) {
 
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindSkill, Name: "pattern-cloudflare", Role: manifest.RolePattern, Entry: "SKILL.md", Files: []string{"patterns/"}}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "pattern-cloudflare", Role: manifest.RoleContext}, Type: manifest.TypeSkill, Entry: "SKILL.md", Files: []string{"patterns/"}}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestTransformSkillProjectScope(t *testing.T) {
 	proj := t.TempDir()
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, proj))
-	art := &manifest.Artifact{Kind: manifest.KindSkill, Name: "s", Entry: "SKILL.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "s"}, Type: manifest.TypeSkill, Entry: "SKILL.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "local", src, noExisting)
 	if err != nil {
@@ -119,7 +119,7 @@ func TestTransformSkillMissingEntryErrors(t *testing.T) {
 	src := t.TempDir() // no SKILL.md written
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindSkill, Name: "s", Entry: "SKILL.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "s"}, Type: manifest.TypeSkill, Entry: "SKILL.md"}
 	if _, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting); err == nil {
 		t.Error("expected error for missing entry file")
 	}
@@ -128,7 +128,7 @@ func TestTransformSkillMissingEntryErrors(t *testing.T) {
 func TestTransformUnsupportedKind(t *testing.T) {
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindHook, Name: "h"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "h"}, Type: manifest.TypeHook}
 	if _, err := eng.Transform(art, claudeAdapter(t), "global", t.TempDir(), noExisting); err == nil {
 		t.Error("expected error for Hook kind (no transform)")
 	}

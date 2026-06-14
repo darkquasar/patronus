@@ -1,5 +1,6 @@
-apiVersion: patronus/v1
-kind: Instruction
+apiVersion: patronus/v2
+family: artifact
+type: instruction
 role: instruction
 name: agent-principles
 description: "Ambient house rules for how an AI coding agent should think and work — mindset, workflow, task management, and core principles. Appended into CLAUDE.md/AGENTS.md."

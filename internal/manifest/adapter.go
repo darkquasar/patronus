@@ -3,11 +3,11 @@ package manifest
 import "fmt"
 
 // Adapter declares how one tool wants artifacts laid out and how the scanner IDs
-// it (§5b). Phase 1 consumes only Tool + Detect; Layout is held opaque for the
-// Phase 2 transform engine.
+// it (§5). It carries family: adapter but is NOT an Installable — it is the
+// per-tool transform definition, not something Patronus installs.
 type Adapter struct {
 	APIVersion string        `yaml:"apiVersion,omitempty"`
-	Kind       Kind          `yaml:"kind,omitempty"`
+	Family     Family        `yaml:"family,omitempty"`
 	Tool       string        `yaml:"tool"`
 	Detect     AdapterDetect `yaml:"detect"`
 	Layout     Layout        `yaml:"layout,omitempty"`

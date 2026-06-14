@@ -1,5 +1,5 @@
-apiVersion: patronus/v1
-kind: Adapter
+apiVersion: patronus/v2
+family: adapter
 tool: opencode
 
 # Honors OPENCODE_CONFIG_DIR, then $XDG_CONFIG_HOME/opencode, then ~/.config/opencode.
@@ -9,27 +9,27 @@ detect:
   project: ["opencode.json", "opencode.jsonc", ".opencode/"]
 
 layout:
-  Skill:
+  skill:
     global: "~/.config/opencode/skills/{name}/SKILL.md"
     project: ".opencode/skills/{name}/SKILL.md"
     nameSource: dir
     frontmatter: passthrough   # natively Claude-SKILL.md-compatible
 
-  Agent:
+  agent:
     # Loader accepts agent/ AND agents/ — write singular.
     global: "~/.config/opencode/agent/{name}.md"
     project: ".opencode/agent/{name}.md"
     frontmatter: [mode, model, prompt, permission]
     bodyIs: prompt
 
-  Command:
+  command:
     # Accepts command/ AND commands/ — write singular.
     global: "~/.config/opencode/command/{name}.md"
     project: ".opencode/command/{name}.md"
 
   # OpenCode uses type:"local" (stdio) / type:"remote" (http) — NOT stdio/http —
   # and stdio command is an array (command:[...]), not command+args.
-  Mcp:
+  mcp:
     global: { file: "~/.config/opencode/opencode.json", format: jsonc, path: "mcp.{name}" }
     project: { file: "opencode.json", format: jsonc, path: "mcp.{name}" }
     transports:
@@ -38,12 +38,12 @@ layout:
       http:
         keys: { type: "remote", url: "{url}", headers: "{headers}" }
 
-  Hook:
+  hook:
     # TODO: OpenCode hook surface — confirm before authoring hook artifacts.
     global: null
     project: null
 
-  Instruction:
+  instruction:
     # OpenCode reads AGENTS.md/CLAUDE.md and an `instructions: []` glob array in config.
     global: { file: "~/.config/opencode/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }

@@ -15,7 +15,7 @@ func TestTransformInstructionAppend(t *testing.T) {
 	mustWrite(t, filepath.Join(src, "INSTRUCTIONS.md"), "house rules")
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindInstruction, Name: "agent-principles", Role: manifest.RoleInstruction, Entry: "INSTRUCTIONS.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "agent-principles", Role: manifest.RoleInstruction}, Type: manifest.TypeInstruction, Entry: "INSTRUCTIONS.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -38,7 +38,7 @@ func TestTransformInstructionFoldsExisting(t *testing.T) {
 	mustWrite(t, filepath.Join(src, "INSTRUCTIONS.md"), "new body")
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindInstruction, Name: "ap", Entry: "INSTRUCTIONS.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ap"}, Type: manifest.TypeInstruction, Entry: "INSTRUCTIONS.md"}
 
 	existing := []byte("user prose\n")
 	read := func(string) ([]byte, bool, error) { return existing, true, nil }
@@ -61,7 +61,7 @@ func TestTransformCommand(t *testing.T) {
 	mustWrite(t, filepath.Join(src, "do-thing.md"), "command body")
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindCommand, Name: "do-thing", Entry: "do-thing.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "do-thing"}, Type: manifest.TypeCommand, Entry: "do-thing.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -79,7 +79,7 @@ func TestTransformCommandDefaultEntry(t *testing.T) {
 	mustWrite(t, filepath.Join(src, "foo.md"), "x")
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Kind: manifest.KindCommand, Name: "foo"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "foo"}, Type: manifest.TypeCommand}
 	if _, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting); err != nil {
 		t.Fatalf("default entry resolution failed: %v", err)
 	}

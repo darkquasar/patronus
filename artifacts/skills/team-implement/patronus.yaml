@@ -1,5 +1,6 @@
-apiVersion: patronus/v1
-kind: Skill
+apiVersion: patronus/v2
+family: artifact
+type: skill
 role: capability
 name: team-implement
 description: "Spec-Driven Team Implementation — implement a feature from existing research (spec.md + plan.md) with parallel teammate agents, each owning a concern boundary."

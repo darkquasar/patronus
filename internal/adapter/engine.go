@@ -38,28 +38,28 @@ func (e *Engine) Transform(art *manifest.Artifact, ad *manifest.Adapter, scope, 
 		diffs []diff.FileDiff
 		err   error
 	)
-	switch art.Kind {
-	case manifest.KindSkill:
+	switch art.Type {
+	case manifest.TypeSkill:
 		diffs, err = e.transformSkill(art, ad, scope, srcDir)
-	case manifest.KindInstruction:
+	case manifest.TypeInstruction:
 		diffs, err = e.transformInstruction(art, ad, scope, srcDir, readExisting)
-	case manifest.KindAgent:
+	case manifest.TypeAgent:
 		diffs, err = e.transformAgent(art, ad, scope, srcDir)
-	case manifest.KindCommand:
+	case manifest.TypeCommand:
 		diffs, err = e.transformCommand(art, ad, scope, srcDir)
 	default:
-		return nil, fmt.Errorf("adapter: kind %q not supported for tool %q", art.Kind, ad.Tool)
+		return nil, fmt.Errorf("adapter: type %q not supported for tool %q", art.Type, ad.Tool)
 	}
 	if err != nil {
 		return nil, err
 	}
-	// Stamp source-artifact identity + capability on every emitted diff so the
-	// dry-run summary can group by artifact and label the added capability.
-	cap := manifest.Capability(art.Kind, art.Role)
+	// Stamp source-artifact identity + the declared Type (shape) on every emitted
+	// diff, so the dry-run summary can group by artifact and show Type as one
+	// column. Role (the other axis) is stamped by each transform already.
 	for i := range diffs {
 		diffs[i].Artifact = art.Name
 		diffs[i].Version = art.Version
-		diffs[i].Capability = cap
+		diffs[i].Type = string(art.Type)
 	}
 	return diffs, nil
 }

@@ -184,7 +184,7 @@ func (rs *Resolver) resolveHTTPS(ctx context.Context, ref *Ref) (*Resolved, erro
 		return nil, fmt.Errorf("https: %w", err)
 	}
 
-	// Try recipe first (it has a fixed kind: Recipe), else artifact.
+	// Try recipe first (it declares family: recipe), else artifact.
 	if rec, rerr := manifest.DecodeRecipe(data); rerr == nil {
 		dest := rs.httpsDest(ref.Raw)
 		if err := install.WriteFileAtomic(filepath.Join(dest, path.Base(ref.Raw)), data, 0o644); err != nil {

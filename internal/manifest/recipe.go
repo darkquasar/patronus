@@ -2,35 +2,60 @@ package manifest
 
 import "fmt"
 
-// Recipe is an external binary/tool to fetch, verify, and wire into each agent
-// (§5c). Phase 1 parses recipes for display only; fetch/wire fields are held,
-// not acted on.
+// Recipe is an external binary/tool that Patronus delivers (optional fetch+verify)
+// and/or wires into each agent (§4). It carries NO file type — its shape is a
+// pure function of deliver × wire (see Shape).
 type Recipe struct {
-	APIVersion string       `yaml:"apiVersion" json:"apiVersion"`
-	Kind       Kind         `yaml:"kind" json:"kind"`
-	Name       string       `yaml:"name" json:"name"`
-	Capability string       `yaml:"capability" json:"capability"` // memory | tools | sandbox | observability | context | harness
-	Summary    string       `yaml:"summary" json:"summary"`
-	Upstream   string       `yaml:"upstream,omitempty" json:"upstream,omitempty"`
-	License    string       `yaml:"license,omitempty" json:"license,omitempty"`
-	Delivery   *Delivery    `yaml:"delivery,omitempty" json:"delivery,omitempty"` // nil for wire-only remote MCP
-	Scope      *RecipeScope `yaml:"scope,omitempty" json:"scope,omitempty"`
-	Wire       Wire         `yaml:"wire" json:"wire"`
-	Seed       []string     `yaml:"seed,omitempty" json:"seed,omitempty"`
+	Meta     `yaml:",inline" json:",inline"`
+	Summary  string       `yaml:"summary,omitempty" json:"summary,omitempty"`
+	Upstream string       `yaml:"upstream,omitempty" json:"upstream,omitempty"`
+	License  string       `yaml:"license,omitempty" json:"license,omitempty"`
+	Delivery *Delivery    `yaml:"deliver,omitempty" json:"deliver,omitempty"` // nil for wire-only remote MCP
+	Scope    *RecipeScope `yaml:"scope,omitempty" json:"scope,omitempty"`
+	Wire     Wire         `yaml:"wire" json:"wire"`
+	Seed     []string     `yaml:"seed,omitempty" json:"seed,omitempty"`
 }
 
-// Delivery describes how the recipe's binary is obtained (§2c).
+// Header returns the recipe's shared identity header (implements Installable).
+func (r *Recipe) Header() Meta { return r.Meta }
+
+// DeliverySource is the closed set of ways a recipe's binary/script is obtained.
+type DeliverySource string
+
+const (
+	SourceGithubRelease DeliverySource = "github-release"
+	SourceDocker        DeliverySource = "docker"
+	SourceCargo         DeliverySource = "cargo"
+	SourceScript        DeliverySource = "script"
+	SourceURL           DeliverySource = "url"
+)
+
+var deliverySources = map[DeliverySource]bool{
+	SourceGithubRelease: true, SourceDocker: true, SourceCargo: true,
+	SourceScript: true, SourceURL: true,
+}
+
+// Delivery describes how the recipe's binary/script is obtained (§4b).
 type Delivery struct {
-	Primary   string                 `yaml:"primary" json:"primary"`                         // github-release | docker | cargo | ...
-	Fallbacks map[string]interface{} `yaml:"fallbacks,omitempty" json:"fallbacks,omitempty"` // values mix bool(false) and string refs
-	InstallTo string                 `yaml:"installTo,omitempty" json:"installTo,omitempty"`
-	Binary    string                 `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
-	Assets    []Asset                `yaml:"assets,omitempty" json:"assets,omitempty"`
+	Source    DeliverySource `yaml:"source" json:"source"`                           // github-release | docker | cargo | script | url
+	Fallbacks []Fallback     `yaml:"fallbacks,omitempty" json:"fallbacks,omitempty"` // opt-in system-PM alternatives (--prefer-system-pkg)
+	InstallTo string         `yaml:"installTo,omitempty" json:"installTo,omitempty"`
+	Binary    string         `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
+	Assets    []Asset        `yaml:"assets,omitempty" json:"assets,omitempty"`
 }
 
-// Asset is one pinned per-OS/arch github-release artifact (§2c floor, §9.3
-// pinned trust model). Archive/BinaryPath are set when the asset is a
-// tar.gz/zip rather than a bare binary; the FETCH step extracts BinaryPath.
+// Fallback is one opt-in system-package-manager alternative to the blessed
+// delivery source, consulted only under --prefer-system-pkg. A package manager
+// that doesn't (yet) carry the recipe simply isn't listed — there is no
+// "false" placeholder (which is what the old map[string]interface{} encoded).
+type Fallback struct {
+	PM  string `yaml:"pm" json:"pm"`   // brew | scoop | winget | cargo | aur | npm | ...
+	Ref string `yaml:"ref" json:"ref"` // package name / install ref in that PM
+}
+
+// Asset is one pinned per-OS/arch github-release artifact (§4b floor, pinned
+// trust model). Archive/BinaryPath are set when the asset is a tar.gz/zip rather
+// than a bare binary; the FETCH step extracts BinaryPath.
 type Asset struct {
 	OS         string `yaml:"os" json:"os"`     // GOOS: linux | darwin | windows
 	Arch       string `yaml:"arch" json:"arch"` // GOARCH: amd64 | arm64
@@ -52,9 +77,9 @@ func (d *Delivery) ResolveAsset(goos, goarch string) (*Asset, error) {
 		}
 	}
 	if len(d.Assets) == 0 {
-		return nil, fmt.Errorf("delivery: no assets pinned (upstream not yet resolved)")
+		return nil, fmt.Errorf("deliver: no assets pinned (upstream not yet resolved)")
 	}
-	return nil, fmt.Errorf("delivery: no asset for %s/%s", goos, goarch)
+	return nil, fmt.Errorf("deliver: no asset for %s/%s", goos, goarch)
 }
 
 // RecipeScope captures per-repo isolation markers and the global store location.
@@ -63,20 +88,58 @@ type RecipeScope struct {
 	Global string `yaml:"global,omitempty" json:"global,omitempty"`
 }
 
-// Wire describes how the recipe is bound to each agent.
+// WireMode is the SINGLE source of wiring truth — replacing the old
+// SelfWiring bool + implicit (which-of-Mcp/PostInstall-is-set) signalling.
+type WireMode string
+
+const (
+	WireModeMcp  WireMode = "mcp"  // Patronus performs the MCP-config MERGE itself
+	WireModeRun  WireMode = "run"  // Patronus runs the commands we specify (EXEC)
+	WireModeSelf WireMode = "self" // the recipe's own installer wires it (EXEC, self-managing)
+)
+
+var wireModes = map[WireMode]bool{WireModeMcp: true, WireModeRun: true, WireModeSelf: true}
+
+// Wire describes how the recipe is bound to each agent. Mode is the single
+// discriminator; the mode-specific field (Mcp for mcp, Run for run/self) carries
+// the payload.
 type Wire struct {
-	SelfWiring  bool     `yaml:"selfWiring,omitempty" json:"selfWiring,omitempty"`
-	PostInstall []string `yaml:"postInstall,omitempty" json:"postInstall,omitempty"`
-	Tools       []string `yaml:"tools,omitempty" json:"tools,omitempty"`
-	Mcp         *WireMcp `yaml:"mcp,omitempty" json:"mcp,omitempty"`
+	Mode  WireMode `yaml:"mode" json:"mode"`
+	Tools []string `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Mcp   *WireMcp `yaml:"mcp,omitempty" json:"mcp,omitempty"` // present iff mode == mcp
+	Run   []string `yaml:"run,omitempty" json:"run,omitempty"` // present iff mode == run or self (was: postInstall)
 }
 
-// WireMcp is the MCP-config entry Patronus merges for a non-self-wiring recipe.
+// WireMcp is the MCP-config entry Patronus merges for a mode: mcp recipe.
 type WireMcp struct {
 	Transport string   `yaml:"transport" json:"transport"` // http | stdio
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	Command   string   `yaml:"command,omitempty" json:"command,omitempty"`
 	Args      []string `yaml:"args,omitempty" json:"args,omitempty"`
+}
+
+// RecipeShape is the COMPUTED type of a recipe (§4c) — never authored, so it
+// cannot contradict the deliver/wire structure.
+type RecipeShape string
+
+const (
+	ShapeWireOnly  RecipeShape = "wire-only"  // no delivery, just a config MERGE (github)
+	ShapeFetchWire RecipeShape = "fetch+wire" // fetch a binary, then MERGE config (engram)
+	ShapeFetchRun  RecipeShape = "fetch+run"  // fetch (or docker) + EXEC commands (ai-memory, script)
+)
+
+// Shape derives the recipe's type from deliver × wire. It is a pure function with
+// no ambiguous case — honest only because Delivery is nil-or-present and
+// Wire.Mode is a single enum.
+func (r *Recipe) Shape() RecipeShape {
+	switch {
+	case r.Delivery == nil:
+		return ShapeWireOnly
+	case r.Wire.Mode == WireModeRun || r.Wire.Mode == WireModeSelf:
+		return ShapeFetchRun
+	default:
+		return ShapeFetchWire
+	}
 }
 
 // LoadRecipe reads and validates a recipe manifest.
@@ -105,17 +168,27 @@ func DecodeRecipe(data []byte) (*Recipe, error) {
 }
 
 func validateRecipe(r *Recipe) error {
-	if r.APIVersion != APIVersion {
-		return fmt.Errorf("unexpected apiVersion %q (want %q)", r.APIVersion, APIVersion)
+	if err := validateMeta(r.Meta, FamilyRecipe); err != nil {
+		return err
 	}
-	if r.Kind != KindRecipe {
-		return fmt.Errorf("expected kind Recipe, got %q", r.Kind)
+	if r.Role == "" {
+		return fmt.Errorf("missing role")
 	}
-	if r.Name == "" {
-		return fmt.Errorf("missing name")
+	if !wireModes[r.Wire.Mode] {
+		return fmt.Errorf("invalid wire.mode %q (want mcp|run|self)", r.Wire.Mode)
 	}
-	if r.Capability == "" {
-		return fmt.Errorf("missing capability")
+	if r.Delivery != nil && !deliverySources[r.Delivery.Source] {
+		return fmt.Errorf("invalid deliver.source %q", r.Delivery.Source)
+	}
+	switch r.Wire.Mode {
+	case WireModeMcp:
+		if r.Wire.Mcp == nil {
+			return fmt.Errorf("wire.mode mcp requires a wire.mcp block")
+		}
+	case WireModeRun, WireModeSelf:
+		if len(r.Wire.Run) == 0 {
+			return fmt.Errorf("wire.mode %s requires wire.run commands", r.Wire.Mode)
+		}
 	}
 	return nil
 }

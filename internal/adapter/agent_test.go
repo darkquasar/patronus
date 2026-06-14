@@ -46,7 +46,7 @@ func TestAgentClaudePassthrough(t *testing.T) {
 	writeAgent(t, src)
 	home := t.TempDir()
 	eng := agentEngine(t, home, t.TempDir())
-	art := &manifest.Artifact{Kind: manifest.KindAgent, Name: "reviewer", Entry: "agent.md", Role: manifest.RoleCapability}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "reviewer", Role: manifest.RoleCapability}, Type: manifest.TypeAgent, Entry: "agent.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 	writeAgent(t, src)
 	home := t.TempDir()
 	eng := agentEngine(t, home, t.TempDir())
-	art := &manifest.Artifact{Kind: manifest.KindAgent, Name: "reviewer", Entry: "agent.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "reviewer"}, Type: manifest.TypeAgent, Entry: "agent.md"}
 
 	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", src, noExisting)
 	if err != nil {
@@ -99,7 +99,8 @@ func TestAgentCodexTOML(t *testing.T) {
 	home := t.TempDir()
 	eng := agentEngine(t, home, t.TempDir())
 	art := &manifest.Artifact{
-		Kind: manifest.KindAgent, Name: "reviewer", Description: "Reviews code", Entry: "agent.md",
+		Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "reviewer", Description: "Reviews code"},
+		Type: manifest.TypeAgent, Entry: "agent.md",
 		Overrides: map[string]map[string]interface{}{"codex": {"model": "o1"}},
 	}
 

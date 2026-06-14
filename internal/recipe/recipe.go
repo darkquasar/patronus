@@ -40,10 +40,11 @@ const defaultInstallTo = "~/.patronus/bin/"
 // and stats the fetch destination (for FETCH SKIP detection), but downloads
 // nothing — the applier does that.
 //
-// The three productions, by recipe shape (§5c):
-//   - github-release delivery  -> one FETCH diff for the host asset.
-//   - wire.mcp (non-self-wiring) -> one MERGE diff per tool (via MergeConfig).
-//   - wire.selfWiring postInstall -> one display-only EXEC diff per command×tool.
+// The productions, by wire mode (§4) and delivery source:
+//   - deliver.source github-release -> one FETCH diff for the host asset.
+//   - wire.mode mcp   -> one MERGE diff per tool (via MergeConfig).
+//   - wire.mode run   -> one display-only EXEC diff per command×tool (Patronus-run).
+//   - wire.mode self  -> one display-only EXEC diff per command×tool (self-managing).
 func Compute(req Request) ([]diff.FileDiff, error) {
 	rec := req.Recipe
 	scope := req.Scope
@@ -60,19 +61,22 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 
 	var diffs []diff.FileDiff
 
-	// 1) FETCH — only for a github-release delivery. docker/cargo/aur primaries
-	// and wire-only remote MCP (Delivery == nil) produce no download.
+	// 1) FETCH — only for a github-release delivery. docker/cargo/script sources
+	// and wire-only remote MCP (Delivery == nil) produce no download diff.
 	installPath := ""
 	if d, fetch := fetchDiff(req, goos, goarch); fetch != nil {
 		installPath = d
 		diffs = append(diffs, *fetch)
 	}
 
-	// 2) Wiring — self-wiring recipes emit EXEC rows; others emit MCP MERGEs.
+	// 2) Wiring — dispatch on the single wire.mode discriminator: run/self EXEC
+	// commands, mcp MERGEs the config. The shape (wire-only|fetch+wire|fetch+run)
+	// is the computed display label, but the dispatch is mode, not shape.
 	tools := resolveTools(req.Tool, rec)
-	if rec.Wire.SelfWiring {
+	switch rec.Wire.Mode {
+	case manifest.WireModeRun, manifest.WireModeSelf:
 		diffs = append(diffs, execDiffs(rec, tools, scope)...)
-	} else if rec.Wire.Mcp != nil {
+	case manifest.WireModeMcp:
 		merges, err := wireDiffs(req, tools, scope, installPath)
 		if err != nil {
 			return nil, err
@@ -89,7 +93,7 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 // ("", nil) when the recipe has no binary to fetch.
 func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	rec := req.Recipe
-	if rec.Delivery == nil || rec.Delivery.Primary != "github-release" {
+	if rec.Delivery == nil || rec.Delivery.Source != manifest.SourceGithubRelease {
 		return "", nil
 	}
 	if req.PreferSystemPkg {
@@ -115,14 +119,15 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	}
 
 	d := diff.FileDiff{
-		Path:       dest,
-		Action:     classifyFetch(spec),
-		Artifact:   rec.Name,
-		Capability: rec.Capability,
-		Tool:       "-", // a binary placement is tool-agnostic
-		Scope:      "global",
-		Note:       "fetch " + spec.Label,
-		Fetch:      spec,
+		Path:     dest,
+		Action:   classifyFetch(spec),
+		Artifact: rec.Name,
+		Type:     string(rec.Shape()),
+		Role:     string(rec.Role),
+		Tool:     "-", // a binary placement is tool-agnostic
+		Scope:    "global",
+		Note:     "fetch " + spec.Label,
+		Fetch:    spec,
 	}
 	return dest, &d
 }
@@ -216,15 +221,16 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 		}
 
 		out = append(out, diff.FileDiff{
-			Path:       path,
-			Action:     diff.Merge,
-			Before:     before,
-			After:      after,
-			Artifact:   rec.Name,
-			Capability: "mcp",
-			Tool:       tool,
-			Scope:      scope,
-			Note:       "wire mcp: " + rec.Name,
+			Path:     path,
+			Action:   diff.Merge,
+			Before:   before,
+			After:    after,
+			Artifact: rec.Name,
+			Type:     string(rec.Shape()),
+			Role:     string(rec.Role),
+			Tool:     tool,
+			Scope:    scope,
+			Note:     "wire mcp: " + rec.Name,
 		})
 	}
 	return out, nil
@@ -255,27 +261,30 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath string) adapter.S
 	return adapter.ServerSpec{Name: name, Transport: wm.Transport, Values: vals}
 }
 
-// execDiffs builds display-only EXEC rows for a self-wiring recipe: each
-// postInstall command, with {tool} substituted, per targeted tool. The applier
-// skips these; the cmd layer runs them on --deploy.
+// execDiffs builds display-only EXEC rows for a run/self recipe: each wire.run
+// command, with {tool} substituted, per targeted tool. The applier skips these;
+// the cmd layer runs them on --deploy. mode: self flags them self-managing (which
+// is provenance state records, not something the EXEC diff itself carries).
 func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDiff {
+	selfManaged := rec.Wire.Mode == manifest.WireModeSelf
 	var out []diff.FileDiff
 	for _, tool := range tools {
-		for _, raw := range rec.Wire.PostInstall {
+		for _, raw := range rec.Wire.Run {
 			line := strings.ReplaceAll(raw, "{tool}", tool)
 			argv := strings.Fields(line)
 			if len(argv) == 0 {
 				continue
 			}
 			out = append(out, diff.FileDiff{
-				Path:       line, // display path = the command line
-				Action:     diff.Exec,
-				Artifact:   rec.Name,
-				Capability: "self-wire",
-				Tool:       tool,
-				Scope:      scope,
-				Note:       "run: " + line,
-				Exec:       &diff.ExecSpec{Command: argv, Display: line},
+				Path:     line, // display path = the command line
+				Action:   diff.Exec,
+				Artifact: rec.Name,
+				Type:     string(rec.Shape()),
+				Role:     string(rec.Role),
+				Tool:     tool,
+				Scope:    scope,
+				Note:     "run: " + line,
+				Exec:     &diff.ExecSpec{Command: argv, Display: line, SelfManaged: selfManaged},
 			})
 		}
 	}

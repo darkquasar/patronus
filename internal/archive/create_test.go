@@ -7,7 +7,7 @@ import (
 
 func TestCreateTarGzRoundTrip(t *testing.T) {
 	in := map[string][]byte{
-		"patronus.yaml":           []byte("kind: Skill\nname: x\n"),
+		"patronus.yaml":           []byte("family: artifact\ntype: skill\nname: x\n"),
 		"SKILL.md":                []byte("# body"),
 		"patterns/pattern-001.md": []byte("pat one"),
 	}
