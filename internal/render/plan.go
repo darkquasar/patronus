@@ -108,7 +108,7 @@ func printVerboseDiffs(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 func printPlanFooter(w io.Writer, cs *diff.ChangeSet) {
 	c := cs.Counts()
 	parts := []string{}
-	for _, a := range []diff.Action{diff.Create, diff.Append, diff.Merge, diff.Fetch, diff.Exec, diff.Conflict, diff.Skip} {
+	for _, a := range []diff.Action{diff.Create, diff.Append, diff.Merge, diff.Fetch, diff.Exec, diff.Delete, diff.Unappend, diff.Restore, diff.Conflict, diff.Skip} {
 		if c[a] > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", c[a], a))
 		}
@@ -342,6 +342,12 @@ func annotation(a diff.Action) string {
 		return "(run)"
 	case diff.Conflict:
 		return "(conflict!)"
+	case diff.Delete:
+		return "(removed)"
+	case diff.Unappend:
+		return "(un-appended)"
+	case diff.Restore:
+		return "(restored)"
 	default:
 		return ""
 	}

@@ -26,6 +26,13 @@ const (
 	Exec     Action = "EXEC"     // run a self-wiring recipe's post-install command (Phase 4)
 	Conflict Action = "CONFLICT" // target exists & differs from a CREATE's After
 	Skip     Action = "SKIP"     // After == Before; idempotent, nothing to do
+
+	// Inverse actions (Phase 8 remove/revert): a recorded apply read back from
+	// state.json as its undo. They are built already-classified — Classify is not
+	// involved — so they reuse the same applier writes as their forward kin.
+	Delete   Action = "DELETE"   // remove a CREATEd file (inverse of CREATE)
+	Unappend Action = "UNAPPEND" // strip a named fenced section (inverse of APPEND); After is the file without it
+	Restore  Action = "RESTORE"  // write recorded Prior bytes back (inverse of MERGE/APPEND full-file restore)
 )
 
 // FileDiff is the single source of truth for one path's change. Before is nil
@@ -40,12 +47,20 @@ type FileDiff struct {
 
 	// Display / grouping metadata.
 	Artifact   string `json:"artifact,omitempty"`   // source artifact name
+	Version    string `json:"version,omitempty"`    // the source item's own version (recorded in state for update)
 	Capability string `json:"capability,omitempty"` // what's added: skill|instruction|mcp|...
 	Tool       string `json:"tool,omitempty"`
 	Scope      string `json:"scope,omitempty"`
 	Role       string `json:"role,omitempty"`
 	Note       string `json:"note,omitempty"`
 	IsDir      bool   `json:"isDir,omitempty"`
+
+	// Intended, when set on a SKIP, is the action this diff WOULD perform if the
+	// skip were overridden. The Phase-8 remove path uses it for drift: a file
+	// edited since install is emitted as SKIP(Intended=DELETE/UNAPPEND/RESTORE) so
+	// the renderer shows it as skipped, and --force promotes Action to Intended.
+	// Excluded from JSON (an internal control field).
+	Intended Action `json:"-"`
 
 	// Section, when set, describes a named fenced-section APPEND edit. The
 	// planner uses it to re-fold multiple appends that land on the same file

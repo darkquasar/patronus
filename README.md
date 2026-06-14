@@ -34,9 +34,9 @@ flowchart LR
     Agent <-->|read / write| M
     Agent -->|edits, output| You
 
-    classDef l1 fill:#e8f0fe,stroke:#4285f4;
-    classDef l2 fill:#e6f4ea,stroke:#34a853;
-    classDef l3 fill:#fef7e0,stroke:#fbbc04;
+    classDef l1 fill:#e8f0fe,stroke:#4285f4,color:#000;
+    classDef l2 fill:#e6f4ea,stroke:#34a853,color:#000;
+    classDef l3 fill:#fef7e0,stroke:#fbbc04,color:#000;
     class I l1
     class C l2
     class M l3
@@ -96,9 +96,9 @@ flowchart TB
 
     L1 -. "an instruction may say<br/>'check project memory first'" .-> L3
 
-    classDef l1 fill:#e8f0fe,stroke:#4285f4;
-    classDef l2 fill:#e6f4ea,stroke:#34a853;
-    classDef l3 fill:#fef7e0,stroke:#fbbc04;
+    classDef l1 fill:#e8f0fe,stroke:#4285f4,color:#000;
+    classDef l2 fill:#e6f4ea,stroke:#34a853,color:#000;
+    classDef l3 fill:#fef7e0,stroke:#fbbc04,color:#000;
     class L1,L1a,L1b,L1c,L1d l1
     class L2,L2a,L2b,L2c,L2d l2
     class L3,L3a,L3b,L3c,L3d l3
@@ -130,9 +130,9 @@ flowchart TB
     Recipe --> Profile
     Profile --> Repro["one command =<br/>a whole reproducible environment"]
 
-    classDef art fill:#e6f4ea,stroke:#34a853;
-    classDef rec fill:#fef7e0,stroke:#fbbc04;
-    classDef pro fill:#f3e8fd,stroke:#a142f4;
+    classDef art fill:#e6f4ea,stroke:#34a853,color:#000;
+    classDef rec fill:#fef7e0,stroke:#fbbc04,color:#000;
+    classDef pro fill:#f3e8fd,stroke:#a142f4,color:#000;
     class Artifact art
     class Recipe rec
     class Profile,Repro pro
@@ -167,8 +167,8 @@ flowchart LR
     AdX --> OutX["~/.codex/skills/<br/>team-research/SKILL.md"]
     AdO --> OutO["~/.config/opencode/skills/<br/>team-research/SKILL.md"]
 
-    classDef src fill:#e6f4ea,stroke:#34a853;
-    classDef out fill:#eee,stroke:#888;
+    classDef src fill:#e6f4ea,stroke:#34a853,color:#000;
+    classDef out fill:#eee,stroke:#888,color:#000;
     class Src src
     class OutC,OutX,OutO out
 ```
@@ -210,18 +210,20 @@ flowchart LR
     D -->|recipe| F["recipe engine<br/>FETCH + verify + wire"]
     E --> G["plan: change set<br/>(ASCII tree + table)"]
     F --> G
-    G --> H{"--dry-run?"}
-    H -->|yes| I["print plan, write nothing"]
-    H -->|no| J["apply: merge-not-overwrite,<br/>conflict prompts, record state"]
+    G --> H{"--deploy?"}
+    H -->|"no (default)"| I["print plan, write nothing"]
+    H -->|yes| J["apply: merge-not-overwrite,<br/>conflict prompts, record state"]
 
-    classDef cur fill:#e6f4ea,stroke:#34a853;
-    classDef todo fill:#fce8e6,stroke:#ea4335;
-    class B,C cur
-    class E,F,G,J todo
+    classDef cur fill:#e6f4ea,stroke:#34a853,color:#000;
+    class B,C,E,F,G,J cur
 ```
 
-> **Status:** `scan` and `list` work today against a local registry. The transform/recipe/install
-> stages are the next phases (see [`DESIGN.md`](DESIGN.md) §8). Stubbed commands print a notice.
+> **Status:** the whole pipeline is live — `scan`, `list`, `install` (artifacts, recipes, and
+> `--profile` bundles), `lock`, `build`, `update`, and `remove`/`revert`. Installs are computed against
+> a **local** registry (when run inside a checkout) or the **remote** R2 registry (an installed
+> binary), and are a **dry run by default** — `--deploy` is what writes. Everything that gets written
+> is recorded in `state.json`, which is what makes `remove`/`revert` a clean inverse. See
+> [`DESIGN.md`](DESIGN.md) §8 for the phased history.
 
 ---
 
@@ -248,7 +250,7 @@ patronus/
 │   ├── claude.yaml  codex.yaml  opencode.yaml
 ├── reference/templates/        # author-facing scaffolds — NOT installed onto users
 ├── cmd/patronus/               # the Go binary entrypoint
-├── internal/                   # manifest · registry · scan · render
+├── internal/                   # manifest · registry · scan · plan · adapter · diff · install · state · remove · lock · render
 └── DESIGN.md                   # the full design + phased delivery plan
 ```
 
@@ -257,19 +259,187 @@ patronus/
 ## CLI
 
 ```bash
-patronus list [--artifacts] [--recipes] [--profiles] [--layers] [--json]   # catalog (works today)
-patronus scan [--json]                                                      # detect tools (works today)
+patronus list [--artifacts] [--recipes] [--profiles] [--layers] [--json]   # browse the catalog
+patronus scan [--json]                                                      # detect installed tools
 
-patronus install <name>... [--tool claude|codex|opencode|all] [--global|--local] [--dry-run]
-patronus install --profile <name>                                          # bundle across layers
-# install / update / remove / init / lock — in progress (see DESIGN.md §8)
+# install — dry run by default; --deploy writes
+patronus install <name>... [--tool claude|codex|opencode|all] [--global|--local] [--deploy]
+patronus install --profile <name> [--deploy]                               # a cross-layer bundle
+
+# lifecycle
+patronus remove <name>...  [--global|--local] [--deploy] [--force]         # uninstall (alias: revert)
+patronus update [<name>...] [--all] [--deploy]                             # refresh cache / re-install newer
+patronus lock --profile <name>                                            # pin versions to patronus.lock
 ```
 
-Try it from the repo root:
+> **Safe by default.** `install`, `remove`, and `update` all *plan* unless you pass `--deploy`. The
+> plan is the same artifact-centric table + ASCII change-tree you see below — nothing is written,
+> fetched, or executed without `--deploy`.
+
+Try it from the repo root (no install needed):
 
 ```bash
 go run ./cmd/patronus list --profiles --layers
 go run ./cmd/patronus scan
+```
+
+---
+
+### Install → what actually changes
+
+`install` never blind-writes. An artifact translates into each tool's on-disk layout as
+**CREATE** (new file), **APPEND** (a fenced section in a prose file, leaving your other text alone),
+or **MERGE** (a structural config edit that preserves sibling keys). The plan shows it all first:
+
+```console
+$ patronus install agent-principles --tool claude --local
+┌──────────────────┬──────────────────┬───────────┬─────────────┬────────┬───────┐
+│ Artifact         │ Impacted path(s) │ Operation │ Capability  │ Tool   │ Scope │
+├──────────────────┼──────────────────┼───────────┼─────────────┼────────┼───────┤
+│ agent-principles │ ./CLAUDE.md      │ APPEND    │ instruction │ claude │ local │
+└──────────────────┴──────────────────┴───────────┴─────────────┴────────┴───────┘
+
+./
+└── CLAUDE.md  (appended)  # APPEND — role: instruction
+
+Plan: 1 APPEND
+(dry run — no files were written)
+```
+
+Add `--deploy` to apply it. The APPEND wraps the content in markers so it can be removed cleanly later:
+
+```diff
+  # My Project                          ← your existing prose, untouched
+  some notes of my own
++
++ <!-- patronus:start agent-principles -->
++ # Agent Principles
++ ... house rules ...
++ <!-- patronus:end agent-principles -->
+```
+
+---
+
+### Install a profile → a whole environment in one command
+
+A **profile** selects items across several layers, so one `install` lays down an entire opinionated
+environment. The plan groups every resulting change by source item, then shows the exact file tree —
+so you see precisely what will be created, appended, and run *before* anything happens:
+
+```console
+$ patronus install --profile cloudflare --tool claude --local
+warning: profile "cloudflare" is a stub: layers marked TODO are not yet populated
+┌────────────────────┬───────────────────────────────────────────┬───────────┬─────────────┬────────┬───────┐
+│ Artifact           │ Impacted path(s)                          │ Operation │ Capability  │ Tool   │ Scope │
+├────────────────────┼───────────────────────────────────────────┼───────────┼─────────────┼────────┼───────┤
+│ pattern-cloudflare │ ./.claude/skills/pattern-cloudflare/ (8…) │ CREATE    │ pattern     │ claude │ local │
+│ team-implement     │ ./.claude/skills/team-implement/SKILL.md  │ CREATE    │ skill       │ claude │ local │
+│ team-research      │ ./.claude/skills/team-research/SKILL.md   │ CREATE    │ skill       │ claude │ local │
+│ agent-principles   │ ./CLAUDE.md                               │ APPEND    │ instruction │ claude │ local │
+│ memory-ai-memory   │ ai-memory install-hooks --agent claude    │ EXEC      │ self-wire   │ claude │ local │
+│ memory-ai-memory   │ ai-memory install-mcp   --client claude   │ EXEC      │ self-wire   │ claude │ local │
+└────────────────────┴───────────────────────────────────────────┴───────────┴─────────────┴────────┴───────┘
+
+./
+├── .claude/
+│   └── skills/
+│       ├── pattern-cloudflare/          # L4 context — a whole pattern set
+│       │   ├── SKILL.md  (new)  # CREATE — role: pattern
+│       │   └── patterns/
+│       │       ├── pattern-001.md  (new)  # CREATE — role: pattern
+│       │       └── … (006 more)  (new)  # CREATE — role: pattern
+│       ├── team-implement/              # L2 capability
+│       │   └── SKILL.md  (new)  # CREATE — role: capability
+│       └── team-research/               # L2 capability
+│           └── SKILL.md  (new)  # CREATE — role: capability
+└── CLAUDE.md  (appended)  # APPEND — role: instruction   ← your prose preserved
+
+Plan: 10 CREATE, 1 APPEND, 2 EXEC
+(dry run — no files were written)
+```
+
+One profile touched **four layers at once**: an L4 context pattern set and two L2 capability skills
+(**CREATE**d as files), L1 house rules (**APPEND**ed into `CLAUDE.md`), and an L3 memory engine
+(**EXEC** — the recipe self-wires its hooks + MCP server). Add `--deploy` to apply it; `patronus lock
+--profile cloudflare` then pins every resolved item so a teammate reproduces the same set. Running it
+again is idempotent — unchanged files become **SKIP**.
+
+> The `stub` warning above is honest: the `cloudflare` profile's instructions/harness slots aren't
+> sourced yet, so they're skipped and only the populated layers install. A fully-sourced profile
+> shows no such warning.
+
+---
+
+### Lifecycle: `remove` / `revert` / `update`
+
+Patronus records everything it writes in `state.json` (per file: the action, a checksum of the bytes
+*it* wrote, and — for APPEND/MERGE — the pre-install bytes). That record is what makes uninstall a
+clean **inverse**, not a guess:
+
+| You installed… | `remove` does… |
+|---|---|
+| a **CREATE**d file | **DELETE** it |
+| an **APPEND**ed section | **UNAPPEND** — strip just that fenced block, leave your other prose |
+| a **MERGE**d config | **RESTORE** the file to its exact pre-install bytes |
+
+`remove` is also a dry run by default:
+
+```console
+$ patronus remove agent-principles --local
+./
+└── CLAUDE.md  (un-appended)  # UNAPPEND
+
+Plan: 1 UNAPPEND
+(dry run — no files were written)
+
+$ patronus remove agent-principles --local --deploy
+Removed: 1 undone, 0 skipped
+```
+
+**Restoring a merged config** works the same way — here the GitHub MCP recipe was wired into an
+existing `.mcp.json`, then removed:
+
+```jsonc
+// before install — your own server
+{ "mcpServers": { "my-server": { "command": "node", "args": ["server.js"] } } }
+
+// after install --deploy — patronus added "github" alongside it (MERGE, siblings preserved)
+{ "mcpServers": {
+    "github":    { "type": "http", "url": "https://api.example/mcp/" },
+    "my-server": { "command": "node", "args": ["server.js"] } } }
+
+// after remove --deploy — byte-identical to "before install" again (RESTORE)
+{ "mcpServers": { "my-server": { "command": "node", "args": ["server.js"] } } }
+```
+
+**If you hand-edited a file after install (drift)**, Patronus detects it via the recorded checksum and
+**warns + skips** rather than destroying your edits:
+
+```console
+$ patronus remove agent-principles --local --deploy
+warning: agent-principles (./CLAUDE.md): modified since install; not removed (use --force)
+
+./
+└── CLAUDE.md  (skip)  # SKIP
+
+Removed: 0 undone, 1 skipped
+```
+
+`--force` overrides the guard and reverts back to the **pre-install** state — note this discards your
+manual edits (Patronus keeps a checksum, not your edited bytes; recover those from your VCS). This is
+the same contract as a Debian/RPM config-file (`conffile`) upgrade.
+
+**`update`** has two jobs on one command. With no name it just refreshes the registry cache; with a
+name it compares the installed version against the registry's latest and re-installs newer ones —
+**manual and explicit, never automatic**:
+
+```console
+$ patronus update agent-principles --deploy
+agent-principles: 1.0.0 -> 1.1.0
+... (re-installs at the recorded tool/scope) ...
+
+$ patronus update agent-principles --deploy
+agent-principles: up to date (1.1.0)
 ```
 
 ---

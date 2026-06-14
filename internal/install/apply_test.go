@@ -55,6 +55,64 @@ func TestApplyAppendAndMergeWriteAfter(t *testing.T) {
 	}
 }
 
+func TestApplyDeleteRemovesFile(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := &Applier{}
+	res, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Delete}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Error("DELETE must remove the file")
+	}
+	if len(res.Applied) != 1 {
+		t.Errorf("applied = %d, want 1", len(res.Applied))
+	}
+}
+
+func TestApplyDeleteMissingIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "gone.md")
+	a := &Applier{}
+	res, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Delete}))
+	if err != nil {
+		t.Fatalf("DELETE of a missing file must succeed: %v", err)
+	}
+	if len(res.Applied) != 1 {
+		t.Errorf("applied = %d, want 1 (idempotent delete still counts)", len(res.Applied))
+	}
+}
+
+func TestApplyUnappendAndRestoreWriteAfter(t *testing.T) {
+	dir := t.TempDir()
+	up := filepath.Join(dir, "CLAUDE.md")
+	rp := filepath.Join(dir, ".mcp.json")
+	if err := os.WriteFile(up, []byte("with section"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(rp, []byte(`{"merged":1}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := &Applier{}
+	_, err := a.Apply(cs(
+		diff.FileDiff{Path: up, Action: diff.Unappend, After: []byte("without section")},
+		diff.FileDiff{Path: rp, Action: diff.Restore, After: []byte("{}")},
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read(t, up) != "without section" {
+		t.Errorf("UNAPPEND bytes wrong: %q", read(t, up))
+	}
+	if read(t, rp) != "{}" {
+		t.Errorf("RESTORE bytes wrong: %q", read(t, rp))
+	}
+}
+
 func TestApplySkipDoesNothing(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "x")

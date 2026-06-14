@@ -90,3 +90,78 @@ func TestAppendSectionBodyTrailingNewlinesNormalized(t *testing.T) {
 		t.Errorf("trailing newlines not normalized:\n got %q\nwant %q", got, want)
 	}
 }
+
+func TestRemoveSectionRoundTripsAppend(t *testing.T) {
+	// Appending then removing must restore the original bytes exactly.
+	original := []byte("# My Notes\n\nsome prose here\n")
+	appended := AppendSection(original, "x", []byte("injected"))
+	got, found := RemoveSection(appended, "x")
+	if !found {
+		t.Fatal("RemoveSection did not find the appended block")
+	}
+	if !bytes.Equal(got, original) {
+		t.Errorf("append-then-remove not a round-trip:\n got %q\nwant %q", got, original)
+	}
+}
+
+func TestRemoveSectionPreservesSurroundingProse(t *testing.T) {
+	existing := []byte("before\n\n<!-- patronus:start x -->\nBODY\n<!-- patronus:end x -->\n\nafter\n")
+	got, found := RemoveSection(existing, "x")
+	if !found {
+		t.Fatal("expected to find block")
+	}
+	s := string(got)
+	if strings.Contains(s, "BODY") || strings.Contains(s, "patronus:start") {
+		t.Errorf("block not fully removed: %q", s)
+	}
+	if !strings.Contains(s, "before") || !strings.Contains(s, "after") {
+		t.Errorf("surrounding prose lost: %q", s)
+	}
+}
+
+func TestRemoveSectionAbsentIsNoOp(t *testing.T) {
+	existing := []byte("# Notes\n\njust prose\n")
+	got, found := RemoveSection(existing, "missing")
+	if found {
+		t.Error("found a section that does not exist")
+	}
+	if !bytes.Equal(got, existing) {
+		t.Errorf("absent removal mutated content:\n got %q\nwant %q", got, existing)
+	}
+}
+
+func TestRemoveSectionMalformedStartWithoutEnd(t *testing.T) {
+	existing := []byte("text\n<!-- patronus:start x -->\ndangling\n")
+	got, found := RemoveSection(existing, "x")
+	if found {
+		t.Error("malformed block should report not found")
+	}
+	if !bytes.Equal(got, existing) {
+		t.Errorf("malformed removal mutated content: %q", got)
+	}
+}
+
+func TestRemoveSectionOnlyContentYieldsEmpty(t *testing.T) {
+	only := AppendSection(nil, "x", []byte("body"))
+	got, found := RemoveSection(only, "x")
+	if !found {
+		t.Fatal("expected to find the only block")
+	}
+	if len(bytes.TrimSpace(got)) != 0 {
+		t.Errorf("expected empty result, got %q", got)
+	}
+}
+
+func TestSectionBody(t *testing.T) {
+	existing := AppendSection([]byte("intro\n"), "x", []byte("the body"))
+	body, found := SectionBody(existing, "x")
+	if !found {
+		t.Fatal("section not found")
+	}
+	if string(body) != "the body" {
+		t.Errorf("got body %q, want %q", body, "the body")
+	}
+	if _, found := SectionBody(existing, "nope"); found {
+		t.Error("found a nonexistent section body")
+	}
+}

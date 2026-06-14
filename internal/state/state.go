@@ -115,6 +115,46 @@ func Merge(s *State, newItems []Item) *State {
 	return s
 }
 
+// Find returns the items matching the given filters. An empty tool or scope
+// matches any value for that field, so Find(name, "", "") returns every recorded
+// install of name across tools/scopes — the natural selection for `remove <name>`.
+func (s *State) Find(artifact, tool, scope string) []Item {
+	var out []Item
+	for _, it := range s.Items {
+		if it.Artifact != artifact {
+			continue
+		}
+		if tool != "" && it.Tool != tool {
+			continue
+		}
+		if scope != "" && it.Scope != scope {
+			continue
+		}
+		out = append(out, it)
+	}
+	return out
+}
+
+// Remove drops every item matching the filters (the inverse of Merge's upsert),
+// keeping the rest in their original order. An empty tool or scope matches any
+// value for that field. Returns the number of items removed.
+func (s *State) Remove(artifact, tool, scope string) int {
+	kept := s.Items[:0]
+	removed := 0
+	for _, it := range s.Items {
+		match := it.Artifact == artifact &&
+			(tool == "" || it.Tool == tool) &&
+			(scope == "" || it.Scope == scope)
+		if match {
+			removed++
+			continue
+		}
+		kept = append(kept, it)
+	}
+	s.Items = kept
+	return removed
+}
+
 // FromChangeSet translates installed diffs into state items, grouped by
 // (artifact, tool, scope). now is an RFC3339 timestamp supplied by the caller
 // (this package takes no clock so it stays deterministic in tests). Pass the
@@ -131,9 +171,14 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		k := key{d.Artifact, d.Tool, d.Scope}
 		it, ok := byKey[k]
 		if !ok {
-			it = &Item{Artifact: d.Artifact, Tool: d.Tool, Scope: d.Scope, InstalledAt: now}
+			it = &Item{Artifact: d.Artifact, ItemVersion: d.Version, Tool: d.Tool, Scope: d.Scope, InstalledAt: now}
 			byKey[k] = it
 			order = append(order, k)
+		}
+		// A later diff may carry the version when the first one (e.g. a shared
+		// composed file) did not; record the first non-empty we see.
+		if it.ItemVersion == "" && d.Version != "" {
+			it.ItemVersion = d.Version
 		}
 		return it
 	}

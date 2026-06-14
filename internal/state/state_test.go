@@ -125,6 +125,54 @@ func TestFromChangeSetGroupsAndCaptures(t *testing.T) {
 	}
 }
 
+func TestFromChangeSetCapturesItemVersion(t *testing.T) {
+	applied := []diff.FileDiff{
+		{Path: "/c/SKILL.md", Action: diff.Create, After: []byte("b"), Artifact: "s", Version: "1.2.0", Tool: "claude", Scope: "global"},
+	}
+	items := FromChangeSet(applied, "now")
+	if len(items) != 1 || items[0].ItemVersion != "1.2.0" {
+		t.Fatalf("itemVersion not captured: %+v", items)
+	}
+}
+
+func TestFind(t *testing.T) {
+	s := &State{Version: Version, Items: []Item{
+		{Artifact: "a", Tool: "claude", Scope: "global"},
+		{Artifact: "a", Tool: "codex", Scope: "global"},
+		{Artifact: "a", Tool: "claude", Scope: "local"},
+		{Artifact: "b", Tool: "claude", Scope: "global"},
+	}}
+	if got := s.Find("a", "", ""); len(got) != 3 {
+		t.Errorf("Find(a) = %d items, want 3", len(got))
+	}
+	if got := s.Find("a", "claude", ""); len(got) != 2 {
+		t.Errorf("Find(a,claude) = %d items, want 2", len(got))
+	}
+	if got := s.Find("a", "claude", "local"); len(got) != 1 {
+		t.Errorf("Find(a,claude,local) = %d items, want 1", len(got))
+	}
+	if got := s.Find("missing", "", ""); len(got) != 0 {
+		t.Errorf("Find(missing) = %d items, want 0", len(got))
+	}
+}
+
+func TestRemove(t *testing.T) {
+	s := &State{Version: Version, Items: []Item{
+		{Artifact: "a", Tool: "claude", Scope: "global"},
+		{Artifact: "a", Tool: "codex", Scope: "global"},
+		{Artifact: "b", Tool: "claude", Scope: "global"},
+	}}
+	if n := s.Remove("a", "", ""); n != 2 {
+		t.Errorf("Remove(a) removed %d, want 2", n)
+	}
+	if len(s.Items) != 1 || s.Items[0].Artifact != "b" {
+		t.Errorf("after Remove(a), items = %+v, want only b", s.Items)
+	}
+	if n := s.Remove("nope", "", ""); n != 0 {
+		t.Errorf("Remove(nope) removed %d, want 0", n)
+	}
+}
+
 func TestChecksumStable(t *testing.T) {
 	a := checksum([]byte("x"))
 	b := checksum([]byte("x"))

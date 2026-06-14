@@ -100,6 +100,68 @@ func AppendSection(existing []byte, name string, body []byte) []byte {
 	return buf.Bytes()
 }
 
+// RemoveSection is the inverse of AppendSection: it strips ONLY the fenced block
+// keyed by name from existing, preserving all surrounding prose, and returns the
+// result plus whether a block was found. It shares sectionMarkers with
+// AppendSection so the two stay symmetric. Behavior:
+//   - block present: the markers and everything between them are removed, along
+//     with one separating blank line if one immediately precedes the block (the
+//     mirror of the blank line AppendSection inserts), so an append-then-remove
+//     round-trips to the original bytes.
+//   - block absent (or malformed start-without-end): existing is returned
+//     unchanged with found=false.
+//   - removing the file's only content yields empty bytes (the caller decides
+//     whether to delete the now-empty file).
+func RemoveSection(existing []byte, name string) (result []byte, found bool) {
+	start, end := sectionMarkers(name)
+	sIdx := bytes.Index(existing, []byte(start))
+	if sIdx < 0 {
+		return existing, false
+	}
+	rel := bytes.Index(existing[sIdx:], []byte(end))
+	if rel < 0 {
+		return existing, false // malformed: start without end — leave untouched
+	}
+	eIdx := sIdx + rel + len(end)
+
+	// Extend the removed range to swallow the separating blank line AppendSection
+	// inserts before an appended block (a "\n\n" boundary), so the round-trip is
+	// exact. Trim one trailing newline after the end marker too when the block was
+	// appended (AppendSection writes the block then a final '\n').
+	startCut := sIdx
+	if startCut >= 2 && existing[startCut-1] == '\n' && existing[startCut-2] == '\n' {
+		startCut-- // drop the blank-line separator that preceded the block
+	}
+	endCut := eIdx
+	if endCut < len(existing) && existing[endCut] == '\n' {
+		endCut++ // drop the newline AppendSection wrote after the block
+	}
+
+	var buf bytes.Buffer
+	buf.Write(existing[:startCut])
+	buf.Write(existing[endCut:])
+	return buf.Bytes(), true
+}
+
+// SectionBody returns the body bytes currently inside the fenced block keyed by
+// name (between the markers, trimmed of the surrounding newlines), and whether
+// the block was found. Used for drift detection: comparing the on-disk section
+// against what Patronus wrote tells remove whether the user edited inside it.
+func SectionBody(existing []byte, name string) (body []byte, found bool) {
+	start, end := sectionMarkers(name)
+	sIdx := bytes.Index(existing, []byte(start))
+	if sIdx < 0 {
+		return nil, false
+	}
+	bodyStart := sIdx + len(start)
+	rel := bytes.Index(existing[bodyStart:], []byte(end))
+	if rel < 0 {
+		return nil, false
+	}
+	inner := existing[bodyStart : bodyStart+rel]
+	return bytes.Trim(inner, "\n"), true
+}
+
 // buildBlock renders the fenced block with the body between the markers.
 func buildBlock(start, end string, body []byte) string {
 	trimmed := bytes.TrimRight(body, "\n")
