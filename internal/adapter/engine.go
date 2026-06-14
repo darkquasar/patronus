@@ -58,6 +58,7 @@ func (e *Engine) Transform(art *manifest.Artifact, ad *manifest.Adapter, scope, 
 	cap := manifest.Capability(art.Kind, art.Role)
 	for i := range diffs {
 		diffs[i].Artifact = art.Name
+		diffs[i].Version = art.Version
 		diffs[i].Capability = cap
 	}
 	return diffs, nil

@@ -109,8 +109,21 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 			}
 			// Overwrite falls through to the write below.
 
-		case diff.Create, diff.Append, diff.Merge:
-			// write below
+		case diff.Delete:
+			// Inverse of CREATE/FETCH (Phase 8 remove): drop the file. A missing
+			// target is success — re-running a remove is idempotent.
+			if err := os.Remove(d.Path); err != nil && !os.IsNotExist(err) {
+				res.Failed = &d
+				return res, fmt.Errorf("install: remove %s: %w", d.Path, err)
+			}
+			a.note("DELETE %s", d.Path)
+			res.Applied = append(res.Applied, d)
+			continue
+
+		case diff.Create, diff.Append, diff.Merge, diff.Unappend, diff.Restore:
+			// write d.After below. Unappend (the file minus our section) and Restore
+			// (the recorded pre-install bytes) use the same atomic write as a forward
+			// edit — the inverse is just different bytes, not new machinery.
 
 		default:
 			res.Failed = &d
