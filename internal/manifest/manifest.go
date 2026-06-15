@@ -70,7 +70,7 @@ const (
 	RoleTools         Role = "tools"         // L5 — Tools / Integrations
 	RoleSandbox       Role = "sandbox"       // L6 — Sandbox / Execution safety
 	RoleObservability Role = "observability" // L7 — reserved
-	RoleHarness       Role = "harness"       // L8 — reserved
+	RoleEval          Role = "eval"          // L8 — Evaluation (eval suites, test/lint/typecheck loops, CI gates); reserved
 	RoleGuardrail     Role = "guardrail"     // L9 — reserved
 	RoleOrchestration Role = "orchestration" // L10 — reserved
 	RoleLifecycle     Role = "lifecycle"     // L11 — Lifecycle (profiles are L11 by nature)

@@ -129,7 +129,7 @@ func mergeLayers(parent, child manifest.ProfileLayers) manifest.ProfileLayers {
 		Context:       appendDedup(parent.Context, child.Context),
 		Tools:         appendDedup(parent.Tools, child.Tools),
 		Observability: appendDedup(parent.Observability, child.Observability),
-		Harness:       appendDedup(parent.Harness, child.Harness),
+		Eval:          appendDedup(parent.Eval, child.Eval),
 		Guardrails:    appendDedup(parent.Guardrails, child.Guardrails),
 		Memory:        replaceScalar(parent.Memory, child.Memory),
 		Sandbox:       replaceScalar(parent.Sandbox, child.Sandbox),
@@ -183,7 +183,7 @@ func flattenLayers(l manifest.ProfileLayers) []slotEntry {
 	addScalar("memory", l.Memory)
 	addScalar("sandbox", l.Sandbox)
 	add("observability", l.Observability)
-	add("harness", l.Harness)
+	add("eval", l.Eval)
 	add("guardrails", l.Guardrails)
 	return out
 }

@@ -7,6 +7,12 @@ environment is**, plus the machinery to install that environment onto whichever 
 (**Claude Code**, **OpenAI Codex CLI**, **OpenCode**), at the **global** or **local-repo** scope, on
 Linux / macOS / Windows.
 
+Those tools are **agent harnesses** — the scaffolding (tool set, sandbox, context management,
+approval gates, reasoning loop) that wraps a language model and turns it into an autonomous agent.
+Patronus does not replace a harness; it **enhances, modifies, and scaffolds** the one you already
+run — layering in memory, skills, house rules, evaluation, and guardrails through each harness's own
+on-disk config.
+
 You **author or select once**; Patronus **translates per tool** and installs. Add a memory layer, a
 set of skills, your house rules, and a curated MCP bundle with a single command — reproducibly.
 
@@ -58,7 +64,7 @@ built first.
 | L5 | Tools / Integrations | The outside world — GitHub, DBs, browser (MCP servers) | Recipe |
 | L6 | Sandbox / Execution safety | Constrain FS / network / exec | Recipe |
 | L7 | Observability | See what the agent *did* — traces, cost, logs | Recipe + hooks |
-| L8 | Evaluation / Harness | Prove output is correct — test/lint/typecheck loops | Artifact + Recipe |
+| L8 | Evaluation | Prove output is correct — test/lint/typecheck loops, eval suites | Artifact + Recipe |
 | L9 | Guardrails / Policy | Hard rules — secret-scan, PII, approval hooks | Artifact |
 | L10 | Orchestration | Multi-agent coordination, parallel fan-out | Artifact (skills) |
 | L11 | Lifecycle / Reproducibility | Pin / lock / share the whole env | Profile + lockfile |
@@ -173,7 +179,7 @@ flowchart TB
     TYP --> TR["recipe (COMPUTED from deliver × wire):<br/>wire-only · fetch+wire · fetch+run"]
     TYP --> TP["profile (COMPUTED): expansion"]
 
-    ROL --> RL["instruction L1 · capability L2 · memory L3<br/>context L4 · tools L5 · sandbox L6<br/>observability L7 · harness L8 · guardrail L9<br/>orchestration L10 · lifecycle L11"]
+    ROL --> RL["instruction L1 · capability L2 · memory L3<br/>context L4 · tools L5 · sandbox L6<br/>observability L7 · eval L8 · guardrail L9<br/>orchestration L10 · lifecycle L11"]
 
     classDef root fill:#eee,stroke:#888,color:#000;
     classDef fam fill:#e8f0fe,stroke:#4285f4,color:#000;
@@ -237,7 +243,7 @@ flowchart LR
         R2["context → L4"]
         R3["instruction → L1"]
         R4["guardrail → L9 (reserved)"]
-        R5["harness → L8 (reserved)"]
+        R5["eval → L8 (reserved)"]
     end
     Types -. "one shape can serve<br/>many jobs" .- Roles
 ```
@@ -412,7 +418,7 @@ One profile touched **four layers at once**: an L4 context pattern set and two L
 --profile cloudflare` then pins every resolved item so a teammate reproduces the same set. Running it
 again is idempotent — unchanged files become **SKIP**.
 
-> The `stub` warning above is honest: the `cloudflare` profile's instructions/harness slots aren't
+> The `stub` warning above is honest: the `cloudflare` profile's instructions/eval slots aren't
 > sourced yet, so they're skipped and only the populated layers install. A fully-sourced profile
 > shows no such warning.
 

@@ -31,7 +31,7 @@ type ProfileLayers struct {
 	Memory        string     `yaml:"memory,omitempty" json:"memory,omitempty"`
 	Sandbox       string     `yaml:"sandbox,omitempty" json:"sandbox,omitempty"`
 	Observability StringList `yaml:"observability,omitempty" json:"observability,omitempty"`
-	Harness       StringList `yaml:"harness,omitempty" json:"harness,omitempty"`
+	Eval          StringList `yaml:"eval,omitempty" json:"eval,omitempty"`
 	Guardrails    StringList `yaml:"guardrails,omitempty" json:"guardrails,omitempty"`
 }
 
