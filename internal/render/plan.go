@@ -63,6 +63,20 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 			order = append(order, k)
 		}
 		g.paths = append(g.paths, displayPath(r, d.Path))
+
+		// Sections from other artifacts folded into this composed APPEND file each
+		// get their own row, so the table shows every contributor (not just the
+		// first) writing to the shared file.
+		for _, c := range d.Contrib {
+			ck := key{c.Artifact, string(diff.Append), d.Type, d.Role, d.Tool, d.Scope, ""}
+			cg, ok := groups[ck]
+			if !ok {
+				cg = &group{key: ck}
+				groups[ck] = cg
+				order = append(order, ck)
+			}
+			cg.paths = append(cg.paths, displayPath(r, d.Path))
+		}
 	}
 
 	headers := []string{"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope"}

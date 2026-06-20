@@ -204,7 +204,19 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 		switch {
 		case d.Action == diff.Append && d.Section != nil:
 			// Re-fold this section onto the already-composed After so multiple
-			// appends to the same file accumulate.
+			// appends to the same file accumulate. When the contribution comes from
+			// a DIFFERENT artifact (not just the same artifact re-appending for
+			// another tool), record it so state can track + remove each section
+			// under its own artifact. Prior is the composed bytes before this fold,
+			// so remove reverses contributions in order.
+			if d.Artifact != "" && d.Artifact != prev.Artifact {
+				prev.Contrib = append(prev.Contrib, diff.SectionContrib{
+					Artifact: d.Artifact,
+					Version:  d.Version,
+					Section:  d.Section.Name,
+					Prior:    prev.After,
+				})
+			}
 			prev.After = adapter.AppendSection(prev.After, d.Section.Name, d.Section.Body)
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		case d.Action == diff.Merge:

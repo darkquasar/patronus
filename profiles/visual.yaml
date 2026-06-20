@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: visual
+summary: "Visual-explanation environment: agent house rules + design discipline, with ASCII diagrams on by default (diagram-explain)."
+# An L1 overlay: instructions only — every referenced item ships in-repo today.
+# Memory (L3), tools (L5), and the rest come from a base profile this composes onto
+# (e.g. core, sourced in the L2/L4 sub-phase); the style profile stays focused on L1.
+layers:
+  instructions:
+    - agents-spine                         # the AGENTS.md format spine
+    - agent-rules                          # distilled DDD + refactoring discipline
+    - diagram-explain                      # output-style — ASCII diagrams on by default

@@ -6,13 +6,28 @@ import "fmt"
 // family with a declared file Type — the same files + role could be a skill or a
 // command, so Type is the only signal and it drives the write action.
 type Artifact struct {
-	Meta      `yaml:",inline" json:",inline"`
-	Type      ArtifactType                      `yaml:"type" json:"type"`                       // skill | agent | command | hook | instruction
-	Entry     string                            `yaml:"entry,omitempty" json:"entry,omitempty"` // body file; omitted for Hook
-	Files     []string                          `yaml:"files,omitempty" json:"files,omitempty"` // supporting dirs copied verbatim
-	Targets   []string                          `yaml:"targets" json:"targets"`
-	Defaults  ArtifactDefaults                  `yaml:"defaults" json:"defaults"`
-	Overrides map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Meta        `yaml:",inline" json:",inline"`
+	Type        ArtifactType                      `yaml:"type" json:"type"`                       // skill | agent | command | hook | instruction | output-style
+	Entry       string                            `yaml:"entry,omitempty" json:"entry,omitempty"` // body file; omitted for Hook
+	Files       []string                          `yaml:"files,omitempty" json:"files,omitempty"` // supporting dirs copied verbatim
+	Targets     []string                          `yaml:"targets" json:"targets"`
+	Defaults    ArtifactDefaults                  `yaml:"defaults" json:"defaults"`
+	Overrides   map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Attribution *Attribution                      `yaml:"attribution,omitempty" json:"attribution,omitempty"` // set on vendored content
+}
+
+// Attribution records the upstream provenance of vendored (de-vendored) artifact
+// content (§3). It rides along in the catalog metadata and the canonically
+// re-marshalled patronus.yaml so a source/commit note is always discoverable; the
+// human-readable license + copyright also ships as a NOTICE file in the artifact
+// folder. Present only on artifacts whose body is sourced from a permissive
+// upstream; absent for original in-repo content.
+type Attribution struct {
+	Upstream  string `yaml:"upstream" json:"upstream"`                 // e.g. github.com/ciembor/agent-rules-books
+	License   string `yaml:"license" json:"license"`                   // SPDX id, e.g. MIT
+	Copyright string `yaml:"copyright" json:"copyright"`               // e.g. "Copyright (c) 2026 Maciej Ciemborowicz"
+	Commit    string `yaml:"commit,omitempty" json:"commit,omitempty"` // pinned upstream commit the content was taken at
+	Note      string `yaml:"note,omitempty" json:"note,omitempty"`     // caveats (e.g. "inspired by, not reproductions of, the source books")
 }
 
 // Header returns the artifact's shared identity header (implements Installable).
@@ -60,6 +75,11 @@ func (a *Artifact) Validate() error {
 	}
 	if a.Description == "" {
 		return fmt.Errorf("missing description")
+	}
+	if a.Attribution != nil {
+		if a.Attribution.Upstream == "" || a.Attribution.License == "" || a.Attribution.Copyright == "" {
+			return fmt.Errorf("attribution requires upstream, license, and copyright")
+		}
 	}
 	return nil
 }

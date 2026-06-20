@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -294,6 +295,48 @@ func TestComposeSharedAgentsFile(t *testing.T) {
 	}
 	if d.Tool != "opencode+codex" && d.Tool != "codex+opencode" {
 		t.Errorf("tool label should show both: %s", d.Tool)
+	}
+}
+
+// TestComposeTwoArtifactsOneFile covers the multi-instruction case the visual/core
+// profiles introduce: two DISTINCT artifacts append to the same CLAUDE.md. They
+// compose into one physical diff (one write), but the second contributor is
+// recorded in Contrib so state/remove can track each section independently.
+func TestComposeTwoArtifactsOneFile(t *testing.T) {
+	home, proj := t.TempDir(), t.TempDir()
+	a := instructionArtifact(t, "spine", []string{"claude"})
+	b := instructionArtifact(t, "rules", []string{"claude"})
+	req := baseReq(t, home, proj, a, b)
+	req.Names = []string{"spine", "rules"}
+	req.Tool = "claude"
+	req.Scope = "local"
+
+	cs, err := Compute(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs.Diffs) != 1 {
+		t.Fatalf("want 1 composed diff, got %d: %v", len(cs.Diffs), paths(cs.Diffs))
+	}
+	d := cs.Diffs[0]
+	// First contributor stays on the diff; the second lives in Contrib.
+	if d.Artifact != "spine" {
+		t.Errorf("primary artifact = %q, want spine", d.Artifact)
+	}
+	if len(d.Contrib) != 1 || d.Contrib[0].Artifact != "rules" || d.Contrib[0].Section != "rules" {
+		t.Fatalf("want one contrib for rules, got %+v", d.Contrib)
+	}
+	// Both fenced sections are present in the single composed file.
+	for _, want := range []string{"patronus:start spine", "patronus:start rules"} {
+		if !bytes.Contains(d.After, []byte(want)) {
+			t.Errorf("composed file missing %q:\n%s", want, d.After)
+		}
+	}
+	// Contrib.Prior is the file BEFORE rules folded in — it has spine but not rules,
+	// so remove can reverse exactly the rules section.
+	if !bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start spine")) ||
+		bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start rules")) {
+		t.Errorf("contrib prior should hold spine-only:\n%s", d.Contrib[0].Prior)
 	}
 }
 

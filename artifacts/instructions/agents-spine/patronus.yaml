@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: agents-spine
+description: "The AGENTS.md format spine — the predictable sections (dev environment, testing, conventions, PR) a coding agent should expect in a project's instructions file. Appended into CLAUDE.md/AGENTS.md."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/openai/agents.md
+  license: MIT
+  copyright: "Copyright (c) 2025 OpenAI"
+  commit: d1ac7f063d20e70015ed6732664049ae4ba9d74e
+  note: "Establishes the AGENTS.md conventions of the open agents.md format; section structure inspired by the standard, not a verbatim copy."

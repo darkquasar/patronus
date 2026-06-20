@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: output-style
+role: instruction
+name: diagram-explain
+description: "Output style: accompany non-trivial explanations with a compact ASCII diagram (architecture, flow, or state) using a consistent charset. CREATE on Claude (output-styles/), APPEND to AGENTS.md on Codex/OpenCode."
+version: 1.0.0
+entry: STYLE.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: global
+attribution:
+  upstream: github.com/tjboudreaux/cc-visualization-skills
+  license: MIT
+  copyright: "Copyright (c) 2026 TJ Boudreaux"
+  commit: 4513e46b4a1bccea0f5177b16a8ee069a4d01b30
+  note: "Authored output style; only the ASCII charset/convention rules are borrowed from the upstream tools-visual-ascii-arch skill, not its prose."

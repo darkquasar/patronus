@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: agent-rules
+description: "Distilled design-discipline rules for an AI coding agent — domain-driven design and refactoring, as compact decision/trigger checklists. Appended into CLAUDE.md/AGENTS.md."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/ciembor/agent-rules-books
+  license: MIT
+  copyright: "Copyright (c) 2026 Maciej Ciemborowicz"
+  commit: 9c8763613514e4047d75c089533e09bc4b493c28
+  note: "Vendored `mini` variants only (most abstracted), deduped to one DDD and one refactoring rule-set. LLM-generated and inspired by, NOT reproductions of, the source books; never present as the books themselves."

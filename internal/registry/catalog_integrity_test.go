@@ -54,6 +54,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"team-implement":     {manifest.TypeSkill, manifest.RoleCapability},
 		"pattern-cloudflare": {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
 		"pattern-mcp":        {manifest.TypeSkill, manifest.RoleContext},
+		// P7.2-L1 vendored/authored instructions + the diagram-explain output-style.
+		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
+		"agent-rules":     {manifest.TypeInstruction, manifest.RoleInstruction},
+		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -77,6 +81,25 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		}
 		if m.APIVersion != manifest.APIVersion {
 			t.Errorf("%s: apiVersion = %q, want %q", m.Name, m.APIVersion, manifest.APIVersion)
+		}
+	}
+
+	// Vendored content must carry complete attribution (§3) so the catalog records
+	// upstream provenance and the build packs a NOTICE.
+	for _, name := range []string{"agents-spine", "agent-rules", "diagram-explain"} {
+		var found *manifest.Artifact
+		for i := range cat.Artifacts {
+			if cat.Artifacts[i].Manifest.Name == name {
+				found = cat.Artifacts[i].Manifest
+			}
+		}
+		if found == nil {
+			t.Errorf("vendored artifact %q not in catalog", name)
+			continue
+		}
+		at := found.Attribution
+		if at == nil || at.Upstream == "" || at.License == "" || at.Copyright == "" {
+			t.Errorf("%s: incomplete attribution: %+v", name, at)
 		}
 	}
 
@@ -116,7 +139,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"cloudflare", "golang", "python"}
+	wantProfiles := []string{"cloudflare", "golang", "lean-code", "python", "terse", "visual"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}
@@ -154,6 +177,9 @@ func TestRealAdaptersLoad(t *testing.T) {
 		}
 		if ad.Layout.Instruction == nil {
 			t.Errorf("%s: missing instruction layout", tool)
+		}
+		if ad.Layout.OutputStyle == nil {
+			t.Errorf("%s: missing output-style layout", tool)
 		}
 		if ad.Layout.Mcp == nil {
 			t.Errorf("%s: missing mcp layout", tool)

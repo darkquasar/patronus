@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: lean-code
+summary: "STUB — minimal-code overlay. Wires the ponytail minimal-code style on top of the L1 baseline; the style overlay is sourced later."
+status: stub                               # installer warns: ponytail not yet sourced
+layers:
+  instructions:
+    - agents-spine
+    - agent-rules
+    # - ponytail   TODO: source the ponytail minimal-code style overlay (L1, P7.x)
+todo:
+  - "Source the ponytail minimal-code style overlay (MIT) and add it to instructions."

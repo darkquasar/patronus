@@ -167,14 +167,17 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 	order := []key{}
 	byKey := map[key]*Item{}
 
-	get := func(d diff.FileDiff) *Item {
-		k := key{d.Artifact, d.Tool, d.Scope}
+	getKey := func(k key) *Item {
 		it, ok := byKey[k]
 		if !ok {
-			it = &Item{Artifact: d.Artifact, ItemVersion: d.Version, Tool: d.Tool, Scope: d.Scope, InstalledAt: now}
+			it = &Item{Artifact: k.artifact, Tool: k.tool, Scope: k.scope, InstalledAt: now}
 			byKey[k] = it
 			order = append(order, k)
 		}
+		return it
+	}
+	get := func(d diff.FileDiff) *Item {
+		it := getKey(key{d.Artifact, d.Tool, d.Scope})
 		// A later diff may carry the version when the first one (e.g. a shared
 		// composed file) did not; record the first non-empty we see.
 		if it.ItemVersion == "" && d.Version != "" {
@@ -200,6 +203,24 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 			continue
 		}
 		it.Files = append(it.Files, fileState(d))
+
+		// A composed APPEND file may carry sections from OTHER artifacts folded in
+		// (e.g. agents-spine + agent-rules → one CLAUDE.md). Record each under its
+		// own artifact so remove strips exactly that section, restoring the file to
+		// the state before this contributor was folded in.
+		for _, c := range d.Contrib {
+			ci := getKey(key{c.Artifact, d.Tool, d.Scope})
+			if ci.ItemVersion == "" {
+				ci.ItemVersion = c.Version
+			}
+			ci.Files = append(ci.Files, FileState{
+				Path:     d.Path,
+				Action:   string(diff.Append),
+				Checksum: checksum(d.After),
+				Section:  c.Section,
+				Prior:    c.Prior,
+			})
+		}
 	}
 
 	out := make([]Item, 0, len(order))

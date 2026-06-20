@@ -58,6 +58,15 @@ func TestValidateArtifact(t *testing.T) {
 		{"every-valid-type-hook", func(a *Artifact) { a.Type = TypeHook }, false},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
 		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
+		{"attribution-complete", func(a *Artifact) {
+			a.Attribution = &Attribution{Upstream: "github.com/x/y", License: "MIT", Copyright: "Copyright (c) 2026 X"}
+		}, false},
+		{"attribution-missing-copyright", func(a *Artifact) {
+			a.Attribution = &Attribution{Upstream: "github.com/x/y", License: "MIT"}
+		}, true},
+		{"attribution-missing-upstream", func(a *Artifact) {
+			a.Attribution = &Attribution{License: "MIT", Copyright: "Copyright (c) 2026 X"}
+		}, true},
 	}
 	for _, tc := range cases {
 		a := base()

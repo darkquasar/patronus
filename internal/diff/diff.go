@@ -71,6 +71,16 @@ type FileDiff struct {
 	// (e.g. codex + opencode both targeting a shared AGENTS.md) into one After.
 	Section *SectionEdit `json:"-"`
 
+	// Contrib lists the ADDITIONAL artifacts whose APPEND sections were folded
+	// into this one composed FileDiff (the first contributor stays in Artifact /
+	// Section). It exists because several instruction/output-style artifacts can
+	// append distinct fenced sections to ONE file (e.g. agents-spine + agent-rules
+	// → CLAUDE.md): the applier writes the file once, but state must record each
+	// section under its own artifact so remove can strip exactly that section, and
+	// the dry-run table must show a row per contributor. Empty for the common
+	// single-contributor case.
+	Contrib []SectionContrib `json:"-"`
+
 	// Fetch, when set, describes a FETCH: a binary to download, verify, and
 	// place. It lives only on Action==Fetch diffs (Path is the placement dest;
 	// Before/After are empty — the bytes are streamed at apply time, never held
@@ -119,6 +129,18 @@ type ExecSpec struct {
 type SectionEdit struct {
 	Name string
 	Body []byte
+}
+
+// SectionContrib records one additional artifact that contributed a fenced
+// section to a shared composed file: enough identity (artifact, version) and the
+// section name for state to record a removable per-artifact item, plus Prior —
+// the file's bytes as they were BEFORE this contributor's section was folded in —
+// so remove can reverse each section independently and in order.
+type SectionContrib struct {
+	Artifact string
+	Version  string
+	Section  string
+	Prior    []byte
 }
 
 // Classify decides the terminal Action for a proposed change, preserving
