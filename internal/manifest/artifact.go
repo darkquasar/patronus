@@ -15,6 +15,16 @@ type Artifact struct {
 	Overrides   map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
 	Attribution *Attribution                      `yaml:"attribution,omitempty" json:"attribution,omitempty"` // set on vendored content
 	Hook        *HookSpec                         `yaml:"hook,omitempty" json:"hook,omitempty"`               // required for Type==hook; the event/matcher/command to register
+	Setting     *SettingSpec                      `yaml:"setting,omitempty" json:"setting,omitempty"`         // required for Type==setting; the dotted path + value to merge into the agent's settings
+}
+
+// SettingSpec is the declarative definition of a setting artifact (Type==setting):
+// a value MERGEd at a dotted path in the agent's settings file. Path is the
+// identity remove uses to restore the prior value. Value is free-form — a scalar
+// (a sandbox toggle) or an object (a statusline {type, command}).
+type SettingSpec struct {
+	Path  string `yaml:"path" json:"path"`   // dotted path in the settings file, e.g. "statusLine" or "permissions.sandbox"
+	Value any    `yaml:"value" json:"value"` // the value to set there (scalar or object)
 }
 
 // HookSpec is the declarative definition of a hook artifact (Type==hook). Rather
@@ -98,6 +108,14 @@ func (a *Artifact) Validate() error {
 		}
 		if a.Hook.Event == "" || a.Hook.Command == "" {
 			return fmt.Errorf("hook artifact %q: hook requires event and command", a.Name)
+		}
+	}
+	if a.Type == TypeSetting {
+		if a.Setting == nil {
+			return fmt.Errorf("setting artifact %q: missing setting block", a.Name)
+		}
+		if a.Setting.Path == "" || a.Setting.Value == nil {
+			return fmt.Errorf("setting artifact %q: setting requires path and value", a.Name)
 		}
 	}
 	if a.Attribution != nil {

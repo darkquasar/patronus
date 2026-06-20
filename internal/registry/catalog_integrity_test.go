@@ -77,6 +77,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"git-guardrails": {manifest.TypeHook, manifest.RoleGuardrail},
 		"block-secrets":  {manifest.TypeHook, manifest.RoleGuardrail},
 		"gitleaks-guard": {manifest.TypeHook, manifest.RoleGuardrail},
+		// P7.5.4: the keystone's SessionStart activation (L2) + the ccusage statusline setting (L7).
+		"superpowers-session-start": {manifest.TypeHook, manifest.RoleCapability},
+		"ccusage-statusline":        {manifest.TypeSetting, manifest.RoleObservability},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -112,7 +115,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"codebase-design", "domain-modeling",
 		"go-style-uber",
 		"tdd-guard-hook", "verification-before-completion",
-		"git-guardrails", // block-secrets + gitleaks-guard are authored (no attribution)
+		"git-guardrails",            // block-secrets + gitleaks-guard are authored (no attribution)
+		"superpowers-session-start", // ccusage-statusline is authored (no attribution)
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {
@@ -151,6 +155,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
 		// P7.5.3 L9 guardrails: install-only recipe (github-release fetch) for the gitleaks binary; no wire.
 		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireMode("")},
+		// P7.5.4 L7 observability: install-only recipe (deliver: npm) for the ccusage CLI; no wire.
+		"ccusage": {manifest.RoleObservability, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))

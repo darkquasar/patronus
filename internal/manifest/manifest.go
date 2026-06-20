@@ -52,12 +52,24 @@ const (
 	// (CREATE under output-styles/) but an AGENTS.md APPEND on Codex/OpenCode,
 	// which have no output-style concept. The adapter layout picks the action.
 	TypeOutputStyle ArtifactType = "output-style"
+	// TypeSetting writes a scalar/object value at a dotted path in the agent's
+	// settings file (a MERGE) — the scalar twin of a hook's array-append. It is
+	// the shape for a native switch flipped in settings: a statusline entry, a
+	// sandbox toggle. Tool-divergent and flavourable per agent (@claude/@codex);
+	// a tool that models no setting target for it is an honest no-op.
+	//
+	// LAYER: setting is a SHAPE, not a layer — like hook, it is reused across
+	// layers, and the artifact's own `role` carries the layer it fills (the
+	// ccusage statusline setting is role: observability/L7; a native-sandbox
+	// setting is role: sandbox/L6). Never assume a layer from the type.
+	TypeSetting ArtifactType = "setting"
 )
 
 // artifactTypes is the valid set for an artifact's `type:` field.
 var artifactTypes = map[ArtifactType]bool{
 	TypeSkill: true, TypeAgent: true, TypeCommand: true,
 	TypeHook: true, TypeInstruction: true, TypeOutputStyle: true,
+	TypeSetting: true,
 }
 
 // Role is the layer an installable fills — universal across all three families,

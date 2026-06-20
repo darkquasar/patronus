@@ -159,16 +159,18 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting) (diff.FileDif
 		return base, nil, nil
 
 	case string(diff.Merge):
-		// A hook MERGE is a settings list-append: undo by stripping exactly our
-		// array element, leaving sibling hooks (other artifacts' or the user's)
-		// intact. This is the MERGE-side twin of APPEND's surgical un-section.
+		// A settings MERGE is undone SURGICALLY — strip exactly our array element
+		// (a hook) or delete exactly our key (a scalar setting), leaving every
+		// sibling (other artifacts' edits, the user's) intact. This is the MERGE-side
+		// twin of APPEND's un-section, and unlike a whole-file Prior restore it is
+		// correct even when other edits folded into the same file after ours.
 		if f.Setting != nil {
 			if !exists {
 				base.Action = diff.Skip
-				base.Note = "settings file absent — nothing to un-hook"
+				base.Note = "settings file absent — nothing to remove"
 				return base, nil, nil
 			}
-			stripped, found, unreadable := stripHook(current, f.Setting)
+			stripped, found, unreadable := stripSetting(current, f.Setting)
 			if unreadable != "" {
 				// An unparseable settings file becomes a user-facing warning + SKIP,
 				// not a fatal: the user can fix it and re-run.
@@ -178,10 +180,10 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting) (diff.FileDif
 			}
 			if !found {
 				base.Action = diff.Skip
-				base.Note = "hook absent — nothing to un-hook"
+				base.Note = "setting absent — nothing to remove"
 				return base, nil, nil
 			}
-			base.Action = diff.Restore // write the element-stripped bytes
+			base.Action = diff.Restore // write the surgically-edited bytes
 			base.Before = current
 			base.After = stripped
 			return base, nil, nil
@@ -241,15 +243,16 @@ func driftsFromChecksum(current []byte, recorded string) bool {
 	return got != recorded
 }
 
-// stripHook removes the recorded hook element from current settings, returning
-// the stripped bytes, whether an element was found, and a non-empty warning
-// message if the settings file could not be parsed. It folds the error into a
-// message string so the caller branches on a value (warn + skip), keeping the
-// "unparseable config is recoverable, not fatal" contract.
-func stripHook(current []byte, edit *diff.SettingEdit) (stripped []byte, found bool, warning string) {
+// stripSetting surgically reverses the recorded settings edit (a hook element or
+// a scalar key) from current, returning the edited bytes, whether anything was
+// found, and a non-empty warning message if the settings file could not be
+// parsed. It folds the error into a message string so the caller branches on a
+// value (warn + skip), keeping the "unparseable config is recoverable, not fatal"
+// contract.
+func stripSetting(current []byte, edit *diff.SettingEdit) (stripped []byte, found bool, warning string) {
 	out, found, err := adapter.RemoveSettingEdit(current, edit)
 	if err != nil {
-		return nil, false, "settings file unparseable; hook not removed: " + err.Error()
+		return nil, false, "settings file unparseable; setting not removed: " + err.Error()
 	}
 	return out, found, ""
 }

@@ -317,3 +317,108 @@ func TestCoreGuardrails(t *testing.T) {
 		t.Errorf("expected a FETCH row for the gitleaks binary:\n%s", out)
 	}
 }
+
+// TestCoreSessionStartAndCcusage is the §6b acceptance for P7.5.4: the keystone's
+// SessionStart activation hook lands (with its placed script), the ccusage install
+// shows as an advisory, and the ccusage statusline is a Claude-only setting that
+// diverges (present on claude, absent on codex/opencode).
+func TestCoreSessionStartAndCcusage(t *testing.T) {
+	f := builtRegistry(t)
+	home := withRemoteEnv(t, f)
+	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks")
+
+	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	// ccusage install is surfaced as an advisory (install-only npm).
+	if !strings.Contains(out, "npm install -g ccusage") {
+		t.Errorf("expected a ccusage install advisory:\n%s", out)
+	}
+
+	settings := filepath.Join(home, ".claude", "settings.json")
+	root := map[string]any{}
+	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
+		t.Fatalf("settings.json unreadable: %v", err)
+	}
+
+	// SessionStart hook registered + its script placed and executable.
+	ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any)
+	if len(ss) != 1 {
+		t.Fatalf("want 1 SessionStart group, got %d: %v", len(ss), root["hooks"])
+	}
+	scriptPath := filepath.Join(home, ".claude", "hooks", "superpowers-session-start.sh")
+	cmd := ss[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
+	if cmd != scriptPath {
+		t.Errorf("SessionStart command = %v, want the placed script %q", cmd, scriptPath)
+	}
+	info, err := os.Stat(scriptPath)
+	if err != nil {
+		t.Fatalf("SessionStart script not placed: %v", err)
+	}
+	if info.Mode().Perm()&0o100 == 0 {
+		t.Errorf("SessionStart script not executable: %v", info.Mode())
+	}
+
+	// The ccusage statusline is set on Claude.
+	sl, ok := root["statusLine"].(map[string]any)
+	if !ok || sl["command"] != "ccusage statusline" {
+		t.Errorf("ccusage statusLine not set on claude: %v", root["statusLine"])
+	}
+}
+
+// TestCcusageStatuslineFlavourDiverges proves the @claude flavour: codex/opencode
+// get NO statusLine setting (the setting artifact targets claude only).
+func TestCcusageStatuslineFlavourDiverges(t *testing.T) {
+	for _, tool := range []string{"codex", "opencode"} {
+		t.Run(tool, func(t *testing.T) {
+			f := builtRegistry(t)
+			home := withRemoteEnv(t, f)
+			withFakeRunner(t)
+			stubBinary(t, home, "gitleaks")
+
+			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
+				t.Fatalf("install: %v\n%s", err, errOut)
+			}
+			// No Claude settings.json statusLine leaked into this tool's tree.
+			if b, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json")); err == nil && strings.Contains(string(b), "statusLine") {
+				t.Errorf("%s should not get the Claude statusLine setting:\n%s", tool, b)
+			}
+		})
+	}
+}
+
+// TestCcusageStatuslineRemoveRoundTrips proves the scalar setting removes cleanly:
+// after install the statusLine key is present; after removing ccusage-statusline
+// it is gone and the rest of settings.json (the hooks) survive.
+func TestCcusageStatuslineRemoveRoundTrips(t *testing.T) {
+	f := builtRegistry(t)
+	home := withRemoteEnv(t, f)
+	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks")
+
+	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, e)
+	}
+	settings := filepath.Join(home, ".claude", "settings.json")
+	if !strings.Contains(string(mustRead(t, settings)), "statusLine") {
+		t.Fatal("statusLine not set after install")
+	}
+
+	if _, e, err := execRemove(t, "ccusage-statusline", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove: %v\n%s", err, e)
+	}
+	root := map[string]any{}
+	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
+		t.Fatalf("settings corrupt after remove: %v", err)
+	}
+	if _, present := root["statusLine"]; present {
+		t.Errorf("statusLine should be gone after remove: %v", root["statusLine"])
+	}
+	// The hooks survive (remove of the scalar setting didn't clobber them).
+	if _, ok := root["hooks"].(map[string]any)["PreToolUse"].([]any); !ok {
+		t.Errorf("hooks should survive removing the statusline setting: %v", root["hooks"])
+	}
+}

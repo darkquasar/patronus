@@ -241,7 +241,7 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 				Path:     d.Path,
 				Action:   string(diff.Merge),
 				Checksum: checksum(d.After),
-				Setting:  c.Edit,
+				Setting:  c.Edit, // remove reverses it surgically; no Prior needed
 			})
 		}
 	}

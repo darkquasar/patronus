@@ -91,18 +91,53 @@ func ftOf(e *diff.SettingEdit) manifest.FileTarget {
 	return manifest.FileTarget{File: e.Target.File, Format: e.Target.Format}
 }
 
-// ApplySettingEdit (re-)appends e's element onto existing, idempotently on
-// e.Identity. The planner uses it to re-fold a settings list-append onto an
-// accumulated config so several hooks into one file all survive.
+// ApplySettingEdit (re-)applies e onto existing: a list-append for a hook
+// registration (IdentityKey set, idempotent on Identity) or a scalar set for a
+// statusline/toggle (IdentityKey ""). The planner uses it to re-fold each settings
+// edit onto an accumulated config so mixed list+scalar edits on one file all
+// survive — a scalar set no longer clobbers the hooks folded before it.
 func ApplySettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, error) {
+	if e.IdentityKey == "" {
+		return MergeSettings(existing, ftOf(e), e.Dotted, e.ScalarValue)
+	}
 	return AppendSettingsList(existing, ftOf(e), e.Dotted, e.IdentityKey, e.Elem)
 }
 
-// RemoveSettingEdit strips e's element from existing (matched on identity) and
-// reports whether one was removed. It is the targeted inverse remove uses, so a
-// hook reverts without disturbing sibling hooks on the same event.
+// RemoveSettingEdit reverses e from existing surgically — without restoring a
+// whole-file snapshot, which would clobber edits that folded in afterward. For a
+// LIST edit it strips the identified array element; for a SCALAR edit it deletes
+// the key at Dotted. Reports whether anything was removed.
 func RemoveSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, error) {
+	if e.IdentityKey == "" {
+		return RemoveSettingScalar(existing, ftOf(e), e.Dotted)
+	}
 	return RemoveSettingsList(existing, ftOf(e), e.Dotted, e.IdentityKey, e.Identity)
+}
+
+// RemoveSettingScalar deletes the key at ft's dotted path within existing and
+// reports whether it was present. It is the scalar twin of RemoveSettingsList:
+// surgical, so sibling keys (other settings, hook arrays) are untouched.
+func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string) ([]byte, bool, error) {
+	if !ft.OK() {
+		return nil, false, fmt.Errorf("config: empty file target")
+	}
+	root, err := parseConfig(existing, ft.Format)
+	if err != nil {
+		return nil, false, err
+	}
+	parent, leaf := descendExisting(root, dotted)
+	if parent == nil {
+		return existing, false, nil
+	}
+	if _, present := parent[leaf]; !present {
+		return existing, false, nil
+	}
+	delete(parent, leaf)
+	out, err := serializeConfig(root, ft.Format)
+	if err != nil {
+		return nil, false, err
+	}
+	return out, true, nil
 }
 
 // parseConfig decodes existing config bytes into a generic map. Empty input

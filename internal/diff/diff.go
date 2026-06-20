@@ -165,18 +165,23 @@ type SectionContrib struct {
 	Prior    []byte
 }
 
-// SettingEdit captures the inputs of a settings list-append (a hook registration)
-// so the planner can re-fold it onto an accumulated config and state/remove can
-// pull exactly this one element back out. It is the MERGE-side analogue of
-// SectionEdit: where a section is identified by Name within prose, a settings
-// element is identified by Identity within the array at Dotted. The full
-// FileTarget travels along so remove can re-parse/serialize in the right format.
+// SettingEdit captures the inputs of a settings MERGE so the planner can re-fold
+// it onto an accumulated config (several settings edits can land on one file). It
+// has two forms, distinguished by IdentityKey:
+//   - LIST-APPEND (IdentityKey != ""): append/replace Elem in the array at Dotted,
+//     keyed by Identity — a hook registration. Remove strips exactly that element.
+//   - SCALAR SET (IdentityKey == ""): set ScalarValue at Dotted — a statusline /
+//     sandbox toggle. Remove restores the prior value (wholesale Prior).
+//
+// Either way the edit is re-foldable, so a scalar set folded after some hooks no
+// longer clobbers them. The full FileTarget travels along for re-parse/serialize.
 type SettingEdit struct {
 	Target      FileTargetRef  // file + format the merge applies to
-	Dotted      string         // resolved array path, e.g. "hooks.PreToolUse"
-	IdentityKey string         // element field carrying the identity, e.g. "patronusId"
-	Identity    string         // this element's identity value (stable per artifact+hook)
-	Elem        map[string]any // the array element to (re-)append; carried so the planner can re-fold onto accumulated config
+	Dotted      string         // resolved path, e.g. "hooks.PreToolUse" (list) or "statusLine" (scalar)
+	IdentityKey string         // array form: element field carrying the identity ("" => scalar set)
+	Identity    string         // array form: this element's identity value
+	Elem        map[string]any // array form: the element to (re-)append
+	ScalarValue any            // scalar form: the value to set at Dotted
 }
 
 // FileTargetRef is the minimal file/format descriptor a SettingEdit needs to
@@ -187,11 +192,12 @@ type FileTargetRef struct {
 	Format string
 }
 
-// SettingContrib records one additional artifact whose settings element was
-// folded into a shared config file (e.g. several hooks into one settings.json).
-// Like SectionContrib it carries identity for a per-artifact removable record;
-// Edit carries the list-append intent so remove strips exactly this element,
-// leaving sibling hooks (other artifacts' or the user's) intact.
+// SettingContrib records one additional artifact whose settings edit was folded
+// into a shared config file (e.g. several hooks into one settings.json). Like
+// SectionContrib it carries identity for a per-artifact removable record. Edit
+// carries the merge intent, and remove reverses it SURGICALLY (strip the array
+// element for a list edit, delete the key for a scalar) — so no whole-file Prior
+// is needed: a revert never disturbs edits that folded into the same file.
 type SettingContrib struct {
 	Artifact string
 	Version  string

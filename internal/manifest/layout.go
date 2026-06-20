@@ -16,6 +16,7 @@ type Layout struct {
 	Command     *CommandLayout     `yaml:"command,omitempty"`
 	Mcp         *McpLayout         `yaml:"mcp,omitempty"`
 	Hook        *HookLayout        `yaml:"hook,omitempty"`
+	Setting     *SettingLayout     `yaml:"setting,omitempty"`
 	Instruction *InstructionLayout `yaml:"instruction,omitempty"`
 	OutputStyle *OutputStyleLayout `yaml:"output-style,omitempty"`
 }
@@ -174,6 +175,22 @@ func (l *HookLayout) ScriptDirFor(scope string) PathTarget {
 		return l.GlobalScriptDir
 	}
 	return l.ProjectScriptDir
+}
+
+// SettingLayout describes the MERGE target for a setting artifact — the agent's
+// settings file at a per-artifact dotted path. Null for tools that model no
+// settings surface (so a @tool-flavoured setting is an honest no-op elsewhere).
+type SettingLayout struct {
+	Global  FileTarget `yaml:"global"`
+	Project FileTarget `yaml:"project"`
+}
+
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *SettingLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
 }
 
 // InstructionLayout describes the APPEND-section target for instructions.

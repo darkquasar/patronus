@@ -181,6 +181,38 @@ func TestRemoveSettingsListRoundTrip(t *testing.T) {
 	}
 }
 
+// TestRemoveSettingScalar proves the scalar key-delete is surgical: it removes
+// exactly the key, leaving sibling keys (and hook arrays) intact, and is a no-op
+// when the key is already absent.
+func TestRemoveSettingScalar(t *testing.T) {
+	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
+	existing := []byte(`{"model":"opus","statusLine":{"type":"command","command":"x"},"hooks":{"PreToolUse":[{"a":1}]}}`)
+
+	out, found, err := RemoveSettingScalar(existing, ft, "statusLine")
+	if err != nil || !found {
+		t.Fatalf("remove statusLine: found=%v err=%v", found, err)
+	}
+	got := reparse(t, out, "json")
+	if _, present := got["statusLine"]; present {
+		t.Error("statusLine should be deleted")
+	}
+	if got["model"] != "opus" {
+		t.Errorf("sibling key clobbered: %v", got)
+	}
+	if got["hooks"] == nil {
+		t.Errorf("hook array clobbered: %v", got)
+	}
+
+	// Removing an absent key is a no-op returning the original bytes.
+	out2, found, err := RemoveSettingScalar(out, ft, "statusLine")
+	if err != nil || found {
+		t.Fatalf("remove absent: found=%v err=%v", found, err)
+	}
+	if !bytes.Equal(out, out2) {
+		t.Error("removing an absent key changed bytes")
+	}
+}
+
 func listLen(t *testing.T, b []byte, _ string) int {
 	t.Helper()
 	got := reparse(t, b, "json")
