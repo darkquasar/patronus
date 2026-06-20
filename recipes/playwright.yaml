@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: recipe
+name: playwright
+role: tools                        # L5 — Tools / Integrations (browser automation — genuinely not native)
+summary: "Playwright MCP — drive a real browser (navigate, click, fill, snapshot) via accessibility tree. Launched on demand via npx. Opt-in (web-dev profile)."
+upstream: github.com/microsoft/playwright-mcp
+license: Apache-2.0
+
+# npx fetches + runs @playwright/mcp on demand, so NO deliver block — install is a
+# single stdio-MCP config MERGE. Shape (computed) = wire-only.
+wire:
+  mode: mcp
+  mcp:
+    transport: stdio
+    command: npx
+    args: ["@playwright/mcp@latest"]
+  tools: [claude, codex, opencode]

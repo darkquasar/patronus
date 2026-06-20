@@ -8,6 +8,7 @@ layers:
   instructions: [agent-principles]                # role: instruction — generic agent house rules
   capabilities: [team-research, team-implement]   # role: capability
   context: [pattern-cloudflare]                   # role: context — the populated L4 slot
+  tools: [cloudflare-mcp]                          # role: tools — hosted Cloudflare Docs MCP (keyless)
   memory: memory-ai-memory
   # eval / guardrails / observability / sandbox: TODO — sourced later
 todo:

@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: data
+summary: "Data/SQL tool overlay — adds Postgres MCP Pro (schema introspection, safe SQL, index tuning) on top of a base profile like core."
+# An L5 tool overlay: tools only. Postgres MCP needs a DATABASE_URI secret set in
+# the MCP client env (Patronus never bakes secrets in) and defaults to a restricted
+# (read-only/guarded) access mode.
+layers:
+  tools:
+    - postgres                             # Postgres introspection + safe SQL (uvx MCP)

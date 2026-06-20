@@ -24,13 +24,16 @@ layers:
   context:
     - codebase-design                      # deep-module design vocabulary
     - domain-modeling                      # ubiquitous-language + ADR discipline
+    - context7                             # live, version-specific library docs (hosted MCP)
+    - serena                               # semantic code navigation of the local repo (LSP MCP)
     - pattern-cloudflare                   # in-repo context skill
     - pattern-mcp                          # in-repo context skill
+  tools:
+    - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
   memory: memory-ai-memory                 # L3 default recipe (self-wiring)
 todo:
-  - "L5 tools: github + Context7 + Serena (P7.3)."
   - "L6 sandbox: native, flavoured per agent (P7.4)."
-  - "L7 observability: ccusage (P7.3)."
+  - "L7 observability: ccusage — needs the advisory wire shape + @claude statusline (P7.5)."
   - "L8 eval: tdd-guard hook (ENFORCED test-first — the strict gate) + promptfoo + verification-before-completion (P7.5)."
   - "L9 guardrails: regex secret hook + gitleaks commit-guard + git-guardrails (P7.5)."
   - "L10 orchestration: Beads recipe + vendored orchestration skills (P7.6)."

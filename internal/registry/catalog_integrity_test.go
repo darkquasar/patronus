@@ -68,6 +68,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.2-L4 vendored context/design-vocabulary skills (mattpocock).
 		"codebase-design": {manifest.TypeSkill, manifest.RoleContext},
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
+		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
+		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -101,6 +103,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"superpowers-bootstrap", "writing-plans", "executing-plans",
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
+		"go-style-uber",
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {
@@ -128,6 +131,13 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"memory-engram":    {manifest.RoleMemory, manifest.ShapeFetchWire, manifest.WireModeMcp},
 		"memory-ai-memory": {manifest.RoleMemory, manifest.ShapeFetchRun, manifest.WireModeSelf},
 		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireModeMcp},
+		// P7.3 L4 context recipes (live docs + local semantic search) — wire-only MCP.
+		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"serena":   {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		// P7.3 L5 tool recipes (opt-in) — all wire-only MCP (npx/uvx on demand, or hosted).
+		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
@@ -154,7 +164,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"cloudflare", "core", "golang", "lean-code", "python", "terse", "visual"}
+	wantProfiles := []string{"cloudflare", "core", "data", "golang", "lean-code", "python", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}

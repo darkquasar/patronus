@@ -2,13 +2,14 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: golang
-summary: "STUB — Go project agent environment. Items to be sourced (see todo)."
-status: stub                               # installer warns + no-ops unpopulated layers
-layers:                                    # keys are §1A layer names
-  instructions: [agent-principles]         # generic agent house rules; TODO: + Go-specific conventions
-  capabilities: [team-research, team-implement]   # only existing in-repo artifacts
-  memory: memory-ai-memory                 # capability default recipe
-  # context / eval / observability / guardrails / sandbox: TODO — sourced later
+summary: "Go project environment: the full core spine PLUS idiomatic Go conventions (Uber Go Style Guide, distilled). core + Go guidelines."
+# golang = core, extended. `extends: core` pulls in every core layer (L1 spine +
+# diagram-explain, L2 skills, L4 design-vocab + Context7/Serena, L5 github, ai-memory);
+# this profile only ADDS the Go-idiomatic instruction overlay. List slots append, so
+# go-style-uber joins core's instructions rather than replacing them.
+extends: core
+layers:
+  instructions:
+    - go-style-uber                        # idiomatic Go conventions distilled from the Uber Go Style Guide
 todo:
-  - "Source Go house-style + conventions instructions from <upstream-TBD>."
-  - "Source Go eval (test/vet/lint loop) from <upstream-TBD>."
+  - "Source a Go eval (go test/vet + golangci-lint loop) when L8 lands (P7.5)."

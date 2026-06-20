@@ -1,0 +1,26 @@
+apiVersion: patronus/v2
+family: recipe
+name: serena
+role: context                      # L4 — Context / Knowledge (semantic code navigation of the local repo)
+summary: "Serena MCP — semantic, symbol-level code navigation + editing via Language Servers (LSP). Local, no vector DB / no indexing. Launched on demand via uvx; flavours its --context per agent."
+upstream: github.com/oraios/serena
+license: MIT
+
+# uvx fetches + runs Serena on demand (Python tool-runner), so there is NO deliver
+# block — install is a single stdio-MCP config MERGE. The per-agent client label
+# differs (claude->claude-code, codex->codex, opencode->ide); {toolContext} resolves
+# it per tool so ONE recipe flavours all three. Shape (computed) = wire-only.
+wire:
+  mode: mcp
+  mcp:
+    transport: stdio
+    command: uvx
+    args:
+      - "--from"
+      - "git+https://github.com/oraios/serena"
+      - "serena"
+      - "start-mcp-server"
+      - "--context"
+      - "{toolContext}"
+      - "--project-from-cwd"
+  tools: [claude, codex, opencode]

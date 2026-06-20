@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: go-style-uber
+description: "Idiomatic Go conventions distilled from the Uber Go Style Guide — error handling, concurrency, struct/enum/slice discipline, naming, and performance, as compact decision/trigger rules. Appended into CLAUDE.md/AGENTS.md."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/uber-go/guide
+  license: Apache-2.0
+  copyright: "Copyright (c) Uber Technologies, Inc."
+  commit: 1d60a91aa5e87d443002e23c21903c49489dbde5
+  note: "Distilled (not reproduced) from the Uber Go Style Guide into compact agent-actionable rules. Conventions and decision tables are paraphrased; consult the upstream guide for the full rationale and code examples."
