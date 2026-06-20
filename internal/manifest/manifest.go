@@ -48,12 +48,16 @@ const (
 	TypeCommand     ArtifactType = "command"
 	TypeHook        ArtifactType = "hook"
 	TypeInstruction ArtifactType = "instruction"
+	// TypeOutputStyle is a tool-divergent shape: a Claude output-style file
+	// (CREATE under output-styles/) but an AGENTS.md APPEND on Codex/OpenCode,
+	// which have no output-style concept. The adapter layout picks the action.
+	TypeOutputStyle ArtifactType = "output-style"
 )
 
 // artifactTypes is the valid set for an artifact's `type:` field.
 var artifactTypes = map[ArtifactType]bool{
 	TypeSkill: true, TypeAgent: true, TypeCommand: true,
-	TypeHook: true, TypeInstruction: true,
+	TypeHook: true, TypeInstruction: true, TypeOutputStyle: true,
 }
 
 // Role is the layer an installable fills — universal across all three families,

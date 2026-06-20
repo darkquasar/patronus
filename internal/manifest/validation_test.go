@@ -57,6 +57,7 @@ func TestValidateArtifact(t *testing.T) {
 		{"every-valid-type-command", func(a *Artifact) { a.Type = TypeCommand }, false},
 		{"every-valid-type-hook", func(a *Artifact) { a.Type = TypeHook }, false},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
+		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
 	}
 	for _, tc := range cases {
 		a := base()

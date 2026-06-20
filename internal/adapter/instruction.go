@@ -33,23 +33,34 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 	}
 
 	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
+	d, err := e.appendSectionDiff(path, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
+	if err != nil {
+		return nil, err
+	}
+	return []diff.FileDiff{d}, nil
+}
+
+// appendSectionDiff folds body into the named fenced section of the target file
+// and returns the resulting APPEND FileDiff. It is the shared core of the
+// instruction and (AGENTS.md-flavoured) output-style transforms — both contribute
+// an idempotent, delimited section to a prose doc, differing only in which
+// artifact type drives them.
+func (e *Engine) appendSectionDiff(path, tool, scope, role, name string, body []byte, readExisting ReadExisting) (diff.FileDiff, error) {
 	existing, _, err := readExisting(path)
 	if err != nil {
-		return nil, fmt.Errorf("adapter: read existing instruction file: %w", err)
+		return diff.FileDiff{}, fmt.Errorf("adapter: read existing section file: %w", err)
 	}
-
-	after := AppendSection(existing, art.Name, body)
-	return []diff.FileDiff{{
+	return diff.FileDiff{
 		Path:    path,
 		Action:  diff.Append,
 		Before:  existing,
-		After:   after,
-		Tool:    ad.Tool,
+		After:   AppendSection(existing, name, body),
+		Tool:    tool,
 		Scope:   scope,
-		Role:    string(art.Role),
-		Note:    "patronus section: " + art.Name,
-		Section: &diff.SectionEdit{Name: art.Name, Body: body},
-	}}, nil
+		Role:    role,
+		Note:    "patronus section: " + name,
+		Section: &diff.SectionEdit{Name: name, Body: body},
+	}, nil
 }
 
 // sectionMarkers returns the start/end fence lines for a named patronus section.

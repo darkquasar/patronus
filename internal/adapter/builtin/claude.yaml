@@ -53,3 +53,11 @@ layout:
     project: { file: "CLAUDE.md", action: appendSection }
     # appendSection inserts/replaces ONLY a fenced block keyed by {name}:
     #   <!-- patronus:start {name} --> … <!-- patronus:end {name} -->
+
+  output-style:
+    # Claude has a native output-styles surface — CREATE a standalone file (no
+    # action ⇒ CREATE). Codex/OpenCode lack it, so they APPEND to AGENTS.md.
+    global: { file: "~/.claude/output-styles/{name}.md" }
+    project: { file: ".claude/output-styles/{name}.md" }
+    frontmatter: passthrough
+    required: [name, description]

@@ -53,7 +53,7 @@ func TestLockBuildsFromRealCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := profile.Resolve(cat, "cloudflare")
+	res, err := profile.Resolve(cat, "cloudflare", "all")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,6 +17,7 @@ type Layout struct {
 	Mcp         *McpLayout         `yaml:"mcp,omitempty"`
 	Hook        *HookLayout        `yaml:"hook,omitempty"`
 	Instruction *InstructionLayout `yaml:"instruction,omitempty"`
+	OutputStyle *OutputStyleLayout `yaml:"output-style,omitempty"`
 }
 
 // PathTarget is a layout entry that is EITHER a bare path string
@@ -162,6 +163,25 @@ type InstructionLayout struct {
 // ForScope returns the file/path target for the given scope ("global"|"local").
 // Scope "local" maps to the Project field.
 func (l *InstructionLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
+}
+
+// OutputStyleLayout describes where an output-style is written. The action is
+// data, not a Go branch: a CREATE target leaves Action empty (Claude →
+// output-styles/{name}.md); an APPEND target sets Action: appendSection
+// (Codex/OpenCode → AGENTS.md). FileTarget carries File + the optional Action.
+type OutputStyleLayout struct {
+	Global      FileTarget  `yaml:"global"`
+	Project     FileTarget  `yaml:"project"`
+	Frontmatter Frontmatter `yaml:"frontmatter,omitempty"`
+	Required    []string    `yaml:"required,omitempty"`
+}
+
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *OutputStyleLayout) ForScope(scope string) FileTarget {
 	if scope == "global" {
 		return l.Global
 	}

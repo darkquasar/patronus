@@ -38,7 +38,7 @@ func TestResolveDispatchesArtifactsAndRecipes(t *testing.T) {
 			Memory:       "memory-ai-memory",
 		}},
 	)
-	r, err := Resolve(cat, "p")
+	r, err := Resolve(cat, "p", "all")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestResolveSlotAndAuthorOrder(t *testing.T) {
 			Memory:       "mem",
 		}},
 	)
-	r, _ := Resolve(cat, "p")
+	r, _ := Resolve(cat, "p", "all")
 	got := r.Names()
 	// Fixed §1A order: capabilities (a,b) before context (ctx) before memory (mem).
 	want := []string{"a", "b", "ctx", "mem"}
@@ -85,7 +85,7 @@ func TestResolveStubWarns(t *testing.T) {
 			Capabilities: manifest.StringList{"a"},
 		}},
 	)
-	r, _ := Resolve(cat, "p")
+	r, _ := Resolve(cat, "p", "all")
 	if !hasWarning(r.Warnings, "stub") {
 		t.Fatalf("expected stub warning, got %v", r.Warnings)
 	}
@@ -97,7 +97,7 @@ func TestResolveUnknownNameWarnsAndSkips(t *testing.T) {
 			Capabilities: manifest.StringList{"a", "ghost"},
 		}},
 	)
-	r, _ := Resolve(cat, "p")
+	r, _ := Resolve(cat, "p", "all")
 	if len(r.Items) != 1 || r.Items[0].Name != "a" {
 		t.Fatalf("ghost should be dropped, got %+v", r.Items)
 	}
@@ -113,7 +113,7 @@ func TestResolveDedup(t *testing.T) {
 			Context:      manifest.StringList{"a"}, // same name in two slots
 		}},
 	)
-	r, _ := Resolve(cat, "p")
+	r, _ := Resolve(cat, "p", "all")
 	if len(r.Items) != 1 {
 		t.Fatalf("expected dedup to 1, got %+v", r.Items)
 	}
@@ -134,7 +134,7 @@ func TestResolveExtendsAppendListsReplaceScalars(t *testing.T) {
 		[]string{"memory-ai-memory", "memory-engram"},
 		parent, child,
 	)
-	r, err := Resolve(cat, "derived")
+	r, err := Resolve(cat, "derived", "all")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestResolveExtendsDedupsAcrossInheritance(t *testing.T) {
 		Capabilities: manifest.StringList{"team-research", "team-implement"}, // restates inherited
 	}}
 	cat := fakeCatalog([]string{"team-research", "team-implement"}, nil, parent, child)
-	r, _ := Resolve(cat, "derived")
+	r, _ := Resolve(cat, "derived", "all")
 	want := []string{"team-research", "team-implement"}
 	if strings.Join(r.Names(), ",") != strings.Join(want, ",") {
 		t.Fatalf("got %v, want %v", r.Names(), want)
@@ -165,15 +165,86 @@ func TestResolveExtendsCycle(t *testing.T) {
 	a := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "a"}, Extends: "b"}
 	b := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "b"}, Extends: "a"}
 	cat := fakeCatalog(nil, nil, a, b)
-	if _, err := Resolve(cat, "a"); err == nil || !strings.Contains(err.Error(), "cycle") {
+	if _, err := Resolve(cat, "a", "all"); err == nil || !strings.Contains(err.Error(), "cycle") {
 		t.Fatalf("want cycle error, got %v", err)
 	}
 }
 
 func TestResolveUnknownProfile(t *testing.T) {
 	cat := fakeCatalog(nil, nil)
-	if _, err := Resolve(cat, "nope"); err == nil {
+	if _, err := Resolve(cat, "nope", "all"); err == nil {
 		t.Fatal("want error for unknown profile")
+	}
+}
+
+// flavourProfile wires a slot with a bare name plus per-tool flavours, so each
+// tool resolves to exactly one of the flavoured items (plus the bare base).
+func flavourProfile() *registry.Catalog {
+	p := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}, Layers: manifest.ProfileLayers{
+		Capabilities: manifest.StringList{"base-cap"},
+		Guardrails:   manifest.StringList{"sandbox-native@claude", "sandbox-native@codex", "sandbox-runtime@opencode"},
+	}}
+	return fakeCatalog([]string{"base-cap", "sandbox-native", "sandbox-runtime"}, nil, p)
+}
+
+func TestResolveFlavourSelectsMatchingTool(t *testing.T) {
+	cat := flavourProfile()
+
+	// claude: bare base + sandbox-native (the @claude flavour); NOT sandbox-runtime.
+	r, err := Resolve(cat, "p", "claude")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(r.Names(), ","); got != "base-cap,sandbox-native" {
+		t.Errorf("claude flavour = %q, want base-cap,sandbox-native", got)
+	}
+
+	// opencode: bare base + sandbox-runtime; NOT sandbox-native.
+	r, _ = Resolve(cat, "p", "opencode")
+	if got := strings.Join(r.Names(), ","); got != "base-cap,sandbox-runtime" {
+		t.Errorf("opencode flavour = %q, want base-cap,sandbox-runtime", got)
+	}
+}
+
+func TestResolveAllToolDropsFlavours(t *testing.T) {
+	cat := flavourProfile()
+	// The tool-agnostic baseline (lock default) keeps only bare names.
+	r, _ := Resolve(cat, "p", "all")
+	if got := strings.Join(r.Names(), ","); got != "base-cap" {
+		t.Errorf("all-tool baseline = %q, want base-cap only (flavours dropped)", got)
+	}
+	// "" behaves like "all".
+	r, _ = Resolve(cat, "p", "")
+	if got := strings.Join(r.Names(), ","); got != "base-cap" {
+		t.Errorf("empty-tool baseline = %q, want base-cap only", got)
+	}
+}
+
+func TestResolveFlavourDedupsBareAndFlavoured(t *testing.T) {
+	// A bare name and its @tool flavour resolve to the same base — install once.
+	p := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}, Layers: manifest.ProfileLayers{
+		Capabilities: manifest.StringList{"x", "x@claude"},
+	}}
+	cat := fakeCatalog([]string{"x"}, nil, p)
+	r, _ := Resolve(cat, "p", "claude")
+	if len(r.Items) != 1 || r.Items[0].Name != "x" {
+		t.Fatalf("bare + @claude should dedup to one base 'x', got %+v", r.Items)
+	}
+}
+
+func TestResolveNonFlavourAtIsNotSplit(t *testing.T) {
+	// An @ that isn't a known-tool suffix stays part of the base name, so it falls
+	// through to the existing warn-and-skip (catalog miss) — never silently dropped.
+	p := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}, Layers: manifest.ProfileLayers{
+		Capabilities: manifest.StringList{"user@example.com"},
+	}}
+	cat := fakeCatalog([]string{"a"}, nil, p)
+	r, _ := Resolve(cat, "p", "claude")
+	if len(r.Items) != 0 {
+		t.Fatalf("non-flavour @ should not resolve, got %+v", r.Items)
+	}
+	if !hasWarning(r.Warnings, "user@example.com") {
+		t.Fatalf("expected catalog-miss warning naming the full base, got %v", r.Warnings)
 	}
 }
 

@@ -126,7 +126,8 @@ func newInstallCmd() *cobra.Command {
 			// --profile expands to the profile's resolved item names, which then flow
 			// through the SAME artifact-vs-recipe dispatch a plain install uses.
 			if profileSel != "" {
-				res, err := profile.Resolve(cat, profileSel)
+				// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
+				res, err := profile.Resolve(cat, profileSel, tool)
 				if err != nil {
 					return err
 				}

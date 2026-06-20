@@ -14,6 +14,7 @@ package profile
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
@@ -46,10 +47,40 @@ type slotEntry struct {
 	slot string
 }
 
-// Resolve expands a named profile into its install items. Pure: it reads only
-// cat (no filesystem, no network), so it is trivially unit-testable with a fake
-// catalog.
-func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
+// flavourTools is the closed set of target suffixes a `name@tool` item may carry.
+// Anything else after an `@` is left as part of the base name (so it simply fails
+// catalog lookup and falls into the existing warn-and-skip path, not silently
+// dropped as a mistyped flavour).
+var flavourTools = map[string]bool{"claude": true, "codex": true, "opencode": true}
+
+// splitFlavour separates a slot item into its base name and optional `@tool`
+// flavour. Only a trailing `@<tool>` where <tool> is a known tool counts; every
+// other `@` is part of the base. "sandbox@opencode" → ("sandbox","opencode");
+// "team-research" → ("team-research",""); "a@b.com" → ("a@b.com","").
+func splitFlavour(item string) (base, flavour string) {
+	i := strings.LastIndexByte(item, '@')
+	if i < 0 {
+		return item, ""
+	}
+	suffix := item[i+1:]
+	if !flavourTools[suffix] {
+		return item, ""
+	}
+	return item[:i], suffix
+}
+
+// Resolve expands a named profile into its install items for a target tool. Pure:
+// it reads only cat (no filesystem, no network), so it is trivially unit-testable
+// with a fake catalog.
+//
+// tool selects per-tool FLAVOURS (§4): a slot item may be a bare name (installed
+// for every tool) or `name@tool` (installed only when its suffix matches). When
+// tool is a concrete agent ("claude"|"codex"|"opencode"), bare names plus that
+// tool's flavours resolve; when tool is "" or "all" (the tool-agnostic baseline
+// `lock` uses by default), only bare names resolve and all `@tool` flavours drop.
+// The base name is what the install path dispatches on; the `@tool` suffix never
+// reaches the catalog or source.Parse.
+func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 	layers, prof, err := resolveLayers(cat, name, map[string]bool{})
 	if err != nil {
 		return nil, err
@@ -63,12 +94,16 @@ func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
 
 	seen := map[string]bool{}
 	for _, e := range flattenLayers(layers) {
-		if seen[e.name] {
-			continue // a name appearing in two slots installs once (first slot wins)
+		base, flavour := splitFlavour(e.name)
+		if flavour != "" && flavour != tool {
+			continue // a flavour for a different tool: silently not selected
 		}
-		seen[e.name] = true
+		if seen[base] {
+			continue // dedup on the BASE name (a name in two slots, or bare + @tool, installs once)
+		}
+		seen[base] = true
 
-		ref, err := source.Parse(e.name)
+		ref, err := source.Parse(base)
 		if err != nil {
 			out.Warnings = append(out.Warnings,
 				fmt.Sprintf("profile %q slot %q: %v — skipped", name, e.slot, err))
@@ -78,12 +113,12 @@ func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
 		fam := classify(cat, ref)
 		if fam == familyUnknown {
 			out.Warnings = append(out.Warnings,
-				fmt.Sprintf("profile %q slot %q: %q not found in catalog — skipped (not yet sourced?)", name, e.slot, e.name))
+				fmt.Sprintf("profile %q slot %q: %q not found in catalog — skipped (not yet sourced?)", name, e.slot, base))
 			continue
 		}
 
 		out.Items = append(out.Items, ResolvedItem{
-			Name:   e.name,
+			Name:   base,
 			Slot:   e.slot,
 			Family: fam,
 			Source: ref.LockSource(),

@@ -48,3 +48,9 @@ layout:
     # Codex concatenates AGENTS.md root->leaf natively; .override.md wins at global.
     global: { file: "~/.codex/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }
+
+  output-style:
+    # Codex has no output-styles surface; the style body lands as an AGENTS.md
+    # APPEND (same target as instruction), action ⇒ appendSection.
+    global: { file: "~/.codex/AGENTS.md", action: appendSection }
+    project: { file: "AGENTS.md", action: appendSection }
