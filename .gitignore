@@ -11,5 +11,7 @@
 /patronus
 /dist/
 
-# Local planning doc — kept out of version control
+# Local planning/design docs — kept out of version control
 DESIGN.md
+design-*.md
+plan.md
