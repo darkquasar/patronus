@@ -1,0 +1,36 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: core
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, with ASCII diagrams ON by default. Strict by design: test-first is enforced once the L8 tdd-guard hook lands."
+# core is deliberately strict (not just guiding). It is built up across Phase 7:
+# the L1+L2+L4 spine ships here; L5 tools, L6 sandbox, L7 obs, L8 eval/tdd-guard,
+# L9 guardrails, and L10 orchestration are wired in P7.3–P7.6 (see todo). It is NOT
+# marked status:stub — every item listed below exists in-repo today and installs.
+layers:
+  instructions:
+    - agents-spine                         # the AGENTS.md format spine
+    - agent-rules                          # distilled DDD + refactoring discipline
+    - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
+  capabilities:
+    - superpowers-bootstrap                # the keystone: skill-check-before-acting discipline
+    - writing-plans                        # plan a multi-step task before touching code
+    - executing-plans                      # execute a plan task-by-task with checkpoints
+    - grilling                             # interrogate a plan before building
+    - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
+    - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
+    - team-research                        # spec-driven parallel research
+    - team-implement                       # spec-driven parallel implementation
+  context:
+    - codebase-design                      # deep-module design vocabulary
+    - domain-modeling                      # ubiquitous-language + ADR discipline
+    - pattern-cloudflare                   # in-repo context skill
+    - pattern-mcp                          # in-repo context skill
+  memory: memory-ai-memory                 # L3 default recipe (self-wiring)
+todo:
+  - "L5 tools: github + Context7 + Serena (P7.3)."
+  - "L6 sandbox: native, flavoured per agent (P7.4)."
+  - "L7 observability: ccusage (P7.3)."
+  - "L8 eval: tdd-guard hook (ENFORCED test-first — the strict gate) + promptfoo + verification-before-completion (P7.5)."
+  - "L9 guardrails: regex secret hook + gitleaks commit-guard + git-guardrails (P7.5)."
+  - "L10 orchestration: Beads recipe + vendored orchestration skills (P7.6)."

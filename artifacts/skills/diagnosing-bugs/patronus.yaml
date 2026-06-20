@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: diagnosing-bugs
+description: "Disciplined diagnosis loop for hard bugs and performance regressions — build a tight red-capable feedback loop first, then reproduce/minimise, hypothesise, instrument, fix with a regression test. Use on 'diagnose'/'debug', or when something is broken/throwing/slow."
+version: 1.0.0
+entry: SKILL.md
+files: [scripts]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Vendored verbatim from the upstream `diagnosing-bugs` skill (skills/engineering/diagnosing-bugs), including scripts/hitl-loop.template.sh."

@@ -433,6 +433,14 @@ type commandRunner interface {
 	Run(argv []string) error
 }
 
+// runnerForCommands is the package-level seam for self-wiring post-install EXECs
+// driven through the cobra commands (the runDeploy path takes no runner argument).
+// Production leaves it nil → real os/exec. Integration tests that install a
+// self-wiring recipe (e.g. memory-ai-memory) set it to a fake so the suite stays
+// process-free — mirroring fetcherForCommands/registryFetcher. A test hook, not a
+// user knob.
+var runnerForCommands commandRunner
+
 // execRunner is the production commandRunner: it runs argv via os/exec, streaming
 // output to the command's stdout/stderr.
 type execRunner struct {
@@ -453,7 +461,7 @@ func (r execRunner) Run(argv []string) error {
 // a mid-apply failure stops, records what already succeeded in state, and returns
 // the error. The runner is overridable for tests (nil => real os/exec).
 func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions) error {
-	return runDeployWith(cmd, cs, res, opts, nil)
+	return runDeployWith(cmd, cs, res, opts, runnerForCommands)
 }
 
 func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) error {
