@@ -21,6 +21,8 @@ func TestShapeMatrix(t *testing.T) {
 		{"delivery+mcp", &Delivery{Source: SourceGithubRelease}, WireModeMcp, ShapeFetchWire},
 		{"delivery+run", &Delivery{Source: SourceScript}, WireModeRun, ShapeFetchRun},
 		{"delivery+self", &Delivery{Source: SourceDocker}, WireModeSelf, ShapeFetchRun},
+		{"delivery+no-wire", &Delivery{Source: SourceNpm}, "", ShapeInstall}, // install-only
+		{"nil-delivery+no-wire", nil, "", ShapeWireOnly},                     // no delivery wins (degenerate)
 	}
 	for _, tc := range cases {
 		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Mode: tc.mode}}

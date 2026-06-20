@@ -92,9 +92,27 @@ func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 			fmt.Sprintf("profile %q is a stub: layers marked TODO are not yet populated", name))
 	}
 
+	// `without` SUBTRACTS base names from the composed layers — the relaxation-
+	// overlay operator (e.g. no-tdd-guard = core without the enforcement hook),
+	// symmetric to the extends-append above. It matches on the BASE name, so it
+	// strips a bare name and all its `@tool` flavours alike. An entry that matches
+	// nothing is a no-op warning, so an overlay stays robust as `core` evolves.
+	excluded, unmatched := excludeSet(prof.Without)
+	for _, e := range flattenLayers(layers) {
+		base, _ := splitFlavour(e.name)
+		delete(unmatched, base)
+	}
+	for dropped := range unmatched {
+		out.Warnings = append(out.Warnings,
+			fmt.Sprintf("profile %q: without %q matched nothing", name, dropped))
+	}
+
 	seen := map[string]bool{}
 	for _, e := range flattenLayers(layers) {
 		base, flavour := splitFlavour(e.name)
+		if excluded[base] {
+			continue // subtracted by `without`
+		}
 		if flavour != "" && flavour != tool {
 			continue // a flavour for a different tool: silently not selected
 		}
@@ -259,6 +277,22 @@ func (r *Resolved) Names() []string {
 		out[i] = it.Name
 	}
 	return out
+}
+
+// excludeSet builds the lookup of base names a profile's `without` subtracts,
+// plus a parallel set used to detect entries that matched nothing (so a stale
+// exclusion surfaces as a warning rather than a silent no-op). A `without` entry
+// is matched on its base name, so a flavoured `name@tool` exclusion is normalized
+// to its base — you subtract the item, not one tool's flavour of it.
+func excludeSet(without manifest.StringList) (excluded, unmatched map[string]bool) {
+	excluded = make(map[string]bool, len(without))
+	unmatched = make(map[string]bool, len(without))
+	for _, w := range without {
+		base, _ := splitFlavour(w)
+		excluded[base] = true
+		unmatched[base] = true
+	}
+	return excluded, unmatched
 }
 
 func findProfile(cat *registry.Catalog, name string) *manifest.Profile {

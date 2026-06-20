@@ -513,6 +513,16 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner) ([]d
 		if d.Action != diff.Exec || d.Exec == nil {
 			continue
 		}
+		if d.Exec.Advisory {
+			// Display-only: an install-only recipe's package-install line. Patronus
+			// never runs a global package install on the user's behalf — it surfaces
+			// the command so the user (or a future --prefer-system-pkg path) runs it.
+			// It is still recorded (in `ran`) so state remembers the recipe was
+			// installed and remove can report the manual-cleanup command.
+			fmt.Fprintf(cmd.OutOrStdout(), "ADVISORY (run yourself): %s\n", d.Exec.Display)
+			ran = append(ran, d)
+			continue
+		}
 		fmt.Fprintf(cmd.OutOrStdout(), "EXEC %s\n", d.Exec.Display)
 		if err := runner.Run(d.Exec.Command); err != nil {
 			return ran, fmt.Errorf("post-install %q: %w", d.Exec.Display, err)

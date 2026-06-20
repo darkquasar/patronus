@@ -1,0 +1,20 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: eval
+name: tdd-guard-hook
+description: "Test-first ENFORCEMENT — a PreToolUse hook that blocks implementation writes (Write/Edit/MultiEdit) unless a failing test justifies them. This is what makes `core` strict by design. Pairs with the `tdd-guard` recipe, which installs the binary the hook invokes."
+version: 1.0.0
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+hook:
+  event: PreToolUse
+  matcher: Write|Edit|MultiEdit|TodoWrite
+  command: tdd-guard
+attribution:
+  upstream: github.com/nizos/tdd-guard
+  license: MIT
+  copyright: "Copyright (c) 2025 Nizar Selander"
+  commit: b76b571a205a3c7b080b2ac27ec6cc6ff1a43bb5
+  note: "The hook registration (PreToolUse event + Write|Edit|MultiEdit|TodoWrite matcher + `tdd-guard` command) is taken from the upstream manual-install guide (docs/installation.md). Patronus wires only the enforcement PreToolUse hook; the upstream's optional UserPromptSubmit/SessionStart context-feeder hooks are left to the user. The `tdd-guard` binary is delivered by the sibling `tdd-guard` recipe (deliver: npm); this artifact only registers the hook."

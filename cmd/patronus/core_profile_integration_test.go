@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,7 @@ var coreSkills = []string{
 	"superpowers-bootstrap", "writing-plans", "executing-plans",
 	"grilling", "diagnosing-bugs", "tdd",
 	"codebase-design", "domain-modeling",
+	"verification-before-completion", // P7.5.2 L8 eval skill
 }
 
 // withFakeRunner swaps the self-wiring EXEC runner for a process-free fake (core
@@ -161,6 +163,104 @@ func TestCoreProfileLockPinsEveryItem(t *testing.T) {
 	for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain", "tarballSha256"}, coreSkills...) {
 		if !strings.Contains(s, want) {
 			t.Errorf("lock missing %q:\n%s", want, s)
+		}
+	}
+}
+
+// TestCoreStrictGate is the §6b acceptance for P7.5.2: core's L8 strict gate.
+// On Claude the tdd-guard-hook MERGEs a PreToolUse matcher-group into
+// settings.json (invoking the `tdd-guard` command), the install-only tdd-guard
+// recipe surfaces its npm install as a display-only ADVISORY (never run), the
+// verification skill installs, and removing the hook strips exactly its element.
+func TestCoreStrictGate(t *testing.T) {
+	f := builtRegistry(t)
+	home := withRemoteEnv(t, f)
+	withFakeRunner(t)
+
+	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	// The tdd-guard binary install is surfaced as an ADVISORY (Patronus never runs
+	// a global npm install itself), not an executed EXEC.
+	if !strings.Contains(out, "ADVISORY") || !strings.Contains(out, "npm install -g tdd-guard") {
+		t.Errorf("expected an ADVISORY row for the tdd-guard npm install:\n%s", out)
+	}
+
+	// The enforcement hook MERGEd into settings.json under PreToolUse, invoking tdd-guard.
+	settings := filepath.Join(home, ".claude", "settings.json")
+	root := map[string]any{}
+	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
+		t.Fatalf("settings.json unreadable: %v", err)
+	}
+	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
+	if len(pre) != 1 {
+		t.Fatalf("want 1 PreToolUse matcher-group, got %d: %v", len(pre), root["hooks"])
+	}
+	grp := pre[0].(map[string]any)
+	if grp["matcher"] != "Write|Edit|MultiEdit|TodoWrite" {
+		t.Errorf("hook matcher = %v, want the tdd-guard matcher", grp["matcher"])
+	}
+	if cmd := grp["hooks"].([]any)[0].(map[string]any)["command"]; cmd != "tdd-guard" {
+		t.Errorf("hook command = %v, want tdd-guard", cmd)
+	}
+
+	// The verification skill landed.
+	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "verification-before-completion", "SKILL.md")); err != nil {
+		t.Errorf("verification skill not installed: %v", err)
+	}
+
+	// Idempotent re-run → SKIP (the hook merge is a no-op the second time).
+	reout, _, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--dry-run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(reout, "SKIP") {
+		t.Errorf("re-install should be idempotent (SKIP):\n%s", reout)
+	}
+
+	// Removing the hook strips exactly its element; settings.json survives.
+	if _, errOut, err := execRemove(t, "tdd-guard-hook", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove tdd-guard-hook: %v\n%s", err, errOut)
+	}
+	root = map[string]any{}
+	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
+		t.Fatalf("settings.json gone/corrupt after remove: %v", err)
+	}
+	if hooks, ok := root["hooks"].(map[string]any); ok {
+		if pre, _ := hooks["PreToolUse"].([]any); len(pre) != 0 {
+			t.Errorf("hook element not stripped on remove: %v", pre)
+		}
+	}
+}
+
+// TestNoTddGuardOverlayDropsEnforcement proves the relaxation overlay: no-tdd-guard
+// installs everything core does EXCEPT the enforcement hook + its binary recipe,
+// while KEEPING the tdd skill (test-first as guidance, not a hard block).
+func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
+	f := builtRegistry(t)
+	home := withRemoteEnv(t, f)
+	withFakeRunner(t)
+
+	out, errOut, err := runInstall(t, "--profile", "no-tdd-guard", "--tool", "claude", "--global", "--deploy", "--yes")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	// No tdd-guard hook in settings, and no npm advisory (the recipe was subtracted).
+	if strings.Contains(out, "npm install -g tdd-guard") {
+		t.Errorf("no-tdd-guard should drop the tdd-guard recipe advisory:\n%s", out)
+	}
+	settings := filepath.Join(home, ".claude", "settings.json")
+	if b, err := os.ReadFile(settings); err == nil && strings.Contains(string(b), "tdd-guard") {
+		t.Errorf("no-tdd-guard should not register the enforcement hook:\n%s", b)
+	}
+
+	// ...but the tdd SKILL (guidance) and verification skill still install.
+	for _, skill := range []string{"tdd", "verification-before-completion"} {
+		if _, err := os.Stat(filepath.Join(home, ".claude", "skills", skill, "SKILL.md")); err != nil {
+			t.Errorf("no-tdd-guard should keep the %q skill: %v", skill, err)
 		}
 	}
 }

@@ -70,6 +70,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
 		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
 		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
+		"tdd-guard-hook":                 {manifest.TypeHook, manifest.RoleEval},
+		"verification-before-completion": {manifest.TypeSkill, manifest.RoleEval},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -104,6 +107,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
 		"go-style-uber",
+		"tdd-guard-hook", "verification-before-completion",
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {
@@ -138,6 +142,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
 		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
 		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		// P7.5.2 L8 eval: install-only recipe (deliver: npm) for the tdd-guard CLI; no wire.
+		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
@@ -164,7 +170,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"cloudflare", "core", "data", "golang", "lean-code", "python", "terse", "visual", "web-dev"}
+	wantProfiles := []string{"cloudflare", "core", "data", "golang", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}

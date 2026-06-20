@@ -82,9 +82,43 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 			return nil, err
 		}
 		diffs = append(diffs, merges...)
+	case "":
+		// install-only: deliver a package and stop. A package-manager source has no
+		// FETCH (npm/cargo resolve the host themselves), so surface the install
+		// command as a display-only advisory row — Patronus never silently runs a
+		// global package install; the user (or a future --prefer-system-pkg path)
+		// runs it. Something else (a hook artifact) does the wiring.
+		if d := installAdvisory(rec, scope); d != nil {
+			diffs = append(diffs, *d)
+		}
 	}
 
 	return diffs, nil
+}
+
+// installAdvisory builds the display-only EXEC row for an install-only recipe: a
+// package-install command the user runs (marked self-managed so the applier skips
+// it and remove reports it as not-auto-revertable). Returns nil when the source
+// is not a package manager (it has its own FETCH path instead).
+func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
+	if rec.Delivery == nil {
+		return nil
+	}
+	cmd := rec.Delivery.InstallCommand(rec.Name)
+	if cmd == "" {
+		return nil
+	}
+	return &diff.FileDiff{
+		Path:     cmd,
+		Action:   diff.Exec,
+		Artifact: rec.Name,
+		Type:     string(rec.Shape()),
+		Role:     string(rec.Role),
+		Tool:     "-", // a global package install is tool-agnostic
+		Scope:    scope,
+		Note:     "install: " + cmd,
+		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true},
+	}
 }
 
 // fetchDiff builds the FETCH diff for a github-release delivery, pre-classified

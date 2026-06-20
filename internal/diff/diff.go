@@ -129,11 +129,15 @@ type FetchSpec struct {
 // human-readable form shown in the dry run. SelfManaged is true when the command
 // comes from a wire.mode:self recipe (the recipe's own installer wires it), which
 // is what remove reports as "not auto-revertable"; false for a wire.mode:run
-// command that Patronus itself runs.
+// command that Patronus itself runs. Advisory is true for a display-only command
+// Patronus must NOT run (an install-only recipe's package-install line): it is
+// shown so the user can run it, but the EXEC runner skips it — distinct from
+// SelfManaged, which IS executed.
 type ExecSpec struct {
 	Command     []string
 	Display     string
 	SelfManaged bool
+	Advisory    bool
 }
 
 // SectionEdit captures the inputs of an appendSection edit so it can be re-applied

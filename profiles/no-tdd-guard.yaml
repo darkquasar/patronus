@@ -1,0 +1,14 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: no-tdd-guard
+summary: "core, minus the test-first ENFORCEMENT — drops the tdd-guard hook + its binary recipe but KEEPS the tdd skill (test-first as guidance, not a hard block). For users who want core's discipline without the PreToolUse gate."
+# A relaxation overlay: everything in core EXCEPT the enforcement. `without`
+# subtracts the tdd-guard recipe (the binary) and tdd-guard-hook (the PreToolUse
+# block); the `tdd` capability skill stays, so test-first remains the taught
+# default — just no longer mechanically enforced. This is the sanctioned way to
+# soften core (never by editing core itself).
+extends: core
+without:
+  - tdd-guard                              # the npm binary recipe
+  - tdd-guard-hook                         # the PreToolUse enforcement hook

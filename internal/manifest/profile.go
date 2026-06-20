@@ -14,6 +14,7 @@ type Profile struct {
 	Summary string        `yaml:"summary,omitempty" json:"summary,omitempty"`
 	Status  string        `yaml:"status,omitempty" json:"status,omitempty"` // stub | (populated)
 	Extends string        `yaml:"extends,omitempty" json:"extends,omitempty"`
+	Without StringList    `yaml:"without,omitempty" json:"without,omitempty"` // base names to SUBTRACT from the composed layers (the relaxation-overlay operator, symmetric to extends-append)
 	Layers  ProfileLayers `yaml:"layers" json:"layers"`
 	Todo    []string      `yaml:"todo,omitempty" json:"todo,omitempty"`
 }

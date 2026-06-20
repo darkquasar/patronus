@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: quiet
+summary: "core, minus the always-on ASCII diagrams — drops the diagram-explain output-style. Keeps every other core default (incl. the strict test-first gate). For users who want core's discipline without diagrams in every explanation."
+# A relaxation overlay: core without the loud default. `without` subtracts the
+# diagram-explain output-style; everything else (strict tdd-guard gate included)
+# stays. The sanctioned way to quiet core (never by editing core itself).
+extends: core
+without:
+  - diagram-explain                        # the ASCII-diagrams-on output-style

@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: recipe
+name: tdd-guard
+role: eval                                 # L8 — the binary behind the test-first enforcement gate
+summary: "Installs the tdd-guard CLI (npm) — the binary the tdd-guard-hook PreToolUse hook invokes to block implementation writes without a failing test. Install-only: Patronus surfaces the install command; the hook does the wiring."
+upstream: github.com/nizos/tdd-guard
+license: MIT
+
+# Install-only recipe: deliver a package and stop. npm resolves the host platform
+# itself, so there is no per-OS/arch github-release asset to fetch+verify; instead
+# the install command is surfaced as a display-only advisory (Patronus never
+# silently runs a global package install). The settings wiring is the sibling
+# `tdd-guard-hook` artifact's job — clean altitude split: recipe delivers, hook wires.
+deliver:
+  source: npm
+  ref: tdd-guard                           # the npm package name
+  binary: tdd-guard                         # the command the hook references
+# no wire: — installing the package IS the whole job (Shape: install-only)

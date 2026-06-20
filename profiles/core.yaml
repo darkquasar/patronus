@@ -2,11 +2,12 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, with ASCII diagrams ON by default. Strict by design: test-first is enforced once the L8 tdd-guard hook lands."
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, and test-first ENFORCED via the tdd-guard hook. Strict by design; relax with the no-tdd-guard / quiet overlays."
 # core is deliberately strict (not just guiding). It is built up across Phase 7:
-# the L1+L2+L4 spine ships here; L5 tools, L6 sandbox, L7 obs, L8 eval/tdd-guard,
-# L9 guardrails, and L10 orchestration are wired in P7.3–P7.6 (see todo). It is NOT
-# marked status:stub — every item listed below exists in-repo today and installs.
+# the L1+L2+L4 spine + L5 tools + L8 eval (tdd-guard ENFORCED + verification) ship
+# here; L6 sandbox, L7 obs, L9 guardrails, and L10 orchestration are wired in the
+# remaining P7.5–P7.6 sub-phases (see todo). It is NOT marked status:stub — every
+# item listed below exists in-repo today and installs.
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
@@ -31,9 +32,13 @@ layers:
   tools:
     - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
   memory: memory-ai-memory                 # L3 default recipe (self-wiring)
+  eval:
+    - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
+    - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)
+    - verification-before-completion       # evidence-before-claims discipline (pairs with the enforcement)
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
   - "L7 observability: ccusage — needs the advisory wire shape + @claude statusline (P7.5)."
-  - "L8 eval: tdd-guard hook (ENFORCED test-first — the strict gate) + promptfoo + verification-before-completion (P7.5)."
+  - "L8 eval: promptfoo CI gate (P7.5.6)."
   - "L9 guardrails: regex secret hook + gitleaks commit-guard + git-guardrails (P7.5)."
   - "L10 orchestration: Beads recipe + vendored orchestration skills (P7.6)."
