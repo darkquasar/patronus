@@ -340,6 +340,57 @@ func TestComposeTwoArtifactsOneFile(t *testing.T) {
 	}
 }
 
+// hookEntry builds a hook artifact registry entry for the plan tests. A hook
+// reads no body file, so the source dir is irrelevant.
+func hookEntry(t *testing.T, name, event, matcher, command string, targets []string) registry.ArtifactEntry {
+	t.Helper()
+	return registry.ArtifactEntry{
+		Manifest: &manifest.Artifact{
+			Meta:     manifest.Meta{Family: manifest.FamilyArtifact, Name: name, Role: manifest.RoleEval},
+			Type:     manifest.TypeHook,
+			Targets:  targets,
+			Defaults: manifest.ArtifactDefaults{Scope: "global"},
+			Hook:     &manifest.HookSpec{Event: event, Matcher: matcher, Command: command},
+		},
+		Source: registry.Source{LocalDir: t.TempDir()},
+	}
+}
+
+// Two hooks on the same event land in ONE settings.json with BOTH array elements
+// present (the merge-fold fix): without re-folding onto accumulated bytes, the
+// second hook would clobber the first. The second is recorded as a SettingContrib
+// so remove can strip exactly it.
+func TestComposeTwoHooksOneSettingsFile(t *testing.T) {
+	home, proj := t.TempDir(), t.TempDir()
+	a := hookEntry(t, "tdd-guard", "PreToolUse", "Edit", "tdd-guard", []string{"claude"})
+	b := hookEntry(t, "gitleaks", "PreToolUse", "Bash", "gitleaks-guard", []string{"claude"})
+	req := baseReq(t, home, proj, a, b)
+	req.Names = []string{"tdd-guard", "gitleaks"}
+	req.Tool = "claude"
+	req.Scope = "global"
+
+	cs, err := Compute(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs.Diffs) != 1 {
+		t.Fatalf("want 1 composed settings diff, got %d: %v", len(cs.Diffs), paths(cs.Diffs))
+	}
+	d := cs.Diffs[0]
+	if d.Artifact != "tdd-guard" {
+		t.Errorf("primary = %q, want tdd-guard", d.Artifact)
+	}
+	if len(d.SettingContrib) != 1 || d.SettingContrib[0].Artifact != "gitleaks" {
+		t.Fatalf("want one setting-contrib for gitleaks, got %+v", d.SettingContrib)
+	}
+	// Both commands survive in the single composed settings file.
+	for _, want := range []string{"tdd-guard", "gitleaks-guard"} {
+		if !bytes.Contains(d.After, []byte(want)) {
+			t.Errorf("composed settings missing %q:\n%s", want, d.After)
+		}
+	}
+}
+
 func TestUnknownArtifactErrors(t *testing.T) {
 	home, proj := t.TempDir(), t.TempDir()
 	req := baseReq(t, home, proj)

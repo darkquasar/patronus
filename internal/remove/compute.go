@@ -159,7 +159,34 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting) (diff.FileDif
 		return base, nil, nil
 
 	case string(diff.Merge):
-		// Undo of a merge restores the recorded pre-install bytes wholesale.
+		// A hook MERGE is a settings list-append: undo by stripping exactly our
+		// array element, leaving sibling hooks (other artifacts' or the user's)
+		// intact. This is the MERGE-side twin of APPEND's surgical un-section.
+		if f.Setting != nil {
+			if !exists {
+				base.Action = diff.Skip
+				base.Note = "settings file absent — nothing to un-hook"
+				return base, nil, nil
+			}
+			stripped, found, unreadable := stripHook(current, f.Setting)
+			if unreadable != "" {
+				// An unparseable settings file becomes a user-facing warning + SKIP,
+				// not a fatal: the user can fix it and re-run.
+				base.Action = diff.Skip
+				base.Note = "settings unreadable — skipped"
+				return base, &Warning{Item: it.Artifact, Path: f.Path, Message: unreadable}, nil
+			}
+			if !found {
+				base.Action = diff.Skip
+				base.Note = "hook absent — nothing to un-hook"
+				return base, nil, nil
+			}
+			base.Action = diff.Restore // write the element-stripped bytes
+			base.Before = current
+			base.After = stripped
+			return base, nil, nil
+		}
+		// Undo of a scalar merge restores the recorded pre-install bytes wholesale.
 		if !exists {
 			// The merged file is gone; restoring Prior would resurrect a file the
 			// user deleted. Skip and note.
@@ -212,6 +239,19 @@ func driftsFromChecksum(current []byte, recorded string) bool {
 	sum := sha256.Sum256(current)
 	got := "sha256:" + hex.EncodeToString(sum[:])
 	return got != recorded
+}
+
+// stripHook removes the recorded hook element from current settings, returning
+// the stripped bytes, whether an element was found, and a non-empty warning
+// message if the settings file could not be parsed. It folds the error into a
+// message string so the caller branches on a value (warn + skip), keeping the
+// "unparseable config is recoverable, not fatal" contract.
+func stripHook(current []byte, edit *diff.SettingEdit) (stripped []byte, found bool, warning string) {
+	out, found, err := adapter.RemoveSettingEdit(current, edit)
+	if err != nil {
+		return nil, false, "settings file unparseable; hook not removed: " + err.Error()
+	}
+	return out, found, ""
 }
 
 // joinCmds renders recorded post-install commands compactly for a warning.

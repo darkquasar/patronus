@@ -63,6 +63,12 @@ type FileState struct {
 	// so revert can restore it; it is omitted for CREATE (revert = delete).
 	Section string `json:"section,omitempty"`
 	Prior   []byte `json:"prior,omitempty"`
+
+	// Setting is the list-append intent for a hook MERGE (settings.json element),
+	// so revert strips exactly this array element without disturbing sibling
+	// hooks. When set, remove uses the targeted Setting path instead of the
+	// wholesale Prior restore that a scalar MERGE (MCP) uses.
+	Setting *diff.SettingEdit `json:"setting,omitempty"`
 }
 
 // Load reads a state file. A missing file is not an error: it yields an empty
@@ -221,6 +227,23 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 				Prior:    c.Prior,
 			})
 		}
+
+		// A composed MERGE may carry hook elements from OTHER artifacts folded into
+		// one settings.json (e.g. tdd-guard + gitleaks + git-guardrails). Record
+		// each under its own artifact with its list-append intent so remove strips
+		// exactly that element and leaves the rest.
+		for _, c := range d.SettingContrib {
+			ci := getKey(key{c.Artifact, d.Tool, d.Scope})
+			if ci.ItemVersion == "" {
+				ci.ItemVersion = c.Version
+			}
+			ci.Files = append(ci.Files, FileState{
+				Path:     d.Path,
+				Action:   string(diff.Merge),
+				Checksum: checksum(d.After),
+				Setting:  c.Edit,
+			})
+		}
 	}
 
 	out := make([]Item, 0, len(order))
@@ -255,6 +278,11 @@ func fileState(d diff.FileDiff) FileState {
 	if d.Action == diff.Append || d.Action == diff.Merge {
 		// Pre-install content the revert must restore. CREATE has none (delete).
 		fs.Prior = d.Before
+	}
+	// A hook MERGE records its list-append intent so revert is a targeted element
+	// strip (Setting), not a wholesale Prior restore — sibling hooks survive.
+	if d.Action == diff.Merge && d.Setting != nil {
+		fs.Setting = d.Setting
 	}
 	return fs
 }

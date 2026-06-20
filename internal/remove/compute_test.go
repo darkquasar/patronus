@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -181,6 +182,62 @@ func TestMergeBecomesRestore(t *testing.T) {
 	d := cs.Diffs[0]
 	if d.Action != diff.Restore || !bytes.Equal(d.After, prior) {
 		t.Fatalf("want RESTORE to prior bytes, got action=%s after=%q", d.Action, d.After)
+	}
+}
+
+// A hook MERGE reverts by stripping EXACTLY its array element, leaving sibling
+// hooks (another artifact's and the user's) intact — the targeted-remove twin of
+// APPEND's surgical un-section.
+func TestHookMergeStripsOneElement(t *testing.T) {
+	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
+	dotted := "hooks.PreToolUse"
+
+	// A user hook the install must never touch (no patronusId, seeded via the same
+	// list-append so it occupies the array honestly).
+	userHook := map[string]any{"matcher": "Bash", "hooks": []any{map[string]any{"type": "command", "command": "user"}}}
+	base, err := adapter.AppendSettingsList(nil, ft, dotted, "patronusId", userHook)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Two patronus hooks fold in on top of the user's.
+	elemA := map[string]any{"patronusId": "A", "matcher": "Edit", "hooks": []any{map[string]any{"type": "command", "command": "tdd"}}}
+	elemB := map[string]any{"patronusId": "B", "matcher": "Write", "hooks": []any{map[string]any{"type": "command", "command": "leaks"}}}
+	withA, err := adapter.AppendSettingsList(base, ft, dotted, "patronusId", elemA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed, err := adapter.AppendSettingsList(withA, ft, dotted, "patronusId", elemB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	editA := &diff.SettingEdit{
+		Target: diff.FileTargetRef{File: ft.File, Format: ft.Format}, Dotted: dotted,
+		IdentityKey: "patronusId", Identity: "A", Elem: elemA,
+	}
+	items := []state.Item{{
+		Artifact: "tdd-guard", Tool: "claude", Scope: "global",
+		Files: []state.FileState{{Path: "/p/settings.json", Action: "MERGE", Setting: editA, Checksum: sum(installed)}},
+	}}
+	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/settings.json": installed}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Errorf("unexpected warnings: %+v", warns)
+	}
+	d := cs.Diffs[0]
+	if d.Action != diff.Restore {
+		t.Fatalf("want RESTORE (element-stripped bytes), got %s", d.Action)
+	}
+	// A is gone; B and the user hook remain.
+	if bytes.Contains(d.After, []byte(`"A"`)) {
+		t.Errorf("removed element A still present:\n%s", d.After)
+	}
+	for _, want := range []string{`"B"`, `"user"`} {
+		if !bytes.Contains(d.After, []byte(want)) {
+			t.Errorf("sibling %s was clobbered:\n%s", want, d.After)
+		}
 	}
 }
 

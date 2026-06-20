@@ -154,6 +154,14 @@ type HookLayout struct {
 	Project FileTarget `yaml:"project"`
 }
 
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *HookLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
+}
+
 // InstructionLayout describes the APPEND-section target for instructions.
 type InstructionLayout struct {
 	Global  FileTarget `yaml:"global"`

@@ -14,6 +14,21 @@ type Artifact struct {
 	Defaults    ArtifactDefaults                  `yaml:"defaults" json:"defaults"`
 	Overrides   map[string]map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
 	Attribution *Attribution                      `yaml:"attribution,omitempty" json:"attribution,omitempty"` // set on vendored content
+	Hook        *HookSpec                         `yaml:"hook,omitempty" json:"hook,omitempty"`               // required for Type==hook; the event/matcher/command to register
+}
+
+// HookSpec is the declarative definition of a hook artifact (Type==hook). Rather
+// than parsing a hook out of a body file, the event/matcher/command are
+// structured data the adapter merges into the agent's settings at the layout's
+// hooks.{event} path, and the (matcher, command) pair is the identity the
+// planner and remove path use to register exactly one array element and pull it
+// back out — so two hooks on one event coexist and revert independently.
+type HookSpec struct {
+	Event   string `yaml:"event" json:"event"`                         // e.g. PreToolUse | SessionStart
+	Matcher string `yaml:"matcher,omitempty" json:"matcher,omitempty"` // tool/glob filter; "" means "all" (omitted)
+	Command string `yaml:"command" json:"command"`                     // the shell command the hook runs
+	Type    string `yaml:"type,omitempty" json:"type,omitempty"`       // hook handler type; defaults to "command"
+	Timeout int    `yaml:"timeout,omitempty" json:"timeout,omitempty"` // seconds; omitted when zero (tool default)
 }
 
 // Attribution records the upstream provenance of vendored (de-vendored) artifact
@@ -75,6 +90,14 @@ func (a *Artifact) Validate() error {
 	}
 	if a.Description == "" {
 		return fmt.Errorf("missing description")
+	}
+	if a.Type == TypeHook {
+		if a.Hook == nil {
+			return fmt.Errorf("hook artifact %q: missing hook block", a.Name)
+		}
+		if a.Hook.Event == "" || a.Hook.Command == "" {
+			return fmt.Errorf("hook artifact %q: hook requires event and command", a.Name)
+		}
 	}
 	if a.Attribution != nil {
 		if a.Attribution.Upstream == "" || a.Attribution.License == "" || a.Attribution.Copyright == "" {

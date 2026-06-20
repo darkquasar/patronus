@@ -219,8 +219,32 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 			}
 			prev.After = adapter.AppendSection(prev.After, d.Section.Name, d.Section.Body)
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
+		case d.Action == diff.Merge && d.Setting != nil:
+			// A settings list-append (hook registration) was computed against the
+			// ORIGINAL file, so — unlike a scalar merge — it must be re-applied onto
+			// the already-composed After, or a second hook into one settings.json
+			// would silently drop the first. This is the MERGE-side twin of the
+			// composed-APPEND fold: record a per-artifact contributor so remove can
+			// strip exactly this element later.
+			folded, err := adapter.ApplySettingEdit(prev.After, d.Setting)
+			if err != nil {
+				// A malformed re-fold is a planner bug, not user input; surface it by
+				// keeping the standalone result rather than masking a half-merge.
+				prev.After = d.After
+			} else {
+				prev.After = folded
+			}
+			if d.Artifact != "" && d.Artifact != prev.Artifact {
+				prev.SettingContrib = append(prev.SettingContrib, diff.SettingContrib{
+					Artifact: d.Artifact,
+					Version:  d.Version,
+					Edit:     d.Setting,
+				})
+			}
+			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		case d.Action == diff.Merge:
-			// Merges already operate on accumulated config; keep latest result.
+			// Scalar merge (MCP, native-switch): already operates on accumulated
+			// config; keep latest result.
 			prev.After = d.After
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		default:

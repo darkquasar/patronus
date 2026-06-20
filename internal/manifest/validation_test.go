@@ -55,7 +55,15 @@ func TestValidateArtifact(t *testing.T) {
 		{"every-valid-type-skill", func(a *Artifact) { a.Type = TypeSkill }, false},
 		{"every-valid-type-agent", func(a *Artifact) { a.Type = TypeAgent }, false},
 		{"every-valid-type-command", func(a *Artifact) { a.Type = TypeCommand }, false},
-		{"every-valid-type-hook", func(a *Artifact) { a.Type = TypeHook }, false},
+		{"every-valid-type-hook", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "true"}
+		}, false},
+		{"hook-missing-block", func(a *Artifact) { a.Type = TypeHook }, true},
+		{"hook-missing-command", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse"}
+		}, true},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
 		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
 		{"attribution-complete", func(a *Artifact) {

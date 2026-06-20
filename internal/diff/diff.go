@@ -81,6 +81,18 @@ type FileDiff struct {
 	// single-contributor case.
 	Contrib []SectionContrib `json:"-"`
 
+	// Setting, when set, marks this MERGE as a settings list-append (a hook
+	// registration) rather than a scalar config merge. It carries the element's
+	// identity + target so the planner re-folds multiple appends onto one
+	// settings file and state/remove pull exactly this element. nil for a scalar
+	// MERGE (MCP wiring, native-switch toggle), which round-trips via Prior.
+	Setting *SettingEdit `json:"-"`
+
+	// SettingContrib lists ADDITIONAL artifacts whose settings elements were
+	// folded into this one composed MERGE (the MERGE-side analogue of Contrib).
+	// Empty for the common single-contributor case.
+	SettingContrib []SettingContrib `json:"-"`
+
 	// Fetch, when set, describes a FETCH: a binary to download, verify, and
 	// place. It lives only on Action==Fetch diffs (Path is the placement dest;
 	// Before/After are empty — the bytes are streamed at apply time, never held
@@ -141,6 +153,39 @@ type SectionContrib struct {
 	Version  string
 	Section  string
 	Prior    []byte
+}
+
+// SettingEdit captures the inputs of a settings list-append (a hook registration)
+// so the planner can re-fold it onto an accumulated config and state/remove can
+// pull exactly this one element back out. It is the MERGE-side analogue of
+// SectionEdit: where a section is identified by Name within prose, a settings
+// element is identified by Identity within the array at Dotted. The full
+// FileTarget travels along so remove can re-parse/serialize in the right format.
+type SettingEdit struct {
+	Target      FileTargetRef  // file + format the merge applies to
+	Dotted      string         // resolved array path, e.g. "hooks.PreToolUse"
+	IdentityKey string         // element field carrying the identity, e.g. "patronusId"
+	Identity    string         // this element's identity value (stable per artifact+hook)
+	Elem        map[string]any // the array element to (re-)append; carried so the planner can re-fold onto accumulated config
+}
+
+// FileTargetRef is the minimal file/format descriptor a SettingEdit needs to
+// re-merge or remove without importing the manifest package into diff. The
+// adapter/planner fills it from the layout's FileTarget.
+type FileTargetRef struct {
+	File   string
+	Format string
+}
+
+// SettingContrib records one additional artifact whose settings element was
+// folded into a shared config file (e.g. several hooks into one settings.json).
+// Like SectionContrib it carries identity for a per-artifact removable record;
+// Edit carries the list-append intent so remove strips exactly this element,
+// leaving sibling hooks (other artifacts' or the user's) intact.
+type SettingContrib struct {
+	Artifact string
+	Version  string
+	Edit     *SettingEdit
 }
 
 // Classify decides the terminal Action for a proposed change, preserving
