@@ -1,0 +1,23 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: sandbox                              # L6 — execution safety (a SHAPE=setting at the sandbox LAYER)
+name: native-sandbox
+description: "Turns on the agent's OWN native sandbox — no extra binary. On Claude it enables the sandboxed Bash tool (settings `sandbox`); on Codex it sets `sandbox_mode = workspace-write` in config.toml. Flavoured per agent: @claude / @codex select the matching native switch; OpenCode has no native sandbox (it uses the sandbox-runtime recipe instead)."
+version: 1.0.0
+entry: ""
+targets: [claude, codex]
+defaults:
+  scope: global
+# Base = the Claude flavour (settings.json `sandbox` object). Codex overrides the
+# path + value to its own native switch (config.toml `sandbox_mode`). The settings
+# FILE per tool is the adapter's setting layout (settings.json vs config.toml).
+setting:
+  path: sandbox
+  value:
+    enabled: true
+    autoAllowBashIfSandboxed: true          # auto-allow commands that stay inside the sandbox (less approval fatigue)
+overrides:
+  codex:
+    path: sandbox_mode
+    value: workspace-write                  # write to the workspace, network off by default

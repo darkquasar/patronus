@@ -80,6 +80,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.5.4: the keystone's SessionStart activation (L2) + the ccusage statusline setting (L7).
 		"superpowers-session-start": {manifest.TypeHook, manifest.RoleCapability},
 		"ccusage-statusline":        {manifest.TypeSetting, manifest.RoleObservability},
+		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
+		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -157,6 +159,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireMode("")},
 		// P7.5.4 L7 observability: install-only recipe (deliver: npm) for the ccusage CLI; no wire.
 		"ccusage": {manifest.RoleObservability, manifest.ShapeInstall, manifest.WireMode("")},
+		// P7.5.5 L6 sandbox: srt (install-only npm, @opencode) + microsandbox (wire-only MCP, hard-isolation).
+		"sandbox-runtime": {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireMode("")},
+		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireModeMcp},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
@@ -183,7 +188,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"cloudflare", "core", "data", "golang", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
+	wantProfiles := []string{"cloudflare", "core", "data", "golang", "hard-isolation", "hardened", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}

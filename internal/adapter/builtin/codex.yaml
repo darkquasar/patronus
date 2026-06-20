@@ -44,6 +44,12 @@ layout:
     global: null
     project: null
 
+  # Codex config lives in config.toml; a setting artifact MERGEs its value at the
+  # artifact's own dotted path (e.g. native-sandbox -> sandbox_mode).
+  setting:
+    global: { file: "~/.codex/config.toml", format: toml }
+    project: { file: ".codex/config.toml", format: toml }
+
   instruction:
     # Codex concatenates AGENTS.md root->leaf natively; .override.md wins at global.
     global: { file: "~/.codex/AGENTS.md", action: appendSection }

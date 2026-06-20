@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: recipe
+name: microsandbox
+role: sandbox                      # L6 — execution safety (the strongest tier: microVM isolation)
+summary: "microsandbox MCP — run code/commands inside hardware-isolated microVMs (not just OS sandboxing) the agent drives via MCP. The hard-isolation tier, above the native/srt OS sandboxes. Launched on demand via npx. Opt-in (hard-isolation overlay)."
+upstream: github.com/superradcompany/microsandbox
+license: Apache-2.0
+
+# npx fetches + runs microsandbox-mcp on demand, so NO deliver block — install is a
+# single stdio-MCP config MERGE. Shape (computed) = wire-only. Pinned reference:
+# superradcompany/microsandbox @9f76f59 (the microVM engine `msb` backs the MCP).
+wire:
+  mode: mcp
+  mcp:
+    transport: stdio
+    command: npx
+    args: ["-y", "microsandbox-mcp"]
+  tools: [claude, codex, opencode]

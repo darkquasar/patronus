@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: hard-isolation
+summary: "hardened, plus microsandbox — hardware-isolated microVMs the agent drives via MCP, the strongest isolation tier (above the native/srt OS sandboxes). For running genuinely untrusted code. Cross-tool (the MCP wires the same for every agent)."
+# hard-isolation = hardened + the microVM tier. microsandbox is an MCP recipe, so
+# it adds to the sandbox layer for every tool uniformly (unlike the native/srt
+# switches, which are per-tool flavours). Use when OS-level sandboxing is not
+# enough and you want VM-grade isolation.
+extends: hardened
+layers:
+  sandbox:
+    - microsandbox
