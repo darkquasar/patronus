@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: eval
+summary: "core, plus an explicit evaluation gate: promptfoo (eval/CI for prompts + outputs) alongside core's verification-before-completion discipline. For projects that gate prompt/agent changes on a test suite."
+# eval = core + the promptfoo CI gate. core already ships verification-before-
+# completion (evidence-before-claims) and the tdd-guard enforcement; this overlay
+# adds the agent-output eval suite for teams that run promptfoo in CI.
+extends: core
+layers:
+  eval:
+    - promptfoo
