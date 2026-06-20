@@ -47,6 +47,10 @@ layout:
   hook:
     global: { file: "~/.claude/settings.json", format: json, path: "hooks.{event}", action: merge }
     project: { file: ".claude/settings.json", format: json, path: "hooks.{event}", action: merge }
+    # A hook artifact that ships a helper script has it PLACED here (CREATE), and
+    # the hook command's {script} token resolves to the placed path.
+    globalScriptDir: "~/.claude/hooks/"
+    projectScriptDir: ".claude/hooks/"
 
   instruction:
     global: { file: "~/.claude/CLAUDE.md", action: appendSection }

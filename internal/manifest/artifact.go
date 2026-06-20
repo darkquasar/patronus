@@ -26,7 +26,8 @@ type Artifact struct {
 type HookSpec struct {
 	Event   string `yaml:"event" json:"event"`                         // e.g. PreToolUse | SessionStart
 	Matcher string `yaml:"matcher,omitempty" json:"matcher,omitempty"` // tool/glob filter; "" means "all" (omitted)
-	Command string `yaml:"command" json:"command"`                     // the shell command the hook runs
+	Command string `yaml:"command" json:"command"`                     // the shell command the hook runs; may contain {script} when Script is set
+	Script  string `yaml:"script,omitempty" json:"script,omitempty"`   // optional bundled helper script (a files: entry) PLACED in the tool's hook-script dir; {script} in Command resolves to its installed path
 	Type    string `yaml:"type,omitempty" json:"type,omitempty"`       // hook handler type; defaults to "command"
 	Timeout int    `yaml:"timeout,omitempty" json:"timeout,omitempty"` // seconds; omitted when zero (tool default)
 }

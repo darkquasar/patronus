@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: block-secrets
+description: "Blocks the agent from WRITING an obvious, high-confidence secret (private keys, AWS/GitHub/GitLab/Slack/OpenAI/Google tokens) into a file — a PreToolUse Write|Edit hook. Best-effort guardrail for write-time secrets only: it does NOT stop reading-and-leaking an existing secret, and it is not a guarantee. Pairs with the gitleaks commit-guard for commit-time scanning."
+version: 1.0.0
+entry: ""
+files: [block-secrets.sh]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+hook:
+  event: PreToolUse
+  matcher: Write|Edit|MultiEdit
+  command: "{script}"
+  script: block-secrets.sh

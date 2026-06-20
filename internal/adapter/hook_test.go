@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -120,6 +121,47 @@ func TestTransformHookNoSurfaceSkips(t *testing.T) {
 		if len(diffs) != 0 {
 			t.Errorf("%s: want 0 diffs (no hook surface), got %d", tool, len(diffs))
 		}
+	}
+}
+
+// A script-bearing hook places its helper script (CREATE, executable) into the
+// tool's hook-script dir AND registers a hook whose command invokes the placed
+// path (the {script} token resolves to it).
+func TestTransformHookPlacesScript(t *testing.T) {
+	home := t.TempDir()
+	src := t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "guard.sh"), []byte("#!/bin/bash\nexit 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+
+	art := &manifest.Artifact{
+		Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "git-guardrails", Role: manifest.RoleGuardrail},
+		Type: manifest.TypeHook,
+		Hook: &manifest.HookSpec{Event: "PreToolUse", Matcher: "Bash", Command: "{script}", Script: "guard.sh"},
+	}
+	diffs, err := eng.Transform(art, loadAdapter(t, "claude"), "global", src, noExisting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 2 {
+		t.Fatalf("want 2 diffs (CREATE script + MERGE settings), got %d", len(diffs))
+	}
+
+	// First diff: the placed, executable script.
+	script := diffs[0]
+	wantPath := filepath.Join(home, ".claude", "hooks", "git-guardrails.sh")
+	if script.Action != diff.Create || script.Path != wantPath {
+		t.Errorf("script diff = %s %q, want CREATE %q", script.Action, script.Path, wantPath)
+	}
+	if script.Mode != 0o755 {
+		t.Errorf("hook script mode = %o, want 0755 (executable)", script.Mode)
+	}
+
+	// Second diff: the settings hook, command resolved to the placed script path.
+	cmd := hooksAt(t, diffs[1].After, "PreToolUse")[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
+	if cmd != wantPath {
+		t.Errorf("hook command = %v, want the placed script path %q", cmd, wantPath)
 	}
 }
 

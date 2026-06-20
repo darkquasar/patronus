@@ -441,6 +441,12 @@ type commandRunner interface {
 // user knob.
 var runnerForCommands commandRunner
 
+// fetcherForDeploy is the package-level seam for FETCH downloads on --deploy
+// (binary recipes like gitleaks). Production uses the real HTTP fetcher;
+// integration tests swap in the serving fetcher so a profile carrying a
+// github-release binary installs fully offline — mirroring fetcherForCommands.
+var fetcherForDeploy recipe.Fetcher = recipe.HTTPFetcher{}
+
 // execRunner is the production commandRunner: it runs argv via os/exec, streaming
 // output to the command's stdout/stderr.
 type execRunner struct {
@@ -470,7 +476,7 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 	app := &install.Applier{
 		Force:    opts.force,
 		Conflict: conflictPrompt(cmd, res, opts.yes),
-		Fetcher:  recipe.HTTPFetcher{},
+		Fetcher:  fetcherForDeploy,
 		Ctx:      cmd.Context(),
 	}
 	result, applyErr := app.Apply(cs)

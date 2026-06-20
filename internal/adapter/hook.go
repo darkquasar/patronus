@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/diff"
@@ -23,7 +25,7 @@ const patronusHookID = "patronusId"
 // carry a null Hook layout target — for them a hook artifact is a no-op rather
 // than an error, so a cross-tool profile installs cleanly and only the tools
 // that support hooks get them.
-func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, scope string, readExisting ReadExisting) ([]diff.FileDiff, error) {
+func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, scope, srcDir string, readExisting ReadExisting) ([]diff.FileDiff, error) {
 	if ad.Layout.Hook == nil {
 		return nil, fmt.Errorf("adapter %q: no Hook layout", ad.Tool)
 	}
@@ -36,8 +38,22 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 		return nil, fmt.Errorf("adapter: hook artifact %q missing hook block", art.Name)
 	}
 
+	// A hook may ship a helper script: place it (CREATE) and resolve the command's
+	// {script} token to its installed path before the registration is built, so the
+	// settings entry invokes exactly the placed file.
+	var diffs []diff.FileDiff
+	command := spec.Command
+	if spec.Script != "" {
+		place, scriptPath, err := e.placeHookScript(art, ad, scope, srcDir, spec.Script)
+		if err != nil {
+			return nil, err
+		}
+		diffs = append(diffs, place)
+		command = strings.ReplaceAll(command, "{script}", scriptPath)
+	}
+
 	identity := hookIdentity(art.Name, spec)
-	elem := hookElement(spec, identity)
+	elem := hookElement(spec, command, identity)
 	dotted := strings.ReplaceAll(target.Path, "{event}", spec.Event)
 	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
 
@@ -50,7 +66,7 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 		return nil, fmt.Errorf("adapter: wire hook %q: %w", art.Name, err)
 	}
 
-	return []diff.FileDiff{{
+	return append(diffs, diff.FileDiff{
 		Path:   path,
 		Action: diff.Merge,
 		Before: existing,
@@ -66,7 +82,35 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 			Identity:    identity,
 			Elem:        elem,
 		},
-	}}, nil
+	}), nil
+}
+
+// placeHookScript emits the CREATE diff that writes the hook's bundled helper
+// script into the tool's hook-script dir, and returns that diff plus the absolute
+// installed path (for {script} substitution in the command). It errors if the
+// tool models a hook surface but no script dir — a hook artifact that ships a
+// script can only target a tool that knows where to put it.
+func (e *Engine) placeHookScript(art *manifest.Artifact, ad *manifest.Adapter, scope, srcDir, script string) (diff.FileDiff, string, error) {
+	dir := ad.Layout.Hook.ScriptDirFor(scope)
+	if !dir.OK() {
+		return diff.FileDiff{}, "", fmt.Errorf("adapter %q: hook %q ships a script but the tool has no %s hook-script dir", ad.Tool, art.Name, scope)
+	}
+	body, err := os.ReadFile(filepath.Join(srcDir, script))
+	if err != nil {
+		return diff.FileDiff{}, "", fmt.Errorf("adapter: read hook script %q: %w", script, err)
+	}
+	scriptDir := e.resolver.ResolveMarker(dir.Path, ad.Tool, scope)
+	scriptPath := filepath.Join(scriptDir, art.Name+filepath.Ext(script))
+	return diff.FileDiff{
+		Path:   scriptPath,
+		Action: diff.Create,
+		After:  body,
+		Mode:   0o755, // a hook script must be executable
+		Tool:   ad.Tool,
+		Scope:  scope,
+		Role:   string(art.Role),
+		Note:   "hook script: " + art.Name,
+	}, scriptPath, nil
 }
 
 // hookElement renders one Claude-shaped hook matcher-group:
@@ -76,10 +120,12 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 //
 // The matcher key is omitted when empty (an "all tools" hook), mirroring how the
 // agent itself treats an absent matcher. The handler type defaults to "command".
-func hookElement(spec *manifest.HookSpec, identity string) map[string]any {
+// command is the resolved command (with any {script} token already substituted
+// to the placed script path), not spec.Command verbatim.
+func hookElement(spec *manifest.HookSpec, command, identity string) map[string]any {
 	handler := map[string]any{
 		"type":    hookType(spec.Type),
-		"command": spec.Command,
+		"command": command,
 	}
 	if spec.Timeout > 0 {
 		handler["timeout"] = spec.Timeout

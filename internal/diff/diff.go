@@ -9,6 +9,7 @@ package diff
 
 import (
 	"bytes"
+	"io/fs"
 
 	"znkr.io/diff/textdiff"
 )
@@ -58,6 +59,11 @@ type FileDiff struct {
 	Role     string `json:"role,omitempty"` // the layer it fills
 	Note     string `json:"note,omitempty"`
 	IsDir    bool   `json:"isDir,omitempty"`
+
+	// Mode is the file permission for a CREATE write when it must differ from the
+	// default 0o644 — set to 0o755 for an executable hook script. Zero means "use
+	// the applier's default." Excluded from JSON (an apply-time control field).
+	Mode fs.FileMode `json:"-"`
 
 	// Intended, when set on a SKIP, is the action this diff WOULD perform if the
 	// skip were overridden. The Phase-8 remove path uses it for drift: a file

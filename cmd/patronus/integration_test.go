@@ -89,11 +89,29 @@ func withRemoteEnv(t *testing.T, f *servingFetcher) (home string) {
 	work := t.TempDir()
 	t.Chdir(work)
 
-	prevSrc, prevReg := fetcherForCommands, registryFetcher
+	prevSrc, prevReg, prevDep := fetcherForCommands, registryFetcher, fetcherForDeploy
 	fetcherForCommands = f
 	registryFetcher = f
-	t.Cleanup(func() { fetcherForCommands, registryFetcher = prevSrc, prevReg })
+	fetcherForDeploy = f // FETCH downloads on --deploy serve from memory too (no network)
+	t.Cleanup(func() {
+		fetcherForCommands, registryFetcher, fetcherForDeploy = prevSrc, prevReg, prevDep
+	})
 	return home
+}
+
+// stubBinary pre-places an executable at ~/.patronus/bin/<name> so a recipe's
+// github-release FETCH classifies as SKIP (archive assets SKIP on dest presence),
+// keeping a --deploy test that wires a binary recipe fully offline without needing
+// the real, host-specific, sha-pinned asset bytes.
+func stubBinary(t *testing.T, home, name string) {
+	t.Helper()
+	dir := filepath.Join(home, ".patronus", "bin")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func mustRead(t *testing.T, path string) []byte {

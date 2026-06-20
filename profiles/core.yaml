@@ -36,9 +36,13 @@ layers:
     - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
     - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)
     - verification-before-completion       # evidence-before-claims discipline (pairs with the enforcement)
+  guardrails:
+    - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
+    - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through
+    - gitleaks-guard                       # PreToolUse Bash @commit — scans the staged diff, blocks a commit carrying a secret
+    - git-guardrails                       # PreToolUse Bash — blocks destructive git (push/reset --hard/clean -f/branch -D/...)
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
   - "L7 observability: ccusage — needs the advisory wire shape + @claude statusline (P7.5)."
   - "L8 eval: promptfoo CI gate (P7.5.6)."
-  - "L9 guardrails: regex secret hook + gitleaks commit-guard + git-guardrails (P7.5)."
   - "L10 orchestration: Beads recipe + vendored orchestration skills (P7.6)."

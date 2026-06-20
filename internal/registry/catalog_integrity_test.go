@@ -73,6 +73,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
 		"tdd-guard-hook":                 {manifest.TypeHook, manifest.RoleEval},
 		"verification-before-completion": {manifest.TypeSkill, manifest.RoleEval},
+		// P7.5.3 L9 guardrails: the default guard set (all type:hook).
+		"git-guardrails": {manifest.TypeHook, manifest.RoleGuardrail},
+		"block-secrets":  {manifest.TypeHook, manifest.RoleGuardrail},
+		"gitleaks-guard": {manifest.TypeHook, manifest.RoleGuardrail},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -108,6 +112,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"codebase-design", "domain-modeling",
 		"go-style-uber",
 		"tdd-guard-hook", "verification-before-completion",
+		"git-guardrails", // block-secrets + gitleaks-guard are authored (no attribution)
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {
@@ -144,6 +149,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
 		// P7.5.2 L8 eval: install-only recipe (deliver: npm) for the tdd-guard CLI; no wire.
 		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
+		// P7.5.3 L9 guardrails: install-only recipe (github-release fetch) for the gitleaks binary; no wire.
+		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))

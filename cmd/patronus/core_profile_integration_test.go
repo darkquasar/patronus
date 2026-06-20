@@ -38,6 +38,7 @@ func TestCoreProfileClaude(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
 
 	if _, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
@@ -115,6 +116,7 @@ func TestCoreProfileFlavoursDivergeForCodexOpencode(t *testing.T) {
 			f := builtRegistry(t)
 			home := withRemoteEnv(t, f)
 			withFakeRunner(t)
+			stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
 
 			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tc.tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install: %v\n%s", err, errOut)
@@ -176,6 +178,7 @@ func TestCoreStrictGate(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
 
 	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
@@ -194,16 +197,25 @@ func TestCoreStrictGate(t *testing.T) {
 	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
 		t.Fatalf("settings.json unreadable: %v", err)
 	}
+	// core's L8+L9 PreToolUse hooks all coexist in ONE settings.json array (the
+	// compose-fold): tdd-guard-hook + block-secrets + gitleaks-guard + git-guardrails.
 	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	if len(pre) != 1 {
-		t.Fatalf("want 1 PreToolUse matcher-group, got %d: %v", len(pre), root["hooks"])
+	if len(pre) != 4 {
+		t.Fatalf("want 4 coexisting PreToolUse groups (tdd-guard + 3 guardrails), got %d: %v", len(pre), root["hooks"])
 	}
-	grp := pre[0].(map[string]any)
-	if grp["matcher"] != "Write|Edit|MultiEdit|TodoWrite" {
-		t.Errorf("hook matcher = %v, want the tdd-guard matcher", grp["matcher"])
+	// Find the tdd-guard enforcement group by its command.
+	var tdd map[string]any
+	for _, g := range pre {
+		grp := g.(map[string]any)
+		if grp["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
+			tdd = grp
+		}
 	}
-	if cmd := grp["hooks"].([]any)[0].(map[string]any)["command"]; cmd != "tdd-guard" {
-		t.Errorf("hook command = %v, want tdd-guard", cmd)
+	if tdd == nil {
+		t.Fatalf("tdd-guard enforcement hook not found among the PreToolUse groups: %v", pre)
+	}
+	if tdd["matcher"] != "Write|Edit|MultiEdit|TodoWrite" {
+		t.Errorf("tdd-guard matcher = %v, want the enforcement matcher", tdd["matcher"])
 	}
 
 	// The verification skill landed.
@@ -220,7 +232,8 @@ func TestCoreStrictGate(t *testing.T) {
 		t.Errorf("re-install should be idempotent (SKIP):\n%s", reout)
 	}
 
-	// Removing the hook strips exactly its element; settings.json survives.
+	// Removing ONLY the tdd-guard-hook strips exactly its element; the three L9
+	// guardrail hooks survive (targeted removal preserves siblings).
 	if _, errOut, err := execRemove(t, "tdd-guard-hook", "--global", "--deploy"); err != nil {
 		t.Fatalf("remove tdd-guard-hook: %v\n%s", err, errOut)
 	}
@@ -228,9 +241,13 @@ func TestCoreStrictGate(t *testing.T) {
 	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
 		t.Fatalf("settings.json gone/corrupt after remove: %v", err)
 	}
-	if hooks, ok := root["hooks"].(map[string]any); ok {
-		if pre, _ := hooks["PreToolUse"].([]any); len(pre) != 0 {
-			t.Errorf("hook element not stripped on remove: %v", pre)
+	pre, _ = root["hooks"].(map[string]any)["PreToolUse"].([]any)
+	if len(pre) != 3 {
+		t.Fatalf("want 3 guardrail hooks surviving after removing tdd-guard, got %d: %v", len(pre), pre)
+	}
+	for _, g := range pre {
+		if g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
+			t.Error("tdd-guard hook should be gone after remove")
 		}
 	}
 }
@@ -242,6 +259,7 @@ func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks") // no-tdd-guard keeps the gitleaks guardrail
 
 	out, errOut, err := runInstall(t, "--profile", "no-tdd-guard", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
@@ -262,5 +280,40 @@ func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(home, ".claude", "skills", skill, "SKILL.md")); err != nil {
 			t.Errorf("no-tdd-guard should keep the %q skill: %v", skill, err)
 		}
+	}
+}
+
+// TestCoreGuardrails is the §6b acceptance for P7.5.3: core's L9 guardrail set.
+// A dry-run (no network) asserts the plan carries the three guardrail hooks
+// (block-secrets + gitleaks-guard + git-guardrails, each MERGEd into Claude
+// settings.json), the two script-bearing hooks place their helper scripts, and
+// the gitleaks recipe contributes a github-release FETCH for the binary. The
+// FETCH *download* mechanism is proven offline separately (install/fetch_test.go).
+func TestCoreGuardrails(t *testing.T) {
+	f := builtRegistry(t)
+	withRemoteEnv(t, f)
+
+	out, _, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--dry-run", "--verbose")
+	if err != nil {
+		t.Fatalf("dry-run: %v", err)
+	}
+
+	// All three guardrail hooks + the two placed scripts + the gitleaks FETCH show
+	// up in the plan.
+	for _, want := range []string{
+		"block-secrets",
+		"gitleaks-guard",
+		"git-guardrails",
+		"git-guardrails.sh", // a placed hook script (named after the artifact)
+		"block-secrets.sh",  // the regex guard's placed script
+		"gitleaks",          // the FETCH row for the binary
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("core dry-run plan missing %q:\n%s", want, out)
+		}
+	}
+	// The gitleaks binary fetch is a FETCH action.
+	if !strings.Contains(out, "FETCH") {
+		t.Errorf("expected a FETCH row for the gitleaks binary:\n%s", out)
 	}
 }

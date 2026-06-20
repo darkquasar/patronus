@@ -15,7 +15,8 @@ import (
 func TestGolangProfileExtendsCore(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
-	withFakeRunner(t) // golang inherits core's self-wiring ai-memory
+	withFakeRunner(t)               // golang inherits core's self-wiring ai-memory
+	stubBinary(t, home, "gitleaks") // ...and core's gitleaks recipe FETCH (offline SKIP)
 
 	if _, errOut, err := runInstall(t, "--profile", "golang", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)

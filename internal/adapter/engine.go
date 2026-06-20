@@ -50,7 +50,7 @@ func (e *Engine) Transform(art *manifest.Artifact, ad *manifest.Adapter, scope, 
 	case manifest.TypeOutputStyle:
 		diffs, err = e.transformOutputStyle(art, ad, scope, srcDir, readExisting)
 	case manifest.TypeHook:
-		diffs, err = e.transformHook(art, ad, scope, readExisting)
+		diffs, err = e.transformHook(art, ad, scope, srcDir, readExisting)
 	default:
 		return nil, fmt.Errorf("adapter: type %q not supported for tool %q", art.Type, ad.Tool)
 	}
