@@ -15,3 +15,8 @@
 DESIGN.md
 design-*.md
 plan.md
+# …but vendored skill/artifact content is legitimate even when a file happens to
+# be named like a design doc (e.g. codebase-design's DESIGN-IT-TWICE.md). The
+# design-doc rules above are for ROOT-LEVEL planning artifacts; never let them
+# sweep up tracked catalog content under artifacts/.
+!artifacts/**
