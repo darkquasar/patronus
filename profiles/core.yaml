@@ -14,13 +14,17 @@ layers:
     - agent-rules                          # distilled DDD + refactoring discipline
     - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
   capabilities:
-    - superpowers-bootstrap                # the keystone: skill-check-before-acting discipline
-    - superpowers-session-start            # SessionStart hook — auto-injects the bootstrap skill from turn one (the keystone's activation)
+    - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
+    - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
     - writing-plans                        # plan a multi-step task before touching code
     - executing-plans                      # execute a plan task-by-task with checkpoints
     - grilling                             # interrogate a plan before building
     - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
     - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
+    - brainstorming                        # explore intent + requirements + design BEFORE any creative work
+    - using-git-worktrees                  # start feature work in an isolated workspace
+    - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
+    - writing-skills                       # author/edit/verify skills (the meta-skill)
     - team-research                        # spec-driven parallel research
     - team-implement                       # spec-driven parallel implementation
   context:
@@ -37,6 +41,8 @@ layers:
     - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
     - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)
     - verification-before-completion       # evidence-before-claims discipline (pairs with the enforcement)
+    - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
+    - receiving-code-review                # act on review feedback with technical rigor, not performative agreement
   guardrails:
     - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
     - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through

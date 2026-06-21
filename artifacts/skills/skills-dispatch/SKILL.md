@@ -1,6 +1,6 @@
 ---
-name: superpowers-bootstrap
-description: Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions
+name: skills-dispatch
+description: Use when starting any conversation - establishes how to find and use the installed skills, requiring a skill check before ANY response including clarifying questions
 ---
 
 <SUBAGENT-STOP>
@@ -15,9 +15,18 @@ IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 This is not negotiable. This is not optional. You cannot rationalize your way out of this.
 </EXTREMELY-IMPORTANT>
 
+## Scope: every installed skill
+
+This dispatch rule governs **all** skills installed in your skills directory,
+regardless of where they came from — workflow skills, design-vocabulary skills,
+domain patterns, and any skill authored for this project. Do not treat it as
+applying to one family of skills; consider the **entire installed set** every
+time. When you are unsure what is installed, enumerate the available skills
+before deciding that none applies.
+
 ## Instruction Priority
 
-These skills override default system prompt behavior, but **user instructions always take precedence**:
+These skills override default system-prompt behavior, but **user instructions always take precedence**:
 
 1. **User's explicit instructions** (CLAUDE.md, AGENTS.md, direct requests) — highest priority
 2. **Skills** — override default system behavior where they conflict
@@ -90,10 +99,10 @@ These thoughts mean STOP—you're rationalizing:
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (grilling, diagnosing-bugs) - these determine HOW to approach the task
+1. **Process skills first** (brainstorming, grilling, diagnosing-bugs) - these determine HOW to approach the task
 2. **Implementation skills second** - these guide execution
 
-"Let's build X" → interrogate the plan first, then implementation skills.
+"Let's build X" → brainstorm/interrogate the plan first, then implementation skills.
 "Fix this bug" → diagnosing-bugs first, then domain-specific skills.
 
 ## Skill Types

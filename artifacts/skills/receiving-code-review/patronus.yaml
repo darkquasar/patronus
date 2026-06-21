@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: receiving-code-review
+description: "Discipline for acting on code-review feedback — verify each suggestion technically before implementing it, push back on unclear or wrong feedback with evidence, and avoid performative agreement or blind application. The receiving half of the review loop."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream `receiving-code-review` skill (skills/receiving-code-review/SKILL.md)."

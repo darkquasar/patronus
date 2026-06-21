@@ -59,12 +59,12 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"agent-rules":     {manifest.TypeInstruction, manifest.RoleInstruction},
 		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
 		// P7.2-L2 vendored capability skills (superpowers + mattpocock subset).
-		"superpowers-bootstrap": {manifest.TypeSkill, manifest.RoleCapability},
-		"writing-plans":         {manifest.TypeSkill, manifest.RoleCapability},
-		"executing-plans":       {manifest.TypeSkill, manifest.RoleCapability},
-		"grilling":              {manifest.TypeSkill, manifest.RoleCapability},
-		"diagnosing-bugs":       {manifest.TypeSkill, manifest.RoleCapability},
-		"tdd":                   {manifest.TypeSkill, manifest.RoleCapability},
+		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
+		"writing-plans":   {manifest.TypeSkill, manifest.RoleCapability},
+		"executing-plans": {manifest.TypeSkill, manifest.RoleCapability},
+		"grilling":        {manifest.TypeSkill, manifest.RoleCapability},
+		"diagnosing-bugs": {manifest.TypeSkill, manifest.RoleCapability},
+		"tdd":             {manifest.TypeSkill, manifest.RoleCapability},
 		// P7.2-L4 vendored context/design-vocabulary skills (mattpocock).
 		"codebase-design": {manifest.TypeSkill, manifest.RoleContext},
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
@@ -78,14 +78,21 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"block-secrets":  {manifest.TypeHook, manifest.RoleGuardrail},
 		"gitleaks-guard": {manifest.TypeHook, manifest.RoleGuardrail},
 		// P7.5.4: the keystone's SessionStart activation (L2) + the ccusage statusline setting (L7).
-		"superpowers-session-start": {manifest.TypeHook, manifest.RoleCapability},
-		"ccusage-statusline":        {manifest.TypeSetting, manifest.RoleObservability},
+		"skills-dispatch-activate": {manifest.TypeHook, manifest.RoleCapability},
+		"ccusage-statusline":       {manifest.TypeSetting, manifest.RoleObservability},
 		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
 		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
 		"beads":                       {manifest.TypeInstruction, manifest.RoleOrchestration},
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
+		// Remaining superpowers workflow skills (complete the vendored set).
+		"brainstorming":                  {manifest.TypeSkill, manifest.RoleCapability},
+		"using-git-worktrees":            {manifest.TypeSkill, manifest.RoleCapability},
+		"finishing-a-development-branch": {manifest.TypeSkill, manifest.RoleCapability},
+		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
+		"requesting-code-review":         {manifest.TypeSkill, manifest.RoleEval},
+		"receiving-code-review":          {manifest.TypeSkill, manifest.RoleEval},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -116,15 +123,18 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	// upstream provenance and the build packs a NOTICE.
 	for _, name := range []string{
 		"agents-spine", "agent-rules", "diagram-explain",
-		"superpowers-bootstrap", "writing-plans", "executing-plans",
+		"skills-dispatch", "writing-plans", "executing-plans",
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
 		"go-style-uber",
 		"tdd-guard-hook", "verification-before-completion",
-		"git-guardrails",            // block-secrets + gitleaks-guard are authored (no attribution)
-		"superpowers-session-start", // ccusage-statusline is authored (no attribution)
+		"git-guardrails",           // block-secrets + gitleaks-guard are authored (no attribution)
+		"skills-dispatch-activate", // ccusage-statusline is authored (no attribution)
 		// P7.6 orchestration: beads (authored-but-attributed instruction) + 2 vendored superpowers skills.
 		"beads", "subagent-driven-development", "dispatching-parallel-agents",
+		// The remaining vendored superpowers workflow skills.
+		"brainstorming", "using-git-worktrees", "finishing-a-development-branch",
+		"writing-skills", "requesting-code-review", "receiving-code-review",
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {

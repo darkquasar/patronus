@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# superpowers-session-start — a SessionStart hook that injects the
-# superpowers-bootstrap skill body as session context, so the skill-first
-# discipline is active from the first turn without the agent having to discover
-# it. This is the keystone's activation (pairs with the superpowers-bootstrap
-# skill that core installs).
+# skills-dispatch-activate — a SessionStart hook that injects the skills-dispatch
+# skill body as session context, so the skill-first discipline is active from the
+# first turn without the agent having to discover it. This is the keystone's
+# activation (pairs with the skills-dispatch skill that core installs).
 #
 # Adapted from obra/superpowers hooks/session-start: the upstream reads the skill
 # from a plugin root via CLAUDE_PLUGIN_ROOT/run-hook.cmd indirection. Patronus
@@ -13,10 +12,10 @@
 
 set -euo pipefail
 
-# The bootstrap skill is installed alongside the agent's other skills. Resolve the
+# The dispatch skill is installed alongside the agent's other skills. Resolve the
 # global location; a project-scoped install would also be found by the agent, but
 # the global copy is the stable one for a SessionStart injection.
-SKILL="${HOME}/.claude/skills/superpowers-bootstrap/SKILL.md"
+SKILL="${HOME}/.claude/skills/skills-dispatch/SKILL.md"
 if [ ! -f "$SKILL" ]; then
   exit 0
 fi
@@ -34,7 +33,7 @@ escape_for_json() {
 }
 escaped=$(escape_for_json "$content")
 
-context="<EXTREMELY_IMPORTANT>\nYou have superpowers. The full content of your 'superpowers-bootstrap' skill — your introduction to using skills — follows. For all other skills, use the Skill tool.\n\n${escaped}\n</EXTREMELY_IMPORTANT>"
+context="<EXTREMELY_IMPORTANT>\nYou have an installed skill library. The full content of your 'skills-dispatch' skill — your introduction to finding and using those skills — follows. It governs EVERY installed skill, whatever its origin. For each skill, use the Skill tool to load it on demand.\n\n${escaped}\n</EXTREMELY_IMPORTANT>"
 
 # Claude Code reads hookSpecificOutput.additionalContext for SessionStart.
 printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$context"

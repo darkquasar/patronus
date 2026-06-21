@@ -45,10 +45,10 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	// The output-style is a Claude FILE; the bootstrap skill + verification skill landed.
 	for _, p := range []string{
 		filepath.Join(home, ".claude", "output-styles", "diagram-explain.md"),
-		filepath.Join(home, ".claude", "skills", "superpowers-bootstrap", "SKILL.md"),
+		filepath.Join(home, ".claude", "skills", "skills-dispatch", "SKILL.md"),
 		filepath.Join(home, ".claude", "skills", "verification-before-completion", "SKILL.md"),
 		filepath.Join(home, ".claude", "hooks", "git-guardrails.sh"),
-		filepath.Join(home, ".claude", "hooks", "superpowers-session-start.sh"),
+		filepath.Join(home, ".claude", "hooks", "skills-dispatch-activate.sh"),
 	} {
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("expected installed file missing: %s (%v)", p, err)
@@ -61,7 +61,7 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	}
 	wd, _ := os.Getwd()
 	lock := string(mustRead(t, filepath.Join(wd, "patronus.lock")))
-	for _, want := range []string{"tdd-guard-hook", "git-guardrails", "block-secrets", "gitleaks-guard", "superpowers-session-start", "ccusage-statusline"} {
+	for _, want := range []string{"tdd-guard-hook", "git-guardrails", "block-secrets", "gitleaks-guard", "skills-dispatch-activate", "ccusage-statusline"} {
 		if !strings.Contains(lock, want) {
 			t.Errorf("lock missing strict-gate item %q:\n%s", want, lock)
 		}

@@ -1,16 +1,9 @@
-This artifact adapts the SessionStart hook from obra/superpowers.
+This artifact vendors the "using-git-worktrees" skill from obra/superpowers.
 
-Reference (upstream path):
-  - hooks/session-start
-  - hooks/hooks.json (the SessionStart matcher: startup|clear|compact)
+Vendored file (upstream path):
+  - skills/using-git-worktrees/SKILL.md
 
-The upstream script reads the skill from a plugin root via CLAUDE_PLUGIN_ROOT and
-a run-hook.cmd indirection — plugin scaffolding Patronus does not ship. The
-vendored script here is therefore ADAPTED, not a verbatim copy: it reads the
-superpowers-bootstrap skill from its installed path and emits the same
-SessionStart `additionalContext` JSON injection. The approach (inject the
-using-superpowers / bootstrap skill body at session start) and the event matcher
-are taken from the upstream; the path resolution is re-authored for Patronus.
+Copied verbatim; no modifications.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072

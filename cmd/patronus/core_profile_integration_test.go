@@ -18,7 +18,7 @@ import (
 // coreSkills are the vendored L2+L4 skill artifacts core wires that land as a
 // per-tool skills/<name>/SKILL.md file.
 var coreSkills = []string{
-	"superpowers-bootstrap", "writing-plans", "executing-plans",
+	"skills-dispatch", "writing-plans", "executing-plans",
 	"grilling", "diagnosing-bugs", "tdd",
 	"codebase-design", "domain-modeling",
 	"verification-before-completion", // P7.5.2 L8 eval skill
@@ -354,7 +354,7 @@ func TestCoreSessionStartAndCcusage(t *testing.T) {
 	if len(ss) != 1 {
 		t.Fatalf("want 1 SessionStart group, got %d: %v", len(ss), root["hooks"])
 	}
-	scriptPath := filepath.Join(home, ".claude", "hooks", "superpowers-session-start.sh")
+	scriptPath := filepath.Join(home, ".claude", "hooks", "skills-dispatch-activate.sh")
 	cmd := ss[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
 	if cmd != scriptPath {
 		t.Errorf("SessionStart command = %v, want the placed script %q", cmd, scriptPath)

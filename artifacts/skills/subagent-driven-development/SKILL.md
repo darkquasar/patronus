@@ -4,16 +4,17 @@ description: Use when executing implementation plans with independent tasks in t
 ---
 
 > **Patronus note:** vendored from superpowers. The `superpowers:`-prefixed
-> sibling skills referenced below map to Patronus artifacts where present —
+> sibling skills referenced below all map to Patronus artifacts —
 > `superpowers:writing-plans` → `writing-plans`, `superpowers:executing-plans` →
 > `executing-plans`, `superpowers:test-driven-development` → the `tdd` skill,
-> `superpowers:dispatching-parallel-agents` → `dispatching-parallel-agents`. The
-> remaining siblings (`requesting-code-review`, `finishing-a-development-branch`,
-> `using-git-worktrees`) and the `../requesting-code-review/code-reviewer.md`
-> path are upstream-only and OPTIONAL here: use your environment's own
-> code-review and branch-finishing flow in their place. The `scripts/` helpers
-> (`task-brief`, `review-package`, `sdd-workspace`) are self-contained and ship
-> with this skill.
+> `superpowers:dispatching-parallel-agents` → `dispatching-parallel-agents`,
+> `superpowers:requesting-code-review` → `requesting-code-review` (whose
+> `code-reviewer.md` the final whole-branch review uses),
+> `superpowers:using-git-worktrees` → `using-git-worktrees`, and
+> `superpowers:finishing-a-development-branch` → `finishing-a-development-branch`.
+> The `../requesting-code-review/code-reviewer.md` path resolves once that skill
+> is installed alongside this one. The `scripts/` helpers (`task-brief`,
+> `review-package`, `sdd-workspace`) are self-contained and ship with this skill.
 
 # Subagent-Driven Development
 

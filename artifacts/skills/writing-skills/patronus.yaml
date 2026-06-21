@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-skills
+description: "Meta-discipline for authoring skills — create, edit, and verify skills (test-with-subagents before deploying), applying the same RED-GREEN rigor to documentation. Ships best-practices + persuasion-principles references and a graphviz render helper."
+version: 1.0.0
+entry: SKILL.md
+files: [testing-skills-with-subagents.md, anthropic-best-practices.md, persuasion-principles.md, graphviz-conventions.dot, render-graphs.js, examples]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored from the upstream `writing-skills` skill (skills/writing-skills/), including testing-skills-with-subagents.md, anthropic-best-practices.md, persuasion-principles.md, graphviz-conventions.dot, the examples/ dir, and render-graphs.js (a Node helper that shells out to graphviz `dot` to render SKILL.md diagrams to SVG — agent-invoked, no network; audited). SKILL.md body is upstream-verbatim; a short Patronus note prepended at the top maps the `superpowers:test-driven-development` cross-ref to the Patronus `tdd` skill and marks the `using-superpowers/references/` runtime-tool files upstream-only."

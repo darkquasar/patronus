@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: skills-dispatch
+description: "The skill-dispatch keystone — establishes how an agent finds and invokes the installed skills, requiring a skill check before ANY response, across the ENTIRE installed set regardless of origin. The auto-trigger discipline the rest of the skill library leans on."
+version: 1.0.0
+entry: SKILL.md
+files: []
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "AUTHORED by Patronus, ADAPTED from the upstream `using-superpowers` skill (the auto-trigger keystone) — not a verbatim copy. Generalized to govern the whole installed skill set rather than one plugin's skills: renamed to `skills-dispatch`, de-branded (the superpowers-specific name and 'you have superpowers' framing removed), a 'Scope: every installed skill' section added, and the priority examples point at Patronus's own skills (brainstorming/grilling/diagnosing-bugs). The strong skill-first discipline (the 1%-rule, red-flags table, decision flow) is retained from upstream; attribution preserved. The SessionStart hook that auto-injects this body is the separate `skills-dispatch-activate` hook artifact."

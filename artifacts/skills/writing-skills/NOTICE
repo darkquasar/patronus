@@ -1,13 +1,19 @@
-This artifact vendors the keystone "using-superpowers" skill from obra/superpowers.
+This artifact vendors the "writing-skills" skill from obra/superpowers.
 
-Vendored file (upstream path):
-  - skills/using-superpowers/SKILL.md
+Vendored files (upstream paths):
+  - skills/writing-skills/SKILL.md
+  - skills/writing-skills/testing-skills-with-subagents.md
+  - skills/writing-skills/anthropic-best-practices.md
+  - skills/writing-skills/persuasion-principles.md
+  - skills/writing-skills/graphviz-conventions.dot
+  - skills/writing-skills/render-graphs.js
+  - skills/writing-skills/examples/CLAUDE_MD_TESTING.md
 
-The body is trimmed to the platform-agnostic skill-invocation discipline; the
-upstream's per-platform reference files (claude-code-tools.md, codex-tools.md,
-gemini-tools.md, …) and the brainstorming cross-reference were not vendored. The
-SessionStart hook that auto-injects this content (upstream hooks/session-start) is
-wired separately as a `type: hook` artifact in a later Patronus sub-phase.
+SKILL.md body is upstream-verbatim; a short 'Patronus note' was prepended at the
+top mapping the superpowers:test-driven-development cross-reference to the
+Patronus tdd skill and marking the using-superpowers/references/ runtime-tool
+files upstream-only. render-graphs.js (a Node helper that shells out to graphviz
+'dot') was audited: agent-invoked, no network access.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
