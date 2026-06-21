@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: agent-principles
 description: "Ambient house rules for how an AI coding agent should think and work — mindset, workflow, task management, and core principles. Appended into CLAUDE.md/AGENTS.md."
-version: 1.0.0
+version: 1.0.1
 entry: INSTRUCTIONS.md       # the portable body appended as a delimited section
 targets: [claude, codex, opencode]
 defaults:
