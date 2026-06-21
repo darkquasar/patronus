@@ -244,6 +244,16 @@ func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	}
 	found := false
 	for _, e := range execs {
+		// A mode: self exec is ADVISORY (Patronus surfaces the self-wiring command
+		// but never runs it — the recipe's own CLI may not be installed) AND
+		// self-managed (provenance). This keeps a missing ai-memory binary from
+		// failing the install.
+		if !e.Exec.Advisory {
+			t.Errorf("self-mode exec %q should be advisory (display-only)", e.Exec.Display)
+		}
+		if !e.Exec.SelfManaged {
+			t.Errorf("self-mode exec %q should be self-managed", e.Exec.Display)
+		}
 		if e.Exec.Display == "ai-memory install-mcp --client claude --apply" {
 			found = true
 			if got := e.Exec.Command[3]; got != "claude" {

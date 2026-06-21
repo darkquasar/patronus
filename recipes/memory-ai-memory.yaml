@@ -19,8 +19,12 @@ scope:
   global: "~/.local/share/ai-memory"
 
 # ai-memory wires ITSELF into each agent — Patronus orchestrates its installers.
-# mode: self → EXEC the run commands, flagged self-managing (remove reports them
-# as "not auto-revertable"). Shape (computed) = fetch+run.
+# mode: self → the run commands are surfaced as ADVISORY (display-only) EXEC rows:
+# Patronus prints them for the user to run but does NOT execute them, because they
+# invoke the `ai-memory` CLI, which this recipe does not deliver (delivery is Docker
+# / opt-in cargo, not a fetched binary). Auto-running would error on any machine
+# where ai-memory isn't installed. Flagged self-managing (remove reports them as
+# "not auto-revertable"). Shape (computed) = fetch+run.
 wire:
   mode: self
   run:

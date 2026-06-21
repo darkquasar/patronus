@@ -244,12 +244,16 @@ func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
 		return "", false
 	}, home, proj)
 
+	// A NON-advisory exec (e.g. a mode: run recipe whose commands Patronus does run)
+	// — proves runDeployWith executes it and records the provenance. (A mode: self
+	// recipe's exec is advisory and would be surfaced, not run; that path is covered
+	// by the recipe-layer test + the advisory branch in runExecs.)
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{
-		Path: "ai-memory install-mcp --client claude --apply", Action: diff.Exec,
-		Artifact: "memory-ai-memory", Type: "self-wire", Tool: "claude", Scope: "global",
+		Path: "demo-tool install-mcp --client claude --apply", Action: diff.Exec,
+		Artifact: "demo-run-recipe", Type: "fetch+run", Tool: "claude", Scope: "global",
 		Exec: &diff.ExecSpec{
-			Command:     []string{"ai-memory", "install-mcp", "--client", "claude", "--apply"},
-			Display:     "ai-memory install-mcp --client claude --apply",
+			Command:     []string{"demo-tool", "install-mcp", "--client", "claude", "--apply"},
+			Display:     "demo-tool install-mcp --client claude --apply",
 			SelfManaged: true,
 		},
 	}}}
