@@ -20,3 +20,9 @@ plan.md
 # design-doc rules above are for ROOT-LEVEL planning artifacts; never let them
 # sweep up tracked catalog content under artifacts/.
 !artifacts/**
+
+# Local R2 audit creds — never commit
+.r2-audit.env
+
+# Local env / secrets — never commit
+.env

@@ -4,7 +4,7 @@ type: skill
 role: context
 name: pattern-mcp
 description: "Configuring remote MCP servers — transport, auth, scoping, failure modes — plus a catalog of ready-to-add servers. Load-first reference."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
 files: [patterns/]
 targets: [claude, codex, opencode]

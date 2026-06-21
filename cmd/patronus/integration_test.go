@@ -210,7 +210,7 @@ func TestRemoteInstallMaterializesAndTransforms(t *testing.T) {
 		}
 	}
 	// The source was materialized into the cache (patronus.yaml on disk).
-	matzd := filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.0", "patronus.yaml")
+	matzd := filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.1", "patronus.yaml")
 	if _, err := os.Stat(matzd); err != nil {
 		t.Errorf("artifact source not materialized: %v", err)
 	}
@@ -292,13 +292,13 @@ func TestRemoteLockPinsPerItemProvenance(t *testing.T) {
 
 // TestProfileInstallFollowsPerItemLock is THE CRUX test: it proves per-item
 // reality-follows-lock. After locking the cloudflare profile (pinning
-// pattern-cloudflare@1.0.0), the served registry is mutated to advertise a NEWER
+// pattern-cloudflare@1.0.1), the served registry is mutated to advertise a NEWER
 // pattern-cloudflare@1.1.0 (both versions' tarballs remain served, mirroring R2's
-// immutable keys). A profile install must then fetch the LOCKED 1.0.0 — not the
+// immutable keys). A profile install must then fetch the LOCKED 1.0.1 — not the
 // index's newer 1.1.0 latest — proving the lock, not the moving index, drives
 // reproducibility.
 func TestProfileInstallFollowsPerItemLock(t *testing.T) {
-	// Build the baseline registry (pattern-cloudflare@1.0.0) and serve it.
+	// Build the baseline registry (pattern-cloudflare@1.0.1) and serve it.
 	outDir := t.TempDir()
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
 		t.Fatalf("build: %v", err)
@@ -306,17 +306,17 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	f := serveTree(t, outDir)
 	home := withRemoteEnv(t, f)
 
-	// Lock the profile → pins pattern-cloudflare@1.0.0 + its tarball sha.
+	// Lock the profile → pins pattern-cloudflare@1.0.1 + its tarball sha.
 	if _, _, err := runLock(t, "--profile", "cloudflare"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
-	if !strings.Contains(string(mustRead(t, filepath.Join(wd, "patronus.lock"))), `"version": "1.0.0"`) {
-		t.Fatal("expected pattern-cloudflare 1.0.0 pinned in the lock")
+	if !strings.Contains(string(mustRead(t, filepath.Join(wd, "patronus.lock"))), `"version": "1.0.1"`) {
+		t.Fatal("expected pattern-cloudflare 1.0.1 pinned in the lock")
 	}
 
 	// Mutate the served index to advertise pattern-cloudflare@1.1.0 (a new, newer
-	// item) while STILL serving the immutable 1.0.0 tarball. Also serve a 1.1.0
+	// item) while STILL serving the immutable 1.0.1 tarball. Also serve a 1.1.0
 	// tarball at its own immutable key.
 	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
 	ix, err := registry.LoadIndex(idx)
@@ -348,11 +348,11 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	if _, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.0", "patronus.yaml")); err != nil {
-		t.Errorf("lock should pin 1.0.0, but it was not materialized: %v", err)
+	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.1", "patronus.yaml")); err != nil {
+		t.Errorf("lock should pin 1.0.1, but it was not materialized: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.1.0", "patronus.yaml")); err == nil {
-		t.Error("install fetched the index's newer 1.1.0 instead of the locked 1.0.0")
+		t.Error("install fetched the index's newer 1.1.0 instead of the locked 1.0.1")
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 )
 
 // TestUpdateInstalledItemFollowsNewerVersion drives the real commands end-to-end:
-// install team-research@1.0.0 to the global scope (state records 1.0.0), mutate the
+// install team-research@1.0.1 to the global scope (state records 1.0.1), mutate the
 // served index to advertise 1.1.0, then `update team-research --deploy` re-installs
 // the newer version and state records 1.1.0. A second update reports up-to-date.
 func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
@@ -21,7 +21,7 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	f := serveTree(t, outDir)
 	home := withRemoteEnv(t, f)
 
-	// Install v1.0.0 at the global scope.
+	// Install v1.0.1 at the global scope.
 	if _, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v", err)
 	}
@@ -31,12 +31,12 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := s.Find("team-research", "claude", "global")
-	if len(got) != 1 || got[0].ItemVersion != "1.0.0" {
-		t.Fatalf("expected recorded version 1.0.0, got %+v", got)
+	if len(got) != 1 || got[0].ItemVersion != "1.0.1" {
+		t.Fatalf("expected recorded version 1.0.1, got %+v", got)
 	}
 
 	// Mutate the served index to advertise team-research@1.1.0, serving a 1.1.0
-	// tarball at its own immutable key (the 1.0.0 tarball stays served too).
+	// tarball at its own immutable key (the 1.0.1 tarball stays served too).
 	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
 	ix, err := registry.LoadIndex(idx)
 	if err != nil {
@@ -58,13 +58,13 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
 	f.bodies[newURL] = newTgz
 
-	// update <name> --deploy: refreshes the cache, sees 1.0.0 -> 1.1.0, re-installs.
+	// update <name> --deploy: refreshes the cache, sees 1.0.1 -> 1.1.0, re-installs.
 	out, _, err := runUpdate(t, "team-research", "--deploy")
 	if err != nil {
 		t.Fatalf("update --deploy: %v", err)
 	}
-	if !strings.Contains(out, "1.0.0 -> 1.1.0") {
-		t.Errorf("expected update to report 1.0.0 -> 1.1.0:\n%s", out)
+	if !strings.Contains(out, "1.0.1 -> 1.1.0") {
+		t.Errorf("expected update to report 1.0.1 -> 1.1.0:\n%s", out)
 	}
 
 	// State now records 1.1.0.
