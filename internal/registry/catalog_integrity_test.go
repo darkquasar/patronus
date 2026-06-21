@@ -197,6 +197,24 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		}
 	}
 
+	// §6b.4 invariant: the catalog must carry at least one recipe of EVERY shape,
+	// so the acceptance suite always has a real example of each delivery×wire path
+	// to install. If a future change drops the last recipe of a shape (e.g. removes
+	// every fetch+wire recipe), this fails — flagging that the corresponding deploy
+	// proof in the P7.7 suite no longer has anything to exercise.
+	shapeSeen := map[manifest.RecipeShape]bool{}
+	for _, e := range cat.Recipes {
+		shapeSeen[e.Manifest.Shape()] = true
+	}
+	for _, sh := range []manifest.RecipeShape{
+		manifest.ShapeWireOnly, manifest.ShapeFetchWire,
+		manifest.ShapeFetchRun, manifest.ShapeInstall,
+	} {
+		if !shapeSeen[sh] {
+			t.Errorf("no recipe of shape %q in the catalog (§6b.4 wants ≥1 of each shape)", sh)
+		}
+	}
+
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
 	wantProfiles := []string{"cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
