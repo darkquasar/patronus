@@ -26,6 +26,9 @@ func runInstall(t *testing.T, args ...string) (string, string, error) {
 }
 
 func TestInstallSkillDryRun(t *testing.T) {
+	// Isolate HOME so --global resolves to an empty sandbox (not the developer's
+	// real ~/.claude, where team-research may already be installed → SKIP not CREATE).
+	t.Setenv("HOME", t.TempDir())
 	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
@@ -181,6 +184,8 @@ func TestInstallDeployAndDryRunMutuallyExclusive(t *testing.T) {
 }
 
 func TestInstallJSON(t *testing.T) {
+	// Isolate HOME so --global is a clean sandbox (see TestInstallSkillDryRun).
+	t.Setenv("HOME", t.TempDir())
 	// --json is a persistent root flag; set it on the package global directly
 	// since we run the subcommand in isolation here.
 	jsonOutput = true

@@ -38,7 +38,12 @@ layers:
     - pattern-mcp                          # in-repo context skill
   tools:
     - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
-  memory: memory-ai-memory                 # L3 default recipe (self-wiring)
+  # No default memory recipe in core: ai-memory ships its full ambient integration
+  # via the opt-in `ai-memory` profile (it needs a running daemon + its lifecycle
+  # hooks fire on every action), and engram is the self-contained fallback. Add a
+  # memory layer by installing the `ai-memory` profile or the `memory-engram`
+  # recipe. The work-state-reground hook below stays — its ai-memory cue is
+  # conditional and simply no-ops when no memory layer is wired.
   eval:
     - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
     - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)

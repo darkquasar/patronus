@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: ai-memory
-summary: "Full ai-memory integration (opt-in): core + the ai-memory lifecycle hooks that AUTOMATICALLY capture every session/prompt/tool/compaction event into the local ai-memory store and auto-inject the prior cross-agent handoff at session start. This is ambient, always-on memory — unlike core's default which only wires the ai-memory recipe (MCP server, queried on demand). Claude-only; needs the ai-memory daemon running (the memory-ai-memory recipe delivers it)."
+summary: "Full ai-memory integration (opt-in): core + the memory-ai-memory recipe (pulled via the hooks' requires) + the ai-memory lifecycle hooks that AUTOMATICALLY capture every session/prompt/tool/compaction event into the local ai-memory store and auto-inject the prior cross-agent handoff at session start. This is ambient, always-on memory. core ships NO memory layer by default (ai-memory needs a running daemon + per-action hooks; engram is the self-contained alternative) — this profile is how you opt into ai-memory. Claude-only; needs the ai-memory daemon running (the memory-ai-memory recipe delivers it)."
 extends: core
 # The 6 hooks are Claude-only (ai-memory's hook surface is per-agent; only Claude
 # is wired here) and each `requires: [memory-ai-memory]`, so the recipe is pulled
