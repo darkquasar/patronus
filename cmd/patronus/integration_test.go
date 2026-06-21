@@ -148,6 +148,25 @@ func shaOf(b []byte) string {
 	return "sha256:" + hex.EncodeToString(s[:])
 }
 
+// catalogItemVersion reads a built registry's index and returns the advertised
+// version of an artifact by name. Tests that install a REAL catalog item read its
+// version from here instead of hardcoding a literal, so a future version bump of
+// that item never breaks the test (the recurring breakage that motivated this).
+func catalogItemVersion(t *testing.T, outDir, name string) string {
+	t.Helper()
+	ix, err := registry.LoadIndex(mustRead(t, filepath.Join(outDir, "catalog", "index.json")))
+	if err != nil {
+		t.Fatalf("load index: %v", err)
+	}
+	for i := range ix.Artifacts {
+		if ix.Artifacts[i].Manifest.Name == name {
+			return ix.Artifacts[i].Manifest.Version
+		}
+	}
+	t.Fatalf("artifact %q not in built catalog index", name)
+	return ""
+}
+
 func runList(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 	cmd := newListCmd()
@@ -209,10 +228,12 @@ func TestRemoteInstallMaterializesAndTransforms(t *testing.T) {
 			t.Errorf("plan missing %q:\n%s", want, out)
 		}
 	}
-	// The source was materialized into the cache (patronus.yaml on disk).
-	matzd := filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.1", "patronus.yaml")
-	if _, err := os.Stat(matzd); err != nil {
-		t.Errorf("artifact source not materialized: %v", err)
+	// The source was materialized into the cache (patronus.yaml on disk). Glob the
+	// versioned dir rather than hardcoding the version, so an item version bump
+	// never breaks this — the test asserts materialization, not a specific version.
+	matches, _ := filepath.Glob(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-*", "patronus.yaml"))
+	if len(matches) == 0 {
+		t.Errorf("artifact source not materialized (no pattern-cloudflare-* in cache)")
 	}
 }
 
@@ -291,14 +312,13 @@ func TestRemoteLockPinsPerItemProvenance(t *testing.T) {
 }
 
 // TestProfileInstallFollowsPerItemLock is THE CRUX test: it proves per-item
-// reality-follows-lock. After locking the cloudflare profile (pinning
-// pattern-cloudflare@1.0.1), the served registry is mutated to advertise a NEWER
-// pattern-cloudflare@1.1.0 (both versions' tarballs remain served, mirroring R2's
-// immutable keys). A profile install must then fetch the LOCKED 1.0.1 — not the
-// index's newer 1.1.0 latest — proving the lock, not the moving index, drives
+// reality-follows-lock. After locking the cloudflare profile (// the catalog baseline), the served registry is mutated to advertise a NEWER
+// synthetic newer version (both tarballs remain served, mirroring R2's
+// immutable keys). A profile install must then fetch the LOCKED baseline — not the
+// index's newer latest — proving the lock, not the moving index, drives
 // reproducibility.
 func TestProfileInstallFollowsPerItemLock(t *testing.T) {
-	// Build the baseline registry (pattern-cloudflare@1.0.1) and serve it.
+	// Build the baseline registry and serve it.
 	outDir := t.TempDir()
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
 		t.Fatalf("build: %v", err)
@@ -306,31 +326,36 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	f := serveTree(t, outDir)
 	home := withRemoteEnv(t, f)
 
-	// Lock the profile → pins pattern-cloudflare@1.0.1 + its tarball sha.
+	// Baseline = the catalog's actual pattern-cloudflare version (read, not
+	// hardcoded). The synthetic "newer" version is a fixed value the test fabricates.
+	const newerVer = "99.0.0"
+	baseVer := catalogItemVersion(t, outDir, "pattern-cloudflare")
+
+	// Lock the profile → pins pattern-cloudflare@<baseVer> + its tarball sha.
 	if _, _, err := runLock(t, "--profile", "cloudflare"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
-	if !strings.Contains(string(mustRead(t, filepath.Join(wd, "patronus.lock"))), `"version": "1.0.1"`) {
-		t.Fatal("expected pattern-cloudflare 1.0.1 pinned in the lock")
+	if !strings.Contains(string(mustRead(t, filepath.Join(wd, "patronus.lock"))), `"version": "`+baseVer+`"`) {
+		t.Fatalf("expected pattern-cloudflare %s pinned in the lock", baseVer)
 	}
 
-	// Mutate the served index to advertise pattern-cloudflare@1.1.0 (a new, newer
-	// item) while STILL serving the immutable 1.0.1 tarball. Also serve a 1.1.0
-	// tarball at its own immutable key.
+	// Mutate the served index to advertise pattern-cloudflare@<newerVer> (a new,
+	// newer item) while STILL serving the immutable baseline tarball. Also serve a
+	// newer tarball at its own immutable key.
 	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
 	ix, err := registry.LoadIndex(idx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	newTgz := mustTarGz(t, map[string][]byte{
-		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: pattern-cloudflare\ndescription: d\nversion: 1.1.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
-		"SKILL.md":      []byte("# v1.1.0 body — should NOT be installed"),
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: pattern-cloudflare\ndescription: d\nversion: " + newerVer + "\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"SKILL.md":      []byte("# v" + newerVer + " body — should NOT be installed"),
 	})
-	newURL := testRegistryBase + "/catalog/pattern-cloudflare/1.1.0/pattern-cloudflare-1.1.0.tar.gz"
+	newURL := testRegistryBase + "/catalog/pattern-cloudflare/" + newerVer + "/pattern-cloudflare-" + newerVer + ".tar.gz"
 	for i := range ix.Artifacts {
 		if ix.Artifacts[i].Manifest.Name == "pattern-cloudflare" {
-			ix.Artifacts[i].Manifest.Version = "1.1.0"
+			ix.Artifacts[i].Manifest.Version = newerVer
 			ix.Artifacts[i].Tarball = registry.Tarball{URL: newURL, SHA256: shaOf(newTgz)}
 		}
 	}
@@ -339,20 +364,20 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
 	f.bodies[newURL] = newTgz
 
-	// Refresh the cache so the client sees the mutated (1.1.0) index.
+	// Refresh the cache so the client sees the mutated (newer) index.
 	if _, _, err := runUpdate(t); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 
-	// Install the profile against the committed lock → must materialize 1.0.0.
+	// Install the profile against the committed lock → must materialize the baseline.
 	if _, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.0.1", "patronus.yaml")); err != nil {
-		t.Errorf("lock should pin 1.0.1, but it was not materialized: %v", err)
+	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-"+baseVer, "patronus.yaml")); err != nil {
+		t.Errorf("lock should pin %s, but it was not materialized: %v", baseVer, err)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-1.1.0", "patronus.yaml")); err == nil {
-		t.Error("install fetched the index's newer 1.1.0 instead of the locked 1.0.1")
+	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-"+newerVer, "patronus.yaml")); err == nil {
+		t.Errorf("install fetched the index's newer %s instead of the locked %s", newerVer, baseVer)
 	}
 }
 
