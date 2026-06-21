@@ -183,7 +183,7 @@ func TestCoreStrictGate(t *testing.T) {
 	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
 	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
-	out, errOut, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--deploy", "--yes")
+	out, errOut, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
@@ -200,11 +200,12 @@ func TestCoreStrictGate(t *testing.T) {
 	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
 		t.Fatalf("settings.json unreadable: %v", err)
 	}
-	// the safe-git strict set (core L8/L9 + git-guardrails) coexists in ONE settings.json array (the
-	// compose-fold): tdd-guard-hook + block-secrets + gitleaks-guard + git-guardrails.
+	// tdd-enforced = core's secret guards (block-secrets + gitleaks-guard) + the
+	// tdd-guard enforcement hook = 3 PreToolUse groups coexisting (the compose-fold).
+	// (git-guardrails is a separate opt-in via the safe-git profile.)
 	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	if len(pre) != 4 {
-		t.Fatalf("want 4 coexisting PreToolUse groups (tdd-guard + 3 guardrails), got %d: %v", len(pre), root["hooks"])
+	if len(pre) != 3 {
+		t.Fatalf("want 3 coexisting PreToolUse groups (tdd-guard + 2 secret guards), got %d: %v", len(pre), root["hooks"])
 	}
 	// Find the tdd-guard enforcement group by its command.
 	var tdd map[string]any
@@ -227,7 +228,7 @@ func TestCoreStrictGate(t *testing.T) {
 	}
 
 	// Idempotent re-run → SKIP (the hook merge is a no-op the second time).
-	reout, _, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--dry-run")
+	reout, _, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +236,7 @@ func TestCoreStrictGate(t *testing.T) {
 		t.Errorf("re-install should be idempotent (SKIP):\n%s", reout)
 	}
 
-	// Removing ONLY the tdd-guard-hook strips exactly its element; the three L9
+	// Removing ONLY the tdd-guard-hook strips exactly its element; the two secret
 	// guardrail hooks survive (targeted removal preserves siblings).
 	if _, errOut, err := execRemove(t, "tdd-guard-hook", "--global", "--deploy"); err != nil {
 		t.Fatalf("remove tdd-guard-hook: %v\n%s", err, errOut)
@@ -245,8 +246,8 @@ func TestCoreStrictGate(t *testing.T) {
 		t.Fatalf("settings.json gone/corrupt after remove: %v", err)
 	}
 	pre, _ = root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	if len(pre) != 3 {
-		t.Fatalf("want 3 guardrail hooks surviving after removing tdd-guard, got %d: %v", len(pre), pre)
+	if len(pre) != 2 {
+		t.Fatalf("want 2 guardrail hooks surviving after removing tdd-guard, got %d: %v", len(pre), pre)
 	}
 	for _, g := range pre {
 		if g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
@@ -255,35 +256,70 @@ func TestCoreStrictGate(t *testing.T) {
 	}
 }
 
-// TestNoTddGuardOverlayDropsEnforcement proves the relaxation overlay: no-tdd-guard
-// installs everything core does EXCEPT the enforcement hook + its binary recipe,
-// while KEEPING the tdd skill (test-first as guidance, not a hard block).
-func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
+// TestCoreOmitsTddEnforcement proves core no longer ENFORCES test-first: no
+// tdd-guard hook in settings, no npm advisory for the binary — but the tdd SKILL
+// (guidance) does install. Enforcement is opt-in via the tdd-enforced profile.
+func TestCoreOmitsTddEnforcement(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks") // no-tdd-guard keeps the gitleaks guardrail
-	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
+	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd")
 
-	out, errOut, err := runInstall(t, "--profile", "no-tdd-guard", "--tool", "claude", "--global", "--deploy", "--yes")
+	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
-
-	// No tdd-guard hook in settings, and no npm advisory (the recipe was subtracted).
+	// No tdd-guard recipe advisory, no enforcement hook in settings.
 	if strings.Contains(out, "npm install -g tdd-guard") {
-		t.Errorf("no-tdd-guard should drop the tdd-guard recipe advisory:\n%s", out)
+		t.Errorf("core should NOT carry the tdd-guard recipe advisory:\n%s", out)
 	}
 	settings := filepath.Join(home, ".claude", "settings.json")
 	if b, err := os.ReadFile(settings); err == nil && strings.Contains(string(b), "tdd-guard") {
-		t.Errorf("no-tdd-guard should not register the enforcement hook:\n%s", b)
+		t.Errorf("core should NOT register the tdd-guard enforcement hook:\n%s", b)
 	}
-
-	// ...but the tdd SKILL (guidance) and verification skill still install.
+	// ...but the tdd SKILL (guidance) + verification skill DO install.
 	for _, skill := range []string{"tdd", "verification-before-completion"} {
 		if _, err := os.Stat(filepath.Join(home, ".claude", "skills", skill, "SKILL.md")); err != nil {
-			t.Errorf("no-tdd-guard should keep the %q skill: %v", skill, err)
+			t.Errorf("core should keep the %q skill: %v", skill, err)
 		}
+	}
+}
+
+// TestTddEnforcedProfileAddsEnforcement proves the inverse: the opt-in tdd-enforced
+// profile (extends core) ADDS the test-first gate — the tdd-guard recipe advisory
+// AND the tdd-guard-hook in settings.json — on top of the full core spine.
+func TestTddEnforcedProfileAddsEnforcement(t *testing.T) {
+	f := builtRegistry(t)
+	home := withRemoteEnv(t, f)
+	withFakeRunner(t)
+	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd")
+
+	out, errOut, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--deploy", "--yes")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	// The binary recipe is surfaced as an advisory (install-only npm).
+	if !strings.Contains(out, "npm install -g tdd-guard") {
+		t.Errorf("tdd-enforced should surface the tdd-guard install advisory:\n%s", out)
+	}
+	// The enforcement hook is registered (command: tdd-guard) on PreToolUse.
+	root := map[string]any{}
+	_ = json.Unmarshal(mustRead(t, filepath.Join(home, ".claude", "settings.json")), &root)
+	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
+	found := false
+	for _, g := range pre {
+		if g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("tdd-enforced should register the tdd-guard PreToolUse hook: %v", pre)
+	}
+	// The core spine still came along (the tdd skill is present).
+	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "tdd", "SKILL.md")); err != nil {
+		t.Errorf("tdd-enforced should include the core tdd skill: %v", err)
 	}
 }
 

@@ -1,0 +1,10 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: tdd-enforced
+summary: "core, plus HARD test-first enforcement: the tdd-guard PreToolUse hook blocks every Write/Edit/MultiEdit that lacks a failing test to justify it (backed by the tdd-guard npm CLI). This is the strict, opinionated gate — opt-in because it intercepts ALL edits and can't tell implementation code from a YAML/docs change. core already TEACHES test-first via the tdd skill; this profile makes it mechanical. Requires the tdd-guard binary on PATH (the recipe surfaces `npm install -g tdd-guard` as an advisory; install it for the hook to function)."
+extends: core
+layers:
+  eval:
+    - tdd-guard                            # the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
+    - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)

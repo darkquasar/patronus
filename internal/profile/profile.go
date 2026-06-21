@@ -94,7 +94,7 @@ func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 	}
 
 	// `without` SUBTRACTS base names from the composed layers — the relaxation-
-	// overlay operator (e.g. no-tdd-guard = core without the enforcement hook),
+	// overlay operator (e.g. safe-git = core plus git-guardrails; the inverse subtracts),
 	// symmetric to the extends-append above. It matches on the BASE name, so it
 	// strips a bare name and all its `@tool` flavours alike. An entry that matches
 	// nothing is a no-op warning, so an overlay stays robust as `core` evolves.

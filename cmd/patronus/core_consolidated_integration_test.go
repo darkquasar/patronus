@@ -20,8 +20,15 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	stubBinary(t, home, "gitleaks")
 	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
+	// safe-git gives core + git-guardrails; add the tdd-guard enforcement items on
+	// top so all four PreToolUse gates (tdd-guard + block-secrets + gitleaks-guard +
+	// git-guardrails) coexist — the full strict set is now split across two opt-in
+	// profiles (tdd-enforced + safe-git), so the consolidated test composes both.
 	if _, e, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install: %v\n%s", err, e)
+		t.Fatalf("install safe-git: %v\n%s", err, e)
+	}
+	if _, e, err := runInstall(t, "tdd-guard", "tdd-guard-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install tdd-guard enforcement: %v\n%s", err, e)
 	}
 
 	settings := filepath.Join(home, ".claude", "settings.json")
@@ -30,10 +37,10 @@ func TestStrictCoreConsolidated(t *testing.T) {
 		t.Fatalf("settings.json: %v", err)
 	}
 
-	// The strict gates + the re-grounding hooks all coexist in ONE settings.json:
-	// 4 PreToolUse hooks (tdd + 3 guardrails, via safe-git which adds git-guardrails to core), 2 SessionStart hooks (the dispatch
-	// keystone activation + the work-state reground), 1 UserPromptSubmit hook (the
-	// per-turn skill heartbeat), and the statusLine setting.
+	// All four PreToolUse gates coexist in ONE settings.json array (the compose-fold):
+	// tdd-guard + block-secrets + gitleaks-guard + git-guardrails. Plus 2 SessionStart
+	// hooks (dispatch keystone activation + work-state reground), 1 UserPromptSubmit
+	// (the per-turn skill heartbeat), and the statusLine setting.
 	if pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any); len(pre) != 4 {
 		t.Errorf("want 4 PreToolUse hooks, got %d", len(pre))
 	}
@@ -66,7 +73,9 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	}
 	wd, _ := os.Getwd()
 	lock := string(mustRead(t, filepath.Join(wd, "patronus.lock")))
-	for _, want := range []string{"tdd-guard-hook", "git-guardrails", "block-secrets", "gitleaks-guard", "skills-dispatch-activate", "ccusage-statusline"} {
+	// safe-git's lock pins core's strict items + git-guardrails (tdd-guard-hook is an
+	// opt-in via tdd-enforced, not in safe-git, so it's not in this lock).
+	for _, want := range []string{"git-guardrails", "block-secrets", "gitleaks-guard", "skills-dispatch-activate", "ccusage-statusline"} {
 		if !strings.Contains(lock, want) {
 			t.Errorf("lock missing strict-gate item %q:\n%s", want, lock)
 		}

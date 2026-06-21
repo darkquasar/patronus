@@ -2,12 +2,10 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, and test-first ENFORCED via the tdd-guard hook. Strict by design; relax with the no-tdd-guard / quiet overlays."
-# core is deliberately strict (not just guiding). It is built up across Phase 7:
-# the L1+L2+L4 spine + L5 tools + L8 eval (tdd-guard ENFORCED + verification) ship
-# here; L6 sandbox, L7 obs, L9 guardrails, and L10 orchestration are wired in the
-# remaining P7.5–P7.6 sub-phases (see todo). It is NOT marked status:stub — every
-# item listed below exists in-repo today and installs.
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `ai-memory` (ambient memory), `quiet` (no diagrams)."
+# core teaches good defaults; it does not mechanically enforce them (that's what the
+# opt-in overlays are for). It is NOT marked status:stub — every item listed below
+# exists in-repo today and installs.
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
@@ -45,9 +43,11 @@ layers:
   # recipe. The work-state-reground hook below stays — its ai-memory cue is
   # conditional and simply no-ops when no memory layer is wired.
   eval:
-    - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
-    - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)
-    - verification-before-completion       # evidence-before-claims discipline (pairs with the enforcement)
+    # Test-first is TAUGHT here (the `tdd` skill above), not mechanically enforced.
+    # The hard PreToolUse gate (tdd-guard recipe + tdd-guard-hook) is opt-in via the
+    # `tdd-enforced` profile — it blocks every edit lacking a failing test, which is
+    # too aggressive for the default (it can't tell impl code from a YAML/docs edit).
+    - verification-before-completion       # evidence-before-claims discipline
     - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
     - receiving-code-review                # act on review feedback with technical rigor, not performative agreement
   guardrails:
