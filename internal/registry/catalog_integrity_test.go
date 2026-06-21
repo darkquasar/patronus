@@ -82,6 +82,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"ccusage-statusline":        {manifest.TypeSetting, manifest.RoleObservability},
 		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
+		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
+		"beads":                       {manifest.TypeInstruction, manifest.RoleOrchestration},
+		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
+		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
@@ -119,6 +123,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"tdd-guard-hook", "verification-before-completion",
 		"git-guardrails",            // block-secrets + gitleaks-guard are authored (no attribution)
 		"superpowers-session-start", // ccusage-statusline is authored (no attribution)
+		// P7.6 orchestration: beads (authored-but-attributed instruction) + 2 vendored superpowers skills.
+		"beads", "subagent-driven-development", "dispatching-parallel-agents",
 	} {
 		var found *manifest.Artifact
 		for i := range cat.Artifacts {
@@ -164,6 +170,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireModeMcp},
 		// P7.5.6 L8 eval: promptfoo CI gate (install-only npm) — the eval profile.
 		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
+		// P7.6 L10 orchestration: the bd (Beads) work-graph binary — install-only github-release; the `beads` instruction (requires: [bd]) wires it.
+		"bd": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))

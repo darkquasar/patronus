@@ -256,3 +256,74 @@ func hasWarning(ws []string, sub string) bool {
 	}
 	return false
 }
+
+// TestResolvePullsRequiresClosure proves a profile that lists only the dependent
+// item (an instruction) also resolves the item it `requires` (a binary recipe),
+// ordered dependency-before-dependent — the P7.6 beads/bd pairing. The required
+// recipe is pulled even though no profile slot names it.
+func TestResolvePullsRequiresClosure(t *testing.T) {
+	cat := &registry.Catalog{
+		Artifacts: []registry.ArtifactEntry{{
+			Manifest: &manifest.Artifact{
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "beads", Requires: []string{"bd"}},
+				Type: manifest.TypeInstruction,
+			},
+		}},
+		Recipes: []registry.RecipeEntry{{
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "bd", Role: "orchestration"}},
+		}},
+		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
+			Meta:   manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
+			Layers: manifest.ProfileLayers{Orchestration: manifest.StringList{"beads"}},
+		}}},
+	}
+	r, err := Resolve(cat, "p", "all")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := r.Names()
+	if len(names) != 2 || names[0] != "bd" || names[1] != "beads" {
+		t.Fatalf("resolved %v, want [bd beads] (dep before dependent)", names)
+	}
+	// bd inherits the dependent's slot for provenance and is classified as a recipe.
+	for _, it := range r.Items {
+		if it.Name == "bd" {
+			if it.Family != manifest.FamilyRecipe {
+				t.Errorf("bd family = %v, want recipe", it.Family)
+			}
+			if it.Slot != "orchestration" {
+				t.Errorf("bd slot = %q, want orchestration (inherited from dependent)", it.Slot)
+			}
+		}
+	}
+}
+
+// TestResolveWithoutBlocksRequiresPullback proves `without` wins over the closure:
+// subtracting the required item keeps it out even though a listed item requires it.
+func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
+	cat := &registry.Catalog{
+		Artifacts: []registry.ArtifactEntry{{
+			Manifest: &manifest.Artifact{
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "beads", Requires: []string{"bd"}},
+				Type: manifest.TypeInstruction,
+			},
+		}},
+		Recipes: []registry.RecipeEntry{{
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "bd", Role: "orchestration"}},
+		}},
+		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
+			Meta:    manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
+			Without: manifest.StringList{"bd"},
+			Layers:  manifest.ProfileLayers{Orchestration: manifest.StringList{"beads"}},
+		}}},
+	}
+	r, err := Resolve(cat, "p", "all")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range r.Items {
+		if it.Name == "bd" {
+			t.Fatalf("bd resolved despite `without: [bd]`: %v", r.Names())
+		}
+	}
+}

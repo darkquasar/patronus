@@ -8,6 +8,7 @@ version: 1.0.0
 targets: [claude, codex, opencode]
 defaults:
   scope: project
+requires: [tdd-guard]                      # the binary this hook invokes — pulled into the install/lock closure (was an implicit, unenforced pairing)
 hook:
   event: PreToolUse
   matcher: Write|Edit|MultiEdit|TodoWrite

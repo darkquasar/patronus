@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/requires"
 )
 
 // LocalRegistry reads the catalog directly from a Patronus repo's on-disk
@@ -75,6 +76,9 @@ func (r *LocalRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 	})
 
 	if err := checkNameUniqueness(cat); err != nil {
+		return nil, err
+	}
+	if err := requires.Validate(cat.ItemNames(), cat.Deps); err != nil {
 		return nil, err
 	}
 	return cat, nil

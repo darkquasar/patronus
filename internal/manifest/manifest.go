@@ -95,13 +95,24 @@ const (
 // Meta is the shared identity header every installable embeds — the one and only
 // definition of Family and Role. Artifacts add a declared Type; recipes/profiles
 // carry no shape field (it is computed).
+//
+// Requires is a directed "needs" edge to other catalog items by name: installing
+// or locking this item also pulls in everything it requires (its transitive
+// closure). It is a per-item fact — type-agnostic, declared on the shared header
+// so ANY installable can be either end of an edge (a hook requires its binary
+// recipe; an instruction requires the binary it documents). Absent ⇒ no deps.
+// Distinct from a profile (which GROUPS by author choice): a `requires` edge
+// travels with the item no matter how it is selected — by profile, by a direct
+// `install <name>`, or as another item's dependency. See the requires package for
+// closure expansion and graph validation (dangling/cycle).
 type Meta struct {
-	APIVersion  string `yaml:"apiVersion" json:"apiVersion"`
-	Family      Family `yaml:"family" json:"family"`
-	Role        Role   `yaml:"role,omitempty" json:"role,omitempty"`
-	Name        string `yaml:"name" json:"name"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
-	Version     string `yaml:"version,omitempty" json:"version,omitempty"`
+	APIVersion  string   `yaml:"apiVersion" json:"apiVersion"`
+	Family      Family   `yaml:"family" json:"family"`
+	Role        Role     `yaml:"role,omitempty" json:"role,omitempty"`
+	Name        string   `yaml:"name" json:"name"`
+	Description string   `yaml:"description,omitempty" json:"description,omitempty"`
+	Version     string   `yaml:"version,omitempty" json:"version,omitempty"`
+	Requires    []string `yaml:"requires,omitempty" json:"requires,omitempty"`
 }
 
 // Installable is implemented by all three installable families (Artifact,

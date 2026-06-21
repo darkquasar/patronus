@@ -45,7 +45,10 @@ layers:
   observability:
     - ccusage                              # install the ccusage CLI (npm, install-only) — on-demand token-usage/cost reports
     - ccusage-statusline@claude            # Claude-only statusline setting (token usage in the status bar); @claude → no-op on codex/opencode
+  orchestration:
+    - beads                                # work-graph discipline (AGENTS.md APPEND) — `requires: [bd]`, so the bd binary recipe is pulled into the install/lock closure automatically
+    - subagent-driven-development          # execute a plan task-by-task with fresh implementer+reviewer subagents
+    - dispatching-parallel-agents          # fan out independent problem domains to concurrent subagents
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
   - "L8 eval: promptfoo CI gate (P7.5.6)."
-  - "L10 orchestration: Beads recipe + vendored orchestration skills (P7.6)."

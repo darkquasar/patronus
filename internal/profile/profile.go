@@ -18,6 +18,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
+	"github.com/darkquasar/patronus/internal/requires"
 	"github.com/darkquasar/patronus/internal/source"
 )
 
@@ -121,28 +122,50 @@ func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 		}
 		seen[base] = true
 
-		ref, err := source.Parse(base)
-		if err != nil {
-			out.Warnings = append(out.Warnings,
-				fmt.Sprintf("profile %q slot %q: %v — skipped", name, e.slot, err))
-			continue
+		// Pull in the `requires` closure of this slot item BEFORE the item itself,
+		// so a hook's binary recipe (or an instruction's binary) is resolved ahead
+		// of the dependent. A pulled dep inherits the dependent's slot for
+		// provenance and is itself deduped via `seen`. The closure is catalog-pure;
+		// `without` still wins (an explicitly-subtracted item is never pulled back).
+		for _, dep := range requires.Expand([]string{base}, cat.Deps) {
+			if dep == base || seen[dep] || excluded[dep] {
+				continue
+			}
+			seen[dep] = true
+			if it, ok := resolveItem(cat, dep, e.slot); ok {
+				out.Items = append(out.Items, it)
+			}
 		}
 
-		fam := classify(cat, ref)
-		if fam == familyUnknown {
+		if it, ok := resolveItem(cat, base, e.slot); ok {
+			out.Items = append(out.Items, it)
+		} else {
 			out.Warnings = append(out.Warnings,
-				fmt.Sprintf("profile %q slot %q: %q not found in catalog — skipped (not yet sourced?)", name, e.slot, base))
-			continue
+				fmt.Sprintf("profile %q slot %q: %q not resolvable — skipped (not yet sourced?)", name, e.slot, base))
 		}
-
-		out.Items = append(out.Items, ResolvedItem{
-			Name:   base,
-			Slot:   e.slot,
-			Family: fam,
-			Source: ref.LockSource(),
-		})
 	}
 	return out, nil
+}
+
+// resolveItem builds one ResolvedItem for a base name in a slot, or reports
+// !ok when the name does not parse or is absent from the catalog. It is the
+// shared item-construction step used for both directly-listed slot items and
+// items pulled in by a `requires` edge.
+func resolveItem(cat *registry.Catalog, base, slot string) (ResolvedItem, bool) {
+	ref, err := source.Parse(base)
+	if err != nil {
+		return ResolvedItem{}, false
+	}
+	fam := classify(cat, ref)
+	if fam == familyUnknown {
+		return ResolvedItem{}, false
+	}
+	return ResolvedItem{
+		Name:   base,
+		Slot:   slot,
+		Family: fam,
+		Source: ref.LockSource(),
+	}, true
 }
 
 // resolveLayers returns the fully composed layers for a profile, applying
@@ -184,6 +207,7 @@ func mergeLayers(parent, child manifest.ProfileLayers) manifest.ProfileLayers {
 		Observability: appendDedup(parent.Observability, child.Observability),
 		Eval:          appendDedup(parent.Eval, child.Eval),
 		Guardrails:    appendDedup(parent.Guardrails, child.Guardrails),
+		Orchestration: appendDedup(parent.Orchestration, child.Orchestration),
 		Sandbox:       appendDedup(parent.Sandbox, child.Sandbox),
 		Memory:        replaceScalar(parent.Memory, child.Memory),
 	}
@@ -238,6 +262,7 @@ func flattenLayers(l manifest.ProfileLayers) []slotEntry {
 	add("observability", l.Observability)
 	add("eval", l.Eval)
 	add("guardrails", l.Guardrails)
+	add("orchestration", l.Orchestration)
 	return out
 }
 

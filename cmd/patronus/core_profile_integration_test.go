@@ -39,6 +39,7 @@ func TestCoreProfileClaude(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
+	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	if _, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
@@ -117,6 +118,7 @@ func TestCoreProfileFlavoursDivergeForCodexOpencode(t *testing.T) {
 			home := withRemoteEnv(t, f)
 			withFakeRunner(t)
 			stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
+			stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tc.tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install: %v\n%s", err, errOut)
@@ -179,6 +181,7 @@ func TestCoreStrictGate(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
+	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
@@ -260,6 +263,7 @@ func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks") // no-tdd-guard keeps the gitleaks guardrail
+	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	out, errOut, err := runInstall(t, "--profile", "no-tdd-guard", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
@@ -327,6 +331,7 @@ func TestCoreSessionStartAndCcusage(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
@@ -378,6 +383,7 @@ func TestCcusageStatuslineFlavourDiverges(t *testing.T) {
 			home := withRemoteEnv(t, f)
 			withFakeRunner(t)
 			stubBinary(t, home, "gitleaks")
+			stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install: %v\n%s", err, errOut)
@@ -398,6 +404,7 @@ func TestCcusageStatuslineRemoveRoundTrips(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)

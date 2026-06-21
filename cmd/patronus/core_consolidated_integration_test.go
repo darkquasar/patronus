@@ -18,6 +18,7 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)

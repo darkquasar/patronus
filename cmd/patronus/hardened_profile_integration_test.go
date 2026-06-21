@@ -22,6 +22,7 @@ func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
 		home := withRemoteEnv(t, f)
 		withFakeRunner(t)
 		stubBinary(t, home, "gitleaks")
+		stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 		if _, e, err := runInstall(t, "--profile", "hardened", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 			t.Fatalf("install: %v\n%s", err, e)
@@ -45,6 +46,7 @@ func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
 		home := withRemoteEnv(t, f)
 		withFakeRunner(t)
 		stubBinary(t, home, "gitleaks")
+		stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 		if _, e, err := runInstall(t, "--profile", "hardened", "--tool", "codex", "--global", "--deploy", "--yes"); err != nil {
 			t.Fatalf("install: %v\n%s", err, e)
@@ -60,6 +62,7 @@ func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
 		home := withRemoteEnv(t, f)
 		withFakeRunner(t)
 		stubBinary(t, home, "gitleaks")
+		stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 		out, e, err := runInstall(t, "--profile", "hardened", "--tool", "opencode", "--global", "--deploy", "--yes")
 		if err != nil {
@@ -80,6 +83,7 @@ func TestHardIsolationAddsMicrosandbox(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
+	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	out, e, err := runInstall(t, "--profile", "hard-isolation", "--tool", "claude", "--global", "--dry-run", "--verbose")
 	if err != nil {

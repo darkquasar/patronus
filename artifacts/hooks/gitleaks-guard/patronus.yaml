@@ -10,6 +10,7 @@ files: [gitleaks-guard.sh]
 targets: [claude, codex, opencode]
 defaults:
   scope: project
+requires: [gitleaks]                       # the scanner binary this hook pipes the staged diff through — pulled into the install/lock closure (was an implicit, unenforced pairing)
 hook:
   event: PreToolUse
   matcher: Bash

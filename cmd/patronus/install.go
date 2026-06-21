@@ -21,6 +21,7 @@ import (
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
+	"github.com/darkquasar/patronus/internal/requires"
 	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/source"
 	"github.com/darkquasar/patronus/internal/state"
@@ -146,6 +147,19 @@ func newInstallCmd() *cobra.Command {
 					applyLockPins(wd, profileSel, rr.Base(), cat, warnf)
 				}
 			}
+
+			// Expand the `requires` closure: an item that needs another (a hook that
+			// needs its binary recipe, an instruction that needs the binary it
+			// documents) silently pulls that dependency in, dependency-before-dependent.
+			// Pure over the catalog — sourced/unknown names contribute no edges and
+			// pass through. Applies to BOTH the profile path (above) and a direct
+			// `install <name>`, since both converge on `names` here. The profile's own
+			// flavour/without selection has already run; requires works on base names.
+			expanded := requires.Expand(names, cat.Deps)
+			if pulled := requires.Pulled(names, expanded); len(pulled) > 0 {
+				warnf("also installing required item(s): %s", strings.Join(pulled, ", "))
+			}
+			names = expanded
 
 			// A positional name may be a sourced reference (file:, git:, https:, ...).
 			// Resolve any sourced entries into the catalog so they dispatch like an
