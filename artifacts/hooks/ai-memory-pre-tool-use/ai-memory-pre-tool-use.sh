@@ -1,0 +1,206 @@
+#!/bin/sh
+# Patronus-vendored ai-memory lifecycle hook (see NOTICE for attribution).
+# The shared ai-memory _lib.sh helpers are INLINED below (Patronus places one
+# script per hook; there is no shared sibling), followed by the upstream hook body.
+# ---- begin inlined _lib.sh (ai-memory, MIT) ----
+# ai-memory hook helper — find marker file + parse minimal TOML.
+# Sourced by per-agent lifecycle hook scripts. POSIX shell only —
+# no bash-isms, no non-standard deps (no jq, no toml crate). Keep changes
+# byte-trivial because every supported agent (claude-code, codex,
+# cursor, gemini-cli, antigravity-cli, opencode, omp) sources this same file.
+
+# Walk up from "$1" toward $HOME (or /) looking for `.ai-memory.toml`.
+# Prints the absolute path of the first marker found, or nothing.
+# Stops at $HOME to avoid leaking declarations from a shared system
+# user's home into another user's session on multi-user boxes.
+ai_memory_find_marker() {
+    dir="$1"
+    [ -z "$dir" ] && return 0
+    while [ -n "$dir" ] && [ "$dir" != "/" ]; do
+        if [ -f "$dir/.ai-memory.toml" ]; then
+            printf '%s\n' "$dir/.ai-memory.toml"
+            return 0
+        fi
+        if [ -n "${HOME:-}" ] && [ "$dir" = "$HOME" ]; then
+            return 0
+        fi
+        parent=$(dirname "$dir")
+        [ "$parent" = "$dir" ] && return 0
+        dir="$parent"
+    done
+}
+
+# Parse `key = "value"` at the TOML root (no nesting, no arrays, no
+# tables). Returns the first match or nothing. Ignores comments and
+# blank lines by construction (the regex only matches the `key = "..."`
+# shape).
+ai_memory_parse_toml_key() {
+    file="$1"; key="$2"
+    [ -f "$file" ] || return 0
+    sed -n -E "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" \
+        "$file" | head -n 1
+}
+
+# Extract the first cwd-like path from a JSON payload on stdin or in $1.
+# Returns the value or nothing. This is intentionally a tiny shell fallback,
+# not a JSON parser; taking the first match preserves the top-level cwd when
+# tool payloads contain nested `cwd` fields later in the object. Antigravity
+# CLI sends `workspacePaths: ["/repo", ...]` instead of `cwd`.
+ai_memory_extract_cwd() {
+    payload="${1:-$(cat)}"
+    rest=${payload#*\"cwd\"}
+    if [ "$rest" != "$payload" ]; then
+        printf '%s' "$rest" \
+            | sed -n -E 's/^[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' \
+            | head -n 1
+        return 0
+    fi
+    rest=${payload#*\"workspacePaths\"}
+    [ "$rest" = "$payload" ] && return 0
+    printf '%s' "$rest" \
+        | sed -n -E 's/^[[:space:]]*:[[:space:]]*\[[[:space:]]*"([^"]*)".*/\1/p' \
+        | head -n 1
+}
+
+# URL-encode the minimal set of characters that have meaning in a query
+# string. Sufficient for the schema's value regex (`^[a-z0-9][a-z0-9._-]*$`)
+# plus a defensive pass for anything a hand-edited marker might contain.
+ai_memory_url_encode() {
+    printf '%s' "$1" \
+        | sed 's/%/%25/g; s/+/%2B/g; s/&/%26/g; s/=/%3D/g; s/?/%3F/g; s/#/%23/g; s/ /%20/g'
+}
+
+# Resolve the basename of the MAIN git repository root for "$1" (a cwd),
+# following the worktree commondir pointer so every linked worktree of a
+# repo collapses to one stable name. Mirrors the server's
+# `discover_main_repo_root` (libgit2) but runs host-side, where the
+# checkout is always visible — the server cannot do this when it runs in a
+# container that has no access to the host filesystem (its own discovery
+# fails and falls back to basename(cwd), so out-of-tree worktrees each
+# became their own project). Prints the name, or nothing when cwd is not
+# inside a git work tree (caller keeps its basename(cwd) fallback).
+ai_memory_repo_root_project() {
+    cwd="$1"
+    [ -z "$cwd" ] && return 0
+    command -v git >/dev/null 2>&1 || return 0
+    # Only touch git when cwd is genuinely inside a working tree. Outside any
+    # repo, or inside a bare repo, `--is-inside-work-tree` is not "true" and
+    # we stay silent rather than guess.
+    [ "$(git -C "$cwd" rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || return 0
+    # `--git-common-dir` is the shared `.git` dir: for a worktree it points
+    # at the MAIN repo's `.git`, so its parent is always the main repo root.
+    common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 0
+    [ -n "$common" ] || return 0
+    root=$(dirname "$common")
+    case "$root" in
+        "" | /) return 0 ;;
+    esac
+    basename "$root"
+}
+
+# Build a query-string suffix from "$1" plus any marker file walked up from
+# it. Returns the suffix with the leading `&`, or nothing when cwd is absent.
+# `cwd` is always included so `GET /handoff` resolves the same basename project
+# as the prior hook events even when no marker file exists.
+ai_memory_marker_qs() {
+    cwd="$1"
+    [ -z "$cwd" ] && return 0
+    qs="&cwd=$(ai_memory_url_encode "$cwd")"
+    marker=$(ai_memory_find_marker "$cwd")
+    [ -z "$marker" ] && { printf '%s' "$qs"; return 0; }
+    ws=$(ai_memory_parse_toml_key "$marker" workspace)
+    pr=$(ai_memory_parse_toml_key "$marker" project)
+    st=$(ai_memory_parse_toml_key "$marker" project_strategy)
+    # The repo-root strategy must be resolved here, on the host: a containerized
+    # server cannot see this checkout, so its own libgit2 discovery fails and
+    # falls back to basename(cwd). When the marker selects repo-root and pins no
+    # explicit project, derive the main repo name now and send it as an explicit
+    # `project` override. `project_strategy` is still forwarded so native servers
+    # keep their existing resolution path.
+    if [ -z "$pr" ]; then
+        case "$st" in
+            repo-root | repo_root) pr=$(ai_memory_repo_root_project "$cwd") ;;
+        esac
+    fi
+    [ -n "$ws" ] && qs="${qs}&workspace=$(ai_memory_url_encode "$ws")"
+    [ -n "$pr" ] && qs="${qs}&project=$(ai_memory_url_encode "$pr")"
+    [ -n "$st" ] && qs="${qs}&project_strategy=$(ai_memory_url_encode "$st")"
+    printf '%s' "$qs"
+}
+
+# POST stdin to "$1" as JSON, fire-and-forget. Adds an
+# `Authorization: Bearer` header when `AI_MEMORY_AUTH_TOKEN` is set.
+# The 0.5s timeout matches the project-wide hook latency budget
+# (never block the agent), and the trailing `|| true` makes the
+# function safe to call from `set -e` scripts.
+ai_memory_post_hook() {
+    if [ -n "${AI_MEMORY_AUTH_TOKEN:-}" ]; then
+        curl -s --max-time 0.5 -X POST "$1" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $AI_MEMORY_AUTH_TOKEN" \
+            --data-binary @-
+    else
+        curl -s --max-time 0.5 -X POST "$1" \
+            -H "Content-Type: application/json" \
+            --data-binary @-
+    fi
+}
+
+# GET "$1" with the same auth-header rules as `ai_memory_post_hook`.
+# Used by `session-start.sh` to pull the cross-agent handoff before
+# the resuming agent's first prompt. 1s budget — slightly more
+# generous than POST because the result is *synchronously* fed to
+# stdout (and prepended to the agent's context), so we want to avoid
+# truncating a handoff that was almost ready.
+ai_memory_get_handoff() {
+    if [ -n "${AI_MEMORY_AUTH_TOKEN:-}" ]; then
+        curl -s --max-time 1.0 "$1" \
+            -H "Authorization: Bearer $AI_MEMORY_AUTH_TOKEN"
+    else
+        curl -s --max-time 1.0 "$1"
+    fi
+}
+
+# Encode stdin as a JSON string (with surrounding quotes). Used by hooks
+# whose stdout contract is JSON rather than raw context text: Antigravity's
+# PreInvocation hook and Claude Code's session-start hook (which wraps the
+# handoff in hookSpecificOutput.additionalContext).
+ai_memory_json_string() {
+    awk '
+        BEGIN { printf "\"" }
+        {
+            gsub(/\\/, "\\\\")
+            gsub(/"/, "\\\"")
+            gsub(/\t/, "\\t")
+            gsub(/\r/, "\\r")
+            printf "%s%s", sep, $0
+            sep = "\\n"
+        }
+        END { printf "\"" }
+    '
+}
+# ---- end inlined _lib.sh ----
+
+# Claude Code pre-tool-use hook.
+# Forwards the event JSON to the ai-memory server, fire-and-forget.
+# Walks up from the payload's cwd for a .ai-memory.toml marker file;
+# if found, appends marker query params to the URL so the server
+# applies the declared workspace/project/strategy instead of
+# bucketing by basename(cwd) under the default workspace.
+# At runtime (after `install-hooks --apply`) `_lib.sh` is staged
+# alongside this script. From the source tree it lives one dir up.
+
+SERVER="${AI_MEMORY_HOOK_URL:-http://127.0.0.1:49374}"
+PAYLOAD=$(cat)
+CWD=$(ai_memory_extract_cwd "$PAYLOAD")
+QS=$(ai_memory_marker_qs "$CWD")
+
+printf '%s' "$PAYLOAD" \
+    | ai_memory_post_hook "$SERVER/hook?event=pre-tool-use&agent=claude-code${QS}" >/dev/null 2>&1 || true
+# Acknowledge to Claude Code with an empty JSON object. This hook only
+# POSTs (fire-and-forget) and injects no context; without "{" on stdout
+# Claude Code treats the (empty) output as plain text and logs
+# "Hook output does not start with {, treating as plain text" on every
+# tool call. Emitting {} keeps the debug log clean.
+printf '{}\n'
+exit 0
