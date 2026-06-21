@@ -349,15 +349,23 @@ func TestCoreSessionStartAndCcusage(t *testing.T) {
 		t.Fatalf("settings.json unreadable: %v", err)
 	}
 
-	// SessionStart hook registered + its script placed and executable.
+	// Two SessionStart hooks now coexist: the dispatch-keystone activation and the
+	// work-state reground. Find the dispatch-activate element by its placed script
+	// (order across the group is not guaranteed), and assert it's placed+executable.
 	ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any)
-	if len(ss) != 1 {
-		t.Fatalf("want 1 SessionStart group, got %d: %v", len(ss), root["hooks"])
+	if len(ss) != 2 {
+		t.Fatalf("want 2 SessionStart groups, got %d: %v", len(ss), root["hooks"])
 	}
 	scriptPath := filepath.Join(home, ".claude", "hooks", "skills-dispatch-activate.sh")
-	cmd := ss[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
-	if cmd != scriptPath {
-		t.Errorf("SessionStart command = %v, want the placed script %q", cmd, scriptPath)
+	foundDispatch := false
+	for _, g := range ss {
+		cmd := g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
+		if cmd == scriptPath {
+			foundDispatch = true
+		}
+	}
+	if !foundDispatch {
+		t.Errorf("no SessionStart group invokes the placed dispatch script %q: %v", scriptPath, ss)
 	}
 	info, err := os.Stat(scriptPath)
 	if err != nil {

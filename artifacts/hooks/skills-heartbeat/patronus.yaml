@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: capability
+name: skills-heartbeat
+description: "Per-turn re-grounding — a UserPromptSubmit hook that re-asserts the skill-dispatch rule on every human turn (the natural stopping point), so the discipline stays at the recent, high-attention end of a long context instead of decaying after the one-time SessionStart injection. Injects the 1%-rule plus the current installed-skill name list. Claude-only today (Codex/OpenCode have no wired hook surface — see the adapter TODO); wire it flavoured as skills-heartbeat@claude."
+version: 1.0.0
+entry: ""
+files: [skills-heartbeat.sh]
+targets: [claude]
+defaults:
+  scope: global
+hook:
+  event: UserPromptSubmit
+  command: "{script}"
+  script: skills-heartbeat.sh

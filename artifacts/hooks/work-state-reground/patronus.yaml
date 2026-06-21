@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: capability
+name: work-state-reground
+description: "Resume/post-compaction re-grounding — a SessionStart hook (startup|clear|compact) that, at the moments the agent has lost the thread, tells it to reconcile with EXTERNALIZED state before continuing: the Beads work-graph and ai-memory. Conditional — it only names a source that is actually present (a `.beads/` db / BEADS_DB for Beads; the installed ai-memory skill/binary for memory), so it never points at a tool that isn't wired. Pairs with skills-dispatch-activate (which re-injects the skill keystone on the same event). Claude-only today; wire it flavoured as work-state-reground@claude."
+version: 1.0.0
+entry: ""
+files: [reground-work-state.sh]
+targets: [claude]
+defaults:
+  scope: global
+hook:
+  event: SessionStart
+  matcher: startup|clear|compact
+  command: "{script}"
+  script: reground-work-state.sh

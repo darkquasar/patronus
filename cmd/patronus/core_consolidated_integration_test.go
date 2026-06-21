@@ -30,13 +30,18 @@ func TestStrictCoreConsolidated(t *testing.T) {
 		t.Fatalf("settings.json: %v", err)
 	}
 
-	// The strict gates all coexist in ONE settings.json: 4 PreToolUse hooks (tdd +
-	// 3 guardrails), 1 SessionStart hook, the statusLine setting.
+	// The strict gates + the re-grounding hooks all coexist in ONE settings.json:
+	// 4 PreToolUse hooks (tdd + 3 guardrails), 2 SessionStart hooks (the dispatch
+	// keystone activation + the work-state reground), 1 UserPromptSubmit hook (the
+	// per-turn skill heartbeat), and the statusLine setting.
 	if pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any); len(pre) != 4 {
 		t.Errorf("want 4 PreToolUse hooks, got %d", len(pre))
 	}
-	if ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any); len(ss) != 1 {
-		t.Errorf("want 1 SessionStart hook, got %d", len(ss))
+	if ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any); len(ss) != 2 {
+		t.Errorf("want 2 SessionStart hooks, got %d", len(ss))
+	}
+	if ups, _ := root["hooks"].(map[string]any)["UserPromptSubmit"].([]any); len(ups) != 1 {
+		t.Errorf("want 1 UserPromptSubmit hook, got %d", len(ups))
 	}
 	if _, ok := root["statusLine"].(map[string]any); !ok {
 		t.Errorf("statusLine setting missing: %v", root["statusLine"])

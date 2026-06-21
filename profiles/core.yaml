@@ -16,6 +16,8 @@ layers:
   capabilities:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
+    - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
+    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Beads + ai-memory (externalized state); Claude-only, conditional on what's wired
     - writing-plans                        # plan a multi-step task before touching code
     - executing-plans                      # execute a plan task-by-task with checkpoints
     - grilling                             # interrogate a plan before building
