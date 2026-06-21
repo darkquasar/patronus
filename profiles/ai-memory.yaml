@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: ai-memory
+summary: "Full ai-memory integration (opt-in): core + the ai-memory lifecycle hooks that AUTOMATICALLY capture every session/prompt/tool/compaction event into the local ai-memory store and auto-inject the prior cross-agent handoff at session start. This is ambient, always-on memory — unlike core's default which only wires the ai-memory recipe (MCP server, queried on demand). Claude-only; needs the ai-memory daemon running (the memory-ai-memory recipe delivers it)."
+extends: core
+# The 6 hooks are Claude-only (ai-memory's hook surface is per-agent; only Claude
+# is wired here) and each `requires: [memory-ai-memory]`, so the recipe is pulled
+# into the install/lock closure automatically. They fire on every action and only
+# do anything when the ai-memory server (127.0.0.1:49374) is up — hence opt-in,
+# not part of the lean default.
+layers:
+  capabilities:
+    - ai-memory-session-start@claude       # READ: auto-inject the pending cross-agent handoff at session start/resume
+    - ai-memory-user-prompt@claude         # WRITE: record each user prompt
+    - ai-memory-pre-tool-use@claude        # WRITE: record each tool invocation (before)
+    - ai-memory-post-tool-use@claude       # WRITE: record each tool result (after)
+    - ai-memory-pre-compact@claude         # WRITE: record the pre-compaction event
+    - ai-memory-stop@claude                # WRITE: record turn-end

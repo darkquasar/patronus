@@ -1,0 +1,23 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: memory                              # L3 — ai-memory lifecycle integration
+name: ai-memory-pre-tool-use
+description: "Records each tool invocation (before) into ai-memory (fire-and-forget). Part of the ai-memory lifecycle hook set; forwards the event to the local ai-memory server (127.0.0.1:49374). requires: [memory-ai-memory] (the recipe that delivers + runs the server)."
+version: 1.0.0
+entry: ""
+files: [ai-memory-pre-tool-use.sh]
+targets: [claude]
+defaults:
+  scope: global
+requires: [memory-ai-memory]              # the recipe whose server these hooks talk to
+hook:
+  event: PreToolUse
+  command: "{script}"
+  script: ai-memory-pre-tool-use.sh
+attribution:
+  upstream: github.com/akitaonrails/ai-memory
+  license: MIT
+  copyright: "Copyright (c) Rodrigo Franco (akitaonrails)"
+  commit: 5d649bd
+  note: "Vendored from ai-memory's hooks/claude-code/pre-tool-use.sh + the shared hooks/_lib.sh (inlined into the script, since Patronus places one script per hook). Audited: POSTs the hook event to the LOCAL ai-memory server only (127.0.0.1:49374, 0.5-1s timeout, fire-and-forget); no external network, no destructive ops. {tool} is fixed to claude-code in the URL."

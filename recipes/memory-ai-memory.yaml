@@ -28,8 +28,12 @@ scope:
 wire:
   mode: self
   run:
-    - "ai-memory install-mcp   --client {tool} --apply"
-    - "ai-memory install-hooks --agent  {tool} --apply"
+    # Only the MCP server wiring is surfaced here. The lifecycle hooks that
+    # ai-memory's `install-hooks` would register are instead shipped as Patronus
+    # `ai-memory-*` hook artifacts (each requires: [memory-ai-memory]) — tracked,
+    # removable, and wired by the opt-in `ai-memory` profile — so we deliberately
+    # do NOT surface `install-hooks` (running it would add untracked duplicates).
+    - "ai-memory install-mcp --client {tool} --apply"
   tools: [claude, codex, opencode]
 
 # Optional durable bootstrap facts pre-loaded into the store at install (L1->L3 bridge).
