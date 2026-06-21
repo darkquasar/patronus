@@ -6,8 +6,14 @@ next. Prefer it over keeping the plan only in conversation — `bd` survives acr
 sessions, context compaction, and hand-offs between agents, and it lives in the
 repo so the work-graph travels with the code.
 
-The `bd` binary is installed by Patronus; if `bd` is not on `PATH`, fall back to
-plain in-context tracking and note that `bd` is unavailable rather than failing.
+**Finding the binary.** Patronus installs `bd` to `~/.patronus/bin/bd`. That
+directory may not be on your `PATH`, so a bare `bd` can fail with "command not
+found". Resolve it once at the start of a session: if `command -v bd` succeeds,
+use `bd` directly; otherwise use the full path `~/.patronus/bin/bd` (or, for
+convenience, prepend `export PATH="$HOME/.patronus/bin:$PATH"`). The `bd …`
+examples below mean "the resolved bd". If the binary is at neither location, fall
+back to plain in-context tracking and note that `bd` is unavailable rather than
+failing.
 
 ## When to use it
 

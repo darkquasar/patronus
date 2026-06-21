@@ -4,7 +4,7 @@ type: instruction
 role: orchestration                        # L10 — teaches the agent to use bd as its cross-session work-graph
 name: beads
 description: "Work-graph discipline: drive Beads (`bd`) as the durable, git-native task graph across sessions — capture work as issues with dependencies, pull the ready set, and close as you go instead of relying on in-context TODOs. Appended into CLAUDE.md/AGENTS.md. Requires the `bd` binary (delivered by the sibling `bd` recipe)."
-version: 1.0.0
+version: 1.0.1
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:
