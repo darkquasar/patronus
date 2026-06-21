@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: recipe
+name: sandbox-runtime
+role: sandbox                              # L6 — execution safety (the OpenCode sandbox engine)
+summary: "Installs Anthropic's sandbox-runtime (`srt`) — a process wrapper using the same OS primitives (Seatbelt on macOS, bubblewrap on Linux) Claude/Codex sandbox with natively. Install-only: run commands under `srt` to sandbox them. For OpenCode, which has no native sandbox; wiring it for Claude/Codex would just nest their own sandbox."
+upstream: github.com/anthropic-experimental/sandbox-runtime
+license: Apache-2.0
+
+# Install-only: deliver the srt wrapper; there is no settings switch to flip (it
+# is invoked as `srt <command>`). Patronus surfaces the npm install as an advisory.
+# Pinned reference: anthropic-experimental/sandbox-runtime @12a3cc1.
+deliver:
+  source: npm
+  ref: "@anthropic-ai/sandbox-runtime"
+  binary: srt
+# no wire: — installing the package IS the whole job (Shape: install-only)

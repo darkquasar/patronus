@@ -1,0 +1,43 @@
+This artifact vendors the "block-dangerous-git.sh" hook script from
+mattpocock/skills (the git-guardrails-claude-code skill).
+
+Vendored file (upstream path):
+  - skills/misc/git-guardrails-claude-code/scripts/block-dangerous-git.sh
+
+The script is vendored verbatim and was audited before inclusion: it reads the
+tool command from stdin (via jq), greps it against a literal list of dangerous
+git patterns (push, reset --hard, clean -f/-fd, branch -D, checkout/restore .,
+push --force), and exits 2 to block on a match. It performs no network access,
+no eval, and no file writes.
+
+Patronus places this script in the agent's hook-script dir and registers the
+upstream's PreToolUse Bash hook to invoke it. The surrounding skill prose
+(setup instructions) is not vendored — only the script + the hook registration.
+
+Upstream: https://github.com/mattpocock/skills
+Commit:   6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+License:  MIT
+
+----------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2026 Matt Pocock
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

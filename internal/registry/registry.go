@@ -47,3 +47,37 @@ type ProfileEntry struct {
 	Manifest *manifest.Profile `json:"manifest"`
 	Source   Source            `json:"source"`
 }
+
+// ItemNames returns every installable item's name (artifacts + recipes). Profiles
+// are excluded: they are not `requires` targets (grouping is their job, not a
+// dependency edge). Order is artifacts-then-recipes, each already sorted by the
+// catalog loader.
+func (c *Catalog) ItemNames() []string {
+	out := make([]string, 0, len(c.Artifacts)+len(c.Recipes))
+	for i := range c.Artifacts {
+		out = append(out, c.Artifacts[i].Manifest.Name)
+	}
+	for i := range c.Recipes {
+		out = append(out, c.Recipes[i].Manifest.Name)
+	}
+	return out
+}
+
+// Deps adapts the catalog to the requires.Deps lookup: it reports an item's
+// direct `requires` edges and whether the name is a known artifact or recipe.
+// Profiles are intentionally not lookupable — they cannot be a requires target
+// (an unknown name there is a dangling edge, which Validate rejects). This is the
+// one seam the requires package needs over a catalog.
+func (c *Catalog) Deps(name string) ([]string, bool) {
+	for i := range c.Artifacts {
+		if c.Artifacts[i].Manifest.Name == name {
+			return c.Artifacts[i].Manifest.Requires, true
+		}
+	}
+	for i := range c.Recipes {
+		if c.Recipes[i].Manifest.Name == name {
+			return c.Recipes[i].Manifest.Requires, true
+		}
+	}
+	return nil, false
+}

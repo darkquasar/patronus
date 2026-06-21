@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: brainstorming
+description: "Pre-implementation discipline — before any creative work (a feature, a component, new functionality, a behavior change), explore user intent, requirements, and design first. Ships an optional local visual-companion server (a 127.0.0.1 web UI) for sketching ideas with your human partner."
+version: 1.0.0
+entry: SKILL.md
+files: [spec-document-reviewer-prompt.md, visual-companion.md, scripts]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream `brainstorming` skill (skills/brainstorming/), including the spec-reviewer prompt, visual-companion.md, and the scripts/ visual-companion server (server.cjs + start/stop-server.sh + helper.js + frame-template.html). The scripts were AUDITED before shipping: the server binds 127.0.0.1 by default, runs under umask 077 with per-session tokens, verifies the PID before signalling on shutdown, and makes no outbound network calls — it is a local, opt-in visual aid the user explicitly approves before launch. This is Patronus's first skill that ships a background local service; it is agent-launched on demand, never at install time."

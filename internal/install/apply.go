@@ -130,7 +130,11 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 			return res, fmt.Errorf("install: unknown action %q for %s", d.Action, d.Path)
 		}
 
-		if err := WriteFileAtomic(d.Path, d.After, 0o644); err != nil {
+		perm := fs.FileMode(0o644)
+		if d.Mode != 0 {
+			perm = d.Mode // e.g. 0o755 for an executable hook script
+		}
+		if err := WriteFileAtomic(d.Path, d.After, perm); err != nil {
 			res.Failed = &d
 			return res, fmt.Errorf("install: write %s: %w", d.Path, err)
 		}

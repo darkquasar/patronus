@@ -1,0 +1,23 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: git-guardrails
+description: "Blocks destructive git commands (push, reset --hard, clean -f, branch -D, checkout/restore .) before the agent runs them — a PreToolUse Bash hook backed by a small bundled script. Stops accidental history/working-tree loss; it is a guardrail, not a security boundary (the agent could still craft an unmatched variant)."
+version: 1.0.0
+entry: ""
+files: [block-dangerous-git.sh]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+hook:
+  event: PreToolUse
+  matcher: Bash
+  command: "{script}"
+  script: block-dangerous-git.sh
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "block-dangerous-git.sh is vendored verbatim from skills/misc/git-guardrails-claude-code/scripts/ (audited: reads stdin, greps the command against a literal dangerous-pattern list, exits 2 to block; no network, eval, or file writes). Patronus places it as the hook script and registers the upstream's PreToolUse Bash hook."

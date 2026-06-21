@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: web-dev
+summary: "Web-development tool overlay — adds Playwright (real-browser automation) on top of a base profile like core."
+# An L5 tool overlay: tools only. Memory/instructions/etc. come from the base
+# profile this composes onto (e.g. core). Playwright is genuinely not native to any
+# of the three agents, so it earns a wire (unlike Fetch/Filesystem MCP, dropped).
+layers:
+  tools:
+    - playwright                           # browser automation (npx MCP)

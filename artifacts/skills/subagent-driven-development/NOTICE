@@ -1,0 +1,43 @@
+This artifact vendors the "subagent-driven-development" skill from obra/superpowers.
+
+Vendored files (upstream paths):
+  - skills/subagent-driven-development/SKILL.md
+  - skills/subagent-driven-development/implementer-prompt.md
+  - skills/subagent-driven-development/task-reviewer-prompt.md
+  - skills/subagent-driven-development/scripts/{task-brief,review-package,sdd-workspace}
+
+The SKILL.md body is upstream-verbatim; a short "Patronus note" block was
+prepended at the top mapping the `superpowers:` sibling cross-references to the
+corresponding Patronus artifacts (writing-plans, executing-plans, tdd,
+dispatching-parallel-agents) and marking the un-vendored siblings
+(requesting-code-review, finishing-a-development-branch, using-git-worktrees)
+optional. The scripts/ helpers were audited before shipping: they perform only
+git reads and file writes (no network access, no destructive operations).
+
+Upstream: https://github.com/obra/superpowers
+Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
+License:  MIT
+
+----------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2025 Jesse Vincent
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

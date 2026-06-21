@@ -89,6 +89,7 @@ func TestRecipeShape(t *testing.T) {
 		{"fetch+wire", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeMcp}}, ShapeFetchWire},
 		{"fetch+run", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeRun}}, ShapeFetchRun},
 		{"fetch+self", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeSelf}}, ShapeFetchRun},
+		{"install-only", Recipe{Delivery: &Delivery{Source: SourceNpm}, Wire: Wire{}}, ShapeInstall},
 	}
 	for _, tc := range cases {
 		if got := tc.r.Shape(); got != tc.want {
@@ -134,6 +135,43 @@ func TestValidateRecipeWireMode(t *testing.T) {
 	r.Delivery = &Delivery{Source: "ftp"}
 	if err := validateRecipe(r); err == nil {
 		t.Error("expected error for invalid deliver.source")
+	}
+
+	// install-only: empty wire.mode is valid WITH a deliver block.
+	r = base()
+	r.Wire = Wire{}
+	r.Delivery = &Delivery{Source: SourceNpm, Ref: "tdd-guard"}
+	if err := validateRecipe(r); err != nil {
+		t.Errorf("install-only recipe (empty mode + deliver) rejected: %v", err)
+	}
+
+	// ...but empty wire.mode WITHOUT a deliver block does nothing — invalid.
+	r = base()
+	r.Wire = Wire{}
+	r.Delivery = nil
+	if err := validateRecipe(r); err == nil {
+		t.Error("expected error for a recipe that neither wires nor delivers")
+	}
+}
+
+func TestDeliveryInstallCommand(t *testing.T) {
+	cases := []struct {
+		name   string
+		d      Delivery
+		recipe string
+		want   string
+	}{
+		{"npm with ref", Delivery{Source: SourceNpm, Ref: "tdd-guard"}, "tdd-guard", "npm install -g tdd-guard"},
+		{"npm defaults ref to recipe name", Delivery{Source: SourceNpm}, "ccusage", "npm install -g ccusage"},
+		{"cargo", Delivery{Source: SourceCargo, Ref: "ripgrep"}, "rg", "cargo install ripgrep"},
+		{"non-PM source has no install command", Delivery{Source: SourceGithubRelease}, "engram", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.d.InstallCommand(tc.recipe); got != tc.want {
+				t.Errorf("InstallCommand = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

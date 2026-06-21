@@ -82,9 +82,43 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 			return nil, err
 		}
 		diffs = append(diffs, merges...)
+	case "":
+		// install-only: deliver a package and stop. A package-manager source has no
+		// FETCH (npm/cargo resolve the host themselves), so surface the install
+		// command as a display-only advisory row — Patronus never silently runs a
+		// global package install; the user (or a future --prefer-system-pkg path)
+		// runs it. Something else (a hook artifact) does the wiring.
+		if d := installAdvisory(rec, scope); d != nil {
+			diffs = append(diffs, *d)
+		}
 	}
 
 	return diffs, nil
+}
+
+// installAdvisory builds the display-only EXEC row for an install-only recipe: a
+// package-install command the user runs (marked self-managed so the applier skips
+// it and remove reports it as not-auto-revertable). Returns nil when the source
+// is not a package manager (it has its own FETCH path instead).
+func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
+	if rec.Delivery == nil {
+		return nil
+	}
+	cmd := rec.Delivery.InstallCommand(rec.Name)
+	if cmd == "" {
+		return nil
+	}
+	return &diff.FileDiff{
+		Path:     cmd,
+		Action:   diff.Exec,
+		Artifact: rec.Name,
+		Type:     string(rec.Shape()),
+		Role:     string(rec.Role),
+		Tool:     "-", // a global package install is tool-agnostic
+		Scope:    scope,
+		Note:     "install: " + cmd,
+		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true},
+	}
 }
 
 // fetchDiff builds the FETCH diff for a github-release delivery, pre-classified
@@ -214,7 +248,7 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 			return nil, fmt.Errorf("recipe %q: read %s: %w", rec.Name, path, err)
 		}
 
-		spec := serverSpec(rec.Name, wm, installPath)
+		spec := serverSpec(rec.Name, wm, installPath, tool)
 		after, err := adapter.MergeConfig(before, ft, tr, spec)
 		if err != nil {
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
@@ -236,9 +270,38 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 	return out, nil
 }
 
+// toolContexts maps a Patronus tool id to the upstream "context"/client label a
+// recipe's launch command wants when it differs from the bare tool name. It backs
+// the {toolContext} token (e.g. Serena's `--context claude-code` vs `--context
+// codex`). A tool absent from the map falls back to its own id, so the token is
+// safe to use even where the value happens to equal the tool name.
+var toolContexts = map[string]string{
+	"claude":   "claude-code",
+	"codex":    "codex",
+	"opencode": "ide",
+}
+
+// toolContext resolves the {toolContext} substitution value for a tool.
+func toolContext(tool string) string {
+	if c, ok := toolContexts[tool]; ok {
+		return c
+	}
+	return tool
+}
+
+// substTokens resolves the recipe wiring placeholders in a single string:
+// {installPath} (the fetched binary's path) and {toolContext} (the per-tool
+// client label, see toolContexts). Centralizing it keeps command and args in sync.
+func substTokens(s, installPath, tool string) string {
+	s = strings.ReplaceAll(s, "{installPath}", installPath)
+	s = strings.ReplaceAll(s, "{toolContext}", toolContext(tool))
+	return s
+}
+
 // serverSpec maps a WireMcp into the adapter.ServerSpec the MERGE primitive
-// expects, resolving {installPath} and building command/commandArray for stdio.
-func serverSpec(name string, wm *manifest.WireMcp, installPath string) adapter.ServerSpec {
+// expects, resolving {installPath} + {toolContext} (per-tool, see toolContexts)
+// and building command/commandArray for stdio.
+func serverSpec(name string, wm *manifest.WireMcp, installPath, tool string) adapter.ServerSpec {
 	vals := map[string]any{}
 	switch wm.Transport {
 	case "http":
@@ -246,16 +309,20 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath string) adapter.S
 			vals["url"] = wm.URL
 		}
 	case "stdio":
-		cmd := strings.ReplaceAll(wm.Command, "{installPath}", installPath)
+		cmd := substTokens(wm.Command, installPath, tool)
 		if cmd != "" {
 			vals["command"] = cmd
 		}
-		if len(wm.Args) > 0 {
-			vals["args"] = toAnySlice(wm.Args)
+		args := make([]string, len(wm.Args))
+		for i, a := range wm.Args {
+			args[i] = substTokens(a, installPath, tool)
+		}
+		if len(args) > 0 {
+			vals["args"] = toAnySlice(args)
 		}
 		// OpenCode's stdio template uses command:[...] — build the array form from
 		// the same resolved command + args so that tool's wiring resolves too.
-		arr := append([]any{cmd}, toAnySlice(wm.Args)...)
+		arr := append([]any{cmd}, toAnySlice(args)...)
 		vals["commandArray"] = arr
 	}
 	return adapter.ServerSpec{Name: name, Transport: wm.Transport, Values: vals}

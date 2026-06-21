@@ -43,6 +43,17 @@ func TestLayoutDecodeClaude(t *testing.T) {
 		t.Errorf("Instruction.global = %+v", got)
 	}
 
+	// OutputStyle on Claude is a CREATE file (no action) under output-styles/.
+	if ad.Layout.OutputStyle == nil {
+		t.Fatal("OutputStyle layout missing")
+	}
+	if got := ad.Layout.OutputStyle.Global; got.File != "~/.claude/output-styles/{name}.md" || got.Action != "" {
+		t.Errorf("OutputStyle.global = %+v, want CREATE file with no action", got)
+	}
+	if !ad.Layout.OutputStyle.Frontmatter.Passthrough {
+		t.Error("OutputStyle.frontmatter should be passthrough")
+	}
+
 	// MCP: Claude stdio transport carries a literal type:"stdio".
 	if ad.Layout.Mcp == nil || ad.Layout.Mcp.Transports == nil {
 		t.Fatal("Mcp transports missing")
@@ -101,6 +112,14 @@ func TestLayoutDecodeCodexShapeByKey(t *testing.T) {
 	// Hook is null for Codex -> no usable file target.
 	if ad.Layout.Hook == nil || ad.Layout.Hook.Global.File != "" {
 		t.Errorf("Codex Hook.global should be null: %+v", ad.Layout.Hook)
+	}
+
+	// OutputStyle on Codex is the APPEND flavour: AGENTS.md, action appendSection.
+	if ad.Layout.OutputStyle == nil {
+		t.Fatal("OutputStyle layout missing")
+	}
+	if got := ad.Layout.OutputStyle.Global; got.File != "~/.codex/AGENTS.md" || got.Action != "appendSection" {
+		t.Errorf("Codex OutputStyle.global = %+v, want AGENTS.md appendSection", got)
 	}
 }
 

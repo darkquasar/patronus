@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: finishing-a-development-branch
+description: "Branch-completion discipline — when implementation is done and tests pass, decide how to integrate: presents structured options for merge, PR, or cleanup rather than ad-hoc finishing. The last step of a development workflow."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream `finishing-a-development-branch` skill (skills/finishing-a-development-branch/SKILL.md)."

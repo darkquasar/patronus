@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-plans
+description: "Write comprehensive, bite-sized implementation plans before touching code — exact file paths, complete code per step, TDD-shaped tasks, self-review against the spec. Use when you have a spec for a multi-step task."
+version: 1.0.0
+entry: SKILL.md
+files: []
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored from the upstream `writing-plans` skill. References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes; the planning discipline is otherwise faithful."

@@ -16,7 +16,9 @@ type Layout struct {
 	Command     *CommandLayout     `yaml:"command,omitempty"`
 	Mcp         *McpLayout         `yaml:"mcp,omitempty"`
 	Hook        *HookLayout        `yaml:"hook,omitempty"`
+	Setting     *SettingLayout     `yaml:"setting,omitempty"`
 	Instruction *InstructionLayout `yaml:"instruction,omitempty"`
+	OutputStyle *OutputStyleLayout `yaml:"output-style,omitempty"`
 }
 
 // PathTarget is a layout entry that is EITHER a bare path string
@@ -147,10 +149,48 @@ type McpLayout struct {
 }
 
 // HookLayout describes the MERGE primitive for hooks. Null for tools whose hook
-// surface is not yet modeled (Codex, OpenCode today).
+// surface is not yet modeled (Codex, OpenCode today). ScriptDir is where a hook
+// artifact's bundled helper script is PLACED (CREATE) when it ships one; the
+// hook's command then invokes that placed path. It is a bare path template
+// (e.g. "~/.claude/hooks/") resolved per scope, like a Skill's path.
 type HookLayout struct {
+	Global           FileTarget `yaml:"global"`
+	Project          FileTarget `yaml:"project"`
+	GlobalScriptDir  PathTarget `yaml:"globalScriptDir,omitempty"`  // where a global hook's helper script is placed (e.g. ~/.claude/hooks/)
+	ProjectScriptDir PathTarget `yaml:"projectScriptDir,omitempty"` // where a project hook's helper script is placed (e.g. .claude/hooks/)
+}
+
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *HookLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
+}
+
+// ScriptDirFor returns the hook-script placement dir for the given scope, or an
+// unset PathTarget when this tool models no hook-script dir.
+func (l *HookLayout) ScriptDirFor(scope string) PathTarget {
+	if scope == "global" {
+		return l.GlobalScriptDir
+	}
+	return l.ProjectScriptDir
+}
+
+// SettingLayout describes the MERGE target for a setting artifact — the agent's
+// settings file at a per-artifact dotted path. Null for tools that model no
+// settings surface (so a @tool-flavoured setting is an honest no-op elsewhere).
+type SettingLayout struct {
 	Global  FileTarget `yaml:"global"`
 	Project FileTarget `yaml:"project"`
+}
+
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *SettingLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
 }
 
 // InstructionLayout describes the APPEND-section target for instructions.
@@ -162,6 +202,25 @@ type InstructionLayout struct {
 // ForScope returns the file/path target for the given scope ("global"|"local").
 // Scope "local" maps to the Project field.
 func (l *InstructionLayout) ForScope(scope string) FileTarget {
+	if scope == "global" {
+		return l.Global
+	}
+	return l.Project
+}
+
+// OutputStyleLayout describes where an output-style is written. The action is
+// data, not a Go branch: a CREATE target leaves Action empty (Claude →
+// output-styles/{name}.md); an APPEND target sets Action: appendSection
+// (Codex/OpenCode → AGENTS.md). FileTarget carries File + the optional Action.
+type OutputStyleLayout struct {
+	Global      FileTarget  `yaml:"global"`
+	Project     FileTarget  `yaml:"project"`
+	Frontmatter Frontmatter `yaml:"frontmatter,omitempty"`
+	Required    []string    `yaml:"required,omitempty"`
+}
+
+// ForScope returns the file/path target for the given scope ("global"|"local").
+func (l *OutputStyleLayout) ForScope(scope string) FileTarget {
 	if scope == "global" {
 		return l.Global
 	}

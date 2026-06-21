@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: orchestration                        # L10 — teaches the agent to use bd as its cross-session work-graph
+name: beads
+description: "Work-graph discipline: drive Beads (`bd`) as the durable, git-native task graph across sessions — capture work as issues with dependencies, pull the ready set, and close as you go instead of relying on in-context TODOs. Appended into CLAUDE.md/AGENTS.md. Requires the `bd` binary (delivered by the sibling `bd` recipe)."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+requires: [bd]                             # the binary this prose drives — pulled into the install/lock closure
+attribution:
+  upstream: github.com/steveyegge/beads
+  license: MIT
+  copyright: "Copyright (c) 2025 Beads Contributors"
+  commit: b4d999fa9e55cfa174ac2a08aba5a81b09019f96
+  note: "Authored Patronus instruction, NOT a reproduction. The bd command surface and the work-graph usage model are summarized from the upstream CLI reference (docs/CLI_REFERENCE.md) and README at the pinned commit; the upstream's own AGENT_INSTRUCTIONS.md is about developing Beads itself, not about a downstream project using bd, so it is not vendored. Consult the upstream docs for the full command reference."

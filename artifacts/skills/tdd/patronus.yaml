@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: tdd
+description: "Test-driven development — vertical tracer-bullet slices (one test → one implementation), behavior tested through public interfaces, never horizontal 'all tests then all code'. Use to build features or fix bugs test-first."
+version: 1.0.0
+entry: SKILL.md
+files: [tests.md, mocking.md, refactoring.md]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Vendored verbatim from the upstream `tdd` skill (skills/engineering/tdd), including tests.md, mocking.md, refactoring.md. Chosen over the superpowers TDD skill as the lighter, self-contained discipline."

@@ -1,0 +1,62 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: core
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, and test-first ENFORCED via the tdd-guard hook. Strict by design; relax with the no-tdd-guard / quiet overlays."
+# core is deliberately strict (not just guiding). It is built up across Phase 7:
+# the L1+L2+L4 spine + L5 tools + L8 eval (tdd-guard ENFORCED + verification) ship
+# here; L6 sandbox, L7 obs, L9 guardrails, and L10 orchestration are wired in the
+# remaining P7.5–P7.6 sub-phases (see todo). It is NOT marked status:stub — every
+# item listed below exists in-repo today and installs.
+layers:
+  instructions:
+    - agents-spine                         # the AGENTS.md format spine
+    - agent-rules                          # distilled DDD + refactoring discipline
+    - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
+  capabilities:
+    - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
+    - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
+    - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
+    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Beads + ai-memory (externalized state); Claude-only, conditional on what's wired
+    - writing-plans                        # plan a multi-step task before touching code
+    - executing-plans                      # execute a plan task-by-task with checkpoints
+    - grilling                             # interrogate a plan before building
+    - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
+    - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
+    - brainstorming                        # explore intent + requirements + design BEFORE any creative work
+    - using-git-worktrees                  # start feature work in an isolated workspace
+    - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
+    - writing-skills                       # author/edit/verify skills (the meta-skill)
+    - team-research                        # spec-driven parallel research
+    - team-implement                       # spec-driven parallel implementation
+  context:
+    - codebase-design                      # deep-module design vocabulary
+    - domain-modeling                      # ubiquitous-language + ADR discipline
+    - context7                             # live, version-specific library docs (hosted MCP)
+    - serena                               # semantic code navigation of the local repo (LSP MCP)
+    - pattern-cloudflare                   # in-repo context skill
+    - pattern-mcp                          # in-repo context skill
+  tools:
+    - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
+  memory: memory-ai-memory                 # L3 default recipe (self-wiring)
+  eval:
+    - tdd-guard                            # install the tdd-guard CLI (npm, install-only recipe) — the binary the hook invokes
+    - tdd-guard-hook                       # ENFORCED test-first — PreToolUse hook blocks impl-before-test (THE strict gate)
+    - verification-before-completion       # evidence-before-claims discipline (pairs with the enforcement)
+    - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
+    - receiving-code-review                # act on review feedback with technical rigor, not performative agreement
+  guardrails:
+    - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
+    - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through
+    - gitleaks-guard                       # PreToolUse Bash @commit — scans the staged diff, blocks a commit carrying a secret
+    - git-guardrails                       # PreToolUse Bash — blocks destructive git (push/reset --hard/clean -f/branch -D/...)
+  observability:
+    - ccusage                              # install the ccusage CLI (npm, install-only) — on-demand token-usage/cost reports
+    - ccusage-statusline@claude            # Claude-only statusline setting (token usage in the status bar); @claude → no-op on codex/opencode
+  orchestration:
+    - beads                                # work-graph discipline (AGENTS.md APPEND) — `requires: [bd]`, so the bd binary recipe is pulled into the install/lock closure automatically
+    - subagent-driven-development          # execute a plan task-by-task with fresh implementer+reviewer subagents
+    - dispatching-parallel-agents          # fan out independent problem domains to concurrent subagents
+todo:
+  - "L6 sandbox: native, flavoured per agent (P7.4)."
+  - "L8 eval: promptfoo CI gate (P7.5.6)."

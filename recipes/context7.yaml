@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: recipe
+name: context7
+role: context                      # L4 — Context / Knowledge (live, up-to-date library docs)
+summary: "Context7 MCP (hosted) — up-to-date, version-specific docs + code examples for libraries, fetched on demand. Keyless by default; set CONTEXT7_API_KEY in your MCP client for higher rate limits."
+upstream: github.com/upstash/context7
+license: MIT
+
+# REMOTE (http) MCP, like github: nothing to download, so NO deliver block — install
+# is a single config MERGE. Works keyless (lower rate limit); the optional API key is
+# a per-user secret, so Patronus does NOT bake it in — add it as a header in your MCP
+# client config. Shape (computed) = wire-only.
+wire:
+  mode: mcp
+  mcp:
+    transport: http
+    url: "https://mcp.context7.com/mcp"
+  tools: [claude, codex, opencode]

@@ -125,6 +125,44 @@ func TestFromChangeSetGroupsAndCaptures(t *testing.T) {
 	}
 }
 
+// TestFromChangeSetExpandsContrib covers a composed APPEND file carrying sections
+// from two artifacts: state must record each under its own artifact (with its
+// section + prior) so remove can strip exactly one.
+func TestFromChangeSetExpandsContrib(t *testing.T) {
+	applied := []diff.FileDiff{{
+		Path: "/proj/CLAUDE.md", Action: diff.Append,
+		Before:   []byte(""),
+		After:    []byte("spine\n\nrules"),
+		Artifact: "spine", Version: "1.0.0", Tool: "claude", Scope: "local",
+		Section: &diff.SectionEdit{Name: "spine"},
+		Contrib: []diff.SectionContrib{{
+			Artifact: "rules", Version: "2.0.0", Section: "rules", Prior: []byte("spine"),
+		}},
+	}}
+	items := FromChangeSet(applied, "now")
+
+	if len(items) != 2 {
+		t.Fatalf("want 2 items (spine + rules), got %d: %+v", len(items), items)
+	}
+	by := map[string]Item{}
+	for _, it := range items {
+		by[it.Artifact] = it
+	}
+	r, ok := by["rules"]
+	if !ok {
+		t.Fatal("contrib artifact 'rules' not recorded")
+	}
+	if r.ItemVersion != "2.0.0" {
+		t.Errorf("rules version = %q, want 2.0.0", r.ItemVersion)
+	}
+	if len(r.Files) != 1 || r.Files[0].Section != "rules" || r.Files[0].Path != "/proj/CLAUDE.md" {
+		t.Fatalf("rules file record wrong: %+v", r.Files)
+	}
+	if string(r.Files[0].Prior) != "spine" {
+		t.Errorf("rules prior = %q, want the file before rules folded in (spine)", r.Files[0].Prior)
+	}
+}
+
 func TestFromChangeSetCapturesItemVersion(t *testing.T) {
 	applied := []diff.FileDiff{
 		{Path: "/c/SKILL.md", Action: diff.Create, After: []byte("b"), Artifact: "s", Version: "1.2.0", Tool: "claude", Scope: "global"},

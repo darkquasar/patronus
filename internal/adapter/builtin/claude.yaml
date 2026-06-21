@@ -47,9 +47,29 @@ layout:
   hook:
     global: { file: "~/.claude/settings.json", format: json, path: "hooks.{event}", action: merge }
     project: { file: ".claude/settings.json", format: json, path: "hooks.{event}", action: merge }
+    # A hook artifact that ships a helper script has it PLACED here (CREATE), and
+    # the hook command's {script} token resolves to the placed path.
+    globalScriptDir: "~/.claude/hooks/"
+    projectScriptDir: ".claude/hooks/"
+
+  # A setting artifact MERGEs a scalar/object value at its own dotted path into
+  # settings.json (the artifact's setting.path supplies the path; the layout only
+  # names the file). Used for the ccusage statusline (statusLine key) and the
+  # native-sandbox toggle (P7.5.5).
+  setting:
+    global: { file: "~/.claude/settings.json", format: json }
+    project: { file: ".claude/settings.json", format: json }
 
   instruction:
     global: { file: "~/.claude/CLAUDE.md", action: appendSection }
     project: { file: "CLAUDE.md", action: appendSection }
     # appendSection inserts/replaces ONLY a fenced block keyed by {name}:
     #   <!-- patronus:start {name} --> … <!-- patronus:end {name} -->
+
+  output-style:
+    # Claude has a native output-styles surface — CREATE a standalone file (no
+    # action ⇒ CREATE). Codex/OpenCode lack it, so they APPEND to AGENTS.md.
+    global: { file: "~/.claude/output-styles/{name}.md" }
+    project: { file: ".claude/output-styles/{name}.md" }
+    frontmatter: passthrough
+    required: [name, description]

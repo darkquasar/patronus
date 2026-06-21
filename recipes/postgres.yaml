@@ -1,0 +1,20 @@
+apiVersion: patronus/v2
+family: recipe
+name: postgres
+role: tools                        # L5 — Tools / Integrations (Postgres introspection, query, index advisor)
+summary: "Postgres MCP Pro — schema introspection, safe SQL execution, index tuning + health checks. Launched on demand via uvx. Requires DATABASE_URI in your MCP client env. Opt-in (data profile)."
+upstream: github.com/crystaldba/postgres-mcp
+license: MIT
+
+# uvx fetches + runs postgres-mcp on demand, so NO deliver block — install is a
+# single stdio-MCP config MERGE. The DATABASE_URI connection string is a per-user
+# SECRET: Patronus does NOT bake it in — add it to the server's `env` in your MCP
+# client config. --access-mode=restricted is the safe default (read-only + guarded).
+# Shape (computed) = wire-only.
+wire:
+  mode: mcp
+  mcp:
+    transport: stdio
+    command: uvx
+    args: ["postgres-mcp", "--access-mode=restricted"]
+  tools: [claude, codex, opencode]

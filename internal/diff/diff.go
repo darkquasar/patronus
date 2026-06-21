@@ -9,6 +9,7 @@ package diff
 
 import (
 	"bytes"
+	"io/fs"
 
 	"znkr.io/diff/textdiff"
 )
@@ -59,6 +60,11 @@ type FileDiff struct {
 	Note     string `json:"note,omitempty"`
 	IsDir    bool   `json:"isDir,omitempty"`
 
+	// Mode is the file permission for a CREATE write when it must differ from the
+	// default 0o644 — set to 0o755 for an executable hook script. Zero means "use
+	// the applier's default." Excluded from JSON (an apply-time control field).
+	Mode fs.FileMode `json:"-"`
+
 	// Intended, when set on a SKIP, is the action this diff WOULD perform if the
 	// skip were overridden. The Phase-8 remove path uses it for drift: a file
 	// edited since install is emitted as SKIP(Intended=DELETE/UNAPPEND/RESTORE) so
@@ -70,6 +76,28 @@ type FileDiff struct {
 	// planner uses it to re-fold multiple appends that land on the same file
 	// (e.g. codex + opencode both targeting a shared AGENTS.md) into one After.
 	Section *SectionEdit `json:"-"`
+
+	// Contrib lists the ADDITIONAL artifacts whose APPEND sections were folded
+	// into this one composed FileDiff (the first contributor stays in Artifact /
+	// Section). It exists because several instruction/output-style artifacts can
+	// append distinct fenced sections to ONE file (e.g. agents-spine + agent-rules
+	// → CLAUDE.md): the applier writes the file once, but state must record each
+	// section under its own artifact so remove can strip exactly that section, and
+	// the dry-run table must show a row per contributor. Empty for the common
+	// single-contributor case.
+	Contrib []SectionContrib `json:"-"`
+
+	// Setting, when set, marks this MERGE as a settings list-append (a hook
+	// registration) rather than a scalar config merge. It carries the element's
+	// identity + target so the planner re-folds multiple appends onto one
+	// settings file and state/remove pull exactly this element. nil for a scalar
+	// MERGE (MCP wiring, native-switch toggle), which round-trips via Prior.
+	Setting *SettingEdit `json:"-"`
+
+	// SettingContrib lists ADDITIONAL artifacts whose settings elements were
+	// folded into this one composed MERGE (the MERGE-side analogue of Contrib).
+	// Empty for the common single-contributor case.
+	SettingContrib []SettingContrib `json:"-"`
 
 	// Fetch, when set, describes a FETCH: a binary to download, verify, and
 	// place. It lives only on Action==Fetch diffs (Path is the placement dest;
@@ -107,11 +135,15 @@ type FetchSpec struct {
 // human-readable form shown in the dry run. SelfManaged is true when the command
 // comes from a wire.mode:self recipe (the recipe's own installer wires it), which
 // is what remove reports as "not auto-revertable"; false for a wire.mode:run
-// command that Patronus itself runs.
+// command that Patronus itself runs. Advisory is true for a display-only command
+// Patronus must NOT run (an install-only recipe's package-install line): it is
+// shown so the user can run it, but the EXEC runner skips it — distinct from
+// SelfManaged, which IS executed.
 type ExecSpec struct {
 	Command     []string
 	Display     string
 	SelfManaged bool
+	Advisory    bool
 }
 
 // SectionEdit captures the inputs of an appendSection edit so it can be re-applied
@@ -119,6 +151,57 @@ type ExecSpec struct {
 type SectionEdit struct {
 	Name string
 	Body []byte
+}
+
+// SectionContrib records one additional artifact that contributed a fenced
+// section to a shared composed file: enough identity (artifact, version) and the
+// section name for state to record a removable per-artifact item, plus Prior —
+// the file's bytes as they were BEFORE this contributor's section was folded in —
+// so remove can reverse each section independently and in order.
+type SectionContrib struct {
+	Artifact string
+	Version  string
+	Section  string
+	Prior    []byte
+}
+
+// SettingEdit captures the inputs of a settings MERGE so the planner can re-fold
+// it onto an accumulated config (several settings edits can land on one file). It
+// has two forms, distinguished by IdentityKey:
+//   - LIST-APPEND (IdentityKey != ""): append/replace Elem in the array at Dotted,
+//     keyed by Identity — a hook registration. Remove strips exactly that element.
+//   - SCALAR SET (IdentityKey == ""): set ScalarValue at Dotted — a statusline /
+//     sandbox toggle. Remove restores the prior value (wholesale Prior).
+//
+// Either way the edit is re-foldable, so a scalar set folded after some hooks no
+// longer clobbers them. The full FileTarget travels along for re-parse/serialize.
+type SettingEdit struct {
+	Target      FileTargetRef  // file + format the merge applies to
+	Dotted      string         // resolved path, e.g. "hooks.PreToolUse" (list) or "statusLine" (scalar)
+	IdentityKey string         // array form: element field carrying the identity ("" => scalar set)
+	Identity    string         // array form: this element's identity value
+	Elem        map[string]any // array form: the element to (re-)append
+	ScalarValue any            // scalar form: the value to set at Dotted
+}
+
+// FileTargetRef is the minimal file/format descriptor a SettingEdit needs to
+// re-merge or remove without importing the manifest package into diff. The
+// adapter/planner fills it from the layout's FileTarget.
+type FileTargetRef struct {
+	File   string
+	Format string
+}
+
+// SettingContrib records one additional artifact whose settings edit was folded
+// into a shared config file (e.g. several hooks into one settings.json). Like
+// SectionContrib it carries identity for a per-artifact removable record. Edit
+// carries the merge intent, and remove reverses it SURGICALLY (strip the array
+// element for a list edit, delete the key for a scalar) — so no whole-file Prior
+// is needed: a revert never disturbs edits that folded into the same file.
+type SettingContrib struct {
+	Artifact string
+	Version  string
+	Edit     *SettingEdit
 }
 
 // Classify decides the terminal Action for a proposed change, preserving

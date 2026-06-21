@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: verification-before-completion
+description: "Evidence before claims, always — before asserting work is complete/fixed/passing (or committing/PRing), run the verification command and read its fresh output. The L8 discipline that pairs with tdd-guard's enforcement. Use whenever about to claim success."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream skills/verification-before-completion/SKILL.md. Same pin as the P7.2 superpowers skills."

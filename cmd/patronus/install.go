@@ -21,6 +21,7 @@ import (
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
+	"github.com/darkquasar/patronus/internal/requires"
 	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/source"
 	"github.com/darkquasar/patronus/internal/state"
@@ -126,7 +127,8 @@ func newInstallCmd() *cobra.Command {
 			// --profile expands to the profile's resolved item names, which then flow
 			// through the SAME artifact-vs-recipe dispatch a plain install uses.
 			if profileSel != "" {
-				res, err := profile.Resolve(cat, profileSel)
+				// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
+				res, err := profile.Resolve(cat, profileSel, tool)
 				if err != nil {
 					return err
 				}
@@ -145,6 +147,19 @@ func newInstallCmd() *cobra.Command {
 					applyLockPins(wd, profileSel, rr.Base(), cat, warnf)
 				}
 			}
+
+			// Expand the `requires` closure: an item that needs another (a hook that
+			// needs its binary recipe, an instruction that needs the binary it
+			// documents) silently pulls that dependency in, dependency-before-dependent.
+			// Pure over the catalog — sourced/unknown names contribute no edges and
+			// pass through. Applies to BOTH the profile path (above) and a direct
+			// `install <name>`, since both converge on `names` here. The profile's own
+			// flavour/without selection has already run; requires works on base names.
+			expanded := requires.Expand(names, cat.Deps)
+			if pulled := requires.Pulled(names, expanded); len(pulled) > 0 {
+				warnf("also installing required item(s): %s", strings.Join(pulled, ", "))
+			}
+			names = expanded
 
 			// A positional name may be a sourced reference (file:, git:, https:, ...).
 			// Resolve any sourced entries into the catalog so they dispatch like an
@@ -432,6 +447,20 @@ type commandRunner interface {
 	Run(argv []string) error
 }
 
+// runnerForCommands is the package-level seam for self-wiring post-install EXECs
+// driven through the cobra commands (the runDeploy path takes no runner argument).
+// Production leaves it nil → real os/exec. Integration tests that install a
+// self-wiring recipe (e.g. memory-ai-memory) set it to a fake so the suite stays
+// process-free — mirroring fetcherForCommands/registryFetcher. A test hook, not a
+// user knob.
+var runnerForCommands commandRunner
+
+// fetcherForDeploy is the package-level seam for FETCH downloads on --deploy
+// (binary recipes like gitleaks). Production uses the real HTTP fetcher;
+// integration tests swap in the serving fetcher so a profile carrying a
+// github-release binary installs fully offline — mirroring fetcherForCommands.
+var fetcherForDeploy recipe.Fetcher = recipe.HTTPFetcher{}
+
 // execRunner is the production commandRunner: it runs argv via os/exec, streaming
 // output to the command's stdout/stderr.
 type execRunner struct {
@@ -452,7 +481,7 @@ func (r execRunner) Run(argv []string) error {
 // a mid-apply failure stops, records what already succeeded in state, and returns
 // the error. The runner is overridable for tests (nil => real os/exec).
 func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions) error {
-	return runDeployWith(cmd, cs, res, opts, nil)
+	return runDeployWith(cmd, cs, res, opts, runnerForCommands)
 }
 
 func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) error {
@@ -461,7 +490,7 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 	app := &install.Applier{
 		Force:    opts.force,
 		Conflict: conflictPrompt(cmd, res, opts.yes),
-		Fetcher:  recipe.HTTPFetcher{},
+		Fetcher:  fetcherForDeploy,
 		Ctx:      cmd.Context(),
 	}
 	result, applyErr := app.Apply(cs)
@@ -502,6 +531,16 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner) ([]d
 	var ran []diff.FileDiff
 	for _, d := range cs.Diffs {
 		if d.Action != diff.Exec || d.Exec == nil {
+			continue
+		}
+		if d.Exec.Advisory {
+			// Display-only: an install-only recipe's package-install line. Patronus
+			// never runs a global package install on the user's behalf — it surfaces
+			// the command so the user (or a future --prefer-system-pkg path) runs it.
+			// It is still recorded (in `ran`) so state remembers the recipe was
+			// installed and remove can report the manual-cleanup command.
+			fmt.Fprintf(cmd.OutOrStdout(), "ADVISORY (run yourself): %s\n", d.Exec.Display)
+			ran = append(ran, d)
 			continue
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "EXEC %s\n", d.Exec.Display)

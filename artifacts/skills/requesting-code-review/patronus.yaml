@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: requesting-code-review
+description: "Discipline for requesting a code review — when finishing a task, a major feature, or before merging, dispatch a reviewer with a focused package to verify the work meets requirements. Ships the `code-reviewer.md` reviewer prompt the subagent-driven-development skill's final whole-branch review references."
+version: 1.0.0
+entry: SKILL.md
+files: [code-reviewer.md]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream `requesting-code-review` skill (skills/requesting-code-review/), including the code-reviewer.md reviewer prompt. Vendoring this skill also resolves the cross-reference the subagent-driven-development skill makes to ../requesting-code-review/code-reviewer.md."

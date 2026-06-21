@@ -3,13 +3,14 @@ family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: cloudflare
 summary: "Cloudflare project agent environment. Partly real — ships the pattern-cloudflare context skill; remaining layers stubbed."
-status: stub                               # still warns: instructions/harness/etc. not yet sourced
+status: stub                               # still warns: instructions/eval/etc. not yet sourced
 layers:
   instructions: [agent-principles]                # role: instruction — generic agent house rules
   capabilities: [team-research, team-implement]   # role: capability
   context: [pattern-cloudflare]                   # role: context — the populated L4 slot
+  tools: [cloudflare-mcp]                          # role: tools — hosted Cloudflare Docs MCP (keyless)
   memory: memory-ai-memory
-  # harness / guardrails / observability / sandbox: TODO — sourced later
+  # eval / guardrails / observability / sandbox: TODO — sourced later
 todo:
   - "Source Cloudflare house-style + conventions instructions from <upstream-TBD>."
-  - "Source a Cloudflare harness (wrangler typegen / deploy checks) from <upstream-TBD>."
+  - "Source a Cloudflare eval (wrangler typegen / deploy checks) from <upstream-TBD>."

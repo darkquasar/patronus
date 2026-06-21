@@ -14,9 +14,11 @@ package profile
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
+	"github.com/darkquasar/patronus/internal/requires"
 	"github.com/darkquasar/patronus/internal/source"
 )
 
@@ -46,10 +48,40 @@ type slotEntry struct {
 	slot string
 }
 
-// Resolve expands a named profile into its install items. Pure: it reads only
-// cat (no filesystem, no network), so it is trivially unit-testable with a fake
-// catalog.
-func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
+// flavourTools is the closed set of target suffixes a `name@tool` item may carry.
+// Anything else after an `@` is left as part of the base name (so it simply fails
+// catalog lookup and falls into the existing warn-and-skip path, not silently
+// dropped as a mistyped flavour).
+var flavourTools = map[string]bool{"claude": true, "codex": true, "opencode": true}
+
+// splitFlavour separates a slot item into its base name and optional `@tool`
+// flavour. Only a trailing `@<tool>` where <tool> is a known tool counts; every
+// other `@` is part of the base. "sandbox@opencode" → ("sandbox","opencode");
+// "team-research" → ("team-research",""); "a@b.com" → ("a@b.com","").
+func splitFlavour(item string) (base, flavour string) {
+	i := strings.LastIndexByte(item, '@')
+	if i < 0 {
+		return item, ""
+	}
+	suffix := item[i+1:]
+	if !flavourTools[suffix] {
+		return item, ""
+	}
+	return item[:i], suffix
+}
+
+// Resolve expands a named profile into its install items for a target tool. Pure:
+// it reads only cat (no filesystem, no network), so it is trivially unit-testable
+// with a fake catalog.
+//
+// tool selects per-tool FLAVOURS (§4): a slot item may be a bare name (installed
+// for every tool) or `name@tool` (installed only when its suffix matches). When
+// tool is a concrete agent ("claude"|"codex"|"opencode"), bare names plus that
+// tool's flavours resolve; when tool is "" or "all" (the tool-agnostic baseline
+// `lock` uses by default), only bare names resolve and all `@tool` flavours drop.
+// The base name is what the install path dispatches on; the `@tool` suffix never
+// reaches the catalog or source.Parse.
+func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 	layers, prof, err := resolveLayers(cat, name, map[string]bool{})
 	if err != nil {
 		return nil, err
@@ -61,35 +93,79 @@ func Resolve(cat *registry.Catalog, name string) (*Resolved, error) {
 			fmt.Sprintf("profile %q is a stub: layers marked TODO are not yet populated", name))
 	}
 
+	// `without` SUBTRACTS base names from the composed layers — the relaxation-
+	// overlay operator (e.g. no-tdd-guard = core without the enforcement hook),
+	// symmetric to the extends-append above. It matches on the BASE name, so it
+	// strips a bare name and all its `@tool` flavours alike. An entry that matches
+	// nothing is a no-op warning, so an overlay stays robust as `core` evolves.
+	excluded, unmatched := excludeSet(prof.Without)
+	for _, e := range flattenLayers(layers) {
+		base, _ := splitFlavour(e.name)
+		delete(unmatched, base)
+	}
+	for dropped := range unmatched {
+		out.Warnings = append(out.Warnings,
+			fmt.Sprintf("profile %q: without %q matched nothing", name, dropped))
+	}
+
 	seen := map[string]bool{}
 	for _, e := range flattenLayers(layers) {
-		if seen[e.name] {
-			continue // a name appearing in two slots installs once (first slot wins)
+		base, flavour := splitFlavour(e.name)
+		if excluded[base] {
+			continue // subtracted by `without`
 		}
-		seen[e.name] = true
+		if flavour != "" && flavour != tool {
+			continue // a flavour for a different tool: silently not selected
+		}
+		if seen[base] {
+			continue // dedup on the BASE name (a name in two slots, or bare + @tool, installs once)
+		}
+		seen[base] = true
 
-		ref, err := source.Parse(e.name)
-		if err != nil {
+		// Pull in the `requires` closure of this slot item BEFORE the item itself,
+		// so a hook's binary recipe (or an instruction's binary) is resolved ahead
+		// of the dependent. A pulled dep inherits the dependent's slot for
+		// provenance and is itself deduped via `seen`. The closure is catalog-pure;
+		// `without` still wins (an explicitly-subtracted item is never pulled back).
+		for _, dep := range requires.Expand([]string{base}, cat.Deps) {
+			if dep == base || seen[dep] || excluded[dep] {
+				continue
+			}
+			seen[dep] = true
+			if it, ok := resolveItem(cat, dep, e.slot); ok {
+				out.Items = append(out.Items, it)
+			}
+		}
+
+		if it, ok := resolveItem(cat, base, e.slot); ok {
+			out.Items = append(out.Items, it)
+		} else {
 			out.Warnings = append(out.Warnings,
-				fmt.Sprintf("profile %q slot %q: %v — skipped", name, e.slot, err))
-			continue
+				fmt.Sprintf("profile %q slot %q: %q not resolvable — skipped (not yet sourced?)", name, e.slot, base))
 		}
-
-		fam := classify(cat, ref)
-		if fam == familyUnknown {
-			out.Warnings = append(out.Warnings,
-				fmt.Sprintf("profile %q slot %q: %q not found in catalog — skipped (not yet sourced?)", name, e.slot, e.name))
-			continue
-		}
-
-		out.Items = append(out.Items, ResolvedItem{
-			Name:   e.name,
-			Slot:   e.slot,
-			Family: fam,
-			Source: ref.LockSource(),
-		})
 	}
 	return out, nil
+}
+
+// resolveItem builds one ResolvedItem for a base name in a slot, or reports
+// !ok when the name does not parse or is absent from the catalog. It is the
+// shared item-construction step used for both directly-listed slot items and
+// items pulled in by a `requires` edge.
+func resolveItem(cat *registry.Catalog, base, slot string) (ResolvedItem, bool) {
+	ref, err := source.Parse(base)
+	if err != nil {
+		return ResolvedItem{}, false
+	}
+	fam := classify(cat, ref)
+	if fam == familyUnknown {
+		return ResolvedItem{}, false
+	}
+	return ResolvedItem{
+		Name:   base,
+		Slot:   slot,
+		Family: fam,
+		Source: ref.LockSource(),
+	}, true
 }
 
 // resolveLayers returns the fully composed layers for a profile, applying
@@ -129,10 +205,11 @@ func mergeLayers(parent, child manifest.ProfileLayers) manifest.ProfileLayers {
 		Context:       appendDedup(parent.Context, child.Context),
 		Tools:         appendDedup(parent.Tools, child.Tools),
 		Observability: appendDedup(parent.Observability, child.Observability),
-		Harness:       appendDedup(parent.Harness, child.Harness),
+		Eval:          appendDedup(parent.Eval, child.Eval),
 		Guardrails:    appendDedup(parent.Guardrails, child.Guardrails),
+		Orchestration: appendDedup(parent.Orchestration, child.Orchestration),
+		Sandbox:       appendDedup(parent.Sandbox, child.Sandbox),
 		Memory:        replaceScalar(parent.Memory, child.Memory),
-		Sandbox:       replaceScalar(parent.Sandbox, child.Sandbox),
 	}
 }
 
@@ -181,10 +258,11 @@ func flattenLayers(l manifest.ProfileLayers) []slotEntry {
 	add("context", l.Context)
 	add("tools", l.Tools)
 	addScalar("memory", l.Memory)
-	addScalar("sandbox", l.Sandbox)
+	add("sandbox", l.Sandbox)
 	add("observability", l.Observability)
-	add("harness", l.Harness)
+	add("eval", l.Eval)
 	add("guardrails", l.Guardrails)
+	add("orchestration", l.Orchestration)
 	return out
 }
 
@@ -224,6 +302,22 @@ func (r *Resolved) Names() []string {
 		out[i] = it.Name
 	}
 	return out
+}
+
+// excludeSet builds the lookup of base names a profile's `without` subtracts,
+// plus a parallel set used to detect entries that matched nothing (so a stale
+// exclusion surfaces as a warning rather than a silent no-op). A `without` entry
+// is matched on its base name, so a flavoured `name@tool` exclusion is normalized
+// to its base — you subtract the item, not one tool's flavour of it.
+func excludeSet(without manifest.StringList) (excluded, unmatched map[string]bool) {
+	excluded = make(map[string]bool, len(without))
+	unmatched = make(map[string]bool, len(without))
+	for _, w := range without {
+		base, _ := splitFlavour(w)
+		excluded[base] = true
+		unmatched[base] = true
+	}
+	return excluded, unmatched
 }
 
 func findProfile(cat *registry.Catalog, name string) *manifest.Profile {

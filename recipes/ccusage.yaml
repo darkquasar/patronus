@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: recipe
+name: ccusage
+role: observability                        # L7 — token-usage/cost visibility from each agent's local logs
+summary: "Installs the ccusage CLI (npm) — an on-demand token-usage + cost reporter that reads each agent's local logs. Install-only: run `ccusage` (or `ccusage claude`) when you want a report; the Claude statusline is wired separately by the ccusage-statusline setting."
+upstream: github.com/ryoppippi/ccusage
+license: MIT
+
+# Install-only: ccusage is a self-contained on-demand CLI — there is nothing to
+# wire into the agent (no MCP server, no hook). Patronus surfaces the npm install
+# as an advisory the user runs; thereafter `ccusage` is invoked on demand. Its
+# Claude statusline is the separate ccusage-statusline setting artifact (@claude).
+deliver:
+  source: npm
+  ref: ccusage
+  binary: ccusage
+# no wire: — installing the package IS the whole job (Shape: install-only)

@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: terse
+summary: "STUB — terse-output overlay. Wires the caveman terse-output style on top of the L1 baseline; the style overlay is sourced later."
+status: stub                               # installer warns: caveman not yet sourced
+layers:
+  instructions:
+    - agents-spine
+    - agent-rules
+    # - caveman   TODO: source the caveman terse-output style overlay (L1, P7.x)
+todo:
+  - "Source the caveman terse-output style overlay (MIT) and add it to instructions."

@@ -131,9 +131,9 @@ func printProfileLayers(w io.Writer, m *manifest.Profile) {
 	add("context", L.Context)
 	add("tools", L.Tools)
 	addScalar("memory", L.Memory)
-	addScalar("sandbox", L.Sandbox)
+	add("sandbox", L.Sandbox)
 	add("observability", L.Observability)
-	add("harness", L.Harness)
+	add("eval", L.Eval)
 	add("guardrails", L.Guardrails)
 
 	for i, r := range rows {

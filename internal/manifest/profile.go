@@ -14,6 +14,7 @@ type Profile struct {
 	Summary string        `yaml:"summary,omitempty" json:"summary,omitempty"`
 	Status  string        `yaml:"status,omitempty" json:"status,omitempty"` // stub | (populated)
 	Extends string        `yaml:"extends,omitempty" json:"extends,omitempty"`
+	Without StringList    `yaml:"without,omitempty" json:"without,omitempty"` // base names to SUBTRACT from the composed layers (the relaxation-overlay operator, symmetric to extends-append)
 	Layers  ProfileLayers `yaml:"layers" json:"layers"`
 	Todo    []string      `yaml:"todo,omitempty" json:"todo,omitempty"`
 }
@@ -21,18 +22,22 @@ type Profile struct {
 // Header returns the profile's shared identity header (implements Installable).
 func (p *Profile) Header() Meta { return p.Meta }
 
-// ProfileLayers maps each §1A layer to its selected item(s). Single-recipe
-// layers (memory, sandbox) are scalars; the rest are lists.
+// ProfileLayers maps each §1A layer to its selected item(s). Memory is the lone
+// scalar (one memory recipe per environment); the rest are lists. Sandbox is a
+// list too — not because a tool runs several sandboxes, but so ONE profile can
+// carry per-tool flavours (native@claude/@codex + sandbox-runtime@opencode) and
+// the resolver picks the one matching --tool.
 type ProfileLayers struct {
 	Instructions  StringList `yaml:"instructions,omitempty" json:"instructions,omitempty"`
 	Capabilities  StringList `yaml:"capabilities,omitempty" json:"capabilities,omitempty"`
 	Context       StringList `yaml:"context,omitempty" json:"context,omitempty"`
 	Tools         StringList `yaml:"tools,omitempty" json:"tools,omitempty"`
 	Memory        string     `yaml:"memory,omitempty" json:"memory,omitempty"`
-	Sandbox       string     `yaml:"sandbox,omitempty" json:"sandbox,omitempty"`
+	Sandbox       StringList `yaml:"sandbox,omitempty" json:"sandbox,omitempty"` // list so one profile can flavour the L6 recipe per tool (native@claude/@codex vs sandbox-runtime@opencode)
 	Observability StringList `yaml:"observability,omitempty" json:"observability,omitempty"`
-	Harness       StringList `yaml:"harness,omitempty" json:"harness,omitempty"`
+	Eval          StringList `yaml:"eval,omitempty" json:"eval,omitempty"`
 	Guardrails    StringList `yaml:"guardrails,omitempty" json:"guardrails,omitempty"`
+	Orchestration StringList `yaml:"orchestration,omitempty" json:"orchestration,omitempty"` // L10 — work-graph + multi-agent dispatch (Beads + orchestration skills)
 }
 
 // StringList accepts either a single scalar or a YAML sequence, decoding both to

@@ -15,6 +15,7 @@ import (
 func newLockCmd() *cobra.Command {
 	var (
 		profileSel string
+		tool       string
 		regSel     registrySel
 	)
 
@@ -54,7 +55,9 @@ func newLockCmd() *cobra.Command {
 				return err
 			}
 
-			res, err := profile.Resolve(cat, profileSel)
+			// tool pins per-tool flavours (§4); the default "all" pins the
+			// tool-agnostic baseline (bare names only).
+			res, err := profile.Resolve(cat, profileSel, tool)
 			if err != nil {
 				return err
 			}
@@ -87,6 +90,7 @@ func newLockCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&profileSel, "profile", "", "profile to lock (required)")
+	cmd.Flags().StringVar(&tool, "tool", "all", "pin per-tool flavours: claude|codex|opencode|all")
 	addRegistryFlags(cmd, &regSel)
 	return cmd
 }

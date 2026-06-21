@@ -150,6 +150,17 @@ func collectArtifactFiles(entry *registry.ArtifactEntry) (map[string][]byte, err
 		}
 		out[path.Clean(entry.Manifest.Entry)] = b
 	}
+
+	// Vendored content (attribution set) must ship its NOTICE in the tarball so the
+	// upstream license + copyright travels with the artifact (§3). Required, not
+	// best-effort: a missing NOTICE on attributed content fails the build.
+	if entry.Manifest.Attribution != nil {
+		nb, err := os.ReadFile(filepath.Join(root, "NOTICE"))
+		if err != nil {
+			return nil, fmt.Errorf("artifact %q declares attribution but has no NOTICE file: %w", entry.Manifest.Name, err)
+		}
+		out["NOTICE"] = nb
+	}
 	for _, f := range entry.Manifest.Files {
 		dir := filepath.Join(root, f)
 		err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {

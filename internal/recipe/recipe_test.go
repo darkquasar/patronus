@@ -256,6 +256,42 @@ func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	}
 }
 
+// An install-only recipe (deliver: npm, no wire) emits exactly one display-only
+// EXEC advisory carrying the package-install command, tool-agnostic and
+// self-managed — Patronus never silently runs a global package install, and no
+// FETCH/MERGE is produced (the wiring is a separate hook artifact's job).
+func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
+	res, _, _ := testEnv(t)
+	rec := &manifest.Recipe{
+		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "tdd-guard", Role: manifest.RoleEval},
+		Delivery: &manifest.Delivery{Source: manifest.SourceNpm, Ref: "tdd-guard", Binary: "tdd-guard"},
+		// no Wire — install-only
+	}
+	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "all", Scope: "global"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("want exactly 1 advisory diff, got %d: %+v", len(diffs), diffs)
+	}
+	d := diffs[0]
+	if d.Action != diff.Exec {
+		t.Errorf("action = %s, want EXEC (advisory)", d.Action)
+	}
+	if d.Type != string(manifest.ShapeInstall) {
+		t.Errorf("type = %s, want install-only", d.Type)
+	}
+	if d.Exec == nil || d.Exec.Display != "npm install -g tdd-guard" {
+		t.Errorf("advisory command wrong: %+v", d.Exec)
+	}
+	if d.Exec == nil || !d.Exec.SelfManaged {
+		t.Error("install advisory must be self-managed (Patronus does not auto-run global installs)")
+	}
+	if d.Tool != "-" {
+		t.Errorf("tool = %q, want '-' (a global install is tool-agnostic)", d.Tool)
+	}
+}
+
 func TestResolveAssetNoMatch(t *testing.T) {
 	rec := engramRecipe()
 	if _, err := rec.Delivery.ResolveAsset("windows", "arm64"); err == nil {

@@ -21,6 +21,8 @@ func TestShapeMatrix(t *testing.T) {
 		{"delivery+mcp", &Delivery{Source: SourceGithubRelease}, WireModeMcp, ShapeFetchWire},
 		{"delivery+run", &Delivery{Source: SourceScript}, WireModeRun, ShapeFetchRun},
 		{"delivery+self", &Delivery{Source: SourceDocker}, WireModeSelf, ShapeFetchRun},
+		{"delivery+no-wire", &Delivery{Source: SourceNpm}, "", ShapeInstall}, // install-only
+		{"nil-delivery+no-wire", nil, "", ShapeWireOnly},                     // no delivery wins (degenerate)
 	}
 	for _, tc := range cases {
 		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Mode: tc.mode}}
@@ -55,8 +57,26 @@ func TestValidateArtifact(t *testing.T) {
 		{"every-valid-type-skill", func(a *Artifact) { a.Type = TypeSkill }, false},
 		{"every-valid-type-agent", func(a *Artifact) { a.Type = TypeAgent }, false},
 		{"every-valid-type-command", func(a *Artifact) { a.Type = TypeCommand }, false},
-		{"every-valid-type-hook", func(a *Artifact) { a.Type = TypeHook }, false},
+		{"every-valid-type-hook", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "true"}
+		}, false},
+		{"hook-missing-block", func(a *Artifact) { a.Type = TypeHook }, true},
+		{"hook-missing-command", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse"}
+		}, true},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
+		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
+		{"attribution-complete", func(a *Artifact) {
+			a.Attribution = &Attribution{Upstream: "github.com/x/y", License: "MIT", Copyright: "Copyright (c) 2026 X"}
+		}, false},
+		{"attribution-missing-copyright", func(a *Artifact) {
+			a.Attribution = &Attribution{Upstream: "github.com/x/y", License: "MIT"}
+		}, true},
+		{"attribution-missing-upstream", func(a *Artifact) {
+			a.Attribution = &Attribution{License: "MIT", Copyright: "Copyright (c) 2026 X"}
+		}, true},
 	}
 	for _, tc := range cases {
 		a := base()

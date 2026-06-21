@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: observability                        # L7 — same layer as the ccusage recipe it surfaces
+name: ccusage-statusline
+description: "Wires ccusage as the Claude Code statusline — a compact token-usage/cost display in the status bar. Claude-only (the statusLine settings key is a Claude concept); on Codex/OpenCode it is an honest no-op. Requires the ccusage CLI (the ccusage recipe)."
+version: 1.0.0
+entry: ""
+targets: [claude]
+defaults:
+  scope: global
+setting:
+  path: statusLine
+  value:
+    type: command
+    command: ccusage statusline

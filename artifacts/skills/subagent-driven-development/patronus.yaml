@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: orchestration
+name: subagent-driven-development
+description: "Orchestration discipline — execute an implementation plan by dispatching a fresh implementer subagent per task, reviewing each (spec compliance + code quality) before moving on, and running one broad whole-branch review at the end. Use to run a multi-task plan with isolated per-task context and automatic review gates."
+version: 1.0.0
+entry: SKILL.md
+files: [implementer-prompt.md, task-reviewer-prompt.md, scripts]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored from the upstream `subagent-driven-development` skill (skills/subagent-driven-development/), including implementer-prompt.md, task-reviewer-prompt.md, and the scripts/ helpers (task-brief, review-package, sdd-workspace — audited: git-read + file-write only, no network/destructive ops). SKILL.md body is upstream-verbatim; a short Patronus note prepended at the top maps the `superpowers:` sibling cross-refs to Patronus artifacts and marks the un-vendored siblings (requesting-code-review, finishing-a-development-branch, using-git-worktrees) optional."

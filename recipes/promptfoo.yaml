@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: recipe
+name: promptfoo
+role: eval                                 # L8 — evaluation / CI gate for prompts + agent outputs
+summary: "Installs promptfoo (npm) — an agent-agnostic eval/CI gate: define test cases + assertions for prompts/outputs and run them locally or in CI. Install-only: run `promptfoo eval` against your config; nothing is wired into the agent."
+upstream: github.com/promptfoo/promptfoo
+license: MIT
+
+# Install-only: promptfoo is a CLI/CI tool you invoke (`promptfoo eval`), not
+# something wired into the agent. Patronus surfaces the npm install as an advisory.
+deliver:
+  source: npm
+  ref: promptfoo
+  binary: promptfoo
+# no wire: — installing the package IS the whole job (Shape: install-only)

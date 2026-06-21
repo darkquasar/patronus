@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: domain-modeling
+description: "Actively build and sharpen a project's domain model — challenge fuzzy terms, maintain a CONTEXT.md glossary, and record architectural decisions as ADRs. Use when pinning down ubiquitous language or recording a decision."
+version: 1.0.0
+entry: SKILL.md
+files: [ADR-FORMAT.md, CONTEXT-FORMAT.md]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Vendored verbatim from the upstream `domain-modeling` skill (skills/engineering/domain-modeling), including ADR-FORMAT.md and CONTEXT-FORMAT.md."

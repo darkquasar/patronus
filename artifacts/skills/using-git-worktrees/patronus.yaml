@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: using-git-worktrees
+description: "Workspace-isolation discipline — start feature work (or a plan execution) in an isolated workspace via the runtime's native worktree support or a git worktree fallback, so in-progress work never collides with the current tree."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Vendored verbatim from the upstream `using-git-worktrees` skill (skills/using-git-worktrees/SKILL.md)."
