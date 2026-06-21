@@ -64,6 +64,48 @@ func TestPrintArtifactsV2Columns(t *testing.T) {
 	if strings.Contains(out, "KIND") {
 		t.Errorf("artifact list still shows the old KIND column:\n%s", out)
 	}
+	// The compact default table omits the description column.
+	if strings.Contains(out, "DESCRIPTION") || strings.Contains(out, "research skill") {
+		t.Errorf("default artifact table should omit the description:\n%s", out)
+	}
+}
+
+// TestPrintArtifactsDescriptionBlocks: --description switches to a block list with
+// each artifact's FULL description, separated by `---`.
+func TestPrintArtifactsDescriptionBlocks(t *testing.T) {
+	var buf bytes.Buffer
+	PrintCatalog(&buf, sampleCatalog(), CatalogView{Artifacts: true, Description: true})
+	out := buf.String()
+
+	for _, want := range []string{"---", "team-research", "research skill", "pattern-cloudflare", "cf patterns", "description:", "targets:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("description block view missing %q\n%s", want, out)
+		}
+	}
+	// Two artifacts => at least 3 rule lines (top, between, bottom).
+	if c := strings.Count(out, "---"); c < 3 {
+		t.Errorf("expected >=3 `---` rules for 2 artifacts, got %d\n%s", c, out)
+	}
+}
+
+// TestPrintSingleArtifact: --artifact <name> shows just that one item's block;
+// an unknown name reports clearly.
+func TestPrintSingleArtifact(t *testing.T) {
+	var found bytes.Buffer
+	PrintCatalog(&found, sampleCatalog(), CatalogView{Artifacts: true, Artifact: "pattern-cloudflare"})
+	fo := found.String()
+	if !strings.Contains(fo, "pattern-cloudflare") || !strings.Contains(fo, "cf patterns") {
+		t.Errorf("single-artifact view missing the item:\n%s", fo)
+	}
+	if strings.Contains(fo, "team-research") {
+		t.Errorf("single-artifact view should not list other items:\n%s", fo)
+	}
+
+	var missing bytes.Buffer
+	PrintCatalog(&missing, sampleCatalog(), CatalogView{Artifacts: true, Artifact: "does-not-exist"})
+	if !strings.Contains(missing.String(), `no artifact named "does-not-exist"`) {
+		t.Errorf("expected a not-found message:\n%s", missing.String())
+	}
 }
 
 // TestPrintRecipesShowsShapeAndRole: recipes list TYPE (= computed Shape) + ROLE,

@@ -12,11 +12,13 @@ import (
 
 func newListCmd() *cobra.Command {
 	var (
-		artifacts bool
-		recipes   bool
-		profiles  bool
-		layers    bool
-		regSel    registrySel
+		artifacts   bool
+		recipes     bool
+		profiles    bool
+		layers      bool
+		description bool
+		artifact    string
+		regSel      registrySel
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -38,9 +40,21 @@ func newListCmd() *cobra.Command {
 				return err
 			}
 
-			// No type flag => show everything.
-			view := render.CatalogView{Artifacts: artifacts, Recipes: recipes, Profiles: profiles, Layers: layers}
-			if !artifacts && !recipes && !profiles {
+			// No type flag => show everything. A single-artifact lookup (--artifact)
+			// or --description is artifact-scoped, so it implies the artifacts section.
+			view := render.CatalogView{
+				Artifacts: artifacts, Recipes: recipes, Profiles: profiles, Layers: layers,
+				Description: description, Artifact: artifact,
+			}
+			switch {
+			case artifact != "" || description:
+				// Scope to artifacts unless the user also explicitly asked for others.
+				if !recipes && !profiles {
+					view.Artifacts, view.Recipes, view.Profiles = true, false, false
+				} else {
+					view.Artifacts = true
+				}
+			case !artifacts && !recipes && !profiles:
 				view.Artifacts, view.Recipes, view.Profiles = true, true, true
 			}
 
@@ -55,6 +69,8 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&recipes, "recipes", false, "show recipes")
 	cmd.Flags().BoolVar(&profiles, "profiles", false, "show profiles")
 	cmd.Flags().BoolVar(&layers, "layers", false, "expand profile layers (with --profiles)")
+	cmd.Flags().BoolVar(&description, "description", false, "show artifacts as a block list with each item's full description (instead of the compact table)")
+	cmd.Flags().StringVar(&artifact, "artifact", "", "show the full details of a single artifact by name")
 	addRegistryFlags(cmd, &regSel)
 	return cmd
 }

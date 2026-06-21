@@ -20,6 +20,14 @@ type CatalogView struct {
 	Recipes   bool
 	Profiles  bool
 	Layers    bool
+	// Description switches the artifact section from the compact table (which omits
+	// the description so a row fits the screen) to a block/list view where each
+	// artifact is one record with its FULL untruncated description, blocks
+	// separated by a `---` rule.
+	Description bool
+	// Artifact, when set, restricts the artifact section to the single named item,
+	// shown as its full block (implies the block view). Empty means all artifacts.
+	Artifact string
 }
 
 // JSON writes v as indented JSON.
@@ -34,7 +42,7 @@ const descWidth = 60
 // PrintCatalog renders the catalog as aligned text sections.
 func PrintCatalog(w io.Writer, cat *registry.Catalog, view CatalogView) {
 	if view.Artifacts {
-		printArtifacts(w, cat.Artifacts)
+		printArtifacts(w, cat.Artifacts, view)
 	}
 	if view.Recipes {
 		printRecipes(w, cat.Recipes)
@@ -44,21 +52,60 @@ func PrintCatalog(w io.Writer, cat *registry.Catalog, view CatalogView) {
 	}
 }
 
-func printArtifacts(w io.Writer, entries []registry.ArtifactEntry) {
+// printArtifacts renders the artifact section. The default is a compact table
+// (NAME/TYPE/ROLE/TARGETS, no description). With --description (or a single
+// --artifact lookup) it switches to a block/list view carrying the full
+// description.
+func printArtifacts(w io.Writer, entries []registry.ArtifactEntry, view CatalogView) {
 	fmt.Fprintln(w, "ARTIFACTS")
+
+	// Single-artifact lookup: filter to the one named item (block view).
+	if view.Artifact != "" {
+		for _, e := range entries {
+			if e.Manifest.Name == view.Artifact {
+				printArtifactBlocks(w, []registry.ArtifactEntry{e})
+				return
+			}
+		}
+		fmt.Fprintf(w, "  no artifact named %q\n\n", view.Artifact)
+		return
+	}
+
 	if len(entries) == 0 {
 		fmt.Fprintln(w, "  (none)")
 		fmt.Fprintln(w)
 		return
 	}
+
+	if view.Description {
+		printArtifactBlocks(w, entries)
+		return
+	}
+
+	// Compact default: drop the description column so a row fits the terminal.
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tTYPE\tROLE\tTARGETS\tDESCRIPTION")
+	fmt.Fprintln(tw, "  NAME\tTYPE\tROLE\tTARGETS")
 	for _, e := range entries {
 		m := e.Manifest
-		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\n",
-			m.Name, m.Type, m.Role, joinList(m.Targets), truncate(m.Description, descWidth))
+		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n", m.Name, m.Type, m.Role, joinList(m.Targets))
 	}
 	tw.Flush()
+	fmt.Fprintln(w)
+}
+
+// printArtifactBlocks renders one record per artifact with its FULL description,
+// blocks separated by a `---` rule so a long description is readable in full.
+func printArtifactBlocks(w io.Writer, entries []registry.ArtifactEntry) {
+	for _, e := range entries {
+		m := e.Manifest
+		fmt.Fprintln(w, "---")
+		fmt.Fprintf(w, "%s\n", m.Name)
+		fmt.Fprintf(w, "  type:        %s\n", m.Type)
+		fmt.Fprintf(w, "  role:        %s\n", m.Role)
+		fmt.Fprintf(w, "  targets:     %s\n", joinList(m.Targets))
+		fmt.Fprintf(w, "  description: %s\n", m.Description)
+	}
+	fmt.Fprintln(w, "---")
 	fmt.Fprintln(w)
 }
 
