@@ -328,10 +328,19 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath, tool string) ada
 	return adapter.ServerSpec{Name: name, Transport: wm.Transport, Values: vals}
 }
 
-// execDiffs builds display-only EXEC rows for a run/self recipe: each wire.run
-// command, with {tool} substituted, per targeted tool. The applier skips these;
-// the cmd layer runs them on --deploy. mode: self flags them self-managing (which
-// is provenance state records, not something the EXEC diff itself carries).
+// execDiffs builds EXEC rows for a run/self recipe: each wire.run command, with
+// {tool} substituted, per targeted tool. The applier always skips these; the cmd
+// layer runs them on --deploy UNLESS they are advisory.
+//
+//   - mode: run  — Patronus runs the commands we specified (auto-run on --deploy).
+//   - mode: self — the recipe wires ITSELF via its OWN installer (e.g. ai-memory
+//     install-hooks). That presupposes the tool's CLI is already on $PATH —
+//     something Patronus did not deliver (ai-memory ships via Docker/cargo, not a
+//     fetched binary). Auto-running it therefore errors on any machine where the
+//     user hasn't installed the tool yet. So a self-managed EXEC is ADVISORY:
+//     Patronus DISPLAYS the wiring command but never executes it. SelfManaged is
+//     the provenance state records; Advisory is what keeps a missing binary from
+//     failing the install.
 func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDiff {
 	selfManaged := rec.Wire.Mode == manifest.WireModeSelf
 	var out []diff.FileDiff
@@ -351,7 +360,7 @@ func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDi
 				Tool:     tool,
 				Scope:    scope,
 				Note:     "run: " + line,
-				Exec:     &diff.ExecSpec{Command: argv, Display: line, SelfManaged: selfManaged},
+				Exec:     &diff.ExecSpec{Command: argv, Display: line, SelfManaged: selfManaged, Advisory: selfManaged},
 			})
 		}
 	}

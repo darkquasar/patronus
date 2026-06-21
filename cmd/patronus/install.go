@@ -534,11 +534,13 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner) ([]d
 			continue
 		}
 		if d.Exec.Advisory {
-			// Display-only: an install-only recipe's package-install line. Patronus
-			// never runs a global package install on the user's behalf — it surfaces
-			// the command so the user (or a future --prefer-system-pkg path) runs it.
-			// It is still recorded (in `ran`) so state remembers the recipe was
-			// installed and remove can report the manual-cleanup command.
+			// Display-only. Two cases produce an advisory EXEC: an install-only
+			// recipe's package-install line, and a mode: self recipe's self-wiring
+			// command (which presupposes the tool's own CLI is already installed —
+			// something Patronus did not deliver). In both, Patronus surfaces the
+			// command for the user to run rather than executing it, so a missing
+			// binary never fails the install. It is still recorded (in `ran`) so
+			// state remembers the recipe and remove can report the manual-cleanup.
 			fmt.Fprintf(cmd.OutOrStdout(), "ADVISORY (run yourself): %s\n", d.Exec.Display)
 			ran = append(ran, d)
 			continue
