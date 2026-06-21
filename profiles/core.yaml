@@ -54,7 +54,9 @@ layers:
     - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
     - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through
     - gitleaks-guard                       # PreToolUse Bash @commit — scans the staged diff, blocks a commit carrying a secret
-    - git-guardrails                       # PreToolUse Bash — blocks destructive git (push/reset --hard/clean -f/branch -D/...)
+    # git-guardrails (blocks destructive git: push/reset --hard/clean -f/...) is NOT
+    # in core — it intercepts ordinary git (incl. push), which is too opinionated for
+    # the default. Opt in via the `safe-git` profile.
   observability:
     - ccusage                              # install the ccusage CLI (npm, install-only) — on-demand token-usage/cost reports
     - ccusage-statusline@claude            # Claude-only statusline setting (token usage in the status bar); @claude → no-op on codex/opencode

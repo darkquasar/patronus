@@ -20,7 +20,7 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	stubBinary(t, home, "gitleaks")
 	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
-	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 
@@ -31,7 +31,7 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	}
 
 	// The strict gates + the re-grounding hooks all coexist in ONE settings.json:
-	// 4 PreToolUse hooks (tdd + 3 guardrails), 2 SessionStart hooks (the dispatch
+	// 4 PreToolUse hooks (tdd + 3 guardrails, via safe-git which adds git-guardrails to core), 2 SessionStart hooks (the dispatch
 	// keystone activation + the work-state reground), 1 UserPromptSubmit hook (the
 	// per-turn skill heartbeat), and the statusLine setting.
 	if pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any); len(pre) != 4 {
@@ -61,7 +61,7 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	}
 
 	// Lock pins the new hook + setting items (not just skills/instructions).
-	if _, _, err := runLock(t, "--profile", "core", "--tool", "claude"); err != nil {
+	if _, _, err := runLock(t, "--profile", "safe-git", "--tool", "claude"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()

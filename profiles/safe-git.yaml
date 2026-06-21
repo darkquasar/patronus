@@ -1,0 +1,9 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: safe-git
+summary: "core, plus the git-guardrails hook that blocks destructive git commands (push, reset --hard, clean -f, branch -D, checkout/restore .) before the agent runs them. Opt-in because it intercepts ordinary git — including `git push` — which is too opinionated for the lean default. A guardrail, not a security boundary (the agent could still craft an unmatched variant)."
+extends: core
+layers:
+  guardrails:
+    - git-guardrails                       # PreToolUse Bash — blocks destructive git (push/reset --hard/clean -f/branch -D/...)

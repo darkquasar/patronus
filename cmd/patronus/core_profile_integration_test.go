@@ -183,7 +183,7 @@ func TestCoreStrictGate(t *testing.T) {
 	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
 	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
-	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
+	out, errOut, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
@@ -200,7 +200,7 @@ func TestCoreStrictGate(t *testing.T) {
 	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
 		t.Fatalf("settings.json unreadable: %v", err)
 	}
-	// core's L8+L9 PreToolUse hooks all coexist in ONE settings.json array (the
+	// the safe-git strict set (core L8/L9 + git-guardrails) coexists in ONE settings.json array (the
 	// compose-fold): tdd-guard-hook + block-secrets + gitleaks-guard + git-guardrails.
 	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
 	if len(pre) != 4 {
@@ -227,7 +227,7 @@ func TestCoreStrictGate(t *testing.T) {
 	}
 
 	// Idempotent re-run → SKIP (the hook merge is a no-op the second time).
-	reout, _, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--dry-run")
+	reout, _, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +287,7 @@ func TestNoTddGuardOverlayDropsEnforcement(t *testing.T) {
 	}
 }
 
-// TestCoreGuardrails is the §6b acceptance for P7.5.3: core's L9 guardrail set.
+// TestCoreGuardrails is the §6b acceptance for P7.5.3: the L9 guardrail set via safe-git (core + git-guardrails).
 // A dry-run (no network) asserts the plan carries the three guardrail hooks
 // (block-secrets + gitleaks-guard + git-guardrails, each MERGEd into Claude
 // settings.json), the two script-bearing hooks place their helper scripts, and
@@ -297,7 +297,7 @@ func TestCoreGuardrails(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
 
-	out, _, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--dry-run", "--verbose")
+	out, _, err := runInstall(t, "--profile", "safe-git", "--tool", "claude", "--global", "--dry-run", "--verbose")
 	if err != nil {
 		t.Fatalf("dry-run: %v", err)
 	}

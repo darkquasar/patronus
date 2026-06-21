@@ -241,7 +241,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"ai-memory", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
+	wantProfiles := []string{"ai-memory", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "no-tdd-guard", "python", "quiet", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}
