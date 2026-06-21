@@ -85,6 +85,17 @@ func withRemoteEnv(t *testing.T, f *servingFetcher) (home string) {
 	home = t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("PATRONUS_REGISTRY_URL", testRegistryBase)
+	// Pin the per-tool config-dir env vars INTO the temp HOME so an install can't
+	// escape the sandbox via an inherited override. OpenCode resolves its global
+	// config from XDG_CONFIG_HOME/OPENCODE_CONFIG_DIR and Codex from CODEX_HOME
+	// (see internal/toolpath/resolver.go); on a host where any of these is already
+	// set (e.g. CI runners set XDG_CONFIG_HOME=/home/runner/.config) the writes
+	// would land outside HOME and the `~/.config/opencode/...` assertions would
+	// miss them. Setting XDG_CONFIG_HOME to <home>/.config keeps the resolved path
+	// identical to the ~/.config fallback the tests assert against.
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Setenv("OPENCODE_CONFIG_DIR", filepath.Join(home, ".config", "opencode"))
+	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	// A cwd with no artifacts/ + adapters/ above it → DiscoverRoot fails → Remote.
 	work := t.TempDir()
 	t.Chdir(work)
