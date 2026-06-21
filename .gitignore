@@ -1,8 +1,27 @@
 # macOS
 .DS_Store
 
-# Claude Code
+# Patronus deploy products — what `patronus install --local` writes into a project.
+# None of these are source (Patronus's own artifacts live under artifacts/); they
+# are generated per-project install output and must never be committed. Covers all
+# three target tools (Claude / Codex / OpenCode). NOTE: .gitignore does not support
+# inline comments — each pattern is on its own line.
+#   .claude/          Claude: skills, hooks, output-styles, settings.json
+#   .codex/           Codex: config.toml, AGENTS.md
+#   .config/opencode/ OpenCode: opencode.json, AGENTS.md
+#   .patronus/        Patronus install state (state.json, cache, fetched binaries)
+#   CLAUDE.md         appended instruction target (Claude)
+#   AGENTS.md         appended instruction target (Codex/OpenCode)
+#   .mcp.json         merged MCP-server config (Claude project scope)
 .claude/
+.codex/
+.config/opencode/
+.patronus/
+/CLAUDE.md
+/AGENTS.md
+/.mcp.json
+# patronus.lock is intentionally NOT ignored — it is the committed lock spec, the
+# one Patronus product meant to live in version control.
 
 # Patronus CI output (published to GitHub Releases)
 /registry/
