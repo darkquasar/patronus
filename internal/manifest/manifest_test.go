@@ -181,6 +181,12 @@ func TestInstallableHeader(t *testing.T) {
 	var _ Installable = (*Profile)(nil)
 }
 
+func TestFamilyPluginConstant(t *testing.T) {
+	if FamilyPlugin != "plugin" {
+		t.Errorf("FamilyPlugin = %q, want \"plugin\"", FamilyPlugin)
+	}
+}
+
 func TestStringListScalarOrSequence(t *testing.T) {
 	type wrap struct {
 		Items StringList `yaml:"items"`
