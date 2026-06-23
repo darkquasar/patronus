@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -307,3 +309,48 @@ func TestRunExecsStopsOnFailure(t *testing.T) {
 type failRunner struct{}
 
 func (failRunner) Run([]string) error { return os.ErrPermission }
+
+// TestComputePlanDispatchesPlugin proves a plugin name routes to plugin.Compute
+// (not the artifact fall-through). The plugin is claude-native (a "claude-code"
+// source), so the registration rides the claude adapter's setting MERGE and
+// yields an applicable diff. The adapters + resolver are real (loadAdapters'
+// builtin claude + a HOME-backed toolpath resolver) because post-fix
+// plugin.Compute routes the registration through adapter.Engine.Transform and
+// would hit a nil adapter without them.
+func TestComputePlanDispatchesPlugin(t *testing.T) {
+	home := t.TempDir()
+	proj := t.TempDir()
+	res := toolpath.New(func(k string) (string, bool) {
+		if k == "HOME" {
+			return home, true
+		}
+		return "", false
+	}, home, proj)
+
+	adapters, err := loadAdapters(filepath.Join(t.TempDir(), "no-adapters-dir"))
+	if err != nil {
+		t.Fatalf("loadAdapters: %v", err)
+	}
+
+	cat := &registry.Catalog{
+		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
+			Meta:    manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Sources: map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
+		}}},
+	}
+
+	cs, err := computePlan(planInputs{
+		cat:      cat,
+		adapters: adapterMap(adapters),
+		res:      res,
+		names:    []string{"superpowers"},
+		tool:     "claude",
+		scope:    "global",
+	})
+	if err != nil {
+		t.Fatalf("computePlan: %v", err)
+	}
+	if cs == nil || len(cs.Diffs) == 0 {
+		t.Fatal("expected a registration diff for the plugin, got none")
+	}
+}

@@ -12,11 +12,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
@@ -267,6 +269,21 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		raw           []diff.FileDiff
 	)
 	for _, name := range in.names {
+		if pl := findPlugin(in.cat, name); pl != nil {
+			diffs, _, err := plugin.Compute(plugin.Request{
+				Plugin:       pl.Manifest,
+				Tool:         in.tool,
+				Scope:        in.scope,
+				Engine:       adapter.New(in.res),
+				Adapter:      in.adapters[in.tool],
+				ReadExisting: read,
+			})
+			if err != nil {
+				return nil, err
+			}
+			raw = append(raw, diffs...)
+			continue
+		}
 		if rec := findRecipe(in.cat, name); rec != nil {
 			diffs, err := recipe.Compute(recipe.Request{
 				Recipe:          rec.Manifest,
@@ -412,6 +429,16 @@ func contains(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// findPlugin returns the catalog plugin entry with the given name, or nil.
+func findPlugin(cat *registry.Catalog, name string) *registry.PluginEntry {
+	for i := range cat.Plugins {
+		if cat.Plugins[i].Manifest.Name == name {
+			return &cat.Plugins[i]
+		}
+	}
+	return nil
 }
 
 // findRecipe returns the catalog recipe entry with the given name, or nil.
