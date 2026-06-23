@@ -48,7 +48,7 @@ type Entry struct {
 	SHA256        string `json:"sha256"`                  // "sha256:" + hex over the manifest + content
 	TarballSha256 string `json:"tarballSha256,omitempty"` // "sha256:" + hex over the published tarball bytes
 	Slot          string `json:"slot,omitempty"`          // §1A layer it filled (informational)
-	Kind          string `json:"kind,omitempty"`          // "artifact" | "recipe"
+	Kind          string `json:"kind,omitempty"`          // "artifact" | "recipe" | "plugin"
 }
 
 // Load reads a lock file, returning an empty lock if the file is absent.
