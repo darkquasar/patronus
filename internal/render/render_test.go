@@ -144,6 +144,17 @@ func TestPrintProfilesAndLayers(t *testing.T) {
 	}
 }
 
+func TestPrintCatalogShowsPlugins(t *testing.T) {
+	cat := &registry.Catalog{Plugins: []registry.PluginEntry{
+		{Manifest: &manifest.Plugin{Meta: manifest.Meta{Family: manifest.FamilyPlugin, Name: "superpowers", Description: "skill marketplace"}}},
+	}}
+	var buf bytes.Buffer
+	PrintCatalog(&buf, cat, CatalogView{Plugins: true})
+	if !strings.Contains(buf.String(), "superpowers") {
+		t.Errorf("output missing plugin name:\n%s", buf.String())
+	}
+}
+
 func TestPrintCatalogEmptySections(t *testing.T) {
 	var buf bytes.Buffer
 	PrintCatalog(&buf, &registry.Catalog{}, CatalogView{Artifacts: true, Recipes: true, Profiles: true})
