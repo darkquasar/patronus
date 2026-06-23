@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: plugin
+role: lifecycle
+name: superpowers
+description: "Brainstorming, planning, and dev-discipline skill bundle (upstream plugin)."
+version: 2.1.0
+sources:
+  claude-code:
+    kind: marketplace
+    marketplace: claude-plugins-official
+    plugin: superpowers
+    ref: v2.1.0
+targets: [claude, codex]
+defaults:
+  scope: global
