@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -361,5 +362,100 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 	}
 	if got := contribs[0].contribs[0]; got.Tool != "claude" || got.Mode != plugin.ModeNative {
 		t.Errorf("contribution = %+v, want Tool=claude Mode=native", got)
+	}
+}
+
+// TestComputePlanPluginAllExpandsTargets covers FIX C1+I1: a bare install (tool
+// "all", no scope flag) must fan out to the plugin's Targets and honor the
+// manifest's defaults.scope, registering on EVERY target instead of yielding zero
+// diffs the way a single ResolveMode("all") call would.
+func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
+	home := t.TempDir()
+	proj := t.TempDir()
+	res := toolpath.New(func(k string) (string, bool) {
+		if k == "HOME" {
+			return home, true
+		}
+		return "", false
+	}, home, proj)
+
+	adapters, err := loadAdapters(filepath.Join(t.TempDir(), "no-adapters-dir"))
+	if err != nil {
+		t.Fatalf("loadAdapters: %v", err)
+	}
+
+	cat := &registry.Catalog{
+		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
+			Meta:     manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Sources:  map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
+			Targets:  []string{"claude", "codex"},
+			Defaults: manifest.PluginDefaults{Scope: "global"},
+		}}},
+	}
+
+	cs, contribs, err := computePlan(planInputs{
+		cat:      cat,
+		adapters: adapterMap(adapters),
+		res:      res,
+		names:    []string{"superpowers"},
+		tool:     "all", // the default; must expand to Targets
+		scope:    "",    // no flag; must fall back to defaults.scope=global
+	})
+	if err != nil {
+		t.Fatalf("computePlan: %v", err)
+	}
+	if cs == nil || len(cs.Diffs) == 0 {
+		t.Fatal("expected registration diffs for the plugin, got none")
+	}
+	for _, d := range cs.Diffs {
+		if d.Scope != "global" {
+			t.Errorf("diff %s scope = %q, want global (from defaults.scope)", d.Path, d.Scope)
+		}
+	}
+	if len(contribs) != 1 || len(contribs[0].contribs) != 2 {
+		t.Fatalf("expected one plugin group with two contributions (claude+codex), got %+v", contribs)
+	}
+	byTool := map[string]plugin.Mode{}
+	for _, c := range contribs[0].contribs {
+		byTool[c.Tool] = c.Mode
+	}
+	if byTool["claude"] != plugin.ModeNative {
+		t.Errorf("claude mode = %q, want native", byTool["claude"])
+	}
+	if byTool["codex"] != plugin.ModeTranslate {
+		t.Errorf("codex mode = %q, want translate (claude-code-only source)", byTool["codex"])
+	}
+}
+
+// TestMergeSourcedNamesPlugin covers FIX I2: a file: reference to a plugin
+// manifest must resolve into cat.Plugins and return the plugin's name, rather than
+// failing with "resolved to nothing".
+func TestMergeSourcedNamesPlugin(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := filepath.Join(dir, "superpowers.yaml")
+	body := "apiVersion: patronus/v2\n" +
+		"family: plugin\n" +
+		"role: lifecycle\n" +
+		"name: superpowers\n" +
+		"version: 2.1.0\n" +
+		"sources:\n" +
+		"  claude-code:\n" +
+		"    kind: marketplace\n" +
+		"    ref: v2.1.0\n" +
+		"targets: [claude, codex]\n"
+	if err := os.WriteFile(manifestPath, []byte(body), 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	cat := &registry.Catalog{}
+	names, err := mergeSourcedNames(context.Background(), cat, []string{"file:" + manifestPath}, t.TempDir())
+	if err != nil {
+		t.Fatalf("mergeSourcedNames: %v", err)
+	}
+	if len(names) != 1 || names[0] != "superpowers" {
+		t.Fatalf("names = %v, want [superpowers]", names)
+	}
+	if len(cat.Plugins) != 1 || cat.Plugins[0].Manifest.Name != "superpowers" {
+		t.Fatalf("cat.Plugins = %+v, want one superpowers plugin", cat.Plugins)
 	}
 }

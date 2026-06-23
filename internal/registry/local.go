@@ -156,8 +156,8 @@ func (r *LocalRegistry) loadPlugins(cat *Catalog) error {
 	return nil
 }
 
-// checkNameUniqueness enforces that artifact and recipe names don't collide, so
-// a bare name in a profile slot is unambiguous.
+// checkNameUniqueness enforces that artifact, recipe, and plugin names don't
+// collide, so a bare name in a profile slot is unambiguous.
 func checkNameUniqueness(cat *Catalog) error {
 	seen := make(map[string]string)
 	for _, a := range cat.Artifacts {

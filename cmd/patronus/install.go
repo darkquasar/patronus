@@ -288,24 +288,31 @@ func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 	)
 	for _, name := range in.names {
 		if pl := findPlugin(in.cat, name); pl != nil {
-			diffs, contrib, err := plugin.Compute(plugin.Request{
-				Plugin:       pl.Manifest,
-				Tool:         in.tool,
-				Scope:        in.scope,
-				Engine:       adapter.New(in.res),
-				Adapter:      in.adapters[in.tool],
-				ReadExisting: read,
-			})
-			if err != nil {
-				return nil, nil, err
+			// Resolve scope and the target tool list the same way artifacts do:
+			// an explicit flag wins, else the manifest's defaults; a bare --tool
+			// "all"/"" fans out to the plugin's own Targets so a plain install
+			// registers on every target (not zero, as a single "all" call would).
+			scope := resolvePluginScope(in.scope, pl.Manifest)
+			tools := resolvePluginTools(in.tool, pl.Manifest)
+			group := pluginContribGroup{name: pl.Manifest.Name}
+			for _, tool := range tools {
+				diffs, contrib, err := plugin.Compute(plugin.Request{
+					Plugin:       pl.Manifest,
+					Tool:         tool,
+					Scope:        scope,
+					Engine:       adapter.New(in.res),
+					Adapter:      in.adapters[tool],
+					ReadExisting: read,
+				})
+				if err != nil {
+					return nil, nil, err
+				}
+				raw = append(raw, diffs...)
+				// Accumulate every target's disposition into one group so the
+				// dry-run shows the full per-target trust picture for the plugin.
+				group.contribs = append(group.contribs, contrib)
 			}
-			raw = append(raw, diffs...)
-			// One Compute call dispatches one tool, so it yields one Contribution;
-			// group by plugin name so a multi-tool dispatch can accumulate targets.
-			pluginGroups = append(pluginGroups, pluginContribGroup{
-				name:     pl.Manifest.Name,
-				contribs: []plugin.Contribution{contrib},
-			})
+			pluginGroups = append(pluginGroups, group)
 			continue
 		}
 		if rec := findRecipe(in.cat, name); rec != nil {
@@ -383,6 +390,9 @@ func mergeSourcedNames(ctx context.Context, cat *registry.Catalog, names []strin
 		case resolved.Recipe != nil:
 			cat.Recipes = append(cat.Recipes, *resolved.Recipe)
 			out = append(out, resolved.Recipe.Manifest.Name)
+		case resolved.Plugin != nil:
+			cat.Plugins = append(cat.Plugins, *resolved.Plugin)
+			out = append(out, resolved.Plugin.Manifest.Name)
 		default:
 			return nil, fmt.Errorf("source %q resolved to nothing", n)
 		}
@@ -467,6 +477,36 @@ func findPlugin(cat *registry.Catalog, name string) *registry.PluginEntry {
 		}
 	}
 	return nil
+}
+
+// resolvePluginScope picks the install scope for a plugin: an explicit flag wins,
+// else the manifest's defaults.scope, else local (project). Mirrors the artifact
+// planner's resolveScope, normalizing "project" to "local". The only valid scopes
+// are "global" and "local"; an unrecognized value falls through to local rather
+// than registering a marketplace plugin in the wrong place.
+func resolvePluginScope(flag string, p *manifest.Plugin) string {
+	s := flag
+	if s == "" {
+		s = p.Defaults.Scope
+	}
+	if s == "project" {
+		s = "local"
+	}
+	if s == "" {
+		s = "local"
+	}
+	return s
+}
+
+// resolvePluginTools picks which tools to register a plugin on. A specific --tool
+// is used as-is (Compute resolves an unsupported target to an honest no-op). A
+// bare "all"/"" fans out to the plugin's declared Targets, so a plain install
+// registers on every target instead of the zero diffs a single "all" call yields.
+func resolvePluginTools(flag string, p *manifest.Plugin) []string {
+	if flag != "" && flag != "all" {
+		return []string{flag}
+	}
+	return p.Targets
 }
 
 // findRecipe returns the catalog recipe entry with the given name, or nil.

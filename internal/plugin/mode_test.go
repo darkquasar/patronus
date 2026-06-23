@@ -32,13 +32,15 @@ func TestResolveMode(t *testing.T) {
 		{"no sources unsupported", mkPlugin(), "claude", ModeUnsupported, ""},
 	}
 	for _, tc := range cases {
-		gotMode, gotEco := ResolveMode(tc.plugin, tc.tool)
-		if gotMode != tc.wantMode {
-			t.Errorf("%s: mode = %q, want %q", tc.name, gotMode, tc.wantMode)
-		}
-		if gotEco != tc.wantEco {
-			t.Errorf("%s: eco = %q, want %q", tc.name, gotEco, tc.wantEco)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			gotMode, gotEco := ResolveMode(tc.plugin, tc.tool)
+			if gotMode != tc.wantMode {
+				t.Errorf("mode = %q, want %q", gotMode, tc.wantMode)
+			}
+			if gotEco != tc.wantEco {
+				t.Errorf("eco = %q, want %q", gotEco, tc.wantEco)
+			}
+		})
 	}
 }
 

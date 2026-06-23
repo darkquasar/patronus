@@ -41,7 +41,7 @@ func ResolveMode(p *manifest.Plugin, tool string) (Mode, string) {
 		return ModeNative, eco
 	}
 	// Cross-ecosystem: pick a deterministic source to translate from.
-	// Prefer claude-code, then codex, then any (sorted) — keep it stable.
+	// Prefer claude-code, then codex; if neither is present it is unsupported.
 	for _, pref := range []string{"claude-code", "codex"} {
 		if _, has := p.Sources[pref]; has {
 			return ModeTranslate, pref
