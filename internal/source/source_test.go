@@ -1,6 +1,7 @@
 package source
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -184,5 +185,43 @@ func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestResolveFilePlugin(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "superpowers.yaml")
+	content := `apiVersion: patronus/v2
+family: plugin
+role: lifecycle
+name: superpowers
+description: d
+version: 2.1.0
+sources:
+  claude-code:
+    kind: marketplace
+    marketplace: claude-plugins-official
+    plugin: superpowers
+    ref: v2.1.0
+targets: [claude]
+defaults:
+  scope: user
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rs := &Resolver{}
+	res, err := rs.Resolve(context.Background(), &Ref{Scheme: File, Path: path, Raw: path})
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if res.Plugin == nil {
+		t.Fatal("expected a plugin entry, got nil")
+	}
+	if res.Recipe != nil || res.Artifact != nil {
+		t.Errorf("expected ONLY a plugin, got artifact=%v recipe=%v", res.Artifact, res.Recipe)
+	}
+	if res.Plugin.Manifest.Name != "superpowers" {
+		t.Errorf("name = %s, want superpowers", res.Plugin.Manifest.Name)
 	}
 }
