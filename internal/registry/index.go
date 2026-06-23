@@ -30,6 +30,7 @@ type Index struct {
 	Artifacts     []IndexArtifact `json:"artifacts"`
 	Recipes       []IndexRecipe   `json:"recipes"`
 	Profiles      []IndexProfile  `json:"profiles"`
+	Plugins       []IndexPlugin   `json:"plugins"`
 }
 
 // Tarball points at an artifact's portable-source tarball at its immutable R2 key
@@ -58,6 +59,12 @@ type IndexRecipe struct {
 // by name and has no content of its own.
 type IndexProfile struct {
 	Manifest *manifest.Profile `json:"manifest"`
+}
+
+// IndexPlugin carries only the manifest: a plugin is self-describing and has no
+// content tarball in the registry (plugins are not portable source artifacts).
+type IndexPlugin struct {
+	Manifest *manifest.Plugin `json:"manifest"`
 }
 
 // LoadIndex parses index.json bytes, rejecting a schema version this binary does
@@ -104,6 +111,9 @@ func (ix *Index) ToCatalog() *Catalog {
 	}
 	for _, p := range ix.Profiles {
 		cat.Profiles = append(cat.Profiles, ProfileEntry{Manifest: p.Manifest})
+	}
+	for _, p := range ix.Plugins {
+		cat.Plugins = append(cat.Plugins, PluginEntry{Manifest: p.Manifest})
 	}
 	return cat
 }
