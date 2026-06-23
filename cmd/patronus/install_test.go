@@ -9,6 +9,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
@@ -339,7 +340,7 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 		}}},
 	}
 
-	cs, err := computePlan(planInputs{
+	cs, contribs, err := computePlan(planInputs{
 		cat:      cat,
 		adapters: adapterMap(adapters),
 		res:      res,
@@ -352,5 +353,13 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 	}
 	if cs == nil || len(cs.Diffs) == 0 {
 		t.Fatal("expected a registration diff for the plugin, got none")
+	}
+	// The Contribution is the dry-run trust surface: it must come back so the plan
+	// can state the per-target disposition (a claude-code source => native).
+	if len(contribs) != 1 || len(contribs[0].contribs) != 1 {
+		t.Fatalf("expected one plugin group with one contribution, got %+v", contribs)
+	}
+	if got := contribs[0].contribs[0]; got.Tool != "claude" || got.Mode != plugin.ModeNative {
+		t.Errorf("contribution = %+v, want Tool=claude Mode=native", got)
 	}
 }

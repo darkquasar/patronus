@@ -6,8 +6,24 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
+
+func TestRenderPluginContributions(t *testing.T) {
+	var buf bytes.Buffer
+	RenderPluginContributions(&buf, "superpowers", []plugin.Contribution{
+		{Tool: "claude", Mode: plugin.ModeNative, Ecosystem: "claude-code"},
+		{Tool: "codex", Mode: plugin.ModeTranslate, Ecosystem: "claude-code"},
+		{Tool: "opencode", Mode: plugin.ModeUnsupported},
+	})
+	out := buf.String()
+	for _, want := range []string{"superpowers", "claude", "native", "codex", "translate", "opencode", "unsupported"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+}
 
 func testResolver() toolpath.Resolver {
 	env := func(k string) (string, bool) {
