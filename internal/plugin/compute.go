@@ -3,15 +3,24 @@ package plugin
 import (
 	"fmt"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
 )
 
-// Request is the input to Compute: one plugin onto one tool at one scope.
+// Request is the input to Compute: one plugin onto one tool at one scope, plus
+// the adapter dependencies the registration MERGE is routed through. The engine,
+// adapter, and existing-reader are injected (not hand-built) so the registration
+// rides the SAME setting-merge transform every other setting artifact uses,
+// rather than duplicating its diff construction. For an unsupported target the
+// engine/adapter/reader are never touched and may be nil.
 type Request struct {
-	Plugin *manifest.Plugin
-	Tool   string
-	Scope  string
+	Plugin       *manifest.Plugin
+	Tool         string
+	Scope        string
+	Engine       *adapter.Engine      // adapter.New(resolver)
+	Adapter      *manifest.Adapter    // the per-tool adapter
+	ReadExisting adapter.ReadExisting // closure over the filesystem (or a test stub)
 }
 
 // Contribution is the plan-facing summary of what happened for this target: the
@@ -29,62 +38,60 @@ type Contribution struct {
 //
 // ResolveMode runs first. An unsupported target (a tool with no plugin construct,
 // or a plugin with no usable source) is an honest no-op: no diffs, no error. A
-// native or translate target writes ONE registration MERGE into the tool's plugin
-// config at dotted path "plugins.<name>".
+// native or translate target registers the plugin by routing a synthetic setting
+// artifact (dotted path "plugins.<name>") through the adapter setting transform,
+// which produces an APPLICABLE settings MERGE — the same code path, and the same
+// diff shape, as every other setting artifact. A tool that models no settings
+// surface yields zero diffs (an honest skip from the transform) while still
+// counting as a native/translate contribution.
 func Compute(req Request) ([]diff.FileDiff, Contribution, error) {
 	mode, eco := ResolveMode(req.Plugin, req.Tool)
 	contrib := Contribution{Tool: req.Tool, Mode: mode, Ecosystem: eco}
 	if mode == ModeUnsupported {
 		return nil, contrib, nil
 	}
-	d, err := buildRegistrationDiff(req, eco)
+
+	art := registrationArtifact(req.Plugin, eco, req.Tool)
+	diffs, err := req.Engine.Transform(art, req.Adapter, req.Scope, "", req.ReadExisting)
 	if err != nil {
 		return nil, contrib, fmt.Errorf("plugin %q on %s: %w", req.Plugin.Name, req.Tool, err)
 	}
-	return []diff.FileDiff{d}, contrib, nil
+	return diffs, contrib, nil
 }
 
-// buildRegistrationDiff constructs the registration MERGE for one plugin on one
-// tool. It mirrors the scalar-setting MERGE in internal/adapter/transformSetting:
-// a diff.Merge with the edit carried as a diff.SettingEdit whose IdentityKey is ""
-// (the scalar-set form, re-foldable + restorable via wholesale Prior), here keyed
-// to dotted path "plugins.<name>" with the registration value as the scalar.
-//
-// The on-disk registration path/format per tool is a known open question (the v1
-// stand-in is the single dotted path "plugins.<name>"); the construction is kept
-// tool-agnostic, exactly like the setting MERGE, so it does not depend on an
-// adapter layout this package cannot see.
-func buildRegistrationDiff(req Request, eco string) (diff.FileDiff, error) {
-	name := req.Plugin.Name
-	src, has := req.Plugin.Sources[eco]
-	if !has {
-		return diff.FileDiff{}, fmt.Errorf("no source for ecosystem %q", eco)
-	}
-
-	dotted := "plugins." + name
+// registrationArtifact builds the synthetic setting artifact that registers one
+// plugin on one tool. The registration is modeled as a setting MERGE at dotted
+// path "plugins.<name>" so it rides the adapter's existing setting transform
+// (an applicable scalar/object MERGE) instead of a hand-built diff. The engine
+// stamps Type="setting" and Artifact=<name> on the resulting diff; that is the
+// honest shape (a settings edit) and is left as-is.
+func registrationArtifact(p *manifest.Plugin, eco, tool string) *manifest.Artifact {
 	value := map[string]any{
 		"enabled":   true,
 		"ecosystem": eco,
 	}
-	if src.Marketplace != "" {
-		value["marketplace"] = src.Marketplace
-	}
-	if src.Ref != "" {
-		value["ref"] = src.Ref
+	if src, has := p.Sources[eco]; has {
+		if src.Marketplace != "" {
+			value["marketplace"] = src.Marketplace
+		}
+		if src.Ref != "" {
+			value["ref"] = src.Ref
+		}
 	}
 
-	return diff.FileDiff{
-		Action:   diff.Merge,
-		Artifact: name,
-		Type:     "plugin",
-		Tool:     req.Tool,
-		Scope:    req.Scope,
-		Note:     "register plugin " + name + " (" + eco + ")",
-		// Scalar-set form (IdentityKey ""): the registration value lives at one
-		// dotted key, restored wholesale on remove — the twin of a setting MERGE.
-		Setting: &diff.SettingEdit{
-			Dotted:      dotted,
-			ScalarValue: value,
+	return &manifest.Artifact{
+		Meta: manifest.Meta{
+			APIVersion: manifest.APIVersion,
+			Family:     manifest.FamilyArtifact,
+			Role:       manifest.RoleLifecycle,
+			Name:       p.Name,
+			Version:    p.Version,
 		},
-	}, nil
+		Type:    manifest.TypeSetting,
+		Targets: []string{tool},
+		Setting: &manifest.SettingSpec{
+			Path:  "plugins." + p.Name,
+			Value: value,
+		},
+	}
 }
