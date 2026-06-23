@@ -64,6 +64,9 @@ func (r *LocalRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 	if err := r.loadProfiles(cat); err != nil {
 		return nil, err
 	}
+	if err := r.loadPlugins(cat); err != nil {
+		return nil, err
+	}
 
 	sort.Slice(cat.Artifacts, func(i, j int) bool {
 		return cat.Artifacts[i].Manifest.Name < cat.Artifacts[j].Manifest.Name
@@ -73,6 +76,9 @@ func (r *LocalRegistry) Catalog(ctx context.Context) (*Catalog, error) {
 	})
 	sort.Slice(cat.Profiles, func(i, j int) bool {
 		return cat.Profiles[i].Manifest.Name < cat.Profiles[j].Manifest.Name
+	})
+	sort.Slice(cat.Plugins, func(i, j int) bool {
+		return cat.Plugins[i].Manifest.Name < cat.Plugins[j].Manifest.Name
 	})
 
 	if err := checkNameUniqueness(cat); err != nil {
@@ -136,6 +142,20 @@ func (r *LocalRegistry) loadProfiles(cat *Catalog) error {
 	return nil
 }
 
+func (r *LocalRegistry) loadPlugins(cat *Catalog) error {
+	for _, path := range globYAML(filepath.Join(r.root, "plugins")) {
+		m, err := manifest.LoadPlugin(path)
+		if err != nil {
+			return err
+		}
+		cat.Plugins = append(cat.Plugins, PluginEntry{
+			Manifest: m,
+			Source:   Source{LocalDir: filepath.Dir(path)},
+		})
+	}
+	return nil
+}
+
 // checkNameUniqueness enforces that artifact and recipe names don't collide, so
 // a bare name in a profile slot is unambiguous.
 func checkNameUniqueness(cat *Catalog) error {
@@ -148,6 +168,12 @@ func checkNameUniqueness(cat *Catalog) error {
 			return fmt.Errorf("name %q used by both %s and recipe", rc.Manifest.Name, kind)
 		}
 		seen[rc.Manifest.Name] = "recipe"
+	}
+	for _, pl := range cat.Plugins {
+		if kind, ok := seen[pl.Manifest.Name]; ok {
+			return fmt.Errorf("name %q used by both %s and plugin", pl.Manifest.Name, kind)
+		}
+		seen[pl.Manifest.Name] = "plugin"
 	}
 	return nil
 }

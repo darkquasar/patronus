@@ -118,3 +118,42 @@ func TestCatalogPropagatesBadManifest(t *testing.T) {
 		t.Error("expected catalog load to fail on a mis-declared manifest")
 	}
 }
+
+func TestLocalRegistryLoadsPlugins(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "plugins"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := `apiVersion: patronus/v2
+family: plugin
+role: lifecycle
+name: superpowers
+description: d
+version: 2.1.0
+sources:
+  claude-code:
+    kind: marketplace
+    marketplace: claude-plugins-official
+    plugin: superpowers
+    ref: v2.1.0
+targets: [claude]
+defaults:
+  scope: user
+`
+	if err := os.WriteFile(filepath.Join(root, "plugins", "superpowers.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cat, err := NewLocalRegistry(root).Catalog(context.Background())
+	if err != nil {
+		t.Fatalf("Catalog: %v", err)
+	}
+	if len(cat.Plugins) != 1 {
+		t.Fatalf("plugins = %d, want 1", len(cat.Plugins))
+	}
+	if cat.Plugins[0].Manifest.Name != "superpowers" {
+		t.Errorf("name = %s, want superpowers", cat.Plugins[0].Manifest.Name)
+	}
+	if cat.Plugins[0].Source.LocalDir != filepath.Join(root, "plugins") {
+		t.Errorf("source dir = %s, want %s", cat.Plugins[0].Source.LocalDir, filepath.Join(root, "plugins"))
+	}
+}
