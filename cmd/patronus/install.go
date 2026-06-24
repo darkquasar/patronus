@@ -213,7 +213,7 @@ func newInstallCmd() *cobra.Command {
 			// unsupported skipped) so the operator sees what is and is not verbatim.
 			for _, g := range pluginContribs {
 				fmt.Fprintln(cmd.OutOrStdout())
-				render.RenderPluginContributions(cmd.OutOrStdout(), g.name, g.contribs)
+				render.PluginContributions(cmd.OutOrStdout(), g.name, g.contribs)
 			}
 
 			// Without --deploy this is a safe dry run: plan shown, nothing written.

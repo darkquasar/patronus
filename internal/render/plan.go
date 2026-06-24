@@ -11,10 +11,10 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-// RenderPluginContributions prints the per-target disposition for one plugin so
+// PluginContributions prints the per-target disposition for one plugin so
 // the dry-run states the trust decision (native/verbatim vs translate/flagged vs
 // unsupported/skipped) before deploy.
-func RenderPluginContributions(w io.Writer, name string, contribs []plugin.Contribution) {
+func PluginContributions(w io.Writer, name string, contribs []plugin.Contribution) {
 	fmt.Fprintf(w, "plugin %s\n", name)
 	for _, c := range contribs {
 		switch c.Mode {

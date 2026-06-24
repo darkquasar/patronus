@@ -10,9 +10,9 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-func TestRenderPluginContributions(t *testing.T) {
+func TestPluginContributions(t *testing.T) {
 	var buf bytes.Buffer
-	RenderPluginContributions(&buf, "superpowers", []plugin.Contribution{
+	PluginContributions(&buf, "superpowers", []plugin.Contribution{
 		{Tool: "claude", Mode: plugin.ModeNative, Ecosystem: "claude-code"},
 		{Tool: "codex", Mode: plugin.ModeTranslate, Ecosystem: "claude-code"},
 		{Tool: "opencode", Mode: plugin.ModeUnsupported},
