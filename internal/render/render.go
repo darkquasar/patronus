@@ -19,6 +19,7 @@ type CatalogView struct {
 	Artifacts bool
 	Recipes   bool
 	Profiles  bool
+	Plugins   bool
 	Layers    bool
 	// Description switches the artifact section from the compact table (which omits
 	// the description so a row fits the screen) to a block/list view where each
@@ -50,6 +51,26 @@ func PrintCatalog(w io.Writer, cat *registry.Catalog, view CatalogView) {
 	if view.Profiles {
 		printProfiles(w, cat.Profiles, view.Layers)
 	}
+	if view.Plugins {
+		printPlugins(w, cat.Plugins)
+	}
+}
+
+func printPlugins(w io.Writer, entries []registry.PluginEntry) {
+	fmt.Fprintln(w, "PLUGINS")
+	if len(entries) == 0 {
+		fmt.Fprintln(w, "  (none)")
+		fmt.Fprintln(w)
+		return
+	}
+	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	fmt.Fprintln(tw, "  NAME\tDESCRIPTION")
+	for _, e := range entries {
+		m := e.Manifest
+		fmt.Fprintf(tw, "  %s\t%s\n", m.Name, truncate(m.Description, descWidth))
+	}
+	tw.Flush()
+	fmt.Fprintln(w)
 }
 
 // printArtifacts renders the artifact section. The default is a compact table

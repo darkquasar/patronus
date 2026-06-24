@@ -33,6 +33,7 @@ const (
 	FamilyArtifact Family = "artifact" // authored in-repo; transformed per tool
 	FamilyRecipe   Family = "recipe"   // external; delivered and/or wired
 	FamilyProfile  Family = "profile"  // a bundle that expands into installables
+	FamilyPlugin   Family = "plugin"   // an upstream plugin package (Claude/Codex); tracked by identity
 	FamilyAdapter  Family = "adapter"  // per-tool layout def (not installable)
 )
 

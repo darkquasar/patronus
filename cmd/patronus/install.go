@@ -12,11 +12,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
@@ -183,7 +185,7 @@ func newInstallCmd() *cobra.Command {
 			env := os.LookupEnv
 			res := toolpath.New(env, toolpath.HomeDir(env), wd)
 
-			cs, err := computePlan(planInputs{
+			cs, pluginContribs, err := computePlan(planInputs{
 				cat:             cat,
 				inv:             inv,
 				adapters:        adapterMap(adapters),
@@ -205,6 +207,14 @@ func newInstallCmd() *cobra.Command {
 				return render.JSON(cmd.OutOrStdout(), cs)
 			}
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
+
+			// The plan is the trust surface: before any deploy, state each plugin's
+			// per-target disposition (native verbatim / translate flagged /
+			// unsupported skipped) so the operator sees what is and is not verbatim.
+			for _, g := range pluginContribs {
+				fmt.Fprintln(cmd.OutOrStdout())
+				render.PluginContributions(cmd.OutOrStdout(), g.name, g.contribs)
+			}
 
 			// Without --deploy this is a safe dry run: plan shown, nothing written.
 			if !deploy {
@@ -250,7 +260,16 @@ type planInputs struct {
 // applier — the dispatch by registry lookup also prefigures Phase-5 profile
 // resolution. Names are unique across artifacts and recipes (enforced at catalog
 // load), so a bare name is unambiguous.
-func computePlan(in planInputs) (*diff.ChangeSet, error) {
+// pluginContribGroup carries one plugin's per-target dispositions so the dry-run
+// can state the trust decision (native/translate/unsupported) before deploy. It
+// is returned alongside the ChangeSet rather than embedded in it: diff is a
+// low-level package and must not import internal/plugin.
+type pluginContribGroup struct {
+	name     string
+	contribs []plugin.Contribution
+}
+
+func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 	read := func(path string) ([]byte, bool, error) {
 		b, err := os.ReadFile(path)
 		if err != nil {
@@ -265,8 +284,37 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	var (
 		artifactNames []string
 		raw           []diff.FileDiff
+		pluginGroups  []pluginContribGroup
 	)
 	for _, name := range in.names {
+		if pl := findPlugin(in.cat, name); pl != nil {
+			// Resolve scope and the target tool list the same way artifacts do:
+			// an explicit flag wins, else the manifest's defaults; a bare --tool
+			// "all"/"" fans out to the plugin's own Targets so a plain install
+			// registers on every target (not zero, as a single "all" call would).
+			scope := resolvePluginScope(in.scope, pl.Manifest)
+			tools := resolvePluginTools(in.tool, pl.Manifest)
+			group := pluginContribGroup{name: pl.Manifest.Name}
+			for _, tool := range tools {
+				diffs, contrib, err := plugin.Compute(plugin.Request{
+					Plugin:       pl.Manifest,
+					Tool:         tool,
+					Scope:        scope,
+					Engine:       adapter.New(in.res),
+					Adapter:      in.adapters[tool],
+					ReadExisting: read,
+				})
+				if err != nil {
+					return nil, nil, err
+				}
+				raw = append(raw, diffs...)
+				// Accumulate every target's disposition into one group so the
+				// dry-run shows the full per-target trust picture for the plugin.
+				group.contribs = append(group.contribs, contrib)
+			}
+			pluginGroups = append(pluginGroups, group)
+			continue
+		}
 		if rec := findRecipe(in.cat, name); rec != nil {
 			diffs, err := recipe.Compute(recipe.Request{
 				Recipe:          rec.Manifest,
@@ -278,7 +326,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 				Warnf:           in.warnf,
 			})
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			raw = append(raw, diffs...)
 			continue
@@ -299,12 +347,16 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 			Scope:     in.scope,
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		raw = append(raw, acs.Diffs...)
 	}
 
-	return plan.Finalize(raw, read)
+	cs, err := plan.Finalize(raw, read)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cs, pluginGroups, nil
 }
 
 // mergeSourcedNames resolves each name as a sourced reference. Bare (registry)
@@ -338,6 +390,9 @@ func mergeSourcedNames(ctx context.Context, cat *registry.Catalog, names []strin
 		case resolved.Recipe != nil:
 			cat.Recipes = append(cat.Recipes, *resolved.Recipe)
 			out = append(out, resolved.Recipe.Manifest.Name)
+		case resolved.Plugin != nil:
+			cat.Plugins = append(cat.Plugins, *resolved.Plugin)
+			out = append(out, resolved.Plugin.Manifest.Name)
 		default:
 			return nil, fmt.Errorf("source %q resolved to nothing", n)
 		}
@@ -412,6 +467,46 @@ func contains(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// findPlugin returns the catalog plugin entry with the given name, or nil.
+func findPlugin(cat *registry.Catalog, name string) *registry.PluginEntry {
+	for i := range cat.Plugins {
+		if cat.Plugins[i].Manifest.Name == name {
+			return &cat.Plugins[i]
+		}
+	}
+	return nil
+}
+
+// resolvePluginScope picks the install scope for a plugin: an explicit flag wins,
+// else the manifest's defaults.scope, else local (project). Mirrors the artifact
+// planner's resolveScope, normalizing "project" to "local". The only valid scopes
+// are "global" and "local"; an unrecognized value falls through to local rather
+// than registering a marketplace plugin in the wrong place.
+func resolvePluginScope(flag string, p *manifest.Plugin) string {
+	s := flag
+	if s == "" {
+		s = p.Defaults.Scope
+	}
+	if s == "project" {
+		s = "local"
+	}
+	if s == "" {
+		s = "local"
+	}
+	return s
+}
+
+// resolvePluginTools picks which tools to register a plugin on. A specific --tool
+// is used as-is (Compute resolves an unsupported target to an honest no-op). A
+// bare "all"/"" fans out to the plugin's declared Targets, so a plain install
+// registers on every target instead of the zero diffs a single "all" call yields.
+func resolvePluginTools(flag string, p *manifest.Plugin) []string {
+	if flag != "" && flag != "all" {
+		return []string{flag}
+	}
+	return p.Targets
 }
 
 // findRecipe returns the catalog recipe entry with the given name, or nil.

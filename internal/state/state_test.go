@@ -221,3 +221,22 @@ func TestChecksumStable(t *testing.T) {
 		t.Error("checksum collision for different content")
 	}
 }
+
+func TestStateMergeRemovePlugin(t *testing.T) {
+	s := &State{Version: 1}
+	Merge(s, []Item{{Artifact: "superpowers", Tool: "claude", Scope: "global", ItemVersion: "2.1.0"}})
+	if len(s.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(s.Items))
+	}
+	// Re-merge same identity replaces, not duplicates.
+	Merge(s, []Item{{Artifact: "superpowers", Tool: "claude", Scope: "global", ItemVersion: "2.2.0"}})
+	if len(s.Items) != 1 || s.Items[0].ItemVersion != "2.2.0" {
+		t.Fatalf("re-merge wrong: %+v", s.Items)
+	}
+	if removed := s.Remove("superpowers", "claude", "global"); removed != 1 {
+		t.Errorf("removed = %d, want 1", removed)
+	}
+	if len(s.Items) != 0 {
+		t.Errorf("items after remove = %d, want 0", len(s.Items))
+	}
+}

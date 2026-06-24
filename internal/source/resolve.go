@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/darkquasar/patronus/internal/archive"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -27,12 +29,30 @@ type Fetcher interface {
 }
 
 // Resolved is the outcome of resolving a non-registry Ref into a catalog entry.
-// Exactly one of Artifact/Recipe is non-nil. ResolvedRef records the concrete
-// version a (possibly mutable) reference pinned to, for the lock's provenance.
+// At most one of Artifact/Recipe/Plugin is non-nil. ResolvedRef records the
+// concrete version a (possibly mutable) reference pinned to, for the lock's
+// provenance.
 type Resolved struct {
 	Artifact    *registry.ArtifactEntry
 	Recipe      *registry.RecipeEntry
+	Plugin      *registry.PluginEntry
 	ResolvedRef string
+}
+
+// peekFamily reads only the family field from a YAML manifest so resolveFile can
+// route a *.yaml to the right loader (recipe vs plugin both use .yaml).
+func peekFamily(path string) (manifest.Family, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var head struct {
+		Family manifest.Family `yaml:"family"`
+	}
+	if err := yaml.Unmarshal(data, &head); err != nil {
+		return "", err
+	}
+	return head.Family, nil
 }
 
 // Resolver fetches out-of-tree sourced references (git:/https:). Registry/file
@@ -100,6 +120,20 @@ func resolveFile(ref *Ref) (*Resolved, error) {
 	ext := filepath.Ext(ref.Path)
 	if ext != ".yaml" && ext != ".yml" {
 		return nil, fmt.Errorf("file source %q must be a recipe .yaml manifest or an artifact directory", ref.Path)
+	}
+	fam, err := peekFamily(ref.Path)
+	if err != nil {
+		return nil, err
+	}
+	if fam == manifest.FamilyPlugin {
+		m, err := manifest.LoadPlugin(ref.Path)
+		if err != nil {
+			return nil, err
+		}
+		return &Resolved{
+			Plugin:      &registry.PluginEntry{Manifest: m, Source: registry.Source{LocalDir: filepath.Dir(ref.Path)}},
+			ResolvedRef: ref.Raw,
+		}, nil
 	}
 	m, err := manifest.LoadRecipe(ref.Path)
 	if err != nil {

@@ -7,8 +7,26 @@ import (
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
+
+// PluginContributions prints the per-target disposition for one plugin so
+// the dry-run states the trust decision (native/verbatim vs translate/flagged vs
+// unsupported/skipped) before deploy.
+func PluginContributions(w io.Writer, name string, contribs []plugin.Contribution) {
+	fmt.Fprintf(w, "plugin %s\n", name)
+	for _, c := range contribs {
+		switch c.Mode {
+		case plugin.ModeNative:
+			fmt.Fprintf(w, "  %-8s → native    (%s)   verbatim\n", c.Tool, c.Ecosystem)
+		case plugin.ModeTranslate:
+			fmt.Fprintf(w, "  %-8s → translate (from %s)   ⚠ not verbatim\n", c.Tool, c.Ecosystem)
+		case plugin.ModeUnsupported:
+			fmt.Fprintf(w, "  %-8s → unsupported (no plugin construct)   skipped\n", c.Tool)
+		}
+	}
+}
 
 // PrintPlan renders a dry-run change set in a fixed order: the artifact-centric
 // summary table first, then the ASCII file tree, then (only with --verbose) the

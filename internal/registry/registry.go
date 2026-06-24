@@ -20,6 +20,7 @@ type Catalog struct {
 	Artifacts []ArtifactEntry `json:"artifacts"`
 	Recipes   []RecipeEntry   `json:"recipes"`
 	Profiles  []ProfileEntry  `json:"profiles"`
+	Plugins   []PluginEntry   `json:"plugins"`
 }
 
 // Source records where an entry came from. LocalDir is populated by the local
@@ -46,6 +47,12 @@ type RecipeEntry struct {
 type ProfileEntry struct {
 	Manifest *manifest.Profile `json:"manifest"`
 	Source   Source            `json:"source"`
+}
+
+// PluginEntry is a plugin manifest plus where it came from.
+type PluginEntry struct {
+	Manifest *manifest.Plugin `json:"manifest"`
+	Source   Source           `json:"source"`
 }
 
 // ItemNames returns every installable item's name (artifacts + recipes). Profiles

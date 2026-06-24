@@ -15,6 +15,7 @@ func newListCmd() *cobra.Command {
 		artifacts   bool
 		recipes     bool
 		profiles    bool
+		plugins     bool
 		layers      bool
 		description bool
 		artifact    string
@@ -22,8 +23,8 @@ func newListCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List the catalog of artifacts, recipes, and profiles",
-		Long:  "Lists installable items from the registry — the local checkout when run inside a Patronus repo, otherwise the cached remote registry (a cold cache bootstrap-fetches once). With no type flag, all three sections are shown.",
+		Short: "List the catalog of artifacts, recipes, profiles, and plugins",
+		Long:  "Lists installable items from the registry — the local checkout when run inside a Patronus repo, otherwise the cached remote registry (a cold cache bootstrap-fetches once). With no type flag, all four sections are shown.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			wd, err := os.Getwd()
@@ -43,19 +44,19 @@ func newListCmd() *cobra.Command {
 			// No type flag => show everything. A single-artifact lookup (--artifact)
 			// or --description is artifact-scoped, so it implies the artifacts section.
 			view := render.CatalogView{
-				Artifacts: artifacts, Recipes: recipes, Profiles: profiles, Layers: layers,
+				Artifacts: artifacts, Recipes: recipes, Profiles: profiles, Plugins: plugins, Layers: layers,
 				Description: description, Artifact: artifact,
 			}
 			switch {
 			case artifact != "" || description:
 				// Scope to artifacts unless the user also explicitly asked for others.
-				if !recipes && !profiles {
-					view.Artifacts, view.Recipes, view.Profiles = true, false, false
+				if !recipes && !profiles && !plugins {
+					view.Artifacts, view.Recipes, view.Profiles, view.Plugins = true, false, false, false
 				} else {
 					view.Artifacts = true
 				}
-			case !artifacts && !recipes && !profiles:
-				view.Artifacts, view.Recipes, view.Profiles = true, true, true
+			case !artifacts && !recipes && !profiles && !plugins:
+				view.Artifacts, view.Recipes, view.Profiles, view.Plugins = true, true, true, true
 			}
 
 			if jsonOutput {
@@ -68,6 +69,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&artifacts, "artifacts", false, "show artifacts")
 	cmd.Flags().BoolVar(&recipes, "recipes", false, "show recipes")
 	cmd.Flags().BoolVar(&profiles, "profiles", false, "show profiles")
+	cmd.Flags().BoolVar(&plugins, "plugins", false, "show plugins")
 	cmd.Flags().BoolVar(&layers, "layers", false, "expand profile layers (with --profiles)")
 	cmd.Flags().BoolVar(&description, "description", false, "show artifacts as a block list with each item's full description (instead of the compact table)")
 	cmd.Flags().StringVar(&artifact, "artifact", "", "show the full details of a single artifact by name")
@@ -87,6 +89,9 @@ func filterCatalog(cat *registry.Catalog, view render.CatalogView) *registry.Cat
 	}
 	if view.Profiles {
 		out.Profiles = cat.Profiles
+	}
+	if view.Plugins {
+		out.Plugins = cat.Plugins
 	}
 	return out
 }

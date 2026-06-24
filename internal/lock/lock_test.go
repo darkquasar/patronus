@@ -167,3 +167,25 @@ func mustWrite(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestLockRoundTripsPluginEntry(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "patronus.lock")
+	in := &Lock{Version: Version, Entries: []Entry{{
+		Name: "superpowers", Source: "registry", Version: "2.1.0",
+		SHA256: "sha256:deadbeef", Kind: "plugin",
+	}}}
+	if err := Save(path, in); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	out, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(out.Entries) != 1 || out.Entries[0].Kind != "plugin" {
+		t.Fatalf("entries = %+v, want one kind=plugin", out.Entries)
+	}
+	if out.Entries[0].Name != "superpowers" {
+		t.Errorf("name = %s, want superpowers", out.Entries[0].Name)
+	}
+}

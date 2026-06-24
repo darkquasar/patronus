@@ -66,3 +66,18 @@ func TestMarshalDeterministic(t *testing.T) {
 		t.Fatal("Marshal not deterministic")
 	}
 }
+
+func TestIndexToCatalogPlugins(t *testing.T) {
+	ix := &Index{
+		Plugins: []IndexPlugin{
+			{Manifest: &manifest.Plugin{Meta: manifest.Meta{Name: "superpowers", Family: manifest.FamilyPlugin}}},
+		},
+	}
+	cat := ix.ToCatalog()
+	if len(cat.Plugins) != 1 {
+		t.Fatalf("plugins = %d, want 1", len(cat.Plugins))
+	}
+	if cat.Plugins[0].Manifest.Name != "superpowers" {
+		t.Errorf("name = %s, want superpowers", cat.Plugins[0].Manifest.Name)
+	}
+}
