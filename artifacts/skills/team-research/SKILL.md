@@ -13,7 +13,7 @@ You are executing a **spec-driven team research** phase. Your job is to deeply i
 
 You do NOT produce `tasks.md` — that's `/team-implement`'s job.
 
-**You are the Team Lead.** Your job is to orchestrate, not to do the manual labor: you plan, spawn, assign, coordinate, merge, and clean up. The full team-lifecycle protocol you follow is in the [Team Lifecycle Protocol](#team-lifecycle-protocol) section at the end of this skill — read it before Phase 3.
+**You are the Team Lead.** Your job is to orchestrate, not to do the investigation yourself: you plan the streams, spawn parallel researchers, coordinate them, and synthesize their findings. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 3.
 
 ---
 
@@ -69,22 +69,22 @@ Present the research plan to the user for approval before proceeding.
 
 ## Phase 3: Spawn the Research Team
 
-Follow Steps 1-4 of the [Team Lifecycle Protocol](#team-lifecycle-protocol) exactly. You MUST use **Team Mode** (not naive subagent spawning):
+Follow the [Coordination Protocol](#coordination-protocol) at the end of this skill. Research is **read-only** — researchers investigate and write findings; they do not edit the codebase, so there are no worktrees, branches, or merges:
 
-1. **Create team** via `TeamCreate`.
-2. **Create tasks** via `TaskCreate` — one per research stream, plus synthesis tasks for the deliverables.
-3. **Create worktrees manually** — one per researcher, branching from current HEAD:
-   ```bash
-   git worktree add .claude/worktrees/<researcher-name> -b team/<team-name>/<researcher-name> HEAD
-   ```
-4. **Spawn researchers** using the `Task` tool **with `team_name` and `name` parameters** (this is what makes them Team members, not subagents). Do NOT use `isolation: "worktree"` — you already created worktrees manually. Spawn ALL researchers in a **single message with parallel `Task` calls**. Use the template in [RESEARCHER-TEMPLATE.md](RESEARCHER-TEMPLATE.md).
+1. **Create the task board** — `TaskCreate` one task per research stream, plus synthesis tasks for the deliverables (`research.md`, `spec.md`, `plan.md`). Use `TaskUpdate` with `addBlockedBy` where a synthesis task must follow its streams.
+2. **Spawn researchers** — issue ALL researcher spawns in a **single message with parallel `Agent` calls** for maximum concurrency. Each `Agent` call sets:
+   - `subagent_type: "Explore"` — read-only investigation (researchers don't modify files).
+   - `name`: a stable researcher name (e.g. `researcher-auth`) — how you address it via `SendMessage`.
+   - `prompt`: the stream's question + brief (see [RESEARCHER-TEMPLATE.md](RESEARCHER-TEMPLATE.md)). Direct the researcher to write its findings to its own `*-findings.md` in the research directory and to call `TaskUpdate` to mark its task complete.
+   - Optionally `run_in_background: true` to run async and be notified on completion.
+   Do NOT pass the deprecated `team_name`, and do NOT create git worktrees — research writes only findings files, which don't conflict.
 
-**Why Team Mode, not subagents**: Researchers work in isolated git worktrees on dedicated branches. The Team Lead merges their branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
+**Why parallel agents**: each researcher investigates one unknown concurrently and writes its own `*-findings.md` — no shared mutable state, no file conflicts, no merge step. The Team Lead coordinates via `SendMessage` (by name) and tracks via the `Task*` board, then synthesizes the findings.
 
 ### Critical Spawn Rules
 
 - **Do NOT prescribe answers.** Define the question and approach, let the researcher investigate.
-- **Spawn all researchers in a single message** with parallel `Task` calls.
+- **Spawn all researchers in a single message** with parallel `Agent` calls.
 - **Each researcher writes to their own `*-findings.md` file** — no file conflicts.
 
 ---
@@ -102,12 +102,12 @@ While researchers work:
 
 ## Phase 5: Synthesize Deliverables
 
-When all researchers report completion:
+When all researchers' tasks are complete (you're notified as each background agent finishes):
 
-1. **Shut down researchers** — `SendMessage` with `type: "shutdown_request"` to each. Wait for confirmation.
-2. **Merge branches** sequentially into the parent branch with `--no-ff`.
-3. **Read ALL `*-findings.md` files** produced by the team.
-4. **Synthesize the three deliverables.** You write these yourself — this is the Team Lead's core job. Use the templates in [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md).
+1. **Read ALL `*-findings.md` files** produced by the researchers.
+2. **Synthesize the three deliverables.** You write these yourself — this is the Team Lead's core job. Use the templates in [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md).
+
+(Researchers are read-only `Explore` agents writing findings files — there are no branches to merge and nothing to shut down; a completed agent has already returned.)
 
 ### Deliverable Gate (MANDATORY before proceeding)
 
@@ -129,8 +129,9 @@ Before cleanup, review the entire research process for lessons learned. Update `
 
 ## Phase 7: Cleanup and Report
 
-1. **Verify all files are committed** to the parent branch.
-2. **Cleanup** — remove worktrees, delete researcher branches, `TeamDelete`.
+1. **Verify all three deliverables are written** (the Deliverable Gate above).
+2. **No cleanup needed** — read-only researchers leave no worktrees or branches behind; the
+   `*-findings.md` files stay in the research directory as the audit trail.
 3. **Present the deliverables** to the user:
 
 ```
@@ -169,59 +170,47 @@ Run `/team-implement <research-dir>` to begin implementation.
 4. **Every finding needs evidence.** Opinions without evidence don't go in the spec.
 5. **The Team Lead writes the deliverables.** Researchers produce raw findings; synthesis is your job.
 6. **The output is three files: `research.md`, `spec.md`, `plan.md`.** No `tasks.md` — that's `/team-implement`'s responsibility. Do not proceed past Phase 5 without all three files written and committed.
-7. **Follow the [Team Lifecycle Protocol](#team-lifecycle-protocol) to the letter** for team lifecycle (create, spawn, coordinate, merge, cleanup).
+7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** for the research lifecycle (plan streams, spawn parallel researchers, coordinate, synthesize).
 8. **Touch the actual code/system.** "I believe X works this way" is not a finding. "I read X at line Y and confirmed Z" is.
 9. **Existing research is prior art.** Check `research/` before investigating something that may already be answered.
-10. **Capture lessons before cleanup.** Surprising discoveries, constraint corrections, and process mistakes go in `tasks/lessons.md`. Routine findings stay in `research.md`.
+10. **Capture lessons before finishing.** Surprising discoveries, constraint corrections, and process mistakes go in `tasks/lessons.md`. Routine findings stay in `research.md`.
 
 ---
 
-## Team Lifecycle Protocol
+## Coordination Protocol
 
-This is the team-lifecycle protocol the Team Lead follows end-to-end. **Team Mode** means `TeamCreate` + spawning via the `Task` tool **with** `team_name` and `name` parameters — NOT naive subagent spawning. Members work in isolated git worktrees on dedicated branches; the Team Lead merges those branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
+This is the protocol the Team Lead follows end-to-end. Research is **read-only**: researchers
+investigate the codebase/web and each writes its own `*-findings.md`. Because no researcher
+edits shared files, there are **no git worktrees, no branches, and no merge step** — the
+machinery that team-*implement* needs does not apply here.
 
-**Team sizing:** Maximum 4 members per team — coordination overhead dominates beyond that. Use 2 for focused parallel work, 3–4 for broader builds with distinct domains. Every member must own a clearly separable domain (files, modules, layers); if two members would edit the same files, merge them into one.
+**Team sizing:** Maximum 4 researchers — coordination overhead dominates beyond that. Use 2 for
+a focused question, 3–4 for a broad domain with distinct unknowns. Each researcher owns one
+clearly separable stream; if two streams would investigate the same thing, merge them into one.
 
-### Step 1: Plan & Create Team
-1. Enter plan mode. Identify the parallel work streams (max 4). Each stream becomes a member.
-2. `TeamCreate` to initialize the team.
-3. `TaskCreate` to define all work items upfront with clear descriptions and acceptance criteria.
-4. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering constraints.
+### Step 1: Plan & create the task board
+1. Enter plan mode. Identify the parallel research streams (max 4). Each stream becomes a researcher.
+2. `TaskCreate` to define every stream + the synthesis tasks (`research.md`, `spec.md`, `plan.md`) upfront, with clear questions and acceptance criteria.
+3. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering (synthesis after its streams).
 
-### Step 2: Set Up Worktrees (MANDATORY before spawning)
-Determine the parent branch (the branch you are on now — typically `main` or a feature branch). Create one worktree + branch per member:
-```bash
-# Repeat for each member (max 4)
-git worktree add .claude/worktrees/<member-name> -b team/<team-name>/<member-name> HEAD
-```
-Naming convention: `team/<team-name>/<member-name>` (e.g., `team/auth-feature/backend`).
+### Step 2: Spawn researchers
+Spawn ALL researchers in a **single message with parallel `Agent` calls** for maximum
+concurrency. For each: `subagent_type: "Explore"` (read-only), a stable `name` (how you address
+it via `SendMessage`), and a `prompt` carrying the stream question + brief. Optionally
+`run_in_background: true` for async completion notifications. Tell each researcher to write its
+findings to its own `*-findings.md` and to `TaskUpdate` its task to complete when done. Do NOT
+pass `team_name` (deprecated/ignored) and do NOT create worktrees — research writes no shared
+code.
 
-### Step 3: Spawn Members
-Use the `Task` tool with `team_name` and `name` parameters. **Do NOT use `isolation: "worktree"`** — you already created the worktrees manually. Spawn ALL members in a **single message with parallel `Task` calls** for maximum concurrency. Each spawn prompt must direct the member to `cd` into its worktree as its first action and confirm the `cd` before doing anything else. (See the spawn template referenced by this skill.)
+### Step 3: Coordinate
+- `SendMessage` (address researchers by `name`) to share cross-stream context or redirect a
+  researcher that hits a dead end. Researchers report status via `TaskUpdate`, not JSON messages.
+- Monitor progress with `TaskList`/`TaskGet`. Do NOT do the researchers' work — your job is
+  orchestration and, ultimately, synthesis.
 
-### Step 4: Assign & Coordinate
-- `TaskUpdate` with `owner` to assign tasks to members.
-- `SendMessage` to unblock, redirect, or share context between members. When a member completes work another depends on, notify the downstream member to pull.
-- Monitor `TaskList` for progress. Do NOT do the members' work — your job is orchestration.
-
-### Step 5: Merge (Orchestrator Only)
-When all members have committed and all tasks are complete:
-1. **Shut down all members first** — `SendMessage` with `type: "shutdown_request"` for each. Wait for confirmation.
-2. **Merge each branch into the parent** sequentially, from the main project directory (NOT a worktree), resolving conflicts as you go:
-   ```bash
-   git merge team/<team-name>/<member-name> --no-ff -m "Merge <member-name> work: <summary>"
-   # ... repeat for each member
-   ```
-   Use `--no-ff` to preserve branch history. If a merge conflicts, resolve it manually — do not force or skip.
-3. **Verify the merged result** — run tests, check for regressions, confirm everything integrates.
-
-### Step 6: Cleanup
-After successful merge and verification:
-```bash
-git worktree remove .claude/worktrees/<member-name>   # repeat per member
-git branch -d team/<team-name>/<member-name>          # repeat per member
-rmdir .claude/worktrees 2>/dev/null
-```
-Then `TeamDelete` to clean up team metadata. **If something goes wrong during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a member needs to rebase.
+### Step 4: Collect & synthesize
+As each researcher completes (you're notified for background agents), read its `*-findings.md`.
+When all streams are in, synthesize `research.md` + `spec.md` + `plan.md` yourself (the Team
+Lead's core job). There is nothing to merge or clean up — the findings files are the audit trail.
 
 $ARGUMENTS
