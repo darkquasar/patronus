@@ -7,7 +7,7 @@ description: "/team-implement — Spec-Driven Team Implementation. Use when the 
 
 You are executing a **spec-driven team implementation**. Research has already been done by someone else. Your job is to read the specs, understand the architecture, define concern boundaries, and spin up a team of agents to build it.
 
-**You are the Team Lead.** Your job is to orchestrate, not to do the manual labor: you plan, spawn, assign, coordinate, merge, and clean up. The full team-lifecycle protocol you follow is in the [Team Lifecycle Protocol](#team-lifecycle-protocol) section at the end of this skill — read it before Phase 4.
+**You are the Team Lead.** Your job is to orchestrate, not to write the code yourself: you plan, create worktrees, spawn parallel teammates, coordinate, then merge their branches and clean up. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 4.
 
 ---
 
@@ -69,17 +69,25 @@ From `tasks.md`, identify 2-5 concern boundaries that become teammates. Each bou
 
 ## Phase 4: Spawn the Team
 
-Follow Steps 1-4 of the [Team Lifecycle Protocol](#team-lifecycle-protocol) exactly. You MUST use **Team Mode** (not naive subagent spawning):
+Follow the [Coordination Protocol](#coordination-protocol) at the end of this skill. Implementers WRITE code, so each needs an isolated git worktree on its own branch that you (the Team Lead) own and merge back:
 
-1. **Create team** via `TeamCreate`.
-2. **Create tasks** via `TaskCreate` for every item in `tasks.md`, with `addBlockedBy`/`addBlocks` for dependency ordering.
-3. **Create worktrees manually** — one per teammate, branching from current HEAD:
+1. **Create the task board** — `TaskCreate` for every item in `tasks.md`, with `addBlockedBy`/`addBlocks` for dependency ordering.
+2. **Create one worktree + branch per teammate** that you control (so you can merge them afterward), branching from the current HEAD:
    ```bash
    git worktree add .claude/worktrees/<teammate-name> -b team/<team-name>/<teammate-name> HEAD
    ```
-4. **Spawn teammates** using the `Task` tool **with `team_name` and `name` parameters** (this is what makes them Team members, not subagents). Do NOT use `isolation: "worktree"` — you already created worktrees manually. Spawn ALL teammates in a **single message with parallel `Task` calls**. Use the template in [TEAMMATE-TEMPLATE.md](TEAMMATE-TEMPLATE.md).
+3. **Spawn teammates** — issue ALL spawns in a **single message with parallel `Agent` calls**. For each: `subagent_type: "general-purpose"`, a stable `name` (how you address it via `SendMessage`), optional `run_in_background: true`, and a `prompt` (see [TEAMMATE-TEMPLATE.md](TEAMMATE-TEMPLATE.md)) that directs the teammate to `cd` into its assigned worktree as its first action and confirm the `cd` before doing anything else. Do NOT pass the deprecated `team_name`, and do NOT use the `Agent` tool's `isolation: "worktree"` here — you created the worktrees yourself so you retain ownership of the branches to merge.
 
-**Why Team Mode, not subagents**: Teammates work in isolated git worktrees on dedicated branches. The Team Lead merges their branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
+**Why parent-created worktrees (not the `Agent` tool's `isolation: "worktree"`)**: per Anthropic's
+docs, worktree-isolated subagents (a) branch from your **default branch (origin/HEAD), NOT the
+parent's current HEAD** unless `worktree.baseRef: "head"` is set — so on a feature branch they'd
+get a stale baseline and diffs that may not merge cleanly — and (b) are **never auto-merged back**:
+a changed worktree is just *preserved on its branch*, and the subagent returns only a text summary,
+not a diff. By creating the worktrees yourself from the current `HEAD`, you branch from the right
+baseline AND own branches you can merge. (Anthropic's only first-party parallel-code pattern,
+`/batch`, sidesteps merging entirely by having each agent open a **pull request** — a valid
+alternative if you'd rather integrate via PRs than direct merge.) Coordinate via `SendMessage` (by
+name) and track via the `Task*` board.
 
 ### Critical Spawn Rules
 
@@ -102,11 +110,10 @@ While teammates work:
 
 ## Phase 6: Merge and Verify
 
-When all teammates report completion:
+When all teammates' tasks are complete (you're notified as each background agent finishes):
 
-1. **Shut down teammates** — `SendMessage` with `type: "shutdown_request"` to each. Wait for confirmation.
-2. **Merge branches** sequentially into the parent branch with `--no-ff`.
-3. **Resolve conflicts** if any — do not force-push or skip.
+1. **Merge branches** sequentially into the parent branch with `--no-ff` (a completed agent has already returned — there is nothing to shut down).
+2. **Resolve conflicts** if any — do not force-push or skip.
 4. **Run verification**:
    - Type checking (e.g., `tsc --noEmit`, `mypy`, `cargo check`)
    - Tests (e.g., `npm test`, `pytest`, `cargo test`)
@@ -114,7 +121,7 @@ When all teammates report completion:
 5. **Update `tasks.md`** — mark all completed tasks with `[x]`.
 6. **Write `provenance.md`** — in the research domain directory, list every created/modified file with task IDs and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
 7. **Rename the research domain folder** — prefix the folder name with `done-` to signal that the research has been implemented (e.g., `research/phase-08/skills-tools-model/` → `research/phase-08/done-skills-tools-model/`). Use `mv` to rename in place.
-8. **Cleanup** — remove worktrees, delete teammate branches, `TeamDelete`.
+8. **Cleanup** — remove the worktrees you created and delete the teammate branches (see the Coordination Protocol's Cleanup step).
 
 ---
 
@@ -156,57 +163,69 @@ See `<research-domain>/provenance.md` for full file-to-spec traceability.
 4. **No two teammates should edit the same file.** Resolve overlaps before spawning.
 5. **Write `provenance.md`** in the research domain directory listing every created/modified file. Do NOT add provenance headers to source files. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
 6. **Run verification before declaring done.** A description of a test is not a test.
-7. **Follow the [Team Lifecycle Protocol](#team-lifecycle-protocol) to the letter** for team lifecycle (create, spawn, coordinate, merge, cleanup).
+7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** (plan, create worktrees, spawn parallel teammates, coordinate, merge, cleanup).
 8. **Present `tasks.md` to user for approval** before spawning any teammates.
 
 ---
 
-## Team Lifecycle Protocol
+## Coordination Protocol
 
-This is the team-lifecycle protocol the Team Lead follows end-to-end. **Team Mode** means `TeamCreate` + spawning via the `Task` tool **with** `team_name` and `name` parameters — NOT naive subagent spawning. Members work in isolated git worktrees on dedicated branches; the Team Lead merges those branches after completion. This allows parallel file writes without conflicts and preserves a merge-able git history. Naive subagents (`Task` without `team_name`) don't get worktrees, can't be coordinated via `SendMessage`, and can't be tracked via `TaskList`.
+This is the protocol the Team Lead follows end-to-end. Implementation **writes code**, so each
+teammate works in a dedicated git worktree on its own branch — created and owned by YOU (the
+Team Lead) so you can merge each branch back after completion. Spawn teammates as parallel
+`Agent` calls (there is a single implicit team — no team to create, no `team_name` to pass).
+Coordinate by `name` via `SendMessage`; track via the `Task*` board.
 
-**Team sizing:** Maximum 5 members per team for implementation work — coordination overhead dominates beyond that. Use 2 for focused parallel work, 3–5 for broader feature builds with distinct domains. Every member must own a clearly separable domain (files, modules, layers); if two members would edit the same files, merge them into one.
+**Team sizing:** Maximum 5 teammates for implementation work — coordination overhead dominates
+beyond that. Use 2 for focused parallel work, 3–5 for broader feature builds with distinct
+domains. Every teammate must own a clearly separable domain (files, modules, layers); if two
+would edit the same files, merge them into one.
 
-### Step 1: Plan & Create Team
-1. Enter plan mode. Identify the parallel work streams. Each stream becomes a member.
-2. `TeamCreate` to initialize the team.
-3. `TaskCreate` to define all work items upfront with clear descriptions and acceptance criteria.
-4. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering constraints.
+### Step 1: Plan & create the task board
+1. Enter plan mode. Identify the parallel work streams. Each stream becomes a teammate.
+2. `TaskCreate` to define all work items upfront with clear descriptions and acceptance criteria.
+3. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering constraints.
 
-### Step 2: Set Up Worktrees (MANDATORY before spawning)
-Determine the parent branch (the branch you are on now — typically `main` or a feature branch). Create one worktree + branch per member:
+### Step 2: Set up worktrees (MANDATORY before spawning)
+Determine the parent branch (the branch you are on now — typically `main` or a feature branch). Create one worktree + branch per teammate that you own:
 ```bash
-# Repeat for each member
-git worktree add .claude/worktrees/<member-name> -b team/<team-name>/<member-name> HEAD
+# Repeat for each teammate
+git worktree add .claude/worktrees/<teammate-name> -b team/<team-name>/<teammate-name> HEAD
 ```
-Naming convention: `team/<team-name>/<member-name>` (e.g., `team/auth-feature/backend`).
+Naming convention: `team/<team-name>/<teammate-name>` (e.g., `team/auth-feature/backend`).
 
-### Step 3: Spawn Members
-Use the `Task` tool with `team_name` and `name` parameters. **Do NOT use `isolation: "worktree"`** — you already created the worktrees manually. Spawn ALL members in a **single message with parallel `Task` calls** for maximum concurrency. Each spawn prompt must direct the member to `cd` into its worktree as its first action and confirm the `cd` before doing anything else. (See the spawn template referenced by this skill.)
+### Step 3: Spawn teammates
+Spawn ALL teammates in a **single message with parallel `Agent` calls** for maximum concurrency.
+For each: `subagent_type: "general-purpose"`, a stable `name` (how you address it via
+`SendMessage`), optional `run_in_background: true`, and a prompt that directs the teammate to
+`cd` into its assigned worktree as its FIRST action and confirm the `cd` before doing anything
+else. Do NOT pass the deprecated `team_name`, and do NOT use the `Agent` tool's built-in
+`isolation: "worktree"` — you created the worktrees yourself so you own the branches to merge.
 
-### Step 4: Assign & Coordinate
-- `TaskUpdate` with `owner` to assign tasks to members.
-- `SendMessage` to unblock, redirect, or share context between members. When a member completes work another depends on, notify the downstream member to pull.
-- Monitor `TaskList` for progress. Do NOT do the members' work — your job is orchestration.
+### Step 4: Assign & coordinate
+- `TaskUpdate` with `owner` to assign tasks; teammates report status via `TaskUpdate`.
+- `SendMessage` (address teammates by `name`) to unblock, redirect, or share context. When a
+  teammate completes work another depends on, notify the downstream teammate to pull.
+- Monitor `TaskList`/`TaskGet` for progress. Do NOT do the teammates' work — you orchestrate.
 
-### Step 5: Merge (Orchestrator Only)
-When all members have committed and all tasks are complete:
-1. **Shut down all members first** — `SendMessage` with `type: "shutdown_request"` for each. Wait for confirmation.
-2. **Merge each branch into the parent** sequentially, from the main project directory (NOT a worktree), resolving conflicts as you go:
+### Step 5: Merge (Orchestrator only)
+When all teammates' tasks are complete (you're notified as each background agent finishes) and
+each has committed to its branch:
+1. **Merge each branch into the parent** sequentially, from the main project directory (NOT a worktree), resolving conflicts as you go:
    ```bash
-   git merge team/<team-name>/<member-name> --no-ff -m "Merge <member-name> work: <summary>"
-   # ... repeat for each member
+   git merge team/<team-name>/<teammate-name> --no-ff -m "Merge <teammate-name> work: <summary>"
+   # ... repeat for each teammate
    ```
    Use `--no-ff` to preserve branch history. If a merge conflicts, resolve it manually — do not force or skip.
-3. **Verify the merged result** — run tests, check for regressions, confirm everything integrates.
+2. **Verify the merged result** — run tests, check for regressions, confirm everything integrates.
 
 ### Step 6: Cleanup
 After successful merge and verification:
 ```bash
-git worktree remove .claude/worktrees/<member-name>   # repeat per member
-git branch -d team/<team-name>/<member-name>          # repeat per member
+git worktree remove .claude/worktrees/<teammate-name>   # repeat per teammate
+git branch -d team/<team-name>/<teammate-name>          # repeat per teammate
 rmdir .claude/worktrees 2>/dev/null
 ```
-Then `TeamDelete` to clean up team metadata. **If something goes wrong during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a member needs to rebase.
+**If something goes wrong during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a teammate needs to rebase.
 
 $ARGUMENTS
