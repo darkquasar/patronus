@@ -25,8 +25,8 @@ layers:
     - using-git-worktrees                  # start feature work in an isolated workspace
     - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
     - writing-skills                       # author/edit/verify skills (the meta-skill)
-    - team-research                        # spec-driven parallel research
-    - team-implement                       # spec-driven parallel implementation
+    - team-research@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
+    - team-implement@claude                # spec-driven parallel implementation (Claude tools; codex flavour is a separate artifact)
   context:
     - codebase-design                      # deep-module design vocabulary
     - domain-modeling                      # ubiquitous-language + ADR discipline
