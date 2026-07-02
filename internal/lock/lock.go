@@ -25,6 +25,13 @@ import (
 // longer versioned as a whole — npm/pip model) and added per-entry TarballSha256.
 const Version = 2
 
+// Plugin reconciliation statuses (Entry.Status, Kind=="plugin" only).
+const (
+	StatusVerified   = "verified"
+	StatusUnverified = "unverified"
+	StatusMissing    = "missing"
+)
+
 // Lock is the full patronus.lock document. Reproducibility is PER-ITEM: each
 // entry pins its own version + sha, independent of the tool version and of any
 // registry-wide version (there is none).
@@ -49,6 +56,12 @@ type Entry struct {
 	TarballSha256 string `json:"tarballSha256,omitempty"` // "sha256:" + hex over the published tarball bytes
 	Slot          string `json:"slot,omitempty"`          // §1A layer it filled (informational)
 	Kind          string `json:"kind,omitempty"`          // "artifact" | "recipe" | "plugin"
+
+	// Status applies to plugin entries only (Kind=="plugin"): the reconciliation
+	// state between declared intent and installed reality. verified = found
+	// installed at last scan; unverified = declared but not yet/cannot confirm;
+	// missing = was tracked and a scan found it absent (out-of-band removal).
+	Status string `json:"status,omitempty"`
 }
 
 // Load reads a lock file, returning an empty lock if the file is absent.

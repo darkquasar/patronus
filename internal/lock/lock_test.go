@@ -4,12 +4,77 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/registry"
 )
+
+func TestEntryStatusRoundTrips(t *testing.T) {
+	l := &Lock{Version: Version, Entries: []Entry{
+		{Name: "superpowers", Kind: "plugin", Source: "registry", SHA256: "sha256:x", Status: StatusUnverified},
+	}}
+	dir := t.TempDir()
+	p := dir + "/patronus.lock"
+	if err := Save(p, l); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Entries[0].Status != StatusUnverified {
+		t.Errorf("status = %q, want %q", got.Entries[0].Status, StatusUnverified)
+	}
+}
+
+func TestFromResolvedWritesPluginUnverified(t *testing.T) {
+	cat := &registry.Catalog{
+		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
+			Meta: manifest.Meta{Family: manifest.FamilyPlugin, Name: "superpowers", Version: "2.1.0"},
+		}}},
+	}
+	res := &profile.Resolved{
+		Profile: &manifest.Profile{Meta: manifest.Meta{Name: "p"}},
+		Items: []profile.ResolvedItem{
+			{Name: "superpowers", Family: manifest.FamilyPlugin, Source: "registry"},
+		},
+	}
+	l, err := FromResolved(cat, res, "2026-06-26T00:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var e *Entry
+	for i := range l.Entries {
+		if l.Entries[i].Name == "superpowers" {
+			e = &l.Entries[i]
+		}
+	}
+	if e == nil {
+		t.Fatalf("no superpowers entry: %+v", l.Entries)
+	}
+	if e.Status != StatusUnverified {
+		t.Errorf("plugin status = %q, want %q", e.Status, StatusUnverified)
+	}
+	if e.Kind != "plugin" || e.Version != "2.1.0" {
+		t.Errorf("entry = %+v, want kind=plugin version=2.1.0", *e)
+	}
+}
+
+func TestArtifactEntryOmitsStatus(t *testing.T) {
+	l := &Lock{Version: Version, Entries: []Entry{{Name: "a", Kind: "artifact", SHA256: "sha256:y"}}}
+	dir := t.TempDir()
+	p := dir + "/patronus.lock"
+	if err := Save(p, l); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(p)
+	if strings.Contains(string(data), "\"status\"") {
+		t.Errorf("artifact entry must omit status (omitempty): %s", data)
+	}
+}
 
 func TestSaveLoadRoundTrip(t *testing.T) {
 	l := &Lock{
