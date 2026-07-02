@@ -10,8 +10,43 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/adapter"
+	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/state"
 )
+
+// TestRemoveRevertsV1OrphanPluginMerge proves the v1 orphan cleanup needs NO new
+// code: a v1-era plugins.<name> setting recorded as a MERGE FileState (with the
+// pre-install bytes in Prior) is reverted by remove.Compute's existing
+// Prior-restore path.
+func TestRemoveRevertsV1OrphanPluginMerge(t *testing.T) {
+	prior := []byte("{\n}\n")
+	// The v1 install recorded the post-merge bytes' checksum; the file is unchanged
+	// since, so remove restores Prior wholesale (no drift skip).
+	current := []byte("{\"plugins\":{}}")
+	sum := sha256.Sum256(current)
+	items := []state.Item{{
+		Artifact: "superpowers", Tool: "claude", Scope: "global",
+		Files: []state.FileState{{
+			Path: "/tmp/does-not-matter/settings.json", Action: "MERGE",
+			Checksum: "sha256:" + hex.EncodeToString(sum[:]), Prior: prior,
+		}},
+	}}
+	read := func(string) ([]byte, bool, error) { return current, true, nil }
+	cs, _, err := remove.Compute(items, read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored bool
+	for _, d := range cs.Diffs {
+		if d.Action == diff.Restore || d.Action == diff.Merge {
+			restored = true
+		}
+	}
+	if !restored {
+		t.Errorf("expected a restore/merge revert of the v1 orphan, got %+v", cs.Diffs)
+	}
+}
 
 // execRemove executes the remove command with args, returning stdout, stderr, err.
 func execRemove(t *testing.T, args ...string) (string, string, error) {
