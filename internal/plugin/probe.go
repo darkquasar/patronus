@@ -26,6 +26,8 @@ type CLIProbe interface {
 // subcommand (e.g. older Codex) yields false, which degrades install to advisory.
 type ExecProbe struct{}
 
+var _ CLIProbe = ExecProbe{}
+
 func (ExecProbe) HasPluginCLI(tool string) bool {
 	bin, ok := Bin(tool)
 	if !ok {

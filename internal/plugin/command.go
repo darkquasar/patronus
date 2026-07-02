@@ -38,6 +38,18 @@ func pluginRef(p *manifest.Plugin, src manifest.PluginSource) string {
 	return name + "@" + src.Marketplace
 }
 
+// Ref returns the "<plugin>@<marketplace>" identity a plugin installs under in one
+// ecosystem, and ok=false when the plugin has no source for that ecosystem. It is
+// the same id DetectInstalled emits, so scan can map a lock entry to its installed
+// id per tool without re-deriving the naming rule.
+func Ref(p *manifest.Plugin, eco string) (string, bool) {
+	src, has := p.Sources[eco]
+	if !has {
+		return "", false
+	}
+	return pluginRef(p, src), true
+}
+
 func cmd(argv ...string) Command {
 	return Command{Argv: argv, Display: strings.Join(argv, " ")}
 }
