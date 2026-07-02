@@ -12,7 +12,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
@@ -185,7 +184,7 @@ func newInstallCmd() *cobra.Command {
 			env := os.LookupEnv
 			res := toolpath.New(env, toolpath.HomeDir(env), wd)
 
-			cs, pluginContribs, err := computePlan(planInputs{
+			cs, err := computePlan(planInputs{
 				cat:             cat,
 				inv:             inv,
 				adapters:        adapterMap(adapters),
@@ -207,14 +206,6 @@ func newInstallCmd() *cobra.Command {
 				return render.JSON(cmd.OutOrStdout(), cs)
 			}
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
-
-			// The plan is the trust surface: before any deploy, state each plugin's
-			// per-target disposition (native verbatim / translate flagged /
-			// unsupported skipped) so the operator sees what is and is not verbatim.
-			for _, g := range pluginContribs {
-				fmt.Fprintln(cmd.OutOrStdout())
-				render.PluginContributions(cmd.OutOrStdout(), g.name, g.contribs)
-			}
 
 			// Without --deploy this is a safe dry run: plan shown, nothing written.
 			if !deploy {
@@ -251,6 +242,10 @@ type planInputs struct {
 	scope           string
 	preferSystemPkg bool
 	warnf           func(string, ...any)
+
+	// pluginProbe decides executed-vs-advised for plugin installs; a test seam.
+	// Production leaves it nil → plugin.ExecProbe (real `<tool> plugin --help`).
+	pluginProbe plugin.CLIProbe
 }
 
 // computePlan dispatches each requested name to the artifact path (adapter
@@ -260,16 +255,7 @@ type planInputs struct {
 // applier — the dispatch by registry lookup also prefigures Phase-5 profile
 // resolution. Names are unique across artifacts and recipes (enforced at catalog
 // load), so a bare name is unambiguous.
-// pluginContribGroup carries one plugin's per-target dispositions so the dry-run
-// can state the trust decision (native/translate/unsupported) before deploy. It
-// is returned alongside the ChangeSet rather than embedded in it: diff is a
-// low-level package and must not import internal/plugin.
-type pluginContribGroup struct {
-	name     string
-	contribs []plugin.Contribution
-}
-
-func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
+func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	read := func(path string) ([]byte, bool, error) {
 		b, err := os.ReadFile(path)
 		if err != nil {
@@ -284,7 +270,6 @@ func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 	var (
 		artifactNames []string
 		raw           []diff.FileDiff
-		pluginGroups  []pluginContribGroup
 	)
 	for _, name := range in.names {
 		if pl := findPlugin(in.cat, name); pl != nil {
@@ -294,25 +279,11 @@ func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 			// registers on every target (not zero, as a single "all" call would).
 			scope := resolvePluginScope(in.scope, pl.Manifest)
 			tools := resolvePluginTools(in.tool, pl.Manifest)
-			group := pluginContribGroup{name: pl.Manifest.Name}
-			for _, tool := range tools {
-				diffs, contrib, err := plugin.Compute(plugin.Request{
-					Plugin:       pl.Manifest,
-					Tool:         tool,
-					Scope:        scope,
-					Engine:       adapter.New(in.res),
-					Adapter:      in.adapters[tool],
-					ReadExisting: read,
-				})
-				if err != nil {
-					return nil, nil, err
-				}
-				raw = append(raw, diffs...)
-				// Accumulate every target's disposition into one group so the
-				// dry-run shows the full per-target trust picture for the plugin.
-				group.contribs = append(group.contribs, contrib)
+			probe := in.pluginProbe
+			if probe == nil {
+				probe = plugin.ExecProbe{}
 			}
-			pluginGroups = append(pluginGroups, group)
+			raw = append(raw, pluginInstallDiffs(pl.Manifest, tools, scope, probe)...)
 			continue
 		}
 		if rec := findRecipe(in.cat, name); rec != nil {
@@ -326,7 +297,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 				Warnf:           in.warnf,
 			})
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			raw = append(raw, diffs...)
 			continue
@@ -347,16 +318,16 @@ func computePlan(in planInputs) (*diff.ChangeSet, []pluginContribGroup, error) {
 			Scope:     in.scope,
 		})
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		raw = append(raw, acs.Diffs...)
 	}
 
 	cs, err := plan.Finalize(raw, read)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return cs, pluginGroups, nil
+	return cs, nil
 }
 
 // mergeSourcedNames resolves each name as a sourced reference. Bare (registry)

@@ -10,7 +10,6 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
-	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
@@ -312,13 +311,10 @@ type failRunner struct{}
 
 func (failRunner) Run([]string) error { return os.ErrPermission }
 
-// TestComputePlanDispatchesPlugin proves a plugin name routes to plugin.Compute
-// (not the artifact fall-through). The plugin is claude-native (a "claude-code"
-// source), so the registration rides the claude adapter's setting MERGE and
-// yields an applicable diff. The adapters + resolver are real (loadAdapters'
-// builtin claude + a HOME-backed toolpath resolver) because post-fix
-// plugin.Compute routes the registration through adapter.Engine.Transform and
-// would hit a nil adapter without them.
+// TestComputePlanDispatchesPlugin proves a plugin name routes to the plugin
+// install path (not the artifact fall-through). The plugin has a "claude-code"
+// source and the injected probe reports the claude CLI present, so it dispatches
+// as a non-advisory EXEC diff that rides the shared apply spine.
 func TestComputePlanDispatchesPlugin(t *testing.T) {
 	home := t.TempDir()
 	proj := t.TempDir()
@@ -341,34 +337,39 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 		}}},
 	}
 
-	cs, contribs, err := computePlan(planInputs{
-		cat:      cat,
-		adapters: adapterMap(adapters),
-		res:      res,
-		names:    []string{"superpowers"},
-		tool:     "claude",
-		scope:    "global",
+	cs, err := computePlan(planInputs{
+		cat:         cat,
+		adapters:    adapterMap(adapters),
+		res:         res,
+		names:       []string{"superpowers"},
+		tool:        "claude",
+		scope:       "global",
+		pluginProbe: fakeProbe{present: map[string]bool{"claude": true}},
 	})
 	if err != nil {
 		t.Fatalf("computePlan: %v", err)
 	}
 	if cs == nil || len(cs.Diffs) == 0 {
-		t.Fatal("expected a registration diff for the plugin, got none")
+		t.Fatal("expected an install EXEC diff for the plugin, got none")
 	}
-	// The Contribution is the dry-run trust surface: it must come back so the plan
-	// can state the per-target disposition (a claude-code source => native).
-	if len(contribs) != 1 || len(contribs[0].contribs) != 1 {
-		t.Fatalf("expected one plugin group with one contribution, got %+v", contribs)
+	// A claude-code source with the claude CLI present dispatches as a non-advisory
+	// EXEC diff (Patronus runs it on --deploy), typed "plugin" and keyed on claude.
+	var found bool
+	for _, d := range cs.Diffs {
+		if d.Action == diff.Exec && d.Type == "plugin" && d.Tool == "claude" &&
+			d.Exec != nil && !d.Exec.Advisory {
+			found = true
+		}
 	}
-	if got := contribs[0].contribs[0]; got.Tool != "claude" || got.Mode != plugin.ModeNative {
-		t.Errorf("contribution = %+v, want Tool=claude Mode=native", got)
+	if !found {
+		t.Errorf("expected a non-advisory plugin EXEC diff for claude, got %+v", cs.Diffs)
 	}
 }
 
 // TestComputePlanPluginAllExpandsTargets covers FIX C1+I1: a bare install (tool
 // "all", no scope flag) must fan out to the plugin's Targets and honor the
-// manifest's defaults.scope, registering on EVERY target instead of yielding zero
-// diffs the way a single ResolveMode("all") call would.
+// manifest's defaults.scope, emitting EXEC diffs for EVERY target instead of the
+// zero diffs a single "all" call would yield.
 func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 	home := t.TempDir()
 	proj := t.TempDir()
@@ -393,37 +394,37 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 		}}},
 	}
 
-	cs, contribs, err := computePlan(planInputs{
-		cat:      cat,
-		adapters: adapterMap(adapters),
-		res:      res,
-		names:    []string{"superpowers"},
-		tool:     "all", // the default; must expand to Targets
-		scope:    "",    // no flag; must fall back to defaults.scope=global
+	cs, err := computePlan(planInputs{
+		cat:         cat,
+		adapters:    adapterMap(adapters),
+		res:         res,
+		names:       []string{"superpowers"},
+		tool:        "all", // the default; must expand to Targets
+		scope:       "",    // no flag; must fall back to defaults.scope=global
+		pluginProbe: fakeProbe{present: map[string]bool{}},
 	})
 	if err != nil {
 		t.Fatalf("computePlan: %v", err)
 	}
 	if cs == nil || len(cs.Diffs) == 0 {
-		t.Fatal("expected registration diffs for the plugin, got none")
+		t.Fatal("expected install EXEC diffs for the plugin, got none")
 	}
 	for _, d := range cs.Diffs {
 		if d.Scope != "global" {
 			t.Errorf("diff %s scope = %q, want global (from defaults.scope)", d.Path, d.Scope)
 		}
 	}
-	if len(contribs) != 1 || len(contribs[0].contribs) != 2 {
-		t.Fatalf("expected one plugin group with two contributions (claude+codex), got %+v", contribs)
+	// The bare "all" install fans out to both declared targets: claude (a
+	// claude-code source => install commands) and codex (no codex source => an
+	// honest skip line). Both surface as plugin EXEC diffs.
+	tools := map[string]bool{}
+	for _, d := range cs.Diffs {
+		if d.Type == "plugin" {
+			tools[d.Tool] = true
+		}
 	}
-	byTool := map[string]plugin.Mode{}
-	for _, c := range contribs[0].contribs {
-		byTool[c.Tool] = c.Mode
-	}
-	if byTool["claude"] != plugin.ModeNative {
-		t.Errorf("claude mode = %q, want native", byTool["claude"])
-	}
-	if byTool["codex"] != plugin.ModeTranslate {
-		t.Errorf("codex mode = %q, want translate (claude-code-only source)", byTool["codex"])
+	if !tools["claude"] || !tools["codex"] {
+		t.Errorf("expected plugin EXEC diffs for both claude and codex, got tools %v", tools)
 	}
 }
 
