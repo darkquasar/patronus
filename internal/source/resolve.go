@@ -39,13 +39,11 @@ type Resolved struct {
 	ResolvedRef string
 }
 
-// peekFamily reads only the family field from a YAML manifest so resolveFile can
-// route a *.yaml to the right loader (recipe vs plugin both use .yaml).
-func peekFamily(path string) (manifest.Family, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
+// peekFamily reads only the family field from already-read manifest bytes so
+// resolveFile can route a *.yaml to the right loader (recipe vs plugin both use
+// .yaml) WITHOUT re-reading the file — the caller reads once and decodes from the
+// same bytes.
+func peekFamily(data []byte) (manifest.Family, error) {
 	var head struct {
 		Family manifest.Family `yaml:"family"`
 	}
@@ -121,23 +119,30 @@ func resolveFile(ref *Ref) (*Resolved, error) {
 	if ext != ".yaml" && ext != ".yml" {
 		return nil, fmt.Errorf("file source %q must be a recipe .yaml manifest or an artifact directory", ref.Path)
 	}
-	fam, err := peekFamily(ref.Path)
+	// Read the manifest ONCE and both peek its family and decode it from the same
+	// bytes (recipe and plugin share the .yaml extension). The path is wrapped back
+	// into decode errors so messages match the by-path loaders.
+	data, err := os.ReadFile(ref.Path)
 	if err != nil {
 		return nil, err
 	}
+	fam, err := peekFamily(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", ref.Path, err)
+	}
 	if fam == manifest.FamilyPlugin {
-		m, err := manifest.LoadPlugin(ref.Path)
+		m, err := manifest.DecodePlugin(data)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %w", ref.Path, err)
 		}
 		return &Resolved{
 			Plugin:      &registry.PluginEntry{Manifest: m, Source: registry.Source{LocalDir: filepath.Dir(ref.Path)}},
 			ResolvedRef: ref.Raw,
 		}, nil
 	}
-	m, err := manifest.LoadRecipe(ref.Path)
+	m, err := manifest.DecodeRecipe(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", ref.Path, err)
 	}
 	return &Resolved{
 		Recipe:      &registry.RecipeEntry{Manifest: m, Source: registry.Source{LocalDir: filepath.Dir(ref.Path)}},

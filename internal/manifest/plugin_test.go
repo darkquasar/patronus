@@ -63,6 +63,23 @@ defaults:
 	}
 }
 
+func TestDecodePlugin(t *testing.T) {
+	data := []byte("apiVersion: patronus/v2\nfamily: plugin\nrole: lifecycle\nname: superpowers\nversion: 2.1.0\nsources:\n  claude-code:\n    kind: marketplace\n    marketplace: claude-plugins-official\n    plugin: superpowers\n    ref: v2.1.0\ntargets: [claude]\n")
+	p, err := DecodePlugin(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Name != "superpowers" || p.Sources["claude-code"].Marketplace != "claude-plugins-official" {
+		t.Errorf("decoded wrong: %+v", p)
+	}
+}
+
+func TestDecodePluginRejectsWrongFamily(t *testing.T) {
+	if _, err := DecodePlugin([]byte("apiVersion: patronus/v2\nfamily: artifact\nname: x\n")); err == nil {
+		t.Error("expected family validation error")
+	}
+}
+
 func TestLoadPluginWrongFamily(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.yaml")
