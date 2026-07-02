@@ -6,22 +6,26 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/diff"
-	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-func TestPluginContributions(t *testing.T) {
-	var buf bytes.Buffer
-	PluginContributions(&buf, "superpowers", []plugin.Contribution{
-		{Tool: "claude", Mode: plugin.ModeNative, Ecosystem: "claude-code"},
-		{Tool: "codex", Mode: plugin.ModeTranslate, Ecosystem: "claude-code"},
-		{Tool: "opencode", Mode: plugin.ModeUnsupported},
-	})
-	out := buf.String()
-	for _, want := range []string{"superpowers", "claude", "native", "codex", "translate", "opencode", "unsupported"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("output missing %q:\n%s", want, out)
-		}
+// TestPlanRendersPluginExecRows proves plugin actions now surface in the standard
+// summary table as EXEC rows (install command lines / honest skip lines), rather
+// than the deleted mode-based PluginContributions block.
+func TestPlanRendersPluginExecRows(t *testing.T) {
+	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{
+		{Action: diff.Exec, Type: "plugin", Tool: "claude", Scope: "user",
+			Artifact: "superpowers", Path: "claude plugin install superpowers@claude-plugins-official --scope user",
+			Exec: &diff.ExecSpec{Display: "claude plugin install superpowers@claude-plugins-official --scope user", Advisory: false}},
+		{Action: diff.Exec, Type: "plugin", Tool: "opencode", Scope: "user",
+			Artifact: "superpowers", Path: "skipped: opencode has no plugin system",
+			Exec: &diff.ExecSpec{Display: "skipped: opencode has no plugin system", Advisory: true}},
+	}}
+	var b bytes.Buffer
+	PrintPlan(&b, cs, testResolver(), false)
+	out := b.String()
+	if !strings.Contains(out, "superpowers") || !strings.Contains(out, "plugin") {
+		t.Errorf("expected plugin rows in plan, got:\n%s", out)
 	}
 }
 
