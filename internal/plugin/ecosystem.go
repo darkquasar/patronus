@@ -3,8 +3,6 @@
 // spawns no processes — the cmd layer injects execution and runtime probing.
 package plugin
 
-import "github.com/darkquasar/patronus/internal/manifest"
-
 // EcosystemFor maps a Patronus tool name to its plugin ecosystem key. ok is false
 // for tools with no plugin construct (opencode), which makes every plugin an
 // honest skip there. This is the ONLY manifest-derived plugin distinction:
@@ -19,7 +17,3 @@ func EcosystemFor(tool string) (eco string, ok bool) {
 		return "", false
 	}
 }
-
-// ensure manifest stays imported for sibling files in this package during the
-// transitional build; remove if unused after Task 2.
-var _ = manifest.FamilyPlugin
