@@ -29,6 +29,11 @@ type CatalogView struct {
 	// Artifact, when set, restricts the artifact section to the single named item,
 	// shown as its full block (implies the block view). Empty means all artifacts.
 	Artifact string
+	// PluginStatus maps a plugin name to its lock reconciliation status
+	// (verified|unverified|missing). When non-nil, the plugin section shows a STATUS
+	// column, reading "untracked" for a catalog plugin absent from the lock. nil
+	// means no lock was consulted (no status column).
+	PluginStatus map[string]string
 }
 
 // JSON writes v as indented JSON.
@@ -52,11 +57,11 @@ func PrintCatalog(w io.Writer, cat *registry.Catalog, view CatalogView) {
 		printProfiles(w, cat.Profiles, view.Layers)
 	}
 	if view.Plugins {
-		printPlugins(w, cat.Plugins)
+		printPlugins(w, cat.Plugins, view.PluginStatus)
 	}
 }
 
-func printPlugins(w io.Writer, entries []registry.PluginEntry) {
+func printPlugins(w io.Writer, entries []registry.PluginEntry, status map[string]string) {
 	fmt.Fprintln(w, "PLUGINS")
 	if len(entries) == 0 {
 		fmt.Fprintln(w, "  (none)")
@@ -64,10 +69,24 @@ func printPlugins(w io.Writer, entries []registry.PluginEntry) {
 		return
 	}
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tDESCRIPTION")
-	for _, e := range entries {
-		m := e.Manifest
-		fmt.Fprintf(tw, "  %s\t%s\n", m.Name, truncate(m.Description, descWidth))
+	// A STATUS column appears only when a lock was consulted (status != nil), so
+	// `list --plugins` outside a locked project keeps its original two columns.
+	if status != nil {
+		fmt.Fprintln(tw, "  NAME\tSTATUS\tDESCRIPTION")
+		for _, e := range entries {
+			m := e.Manifest
+			st := status[m.Name]
+			if st == "" {
+				st = "untracked"
+			}
+			fmt.Fprintf(tw, "  %s\t%s\t%s\n", m.Name, st, truncate(m.Description, descWidth))
+		}
+	} else {
+		fmt.Fprintln(tw, "  NAME\tDESCRIPTION")
+		for _, e := range entries {
+			m := e.Manifest
+			fmt.Fprintf(tw, "  %s\t%s\n", m.Name, truncate(m.Description, descWidth))
+		}
 	}
 	tw.Flush()
 	fmt.Fprintln(w)

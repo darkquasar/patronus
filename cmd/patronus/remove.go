@@ -11,6 +11,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/state"
@@ -122,6 +123,15 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			// Symmetric plugin teardown: for any selected item that is a tracked
+			// plugin, append the tool's uninstall EXEC(s) (advisory when its CLI is
+			// absent). The v1 orphan `plugins.<name>` MERGE, if any, is already
+			// reverted by remove.Compute's Prior-restore path — no extra code.
+			if pluginDiffs := pluginRemoveDiffs(cmd, wd, selected, warnf); len(pluginDiffs) > 0 {
+				cs.Diffs = append(cs.Diffs, pluginDiffs...)
+			}
+
 			if force {
 				remove.Promote(cs)
 			}
@@ -159,6 +169,36 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 	return cmd
 }
 
+// pluginRemoveDiffs builds the uninstall EXEC diffs for any selected item that is
+// a tracked plugin, grouping the recorded (tool,scope) items under each plugin's
+// manifest. It loads the catalog to resolve each plugin's source/ecosystem; if the
+// catalog is unavailable, no plugin is a known plugin here and it returns nil
+// (the file-revert path still runs). It never fails the remove.
+func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, warnf func(string, ...any)) []diff.FileDiff {
+	cat := scanCatalogFn(cmd.Context(), wd, warnf)
+	if cat == nil {
+		return nil
+	}
+	// Group recorded items by plugin name so one plugin's per-tool items build one
+	// uninstall pass. Non-plugin items (findPlugin==nil) are left to remove.Compute.
+	byPlugin := map[string][]state.Item{}
+	for _, it := range selected {
+		if findPlugin(cat, it.Artifact) != nil {
+			byPlugin[it.Artifact] = append(byPlugin[it.Artifact], it)
+		}
+	}
+	if len(byPlugin) == 0 {
+		return nil
+	}
+	probe := plugin.ExecProbe{}
+	var out []diff.FileDiff
+	for name, items := range byPlugin {
+		pl := findPlugin(cat, name)
+		out = append(out, pluginUninstallDiffs(pl.Manifest, items, probe)...)
+	}
+	return out
+}
+
 // removeStateOpts carries what runRemove needs to rewrite state after an undo.
 type removeStateOpts struct {
 	home       string
@@ -177,6 +217,20 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 
 	app := &install.Applier{}
 	result, applyErr := app.Apply(cs)
+
+	// Run plugin uninstall EXECs (the applier skips EXEC diffs — it stays a pure
+	// file writer). Only after the file reverts succeed, mirroring runDeploy. An
+	// advisory exec (CLI absent) is shown, not run. A failure is surfaced but does
+	// not block dropping the file-reverted state below.
+	if applyErr == nil {
+		runner := runnerForCommands
+		if runner == nil {
+			runner = execRunner{cmd: cmd}
+		}
+		if _, execErr := runExecs(cmd, cs, runner); execErr != nil {
+			applyErr = execErr
+		}
+	}
 
 	// Determine which (artifact,tool,scope) items were fully undone: every recorded
 	// file for that item must appear in result.Applied (not skipped). We key applied

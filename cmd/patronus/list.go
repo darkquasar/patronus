@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
 )
@@ -59,6 +61,13 @@ func newListCmd() *cobra.Command {
 				view.Artifacts, view.Recipes, view.Profiles, view.Plugins = true, true, true, true
 			}
 
+			// When the plugin section is shown and a project lock exists, surface each
+			// plugin's reconciliation status (verified|unverified|missing) beside its
+			// name; a catalog plugin absent from the lock reads "untracked".
+			if view.Plugins {
+				view.PluginStatus = pluginStatusFromLock(wd)
+			}
+
 			if jsonOutput {
 				return render.JSON(cmd.OutOrStdout(), filterCatalog(cat, view))
 			}
@@ -75,6 +84,26 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifact, "artifact", "", "show the full details of a single artifact by name")
 	addRegistryFlags(cmd, &regSel)
 	return cmd
+}
+
+// pluginStatusFromLock reads <wd>/patronus.lock and returns a name->status map of
+// its plugin entries, or nil when there is no lock (or it has no plugins) — nil
+// keeps list's plugin section in its original no-status-column form.
+func pluginStatusFromLock(wd string) map[string]string {
+	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+	if err != nil || len(l.Entries) == 0 {
+		return nil
+	}
+	out := map[string]string{}
+	for _, e := range l.Entries {
+		if e.Kind == "plugin" {
+			out[e.Name] = e.Status
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // filterCatalog returns a catalog containing only the sections the view selects,

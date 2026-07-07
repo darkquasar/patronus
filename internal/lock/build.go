@@ -37,6 +37,17 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 			Slot:   it.Slot,
 			Kind:   string(it.Family),
 		}
+		// A plugin is tracked by IDENTITY, not by a content-fold: it has no local
+		// files to hash (the tool clones it), so lock records it as declared intent
+		// with status unverified for scan to reconcile against installed reality.
+		if it.Family == manifest.FamilyPlugin {
+			e.Status = StatusUnverified
+			if p := findPlugin(cat, it.Name); p != nil {
+				e.Version = p.Manifest.Version
+			}
+			l.Entries = append(l.Entries, e)
+			continue
+		}
 		sum, version, err := hashItem(cat, it)
 		if err != nil {
 			return nil, fmt.Errorf("hashing %q: %w", it.Name, err)
@@ -173,6 +184,15 @@ func findRecipe(cat *registry.Catalog, name string) *registry.RecipeEntry {
 	for i := range cat.Recipes {
 		if cat.Recipes[i].Manifest.Name == name {
 			return &cat.Recipes[i]
+		}
+	}
+	return nil
+}
+
+func findPlugin(cat *registry.Catalog, name string) *registry.PluginEntry {
+	for i := range cat.Plugins {
+		if cat.Plugins[i].Manifest.Name == name {
+			return &cat.Plugins[i]
 		}
 	}
 	return nil
