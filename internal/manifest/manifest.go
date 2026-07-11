@@ -107,13 +107,18 @@ const (
 // `install <name>`, or as another item's dependency. See the requires package for
 // closure expansion and graph validation (dangling/cycle).
 type Meta struct {
-	APIVersion  string   `yaml:"apiVersion" json:"apiVersion"`
-	Family      Family   `yaml:"family" json:"family"`
-	Role        Role     `yaml:"role,omitempty" json:"role,omitempty"`
-	Name        string   `yaml:"name" json:"name"`
-	Description string   `yaml:"description,omitempty" json:"description,omitempty"`
-	Version     string   `yaml:"version,omitempty" json:"version,omitempty"`
-	Requires    []string `yaml:"requires,omitempty" json:"requires,omitempty"`
+	APIVersion  string `yaml:"apiVersion" json:"apiVersion"`
+	Family      Family `yaml:"family" json:"family"`
+	Role        Role   `yaml:"role,omitempty" json:"role,omitempty"`
+	Name        string `yaml:"name" json:"name"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+	// Version is SemVer. Bump it on ANY content change to the artifact: the
+	// catalog re-installs only when the published version exceeds the installed
+	// one, so an un-bumped change never reaches users. patch = no behavior
+	// change; minor = backward-compatible new/changed behavior; major = breaking
+	// contract change. Not validated here — see CONTRIBUTING.md.
+	Version  string   `yaml:"version,omitempty" json:"version,omitempty"`
+	Requires []string `yaml:"requires,omitempty" json:"requires,omitempty"`
 }
 
 // Installable is implemented by all three installable families (Artifact,

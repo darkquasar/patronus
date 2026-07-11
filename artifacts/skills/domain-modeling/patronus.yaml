@@ -4,7 +4,7 @@ type: skill
 role: context
 name: domain-modeling
 description: "Actively build and sharpen a project's domain model — challenge fuzzy terms, maintain a CONTEXT.md glossary, and record architectural decisions as ADRs. Use when pinning down ubiquitous language or recording a decision."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
 files: [ADR-FORMAT.md, CONTEXT-FORMAT.md]
 targets: [claude, codex, opencode]

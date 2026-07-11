@@ -13,15 +13,15 @@ You are executing a **spec-driven team implementation**. Research has already be
 
 ## Phase 0: Identify the Research Domain
 
-The user will provide a research domain path (a directory containing spec documents). If they didn't, ask for it.
+The user will provide a feature-folder path under `docs/specs/` (e.g. `docs/specs/07-logging-improvement/`). If they didn't, ask for it — or list the folders under `docs/specs/` whose `meta.yaml` shows `spec` and `plan` complete but `tasks` still `false`.
 
-1. **Scan the research directory** for these files (names may vary slightly):
+1. **Read the folder's `meta.yaml`** — confirm `completeness.spec` and `completeness.plan` are `true` before proceeding. Then scan the folder for these files:
    - `research.md` — background research and findings
    - `spec.md` — the specification (required)
    - `plan.md` — the implementation plan (required)
    - `tasks.md` — pre-existing task breakdown (optional)
    - `*-findings.md` — any additional research findings
-2. **Read ALL found files** in the research directory. Understand the full picture before proceeding.
+2. **Read ALL found files** in the feature folder. Understand the full picture before proceeding.
 3. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's conventions and constraints.
 4. **Read `tasks/lessons.md`** if it exists — internalize past mistakes.
 
@@ -42,14 +42,14 @@ Before defining any boundaries, you MUST understand the existing project structu
 
 ## Phase 2: Check for tasks.md
 
-Look for `tasks.md` in the research domain directory. This is the implementation task breakdown.
+Look for `tasks.md` in the feature folder. This is the implementation task breakdown.
 
 **If `tasks.md` does NOT exist**, you must create it before proceeding:
 
 1. Enter plan mode.
 2. Analyze `spec.md` and `plan.md` to extract every discrete implementation task.
 3. Group tasks by concern boundary (the domains that will become teammate assignments).
-4. Write `tasks.md` in the research domain directory. See [TASKS-TEMPLATE.md](TASKS-TEMPLATE.md) for the format.
+4. Write `tasks.md` in the feature folder, then set `tasks: true` in the folder's `meta.yaml` and bump `updated:`. See [TASKS-TEMPLATE.md](TASKS-TEMPLATE.md) for the format.
 
 **Present `tasks.md` to the user for review before proceeding.** Do not spawn teammates until the user approves the task breakdown.
 
@@ -119,8 +119,8 @@ When all teammates' tasks are complete (you're notified as each background agent
    - Tests (e.g., `npm test`, `pytest`, `cargo test`)
    - Any spec-defined verification steps
 5. **Update `tasks.md`** — mark all completed tasks with `[x]`.
-6. **Write `provenance.md`** — in the research domain directory, list every created/modified file with task IDs and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
-7. **Rename the research domain folder** — prefix the folder name with `done-` to signal that the research has been implemented (e.g., `research/phase-08/skills-tools-model/` → `research/phase-08/done-skills-tools-model/`). Use `mv` to rename in place.
+6. **Write `provenance.md`** — in the feature folder, list every created/modified file with task IDs and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
+7. **Mark implementation complete in `meta.yaml`** — the feature folder's `meta.yaml` already has `tasks: true`; bump `updated:`. (Optionally record an `implemented: true` flag — the manifest is extensible.) Do not rename the folder; the `NN-slug` name is stable.
 8. **Cleanup** — remove the worktrees you created and delete the teammate branches (see the Coordination Protocol's Cleanup step).
 
 ---
@@ -161,7 +161,7 @@ See `<research-domain>/provenance.md` for full file-to-spec traceability.
 2. **Never prescribe code to teammates.** Define boundaries, point to specs, let them write.
 3. **Maximum 5 teammates.** Prefer fewer when the work allows it.
 4. **No two teammates should edit the same file.** Resolve overlaps before spawning.
-5. **Write `provenance.md`** in the research domain directory listing every created/modified file. Do NOT add provenance headers to source files. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
+5. **Write `provenance.md`** in the feature folder listing every created/modified file. Do NOT add provenance headers to source files. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
 6. **Run verification before declaring done.** A description of a test is not a test.
 7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** (plan, create worktrees, spawn parallel teammates, coordinate, merge, cleanup).
 8. **Present `tasks.md` to user for approval** before spawning any teammates.
