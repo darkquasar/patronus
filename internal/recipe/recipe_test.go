@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -182,6 +183,95 @@ func TestComputeFetchSkipsWhenBinaryMatches(t *testing.T) {
 			t.Errorf("expected FETCH to classify as SKIP for matching binary, got %s", d.Action)
 		}
 	}
+}
+
+// tkRecipe is an install-only `url` recipe: a single pinned artifact, no per-OS
+// asset matrix, gated to POSIX hosts (it is a bash script).
+func tkRecipe(sha string) *manifest.Recipe {
+	return &manifest.Recipe{
+		Meta: manifest.Meta{
+			APIVersion: manifest.APIVersion, Family: manifest.FamilyRecipe,
+			Role: manifest.RoleOrchestration, Name: "tk", Version: "0.3.2",
+		},
+		Delivery: &manifest.Delivery{
+			Source:    manifest.SourceURL,
+			URL:       "https://example.test/ticket",
+			SHA256:    sha,
+			Platforms: []string{"linux", "darwin"},
+		},
+	}
+}
+
+// TestFetchDiffURLSource covers the three outcomes of a `url` delivery: a FETCH
+// when the dest is absent, a SKIP when the dest's sha already matches the pin,
+// and — on a host outside the Platforms allow-list — NO fetch plus a clear
+// advisory. The advisory is asserted, not just its absence-of-FETCH consequence:
+// core drops a working work-graph on native Windows, and an accepted regression
+// that tells the user nothing is just a silent no-op.
+func TestFetchDiffURLSource(t *testing.T) {
+	content := []byte("#!/usr/bin/env bash\n# ticket\n")
+	sha := sha256Hex(content)
+
+	t.Run("absent dest fetches", func(t *testing.T) {
+		res, _, _ := testEnv(t)
+		dest, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if d == nil {
+			t.Fatal("want a FETCH diff for a url delivery, got nil")
+		}
+		if d.Action != diff.Fetch {
+			t.Errorf("Action = %s, want FETCH", d.Action)
+		}
+		if d.Fetch.URL != "https://example.test/ticket" || d.Fetch.SHA256 != sha {
+			t.Errorf("FetchSpec = %+v, want the pinned url+sha", d.Fetch)
+		}
+		if d.Fetch.Archive != "" {
+			t.Errorf("Archive = %q, want empty (a url artifact is a raw binary)", d.Fetch.Archive)
+		}
+		if filepath.Base(dest) != "tk" {
+			t.Errorf("dest = %q, want it to end in tk", dest)
+		}
+	})
+
+	t.Run("matching dest skips", func(t *testing.T) {
+		res, home, _ := testEnv(t)
+		dest := filepath.Join(home, ".patronus", "bin", "tk")
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dest, content, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if d == nil {
+			t.Fatal("want a diff, got nil")
+		}
+		if d.Action != diff.Skip {
+			t.Errorf("Action = %s, want SKIP (dest sha already matches the pin)", d.Action)
+		}
+	})
+
+	t.Run("unsupported platform warns and emits no fetch", func(t *testing.T) {
+		res, _, _ := testEnv(t)
+		var warnings []string
+		dest, d := fetchDiff(Request{
+			Recipe:   tkRecipe(sha),
+			Resolver: res,
+			Warnf:    func(f string, a ...any) { warnings = append(warnings, fmt.Sprintf(f, a...)) },
+		}, "windows", "amd64")
+
+		if d != nil {
+			t.Errorf("want NO fetch diff on windows, got %+v", d)
+		}
+		if dest != "" {
+			t.Errorf("dest = %q, want empty", dest)
+		}
+		if len(warnings) != 1 {
+			t.Fatalf("want exactly 1 advisory, got %v", warnings)
+		}
+		if !strings.Contains(warnings[0], "windows") {
+			t.Errorf("advisory %q should name the unsupported platform", warnings[0])
+		}
+	})
 }
 
 func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
