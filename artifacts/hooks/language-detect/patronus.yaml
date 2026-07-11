@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: capability
+name: language-detect
+description: "Language-idiom re-grounding — a SessionStart hook (startup|clear|compact) that inspects the repo root for language manifests (go.mod, Cargo.toml, package.json, pyproject.toml/requirements.txt) and injects a POINTER to the idioms the codebase actually follows. It points rather than inlines: naming the language costs a line, while inlining a style guide would spend the context the idiom instruction (e.g. go-style-uber) already owns. Conditional — it only names a language whose manifest is present, so it never asserts an idiom the repo does not use."
+version: 1.0.0
+entry: ""
+files: [detect-language.sh]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+hook:
+  event: SessionStart
+  matcher: startup|clear|compact
+  command: "{script}"
+  script: detect-language.sh

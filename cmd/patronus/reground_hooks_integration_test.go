@@ -68,11 +68,11 @@ func TestRegroundHooksLandOnClaude(t *testing.T) {
 		}
 	}
 
-	// work-state-reground is a SECOND SessionStart group alongside the keystone
-	// activation (both on the same event, composed into one array).
+	// work-state-reground is one SessionStart group alongside the keystone activation
+	// and language-detect (all on the same event, composed into one array).
 	ss, _ := hooks["SessionStart"].([]any)
-	if len(ss) != 2 {
-		t.Errorf("want 2 SessionStart hooks (dispatch-activate + work-state-reground), got %d", len(ss))
+	if len(ss) != 3 {
+		t.Errorf("want 3 SessionStart hooks (dispatch-activate + work-state-reground + language-detect), got %d", len(ss))
 	}
 }
 

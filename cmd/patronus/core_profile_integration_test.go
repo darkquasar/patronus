@@ -385,12 +385,13 @@ func TestCoreSessionStartAndCcusage(t *testing.T) {
 		t.Fatalf("settings.json unreadable: %v", err)
 	}
 
-	// Two SessionStart hooks now coexist: the dispatch-keystone activation and the
-	// work-state reground. Find the dispatch-activate element by its placed script
-	// (order across the group is not guaranteed), and assert it's placed+executable.
+	// Three SessionStart hooks now coexist: the dispatch-keystone activation, the
+	// work-state reground, and the language-idiom detect. Find the dispatch-activate
+	// element by its placed script (order across the group is not guaranteed), and
+	// assert it's placed+executable.
 	ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any)
-	if len(ss) != 2 {
-		t.Fatalf("want 2 SessionStart groups, got %d: %v", len(ss), root["hooks"])
+	if len(ss) != 3 {
+		t.Fatalf("want 3 SessionStart groups, got %d: %v", len(ss), root["hooks"])
 	}
 	scriptPath := filepath.Join(home, ".claude", "hooks", "skills-dispatch-activate.sh")
 	foundDispatch := false

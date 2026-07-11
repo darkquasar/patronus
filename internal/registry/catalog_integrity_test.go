@@ -99,6 +99,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// heartbeat + resume/compaction work-state reground (Beads + ai-memory).
 		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
 		"work-state-reground": {manifest.TypeHook, manifest.RoleCapability},
+		// Core eng-team: SessionStart language-idiom pointer (authored).
+		"language-detect": {manifest.TypeHook, manifest.RoleCapability},
 		// ai-memory lifecycle hooks (vendored, Claude-only): Patronus-tracked
 		// versions of ai-memory install-hooks, each requires: [memory-ai-memory].
 		"ai-memory-session-start": {manifest.TypeHook, manifest.RoleMemory},

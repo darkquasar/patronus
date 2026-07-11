@@ -44,8 +44,8 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	if pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any); len(pre) != 4 {
 		t.Errorf("want 4 PreToolUse hooks, got %d", len(pre))
 	}
-	if ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any); len(ss) != 2 {
-		t.Errorf("want 2 SessionStart hooks, got %d", len(ss))
+	if ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any); len(ss) != 3 {
+		t.Errorf("want 3 SessionStart hooks, got %d", len(ss))
 	}
 	if ups, _ := root["hooks"].(map[string]any)["UserPromptSubmit"].([]any); len(ups) != 1 {
 		t.Errorf("want 1 UserPromptSubmit hook, got %d", len(ups))
