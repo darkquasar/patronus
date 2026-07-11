@@ -70,6 +70,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
 		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
 		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// Core eng-team: work-on-a-branch disposition (authored, advisory).
+		"branch-first": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
 		"tdd-guard-hook":                 {manifest.TypeHook, manifest.RoleEval},
 		"verification-before-completion": {manifest.TypeSkill, manifest.RoleEval},

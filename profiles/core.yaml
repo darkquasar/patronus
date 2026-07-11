@@ -11,6 +11,7 @@ layers:
     - agents-spine                         # the AGENTS.md format spine
     - agent-rules                          # distilled DDD + refactoring discipline
     - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
+    - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
   capabilities:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
