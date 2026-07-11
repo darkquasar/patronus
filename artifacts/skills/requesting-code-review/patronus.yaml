@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: requesting-code-review
 description: "Discipline for requesting a code review — when finishing a task, a major feature, or before merging, dispatch a reviewer with a focused package to verify the work meets requirements. Ships the `code-reviewer.md` reviewer prompt the subagent-driven-development skill's final whole-branch review references."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [code-reviewer.md]
 targets: [claude, codex, opencode]
