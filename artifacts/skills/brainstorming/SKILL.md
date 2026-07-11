@@ -67,6 +67,13 @@ digraph brainstorming {
 - Check out the current project state first (files, docs, recent commits)
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
+- If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
+
+  > "This looks broad enough to research in parallel. Want me to run `team-research` — spawn
+  > parallel researchers to investigate each unknown and synthesize research.md, spec.md, and
+  > plan.md — instead of designing solo?"
+
+  If yes, hand off to the **team-research** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while team-research investigates work you *don't*. A project can need one, both, or neither.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions

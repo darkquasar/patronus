@@ -8,8 +8,9 @@ Vendored files (upstream paths):
 
 SKILL.md is ADAPTED, not verbatim. Patronus re-coupled it into its own lifecycle
 (see docs/adr/0001-profiles-recouple-plugins-stay-as-is.md) with two additions:
-an explicit ASCII-diagram step at design-presentation points, and a `grilling`
-hand-off offered after design approval, before the spec is written. The body
+an explicit ASCII-diagram step at design-presentation points, a `grilling` hand-off
+offered after design approval (before the spec is written), and a `team-research`
+hand-off at the scope-assessment step for genuinely unknown domains. The body
 otherwise follows upstream.
 
 All other files above are copied verbatim. The scripts/ visual-companion server
