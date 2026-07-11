@@ -1,6 +1,10 @@
 package manifest
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // Recipe is an external binary/tool that Patronus delivers (optional fetch+verify)
 // and/or wires into each agent (§4). It carries NO file type — its shape is a
@@ -69,6 +73,47 @@ type Delivery struct {
 	InstallTo string         `yaml:"installTo,omitempty" json:"installTo,omitempty"`
 	Binary    string         `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
 	Assets    []Asset        `yaml:"assets,omitempty" json:"assets,omitempty"`
+
+	// url source: a single platform-independent artifact (e.g. a shell script).
+	// There is no per-OS/arch matrix — Platforms gates which hosts it runs on.
+	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
+	SHA256    string   `yaml:"sha256,omitempty" json:"sha256,omitempty"`       // hex digest; pinned
+	Platforms []string `yaml:"platforms,omitempty" json:"platforms,omitempty"` // GOOS allow-list; empty = unrestricted
+}
+
+// PinnedURL is the single pinned download of a `url` delivery. It exists so
+// ResolveURL returns one named value rather than two bare strings: a transposed
+// (url, sha256) pair would silently disarm the trust anchor.
+type PinnedURL struct {
+	URL    string
+	SHA256 string // hex digest; pinned
+}
+
+// ResolveURL returns the pinned artifact for a `url` delivery, or a clear error
+// when the host GOOS is outside the recipe's Platforms allow-list. It is the
+// `url`-source analogue of ResolveAsset: the caller (fetchDiff) turns the error
+// into a warning and emits no FETCH, rather than downloading something the host
+// cannot execute. An empty Platforms list means unrestricted.
+func (d *Delivery) ResolveURL(goos string) (*PinnedURL, error) {
+	if !d.supportsOS(goos) {
+		return nil, fmt.Errorf("deliver: not supported on %s (platforms: %s)",
+			goos, strings.Join(d.Platforms, ", "))
+	}
+	return &PinnedURL{URL: d.URL, SHA256: d.SHA256}, nil
+}
+
+// supportsOS reports whether goos is in the Platforms allow-list. An empty list
+// means unrestricted (the common case: a real cross-platform binary).
+func (d *Delivery) supportsOS(goos string) bool {
+	if len(d.Platforms) == 0 {
+		return true
+	}
+	for _, p := range d.Platforms {
+		if p == goos {
+			return true
+		}
+	}
+	return false
 }
 
 // Fallback is one opt-in system-package-manager alternative to the blessed
@@ -204,8 +249,10 @@ func validateRecipe(r *Recipe) error {
 	if r.Role == "" {
 		return fmt.Errorf("missing role")
 	}
-	if r.Delivery != nil && !deliverySources[r.Delivery.Source] {
-		return fmt.Errorf("invalid deliver.source %q", r.Delivery.Source)
+	if r.Delivery != nil {
+		if err := validateDelivery(r.Delivery); err != nil {
+			return err
+		}
 	}
 	// An empty wire.mode is the install-only recipe (deliver a package, wire
 	// nothing — a hook or another item does the wiring). It is valid ONLY with a
@@ -228,6 +275,28 @@ func validateRecipe(r *Recipe) error {
 		if len(r.Wire.Run) == 0 {
 			return fmt.Errorf("wire.mode %s requires wire.run commands", r.Wire.Mode)
 		}
+	}
+	return nil
+}
+
+// validateDelivery checks the source-specific shape of a deliver block. The
+// source enum itself is closed; each source then has its own required fields.
+func validateDelivery(d *Delivery) error {
+	if !deliverySources[d.Source] {
+		return fmt.Errorf("invalid deliver.source %q", d.Source)
+	}
+	if d.Source != SourceURL {
+		return nil
+	}
+	// A url delivery is a single pinned artifact, not a per-OS/arch matrix.
+	if d.URL == "" {
+		return errors.New("deliver: source url requires a url")
+	}
+	if d.SHA256 == "" {
+		return errors.New("deliver: source url requires a sha256 (the pinned trust anchor)")
+	}
+	if len(d.Assets) > 0 {
+		return errors.New("deliver: source url takes a single url, not assets")
 	}
 	return nil
 }
