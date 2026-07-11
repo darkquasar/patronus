@@ -95,6 +95,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
 		"requesting-code-review":         {manifest.TypeSkill, manifest.RoleEval},
 		"receiving-code-review":          {manifest.TypeSkill, manifest.RoleEval},
+		// Core eng-team: the two advisory lifecycle review gates (authored).
+		"spec-review": {manifest.TypeSkill, manifest.RoleEval},
 		// Tiered JIT re-grounding hooks (authored; Claude-only): per-turn skill
 		// heartbeat + resume/compaction work-state reground (Beads + ai-memory).
 		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
