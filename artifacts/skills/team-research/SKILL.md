@@ -22,7 +22,7 @@ You do NOT produce `tasks.md` — that's `/team-implement`'s job.
 The user will provide a research question, problem space, or feature area. If the description is too vague, ask clarifying questions until you have:
 
 1. **The problem statement** — what are we trying to solve or understand?
-2. **The output destination** — a directory under `research/` where deliverables will land. If none exists, create one with a descriptive name (e.g., `research/07-architecture-deep-dive/logging-improvement/`).
+2. **The output destination** — a per-feature folder under `docs/specs/`: `docs/specs/NN-slug/` (sequential number + short slug, e.g. `docs/specs/07-logging-improvement/`). Scan `docs/specs/` for the highest existing `NN` and increment. All deliverables — `research.md`, `spec.md`, `plan.md`, the `*-findings.md` appendix, and a `meta.yaml` manifest — land in this one folder. `docs/specs/` is gitignored; ensure `.gitignore` contains `/docs/specs/` (add it and tell the user if missing).
 3. **Scope boundaries** — what's in scope and what's explicitly out of scope.
 4. **Success criteria** — what does "research complete" look like? What questions must be answered?
 
@@ -35,7 +35,7 @@ Before creating any team, YOU do the initial reconnaissance. This prevents spawn
 1. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's architecture, conventions, and constraints.
 2. **Read `tasks/lessons.md`** if it exists — avoid past mistakes.
 3. **Read the project structure** — understand what exists, what frameworks are in use, where the code lives.
-4. **Read existing research** — check for prior research in the `research/` directory that overlaps with or informs this domain. Don't duplicate work that's already been done.
+4. **Read existing research** — check for prior feature folders under `docs/specs/` (their `research.md` / `spec.md`) that overlap with or inform this domain. Don't duplicate work that's already been done.
 5. **Identify the unknowns** — list the specific questions that need answers. Each unknown becomes a potential research stream.
 
 ---
@@ -106,6 +106,19 @@ When all researchers' tasks are complete (you're notified as each background age
 
 1. **Read ALL `*-findings.md` files** produced by the researchers.
 2. **Synthesize the three deliverables.** You write these yourself — this is the Team Lead's core job. Use the templates in [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md).
+3. **Write the folder's `meta.yaml`.** Since team-research produces research, spec, and plan, create `docs/specs/NN-slug/meta.yaml` with those three flags `true` (leave `tasks: false` — that's `/team-implement`'s job):
+
+   ```yaml
+   slug: NN-slug
+   intent: "One line: what this feature is."
+   created: <today, YYYY-MM-DD>     # from context; do not invent
+   updated: <today, YYYY-MM-DD>
+   completeness:
+     research: true
+     spec:     true
+     plan:     true
+     tasks:    false
+   ```
 
 (Researchers are read-only `Explore` agents writing findings files — there are no branches to merge and nothing to shut down; a completed agent has already returned.)
 
@@ -169,10 +182,10 @@ Run `/team-implement <research-dir>` to begin implementation.
 3. **Maximum 4 researchers.** Prefer fewer when the domain allows it.
 4. **Every finding needs evidence.** Opinions without evidence don't go in the spec.
 5. **The Team Lead writes the deliverables.** Researchers produce raw findings; synthesis is your job.
-6. **The output is three files: `research.md`, `spec.md`, `plan.md`.** No `tasks.md` — that's `/team-implement`'s responsibility. Do not proceed past Phase 5 without all three files written and committed.
+6. **The output is three files plus `meta.yaml`: `research.md`, `spec.md`, `plan.md` in `docs/specs/NN-slug/`.** No `tasks.md` — that's `/team-implement`'s responsibility. Do not proceed past Phase 5 without all three files written and `meta.yaml` updated (research/spec/plan `true`). `docs/specs/` is gitignored — do not commit the deliverables.
 7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** for the research lifecycle (plan streams, spawn parallel researchers, coordinate, synthesize).
 8. **Touch the actual code/system.** "I believe X works this way" is not a finding. "I read X at line Y and confirmed Z" is.
-9. **Existing research is prior art.** Check `research/` before investigating something that may already be answered.
+9. **Existing research is prior art.** Check `docs/specs/` (prior feature folders) before investigating something that may already be answered.
 10. **Capture lessons before finishing.** Surprising discoveries, constraint corrections, and process mistakes go in `tasks/lessons.md`. Routine findings stay in `research.md`.
 
 ---

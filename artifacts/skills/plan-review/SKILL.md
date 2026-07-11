@@ -30,7 +30,7 @@ re-run per task.
 
 **1. Identify the plan — and the spec it implements.**
 
-Find the plan (usually the most recent `docs/plans/*.md`) *and* the spec it was written from. You
+Find the plan (`docs/specs/NN-slug/plan.md` in the relevant feature folder) *and* the spec it was written from (`spec.md` in the same folder). You
 cannot review a plan without both: most of the rubric is a comparison between them.
 
 If there is no spec, say so — a plan with no spec to check against can only be reviewed for

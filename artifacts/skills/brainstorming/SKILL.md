@@ -26,7 +26,7 @@ You MUST create a task for each of these items and complete them in order:
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Write spec** — into a per-feature folder `docs/specs/NN-slug/spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit — `docs/specs/` is gitignored by default.
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
@@ -130,10 +130,32 @@ either way.
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design (spec) to `docs/specs/NN-slug/spec.md`, where `NN-slug` is a per-feature folder (sequential number + short slug, e.g. `01-user-auth`). Scan `docs/specs/` for the highest existing `NN` and increment.
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Do NOT commit the spec. `docs/specs/` is gitignored — design docs stay local unless the user explicitly asks to share them. (ADRs are the exception: those live in `docs/adr/`, committed.)
+
+**Spec folder & meta.yaml:**
+
+Each feature gets one folder under `docs/specs/`: `NN-slug/` (sequential number + slug, e.g. `03-payment-retry`). It holds the whole design lifecycle together — `spec.md`, `plan.md`, `tasks.md`, `research.md` — plus a `meta.yaml` manifest.
+
+On first write into a new feature folder, create `meta.yaml` with every completeness flag `false`, then set `spec: true` once `spec.md` is written:
+
+```yaml
+slug: 03-payment-retry
+intent: "One line: what this feature is."
+created: <today, YYYY-MM-DD>     # from context; do not invent
+updated: <today, YYYY-MM-DD>
+completeness:
+  research: false
+  spec:     true      # you just wrote spec.md
+  plan:     false
+  tasks:    false
+```
+
+If `meta.yaml` already exists (e.g. `team-research` created it), just set `spec: true` and bump `updated:`. Downstream skills own their own flags — `writing-plans` sets `plan:`, etc.
+
+Ensure `docs/specs/` is gitignored when in a git repo: if `.gitignore` doesn't already ignore it, add `/docs/specs/` and tell the user you did (design docs stay local by default). Leave `docs/adr/` tracked.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -148,7 +170,7 @@ Fix any issues inline. No need to re-review — just fix and move on.
 **User Review Gate:**
 After the spec review loop passes, ask the user to review the written spec before proceeding:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+> "Spec written to `<path>` (kept local — `docs/specs/` is gitignored). Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 

@@ -13,7 +13,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `docs/specs/NN-slug/plan.md` — the plan lives in the same per-feature folder as its spec (find the `NN-slug` folder whose `spec.md` you're planning from). After writing `plan.md`, set `plan: true` in that folder's `meta.yaml` and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the brainstorming skill's "Spec folder & meta.yaml" for the shape). `docs/specs/` is gitignored — do not commit the plan.
 - (User preferences for plan location override this default)
 
 ## Scope Check

@@ -5,9 +5,10 @@ Vendored file (upstream path):
 
 References to un-vendored sibling skills (subagent-driven-development,
 using-git-worktrees, finishing-a-development-branch) were softened to optional
-notes so this artifact stands alone; the default plan-save path was generalized
-from `docs/superpowers/plans/` to `docs/plans/`. The planning discipline is
-otherwise a faithful copy.
+notes so this artifact stands alone; the default plan-save path was changed
+from `docs/superpowers/plans/` to the per-feature spec folder
+`docs/specs/NN-slug/plan.md` (co-located with its spec, tracked via meta.yaml).
+The planning discipline is otherwise a faithful copy.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
