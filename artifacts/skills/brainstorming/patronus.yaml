@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: brainstorming
 description: "Pre-implementation discipline — before any creative work (a feature, a component, new functionality, a behavior change), explore user intent, requirements, and design first. Ships an optional local visual-companion server (a 127.0.0.1 web UI) for sketching ideas with your human partner."
-version: 1.1.0
+version: 2.0.0
 entry: SKILL.md
 files: [spec-document-reviewer-prompt.md, visual-companion.md, scripts]
 targets: [claude, codex, opencode]
