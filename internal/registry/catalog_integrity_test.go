@@ -70,6 +70,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
 		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
 		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// Core eng-team: work-on-a-branch disposition (authored, advisory).
+		"branch-first": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
 		"tdd-guard-hook":                 {manifest.TypeHook, manifest.RoleEval},
 		"verification-before-completion": {manifest.TypeSkill, manifest.RoleEval},
@@ -93,10 +95,15 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
 		"requesting-code-review":         {manifest.TypeSkill, manifest.RoleEval},
 		"receiving-code-review":          {manifest.TypeSkill, manifest.RoleEval},
+		// Core eng-team: the two advisory lifecycle review gates (authored).
+		"spec-review": {manifest.TypeSkill, manifest.RoleEval},
+		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
 		// Tiered JIT re-grounding hooks (authored; Claude-only): per-turn skill
 		// heartbeat + resume/compaction work-state reground (Beads + ai-memory).
 		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
 		"work-state-reground": {manifest.TypeHook, manifest.RoleCapability},
+		// Core eng-team: SessionStart language-idiom pointer (authored).
+		"language-detect": {manifest.TypeHook, manifest.RoleCapability},
 		// ai-memory lifecycle hooks (vendored, Claude-only): Patronus-tracked
 		// versions of ai-memory install-hooks, each requires: [memory-ai-memory].
 		"ai-memory-session-start": {manifest.TypeHook, manifest.RoleMemory},

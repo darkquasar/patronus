@@ -6,7 +6,7 @@ summary: "Cloudflare project agent environment. Partly real — ships the patter
 status: stub                               # still warns: instructions/eval/etc. not yet sourced
 layers:
   instructions: [agent-principles]                # role: instruction — generic agent house rules
-  capabilities: [team-research, team-implement]   # role: capability
+  capabilities: [team-research@claude, team-implement@claude]   # role: capability (Claude-flavoured; codex variant separate)
   context: [pattern-cloudflare]                   # role: context — the populated L4 slot
   tools: [cloudflare-mcp]                          # role: tools — hosted Cloudflare Docs MCP (keyless)
   memory: memory-ai-memory

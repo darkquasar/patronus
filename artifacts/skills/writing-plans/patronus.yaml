@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Vendored from the upstream `writing-plans` skill. References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes; the planning discipline is otherwise faithful."
+  note: "ADAPTED from the upstream `writing-plans` skill. References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes. Patronus re-couplings (per ADR-0001): (1) an OPTIONAL beads mirror offered after the plan is saved — the `- [ ]` checkboxes stay the canonical capture, the bd epic+issues are additive and survive a compaction the checkboxes may not; (2) a pointer to the `plan-review` skill as the independent counterpart to the skill's own Self-Review. The planning discipline is otherwise faithful."

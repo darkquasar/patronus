@@ -7,6 +7,6 @@ description: "Spec-Driven Team Research — investigate an unknown domain with p
 version: 1.0.1
 entry: SKILL.md
 files: []
-targets: [claude, codex, opencode]
+targets: [claude]   # Claude-flavoured: body uses Agent/SendMessage/Task* (Claude-only). Codex parity is a separate codex-flavoured artifact (native subagents); opencode TBD.
 defaults:
   scope: project

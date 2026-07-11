@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Vendored from the upstream `executing-plans` skill. References to un-vendored sibling skills (finishing-a-development-branch, using-git-worktrees, subagent-driven-development) are softened to optional notes; the execution discipline is otherwise faithful."
+  note: "ADAPTED from the upstream `executing-plans` skill. References to un-vendored sibling skills (finishing-a-development-branch, using-git-worktrees, subagent-driven-development) are softened to optional notes. Patronus re-coupling (per ADR-0001): the per-task 'mark as completed' step also runs `bd close <issue-id>` when the plan's tasks were mirrored into beads by writing-plans — closing is what unblocks the next ready task, so a mirrored plan that is never closed stalls `bd ready`. No-ops when beads was not used. The execution discipline is otherwise faithful."

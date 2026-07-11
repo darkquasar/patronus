@@ -67,6 +67,13 @@ digraph brainstorming {
 - Check out the current project state first (files, docs, recent commits)
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
+- If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
+
+  > "This looks broad enough to research in parallel. Want me to run `team-research` — spawn
+  > parallel researchers to investigate each unknown and synthesize research.md, spec.md, and
+  > plan.md — instead of designing solo?"
+
+  If yes, hand off to the **team-research** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while team-research investigates work you *don't*. A project can need one, both, or neither.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
@@ -86,6 +93,15 @@ digraph brainstorming {
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
 
+**Draw it, don't just describe it:**
+
+When an approach or a design section involves structure, control flow, data flow, or a state
+machine, **lead with a compact ASCII diagram** and then the prose. Use the diagram-explain
+charset: `+---+` boxes, `=>` sync, `~>` async, `>` `<` `^` `v` arrows, ≤100 columns wide.
+
+The picture is a required complement to the words for any non-trivial structural concept, not an
+afterthought. A boundary you cannot draw is usually a boundary you have not yet decided.
+
 **Design for isolation and clarity:**
 
 - Break the system into smaller units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently
@@ -100,6 +116,17 @@ digraph brainstorming {
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
 ## After the Design
+
+**Stress-test it first (optional):**
+
+Once the user approves the design and before you write the doc, offer to interrogate it:
+
+> "Want me to grill this design first — interrogate the assumptions and the hard questions —
+> before we commit it to a spec?"
+
+If yes, run the `grilling` skill, then come back here with what it surfaced. The design is at its
+cheapest to change in the moment right before it becomes a document. The user may decline; proceed
+either way.
 
 **Documentation:**
 

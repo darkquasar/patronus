@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "Vendored verbatim from the upstream `grilling` skill (skills/productivity/grilling)."
+  note: "ADAPTED from the upstream `grilling` skill (skills/productivity/grilling). Patronus re-coupling (per ADR-0001): draw the structure under interrogation as an ASCII diagram (diagram-explain charset) before or alongside the question — ambiguity that survives prose rarely survives a picture. The upstream interview discipline is otherwise unchanged."
