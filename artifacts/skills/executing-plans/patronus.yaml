@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: executing-plans
 description: "Execute a written implementation plan task-by-task with review checkpoints — load, review critically, follow each step exactly, run verifications, stop when blocked. Use when you have a plan to implement."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]
