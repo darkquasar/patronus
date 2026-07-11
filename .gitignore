@@ -11,17 +11,22 @@
 #   .config/opencode/ OpenCode: opencode.json, AGENTS.md
 #   .patronus/        Patronus install state (state.json, cache, fetched binaries)
 #   CLAUDE.md         appended instruction target (Claude)
-#   AGENTS.md         appended instruction target (Codex/OpenCode)
 #   .mcp.json         merged MCP-server config (Claude project scope)
 .claude/
 .codex/
 .config/opencode/
 .patronus/
 /CLAUDE.md
-/AGENTS.md
 /.mcp.json
 # patronus.lock is intentionally NOT ignored — it is the committed lock spec, the
 # one Patronus product meant to live in version control.
+#
+# /AGENTS.md is likewise NOT ignored. It is still install output (composed from the
+# instruction artifacts, same as CLAUDE.md), but it is the AGENTS.md-format contract
+# this repo asks every agent to read — so it is tracked and reviewable rather than
+# invisible. The tradeoff: re-running `patronus install` can produce a diff here, and
+# that diff is the signal that the composed instructions changed. Commit it with the
+# artifact change that caused it.
 
 # Patronus CI output (published to GitHub Releases)
 /registry/
