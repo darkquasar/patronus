@@ -6,11 +6,17 @@ Vendored files (upstream paths):
   - skills/brainstorming/visual-companion.md
   - skills/brainstorming/scripts/{server.cjs,start-server.sh,stop-server.sh,helper.js,frame-template.html}
 
-Copied verbatim. The scripts/ visual-companion server was audited before
-shipping: it binds 127.0.0.1 by default, runs under umask 077 with per-session
-tokens, verifies a PID before signalling it on shutdown, and makes no outbound
-network calls. It is launched by the agent on demand (with user approval), never
-at install time.
+SKILL.md is ADAPTED, not verbatim. Patronus re-coupled it into its own lifecycle
+(see docs/adr/0001-profiles-recouple-plugins-stay-as-is.md) with two additions:
+an explicit ASCII-diagram step at design-presentation points, and a `grilling`
+hand-off offered after design approval, before the spec is written. The body
+otherwise follows upstream.
+
+All other files above are copied verbatim. The scripts/ visual-companion server
+was audited before shipping: it binds 127.0.0.1 by default, runs under umask 077
+with per-session tokens, verifies a PID before signalling it on shutdown, and
+makes no outbound network calls. It is launched by the agent on demand (with user
+approval), never at install time.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
