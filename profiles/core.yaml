@@ -50,6 +50,7 @@ layers:
     # `tdd-enforced` profile — it blocks every edit lacking a failing test, which is
     # too aggressive for the default (it can't tell impl code from a YAML/docs edit).
     - spec-review                          # advisory gate — closes the spec phase (4-lens rubric) before writing-plans
+    - plan-review                          # advisory gate — closes the planning phase (coverage vs the spec) before implementation
     - verification-before-completion       # evidence-before-claims discipline
     - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
     - receiving-code-review                # act on review feedback with technical rigor, not performative agreement
