@@ -6,17 +6,42 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/darkquasar/patronus/internal/profile"
 )
 
-// These drive the real `core` profile (the opinionated default, shipped as of
-// P7.2-L2/L4) end-to-end against the built catalog: the L1 instruction spine +
-// diagram-explain output-style, the vendored L2 capability skills (superpowers +
-// mattpocock subset), and the L4 design-vocabulary skills. They are the §6b
-// acceptance gate for this sub-phase — real build → served catalog → temp-dir
-// install across all three tools, idempotent re-run, lock + remove round-trip.
+// These are the §6b acceptance gate for the real `core` profile — and they are the
+// CLASS-B heart of the suite: they assert what the CATALOG SHIPS, not what Patronus
+// can do.
+//
+// ⚠️ coreSkills below is a PRODUCT GUARANTEE: "the core profile really wires
+// grilling, tdd, executing-plans, ...". A fixture CANNOT express it — the real names
+// ARE the assertion. Renaming them to fixture names would produce a green tautology
+// that passes forever while testing nothing. DO NOT rename them, and do NOT point
+// this file at fixtureRegistry.
+//
+// What makes a real-catalog test SAFE is that it reads the catalog's SHAPE and never
+// its PINS: it must not fetch, hash an upstream digest, or place a binary. So these
+// assert against profile.Resolve, the LOCK, and the PLAN — all of which resolve from
+// the catalog without fetching a thing.
+//
+// They used to --deploy, kept offline by stubBinary pre-placing dummy bytes so core's
+// gitleaks FETCH classified SKIP. That only ever worked because classifyFetch SKIPped
+// an archive on MERE PRESENCE without hashing it — the security hole this work closes.
+// Once Patronus hashes the binary it placed, a stub is correctly detected as tampered
+// and re-fetched, so a DEPLOYED real-catalog test becomes structurally impossible: it
+// would have to fetch upstream bytes in CI (forbidden) or weaken the sha check
+// (forbidden). See test-surface-plan.md, Task 9.
+//
+// The deploy MECHANICS those tests also covered — composed APPEND into one CLAUDE.md,
+// hooks folding into one settings array, per-tool flavour divergence, selective remove
+// round-trips — are proven on the FIXTURE catalog, with items and binaries this suite
+// invents, where the FETCH path actually RUNS (which stubBinary never did).
 
 // coreSkills are the vendored L2+L4 skill artifacts core wires that land as a
 // per-tool skills/<name>/SKILL.md file.
+//
+// ⚠️ These names ARE the assertion. See the file comment. Do not rename them.
 var coreSkills = []string{
 	"skills-dispatch", "writing-plans", "executing-plans",
 	"grilling", "diagnosing-bugs", "tdd",
@@ -34,122 +59,51 @@ func withFakeRunner(t *testing.T) {
 	t.Cleanup(func() { runnerForCommands = prev })
 }
 
-func TestCoreProfileClaude(t *testing.T) {
-	f := builtRegistry(t)
-	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
-
-	if _, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install: %v\n%s", err, errOut)
-	}
-
-	// Strict default #1: diagram-explain → a Claude output-styles FILE carrying the
-	// keep-coding-instructions frontmatter (ASCII diagrams on by default).
-	style := filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")
-	sb, err := os.ReadFile(style)
+// resolvedNames returns the item names a real-catalog profile resolves to for a tool.
+// No install, no plan, no fetch: resolution is where "which items does this profile
+// name" actually lives.
+func resolvedNames(t *testing.T, profileName, tool string) string {
+	t.Helper()
+	r, err := profile.Resolve(realCatalog(t), profileName, tool)
 	if err != nil {
-		t.Fatalf("output-style not created: %v", err)
+		t.Fatalf("resolve %s/%s: %v", profileName, tool, err)
 	}
-	if !strings.Contains(string(sb), "keep-coding-instructions: true") {
-		t.Errorf("output-style missing strict frontmatter:\n%s", sb)
-	}
+	return strings.Join(r.Names(), " ")
+}
 
-	// Strict default #2: the tdd skill is present (test-first discipline ships in
-	// core even before the L8 tdd-guard hook ENFORCES it in a later sub-phase).
-	for _, name := range coreSkills {
-		p := filepath.Join(home, ".claude", "skills", name, "SKILL.md")
-		if _, err := os.Stat(p); err != nil {
-			t.Errorf("skill %q not created at %s: %v", name, p, err)
-		}
-	}
-
-	// Both L1 instruction artifacts land as distinct fenced sections in ONE CLAUDE.md.
-	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")
-	cb := string(mustRead(t, claudeMd))
-	for _, want := range []string{"patronus:start agents-spine", "patronus:start agent-rules"} {
-		if !strings.Contains(cb, want) {
-			t.Errorf("CLAUDE.md missing %q:\n%s", want, cb)
-		}
-	}
-
-	// State records every resolved item (instructions, output-style, all skills).
-	st := string(mustRead(t, filepath.Join(home, ".patronus", "state.json")))
+// TestCoreProfileWiresTheSkillSpine is the headline CLASS-B guarantee: the `core`
+// profile really ships every skill in coreSkills, plus the L1 instruction spine and
+// the diagram-explain output-style.
+func TestCoreProfileWiresTheSkillSpine(t *testing.T) {
+	names := resolvedNames(t, "core", "claude")
 	for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain"}, coreSkills...) {
-		if !strings.Contains(st, want) {
-			t.Errorf("state missing %q:\n%s", want, st)
+		if !strings.Contains(names, want) {
+			t.Errorf("core does not wire %q — resolved: %s", want, names)
 		}
-	}
-
-	// Idempotent re-run.
-	out, _, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--dry-run")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "SKIP") {
-		t.Errorf("re-install should be idempotent (SKIP):\n%s", out)
-	}
-
-	// Remove tdd ONLY → its skill dir is gone, the others survive.
-	if _, errOut, err := execRemove(t, "tdd", "--global", "--deploy"); err != nil {
-		t.Fatalf("remove tdd: %v\n%s", err, errOut)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "tdd", "SKILL.md")); !os.IsNotExist(err) {
-		t.Errorf("tdd skill should be removed, stat err = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "grilling", "SKILL.md")); err != nil {
-		t.Errorf("grilling skill should survive selective remove: %v", err)
 	}
 }
 
-// TestCoreProfileFlavoursDivergeForCodexOpencode proves diagram-explain diverges
-// per tool (an AGENTS.md block, not a Claude output-styles file) while the vendored
-// skills still land as skills/<name>/SKILL.md under each tool's root.
-func TestCoreProfileFlavoursDivergeForCodexOpencode(t *testing.T) {
-	for _, tc := range []struct {
-		tool, agentsRel, skillsRel string
-	}{
-		{"codex", filepath.Join(".codex", "AGENTS.md"), filepath.Join(".codex", "skills")},
-		{"opencode", filepath.Join(".config", "opencode", "AGENTS.md"), filepath.Join(".config", "opencode", "skills")},
-	} {
-		t.Run(tc.tool, func(t *testing.T) {
-			f := builtRegistry(t)
-			home := withRemoteEnv(t, f)
-			withFakeRunner(t)
-			stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
-
-			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tc.tool, "--global", "--deploy", "--yes"); err != nil {
-				t.Fatalf("install: %v\n%s", err, errOut)
-			}
-			// No Claude output-styles file for these tools.
-			if _, err := os.Stat(filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")); err == nil {
-				t.Errorf("%s must not write a Claude output-styles file", tc.tool)
-			}
-			// diagram-explain + both instructions all land as AGENTS.md sections.
-			body := string(mustRead(t, filepath.Join(home, tc.agentsRel)))
-			for _, want := range []string{
-				"patronus:start agents-spine",
-				"patronus:start agent-rules",
-				"patronus:start diagram-explain",
-			} {
-				if !strings.Contains(body, want) {
-					t.Errorf("%s AGENTS.md missing %q:\n%s", tc.tool, want, body)
-				}
-			}
-			// The vendored skills land under this tool's skills root.
-			for _, name := range coreSkills {
-				p := filepath.Join(home, tc.skillsRel, name, "SKILL.md")
-				if _, err := os.Stat(p); err != nil {
-					t.Errorf("%s skill %q not created at %s: %v", tc.tool, name, p, err)
+// TestCoreProfileWiresTheSpineOnEveryTool is CLASS B per tool: core resolves the same
+// spine under codex and opencode, not just claude. (HOW each item LANDS per tool — a
+// Claude output-styles FILE vs an AGENTS.md section — is the adapter MECHANISM, proven
+// on the fixture in outputstyle_integration_test.go.)
+func TestCoreProfileWiresTheSpineOnEveryTool(t *testing.T) {
+	for _, tool := range []string{"codex", "opencode"} {
+		t.Run(tool, func(t *testing.T) {
+			names := resolvedNames(t, "core", tool)
+			for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain"}, coreSkills...) {
+				if !strings.Contains(names, want) {
+					t.Errorf("core/%s does not wire %q — resolved: %s", tool, want, names)
 				}
 			}
 		})
 	}
 }
 
-// TestCoreProfileLockPinsEveryItem locks core and asserts the lock pins each
-// resolved item per-item (the L1 instructions + every vendored skill), so a
-// re-install against the committed lock is reproducible.
+// TestCoreProfileLockPinsEveryItem locks core and asserts the lock pins each resolved
+// item per-item (the L1 instructions + every vendored skill), so a re-install against
+// the committed lock is reproducible. CLASS B — and `lock` resolves and pins from the
+// catalog without fetching a binary, so it stays off the fetch path.
 func TestCoreProfileLockPinsEveryItem(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
@@ -169,161 +123,55 @@ func TestCoreProfileLockPinsEveryItem(t *testing.T) {
 	}
 }
 
-// TestCoreStrictGate is the §6b acceptance for P7.5.2: core's L8 strict gate.
-// On Claude the tdd-guard-hook MERGEs a PreToolUse matcher-group into
-// settings.json (invoking the `tdd-guard` command), the install-only tdd-guard
-// recipe surfaces its npm install as a display-only ADVISORY (never run), the
-// verification skill installs, and removing the hook strips exactly its element.
-func TestCoreStrictGate(t *testing.T) {
-	f := builtRegistry(t)
-	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks") // core's gitleaks recipe FETCH SKIPs (offline)
-
-	out, errOut, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--deploy", "--yes")
-	if err != nil {
-		t.Fatalf("install: %v\n%s", err, errOut)
-	}
-
-	// The tdd-guard binary install is surfaced as an ADVISORY (Patronus never runs
-	// a global npm install itself), not an executed EXEC.
-	if !strings.Contains(out, "ADVISORY") || !strings.Contains(out, "npm install -g tdd-guard") {
-		t.Errorf("expected an ADVISORY row for the tdd-guard npm install:\n%s", out)
-	}
-
-	// The enforcement hook MERGEd into settings.json under PreToolUse, invoking tdd-guard.
-	settings := filepath.Join(home, ".claude", "settings.json")
-	root := map[string]any{}
-	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
-		t.Fatalf("settings.json unreadable: %v", err)
-	}
-	// tdd-enforced = core's secret guards (block-secrets + gitleaks-guard) + the
-	// tdd-guard enforcement hook = 3 PreToolUse groups coexisting (the compose-fold).
-	// (git-guardrails is a separate opt-in via the safe-git profile.)
-	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	if len(pre) != 3 {
-		t.Fatalf("want 3 coexisting PreToolUse groups (tdd-guard + 2 secret guards), got %d: %v", len(pre), root["hooks"])
-	}
-	// Find the tdd-guard enforcement group by its command.
-	var tdd map[string]any
-	for _, g := range pre {
-		grp := g.(map[string]any)
-		if grp["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
-			tdd = grp
+// TestCoreOmitsTddEnforcementButShipsTheSkill is CLASS B: core no longer ENFORCES
+// test-first — no tdd-guard binary, no tdd-guard-hook — but the tdd SKILL (guidance)
+// does ship. Enforcement is opt-in via tdd-enforced.
+func TestCoreOmitsTddEnforcementButShipsTheSkill(t *testing.T) {
+	names := resolvedNames(t, "core", "claude")
+	for _, unwanted := range []string{"tdd-guard-hook", "tdd-guard"} {
+		if strings.Contains(names, unwanted) {
+			t.Errorf("core must NOT carry the enforcement item %q — resolved: %s", unwanted, names)
 		}
 	}
-	if tdd == nil {
-		t.Fatalf("tdd-guard enforcement hook not found among the PreToolUse groups: %v", pre)
-	}
-	if tdd["matcher"] != "Write|Edit|MultiEdit|TodoWrite" {
-		t.Errorf("tdd-guard matcher = %v, want the enforcement matcher", tdd["matcher"])
-	}
-
-	// The verification skill landed.
-	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "verification-before-completion", "SKILL.md")); err != nil {
-		t.Errorf("verification skill not installed: %v", err)
-	}
-
-	// Idempotent re-run → SKIP (the hook merge is a no-op the second time).
-	reout, _, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--dry-run")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(reout, "SKIP") {
-		t.Errorf("re-install should be idempotent (SKIP):\n%s", reout)
-	}
-
-	// Removing ONLY the tdd-guard-hook strips exactly its element; the two secret
-	// guardrail hooks survive (targeted removal preserves siblings).
-	if _, errOut, err := execRemove(t, "tdd-guard-hook", "--global", "--deploy"); err != nil {
-		t.Fatalf("remove tdd-guard-hook: %v\n%s", err, errOut)
-	}
-	root = map[string]any{}
-	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
-		t.Fatalf("settings.json gone/corrupt after remove: %v", err)
-	}
-	pre, _ = root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	if len(pre) != 2 {
-		t.Fatalf("want 2 guardrail hooks surviving after removing tdd-guard, got %d: %v", len(pre), pre)
-	}
-	for _, g := range pre {
-		if g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
-			t.Error("tdd-guard hook should be gone after remove")
+	for _, want := range []string{"tdd", "verification-before-completion"} {
+		if !strings.Contains(names, want) {
+			t.Errorf("core should keep the %q skill — resolved: %s", want, names)
 		}
 	}
 }
 
-// TestCoreOmitsTddEnforcement proves core no longer ENFORCES test-first: no
-// tdd-guard hook in settings, no npm advisory for the binary — but the tdd SKILL
-// (guidance) does install. Enforcement is opt-in via the tdd-enforced profile.
-func TestCoreOmitsTddEnforcement(t *testing.T) {
-	f := builtRegistry(t)
-	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks")
-
-	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
-	if err != nil {
-		t.Fatalf("install: %v\n%s", err, errOut)
-	}
-	// No tdd-guard recipe advisory, no enforcement hook in settings.
-	if strings.Contains(out, "npm install -g tdd-guard") {
-		t.Errorf("core should NOT carry the tdd-guard recipe advisory:\n%s", out)
-	}
-	settings := filepath.Join(home, ".claude", "settings.json")
-	if b, err := os.ReadFile(settings); err == nil && strings.Contains(string(b), "tdd-guard") {
-		t.Errorf("core should NOT register the tdd-guard enforcement hook:\n%s", b)
-	}
-	// ...but the tdd SKILL (guidance) + verification skill DO install.
-	for _, skill := range []string{"tdd", "verification-before-completion"} {
-		if _, err := os.Stat(filepath.Join(home, ".claude", "skills", skill, "SKILL.md")); err != nil {
-			t.Errorf("core should keep the %q skill: %v", skill, err)
-		}
-	}
-}
-
-// TestTddEnforcedProfileAddsEnforcement proves the inverse: the opt-in tdd-enforced
-// profile (extends core) ADDS the test-first gate — the tdd-guard recipe advisory
-// AND the tdd-guard-hook in settings.json — on top of the full core spine.
+// TestTddEnforcedProfileAddsEnforcement is the CLASS-B inverse: the opt-in
+// tdd-enforced profile (extends core) ADDS the test-first gate — the tdd-guard recipe
+// and the tdd-guard-hook — on top of the full core spine.
 func TestTddEnforcedProfileAddsEnforcement(t *testing.T) {
-	f := builtRegistry(t)
-	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks")
-
-	out, errOut, err := runInstall(t, "--profile", "tdd-enforced", "--tool", "claude", "--global", "--deploy", "--yes")
-	if err != nil {
-		t.Fatalf("install: %v\n%s", err, errOut)
-	}
-	// The binary recipe is surfaced as an advisory (install-only npm).
-	if !strings.Contains(out, "npm install -g tdd-guard") {
-		t.Errorf("tdd-enforced should surface the tdd-guard install advisory:\n%s", out)
-	}
-	// The enforcement hook is registered (command: tdd-guard) on PreToolUse.
-	root := map[string]any{}
-	_ = json.Unmarshal(mustRead(t, filepath.Join(home, ".claude", "settings.json")), &root)
-	pre, _ := root["hooks"].(map[string]any)["PreToolUse"].([]any)
-	found := false
-	for _, g := range pre {
-		if g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] == "tdd-guard" {
-			found = true
+	names := resolvedNames(t, "tdd-enforced", "claude")
+	for _, want := range []string{"tdd-guard", "tdd-guard-hook", "tdd"} {
+		if !strings.Contains(names, want) {
+			t.Errorf("tdd-enforced should wire %q — resolved: %s", want, names)
 		}
-	}
-	if !found {
-		t.Errorf("tdd-enforced should register the tdd-guard PreToolUse hook: %v", pre)
-	}
-	// The core spine still came along (the tdd skill is present).
-	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "tdd", "SKILL.md")); err != nil {
-		t.Errorf("tdd-enforced should include the core tdd skill: %v", err)
 	}
 }
 
-// TestCoreGuardrails is the §6b acceptance for P7.5.3: the L9 guardrail set via safe-git (core + git-guardrails).
-// A dry-run (no network) asserts the plan carries the three guardrail hooks
-// (block-secrets + gitleaks-guard + git-guardrails, each MERGEd into Claude
-// settings.json), the two script-bearing hooks place their helper scripts, and
-// the gitleaks recipe contributes a github-release FETCH for the binary. The
-// FETCH *download* mechanism is proven offline separately (install/fetch_test.go).
+// TestCcusageStatuslineIsClaudeOnly is CLASS B: the ccusage statusline setting is
+// @claude-flavoured, so core carries it on claude and NOT on codex/opencode.
+func TestCcusageStatuslineIsClaudeOnly(t *testing.T) {
+	if names := resolvedNames(t, "core", "claude"); !strings.Contains(names, "ccusage-statusline") {
+		t.Errorf("core/claude should wire ccusage-statusline — resolved: %s", names)
+	}
+	for _, tool := range []string{"codex", "opencode"} {
+		if names := resolvedNames(t, "core", tool); strings.Contains(names, "ccusage-statusline") {
+			t.Errorf("core/%s must NOT wire the claude-only ccusage-statusline — resolved: %s", tool, names)
+		}
+	}
+}
+
+// TestCoreGuardrails is CLASS B for the L9 guardrail set via safe-git (core +
+// git-guardrails). It asserts against the PLAN, which places nothing and fetches
+// nothing — and the plan DOES surface these rows: the three guardrail hooks, their
+// placed scripts, and the gitleaks binary as a FETCH.
+//
+// (It is the settings.json MERGEs the plan under-reports, not hook scripts or recipe
+// FETCHes — see pat-resg.)
 func TestCoreGuardrails(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
@@ -332,137 +180,92 @@ func TestCoreGuardrails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dry-run: %v", err)
 	}
-
-	// All three guardrail hooks + the two placed scripts + the gitleaks FETCH show
-	// up in the plan.
 	for _, want := range []string{
 		"block-secrets",
 		"gitleaks-guard",
 		"git-guardrails",
 		"git-guardrails.sh", // a placed hook script (named after the artifact)
 		"block-secrets.sh",  // the regex guard's placed script
-		"gitleaks",          // the FETCH row for the binary
+		"gitleaks",          // the row for the binary
 	} {
 		if !strings.Contains(out, want) {
-			t.Errorf("core dry-run plan missing %q:\n%s", want, out)
+			t.Errorf("safe-git dry-run plan missing %q:\n%s", want, out)
 		}
 	}
-	// The gitleaks binary fetch is a FETCH action.
+	// The gitleaks binary is PLANNED as a FETCH — and never performed (dry run).
 	if !strings.Contains(out, "FETCH") {
 		t.Errorf("expected a FETCH row for the gitleaks binary:\n%s", out)
 	}
 }
 
-// TestCoreSessionStartAndCcusage is the §6b acceptance for P7.5.4: the keystone's
-// SessionStart activation hook lands (with its placed script), the ccusage install
-// shows as an advisory, and the ccusage statusline is a Claude-only setting that
-// diverges (present on claude, absent on codex/opencode).
-func TestCoreSessionStartAndCcusage(t *testing.T) {
-	f := builtRegistry(t)
-	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks")
-
-	out, errOut, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes")
-	if err != nil {
-		t.Fatalf("install: %v\n%s", err, errOut)
-	}
-
-	// ccusage install is surfaced as an advisory (install-only npm).
-	if !strings.Contains(out, "npm install -g ccusage") {
-		t.Errorf("expected a ccusage install advisory:\n%s", out)
-	}
-
-	settings := filepath.Join(home, ".claude", "settings.json")
-	root := map[string]any{}
-	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
-		t.Fatalf("settings.json unreadable: %v", err)
-	}
-
-	// Three SessionStart hooks now coexist: the dispatch-keystone activation, the
-	// work-state reground, and the language-idiom detect. Find the dispatch-activate
-	// element by its placed script (order across the group is not guaranteed), and
-	// assert it's placed+executable.
-	ss, _ := root["hooks"].(map[string]any)["SessionStart"].([]any)
-	if len(ss) != 3 {
-		t.Fatalf("want 3 SessionStart groups, got %d: %v", len(ss), root["hooks"])
-	}
-	scriptPath := filepath.Join(home, ".claude", "hooks", "skills-dispatch-activate.sh")
-	foundDispatch := false
-	for _, g := range ss {
-		cmd := g.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]
-		if cmd == scriptPath {
-			foundDispatch = true
-		}
-	}
-	if !foundDispatch {
-		t.Errorf("no SessionStart group invokes the placed dispatch script %q: %v", scriptPath, ss)
-	}
-	info, err := os.Stat(scriptPath)
-	if err != nil {
-		t.Fatalf("SessionStart script not placed: %v", err)
-	}
-	if info.Mode().Perm()&0o100 == 0 {
-		t.Errorf("SessionStart script not executable: %v", info.Mode())
-	}
-
-	// The ccusage statusline is set on Claude.
-	sl, ok := root["statusLine"].(map[string]any)
-	if !ok || sl["command"] != "ccusage statusline" {
-		t.Errorf("ccusage statusLine not set on claude: %v", root["statusLine"])
-	}
-}
-
-// TestCcusageStatuslineFlavourDiverges proves the @claude flavour: codex/opencode
-// get NO statusLine setting (the setting artifact targets claude only).
-func TestCcusageStatuslineFlavourDiverges(t *testing.T) {
-	for _, tool := range []string{"codex", "opencode"} {
-		t.Run(tool, func(t *testing.T) {
-			f := builtRegistry(t)
-			home := withRemoteEnv(t, f)
-			withFakeRunner(t)
-			stubBinary(t, home, "gitleaks")
-
-			if _, errOut, err := runInstall(t, "--profile", "core", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
-				t.Fatalf("install: %v\n%s", err, errOut)
+// TestCoreSurfacesPackageInstalls is CLASS B: core really wires the ccusage
+// package-manager recipe, and tdd-enforced really wires tdd-guard — each surfacing
+// its global-install command in the plan for the user to run.
+//
+// It asserts the COMMAND is surfaced, not that it is marked advisory. The
+// "display-only, never auto-run" invariant lives on diff.Exec.Advisory, which is set
+// at plan time and honored at apply time (install.go) — and it is already proven on
+// invented recipes by internal/recipe's TestComputeInstallOnly_EmitsAdvisory. The
+// literal "ADVISORY (run yourself)" string is printed only on the DEPLOY path, which
+// this test cannot take (core wires the gitleaks + tk recipes with real upstream
+// pins). Duplicating the mechanism here would add no coverage; what only the real
+// catalog can say is that core NAMES these recipes.
+func TestCoreSurfacesPackageInstalls(t *testing.T) {
+	for _, tc := range []struct{ profileName, recipe, command string }{
+		{"core", "ccusage", "npm install -g ccusage"},
+		{"tdd-enforced", "tdd-guard", "npm install -g tdd-guard"},
+	} {
+		t.Run(tc.profileName, func(t *testing.T) {
+			if names := resolvedNames(t, tc.profileName, "claude"); !strings.Contains(names, tc.recipe) {
+				t.Errorf("%s should wire the %q recipe — resolved: %s", tc.profileName, tc.recipe, names)
 			}
-			// No Claude settings.json statusLine leaked into this tool's tree.
-			if b, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json")); err == nil && strings.Contains(string(b), "statusLine") {
-				t.Errorf("%s should not get the Claude statusLine setting:\n%s", tool, b)
+
+			f := builtRegistry(t)
+			withRemoteEnv(t, f)
+			withFakeRunner(t)
+
+			out, e, err := runInstall(t, "--profile", tc.profileName, "--tool", "claude", "--global")
+			if err != nil {
+				t.Fatalf("plan: %v\n%s", err, e)
+			}
+			if !strings.Contains(out, tc.command) {
+				t.Errorf("%s's plan should surface the install command %q:\n%s", tc.profileName, tc.command, out)
 			}
 		})
 	}
 }
 
-// TestCcusageStatuslineRemoveRoundTrips proves the scalar setting removes cleanly:
-// after install the statusLine key is present; after removing ccusage-statusline
-// it is gone and the rest of settings.json (the hooks) survive.
-func TestCcusageStatuslineRemoveRoundTrips(t *testing.T) {
-	f := builtRegistry(t)
+// TestScalarSettingRemoveRoundTrips is the CLASS-A counterpart, on the FIXTURE: a
+// scalar SETTING merges into settings.json and removes cleanly — the key is gone, and
+// the sibling hooks in the same file survive. That is the mechanism ccusage-statusline
+// relies on, proven with an item this suite invented, deployed for real.
+func TestScalarSettingRemoveRoundTrips(t *testing.T) {
+	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
-	withFakeRunner(t)
-	stubBinary(t, home, "gitleaks")
 
-	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install: %v\n%s", err, e)
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install profile: %v\n%s", err, e)
+	}
+	if _, e, err := runInstall(t, "fix-setting", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install fix-setting: %v\n%s", err, e)
 	}
 	settings := filepath.Join(home, ".claude", "settings.json")
-	if !strings.Contains(string(mustRead(t, settings)), "statusLine") {
-		t.Fatal("statusLine not set after install")
+	if !strings.Contains(string(mustRead(t, settings)), "fixtureLine") {
+		t.Fatal("the scalar setting was not merged on install")
 	}
 
-	if _, e, err := execRemove(t, "ccusage-statusline", "--global", "--deploy"); err != nil {
-		t.Fatalf("remove: %v\n%s", err, e)
+	if _, e, err := execRemove(t, "fix-setting", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove fix-setting: %v\n%s", err, e)
 	}
 	root := map[string]any{}
 	if err := json.Unmarshal(mustRead(t, settings), &root); err != nil {
 		t.Fatalf("settings corrupt after remove: %v", err)
 	}
-	if _, present := root["statusLine"]; present {
-		t.Errorf("statusLine should be gone after remove: %v", root["statusLine"])
+	if _, present := root["fixtureLine"]; present {
+		t.Errorf("the scalar setting should be gone after remove: %v", root["fixtureLine"])
 	}
-	// The hooks survive (remove of the scalar setting didn't clobber them).
+	// The hooks survive — removing the scalar setting did not clobber them.
 	if _, ok := root["hooks"].(map[string]any)["PreToolUse"].([]any); !ok {
-		t.Errorf("hooks should survive removing the statusline setting: %v", root["hooks"])
+		t.Errorf("hooks should survive removing the scalar setting: %v", root["hooks"])
 	}
 }

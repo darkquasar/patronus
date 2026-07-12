@@ -282,6 +282,26 @@ fi
 printf '{"installedSkills":"%s"}\n' "$names"
 `)
 
+	// fix-setting: a SCALAR settings MERGE (the ccusage-statusline shape). Installing
+	// it adds one key to settings.json; removing it takes exactly that key away and
+	// leaves the sibling hooks in the same file standing.
+	write("artifacts/settings/fix-setting/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: setting
+role: observability
+name: fix-setting
+description: "Fixture scalar setting: one key merged into settings.json, removed cleanly."
+version: 1.0.0
+entry: ""
+targets: [claude]
+defaults:
+  scope: global
+setting:
+  path: fixtureLine
+  value:
+    command: fixture statusline
+`)
+
 	write("artifacts/output-styles/fix-style/patronus.yaml", `apiVersion: patronus/v2
 family: artifact
 type: output-style
