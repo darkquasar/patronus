@@ -27,11 +27,16 @@ const styleBody = "---\nname: smoke-style\ndescription: smoke output style\nkeep
 // output-style artifact `smoke-style` and a flavoured profile `smoke` into the
 // served index (+ the artifact's tarball), and refreshes the client cache so the
 // commands see them. Returns the fetcher + temp HOME.
+// The baseline is the FIXTURE catalog, not the real one. This file already INVENTS
+// its item (smoke-style) — it only ever needed a valid catalog to inject into, and
+// building the real one dragged every real recipe, and every real upstream pin, in
+// for no reason.
 func serveSmokeFixture(t *testing.T) (*servingFetcher, string) {
 	t.Helper()
 	outDir := t.TempDir()
+	t.Chdir(fixtureCatalog(t)) // baseline = the fixture; no real pins inherited
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
-		t.Fatalf("build: %v", err)
+		t.Fatalf("build fixture: %v", err)
 	}
 	f := serveTree(t, outDir)
 	home := withRemoteEnv(t, f)
