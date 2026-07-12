@@ -7,54 +7,66 @@ import (
 	"testing"
 )
 
-// These are the §6b acceptance gate for P7.6 (L10 orchestration): the bd recipe +
-// the beads instruction (which `requires: [bd]`) + the two vendored superpowers
+// These are the §6b acceptance gate for L10 orchestration: the tk recipe + the
+// ticket instruction (which `requires: [tk]`) + the two vendored superpowers
 // orchestration skills, proven end-to-end against the built catalog. The headline
-// proof is the requires CLOSURE: a DIRECT `install beads` (no profile) pulls in
-// the bd binary recipe automatically, dependency-before-dependent.
+// proof is the requires CLOSURE: a DIRECT `install ticket` (no profile) pulls in
+// the tk binary recipe automatically, dependency-before-dependent.
+//
+// tk is a `url` (raw) delivery: its sha is verified on download and recomputed
+// from the placed file on every run, so it cannot be faked with a dummy stub. The
+// offline fetcher serves the real script (see serveBinaries), so these tests
+// exercise the true FETCH path.
 
 // TestRequiresClosureDirectInstall proves the per-item `requires` edge: installing
-// ONLY the beads instruction also installs the bd binary it documents — the
+// ONLY the ticket instruction also installs the tk binary it documents — the
 // closure is honored on the direct install path, not just via a profile.
 func TestRequiresClosureDirectInstall(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	// Dry-run first: the plan for a bare `install beads` (no profile) must include
-	// the bd binary recipe, pulled in by the requires closure, and announce it.
-	out, errOut, err := runInstall(t, "beads", "--tool", "claude", "--global", "--dry-run")
+	// Dry-run first: the plan for a bare `install ticket` (no profile) must include
+	// the tk binary recipe, pulled in by the requires closure, and announce it.
+	out, errOut, err := runInstall(t, "ticket", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
-		t.Fatalf("dry-run install beads: %v\n%s", err, errOut)
+		t.Fatalf("dry-run install ticket: %v\n%s", err, errOut)
 	}
-	if !strings.Contains(errOut, "also installing required item") || !strings.Contains(errOut, "bd") {
-		t.Errorf("expected a 'required item(s): bd' notice on stderr:\n%s", errOut)
+	if !strings.Contains(errOut, "also installing required item") || !strings.Contains(errOut, "tk") {
+		t.Errorf("expected a 'required item(s): tk' notice on stderr:\n%s", errOut)
 	}
 	// Both the listed instruction and the auto-pulled binary appear in the plan,
 	// the latter as an install-only recipe row.
-	if !strings.Contains(out, "beads") {
-		t.Errorf("plan missing the beads instruction:\n%s", out)
+	if !strings.Contains(out, "ticket") {
+		t.Errorf("plan missing the ticket instruction:\n%s", out)
 	}
-	if !strings.Contains(out, "bd") || !strings.Contains(out, "install-only") {
-		t.Errorf("plan missing the closure-pulled bd install-only recipe:\n%s", out)
+	if !strings.Contains(out, "tk") || !strings.Contains(out, "install-only") {
+		t.Errorf("plan missing the closure-pulled tk install-only recipe:\n%s", out)
 	}
 
-	// Now deploy for real (bd stubbed → its FETCH SKIPs offline) and assert the
-	// beads instruction actually lands.
-	stubBinary(t, home, "bd")
-	if _, e, err := runInstall(t, "beads", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install beads: %v\n%s", err, e)
+	// Now deploy for real. tk is NOT stubbed: a url delivery sha-verifies what it
+	// downloads, so the fetcher serves the real script and the FETCH truly runs.
+	if _, e, err := runInstall(t, "ticket", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install ticket: %v\n%s", err, e)
 	}
 	cb := string(mustRead(t, filepath.Join(home, ".claude", "CLAUDE.md")))
-	if !strings.Contains(cb, "patronus:start beads") {
-		t.Errorf("CLAUDE.md missing the beads instruction block:\n%s", cb)
+	if !strings.Contains(cb, "patronus:start ticket") {
+		t.Errorf("CLAUDE.md missing the ticket instruction block:\n%s", cb)
 	}
 	st := string(mustRead(t, filepath.Join(home, ".patronus", "state.json")))
-	if !strings.Contains(st, "beads") {
-		t.Errorf("state missing the beads instruction:\n%s", st)
+	if !strings.Contains(st, "ticket") {
+		t.Errorf("state missing the ticket instruction:\n%s", st)
+	}
+	// The closure-pulled binary actually landed, executable.
+	fi, err := os.Stat(filepath.Join(home, ".patronus", "bin", "tk"))
+	if err != nil {
+		t.Fatalf("tk binary not placed by the closure: %v", err)
+	}
+	if fi.Mode().Perm()&0o111 == 0 {
+		t.Errorf("tk mode = %v, want executable", fi.Mode().Perm())
 	}
 
-	// Idempotent re-run.
-	out, _, err = runInstall(t, "beads", "--tool", "claude", "--global", "--dry-run")
+	// Idempotent re-run: the placed tk re-hashes to the pin, so it SKIPs.
+	out, _, err = runInstall(t, "ticket", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,9 +103,9 @@ func TestOrchestrationSkillsInstall(t *testing.T) {
 	}
 }
 
-// TestCoreOrchestrationSlotAndLock proves the core profile's new orchestration slot
-// resolves (beads + bd via closure + the 2 skills) and the lock pins the closure —
-// bd is pinned with a content/tarball sha even though no slot names it directly.
+// TestCoreOrchestrationSlotAndLock proves the core profile's orchestration slot
+// resolves (ticket + tk via closure + session-completion + the 2 skills) and the
+// lock pins the closure — tk is pinned even though no slot names it directly.
 func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
@@ -104,7 +116,8 @@ func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	wd, _ := os.Getwd()
 	s := string(mustRead(t, filepath.Join(wd, "patronus.lock")))
 	for _, want := range []string{
-		"beads", "bd", // bd pinned via the requires closure, not a direct slot entry
+		"ticket", "tk", // tk pinned via the requires closure, not a direct slot entry
+		"session-completion",
 		"subagent-driven-development", "dispatching-parallel-agents",
 		"tarballSha256",
 	} {
@@ -114,26 +127,25 @@ func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	}
 }
 
-// TestBeadsRemoveRoundTrips proves the beads instruction round-trips: its CLAUDE.md
+// TestTicketRemoveRoundTrips proves the ticket instruction round-trips: its CLAUDE.md
 // block is APPENDed on install and cleanly UNAPPENDed on remove (the surrounding
 // file — here, the patronus-managed boundary markers — is left intact).
-func TestBeadsRemoveRoundTrips(t *testing.T) {
+func TestTicketRemoveRoundTrips(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
-	stubBinary(t, home, "bd")
 
-	if _, e, err := runInstall(t, "beads", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "ticket", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")
-	if !strings.Contains(string(mustRead(t, claudeMd)), "patronus:start beads") {
-		t.Fatal("precondition: beads block should be present after install")
+	if !strings.Contains(string(mustRead(t, claudeMd)), "patronus:start ticket") {
+		t.Fatal("precondition: ticket block should be present after install")
 	}
 
-	if _, e, err := execRemove(t, "beads", "--global", "--deploy"); err != nil {
-		t.Fatalf("remove beads: %v\n%s", err, e)
+	if _, e, err := execRemove(t, "ticket", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove ticket: %v\n%s", err, e)
 	}
-	if strings.Contains(string(mustRead(t, claudeMd)), "patronus:start beads") {
-		t.Errorf("beads block should be gone after remove:\n%s", mustRead(t, claudeMd))
+	if strings.Contains(string(mustRead(t, claudeMd)), "patronus:start ticket") {
+		t.Errorf("ticket block should be gone after remove:\n%s", mustRead(t, claudeMd))
 	}
 }

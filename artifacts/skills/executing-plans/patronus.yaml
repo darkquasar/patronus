@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: executing-plans
 description: "Execute a written implementation plan task-by-task with review checkpoints — load, review critically, follow each step exactly, run verifications, stop when blocked. Use when you have a plan to implement."
-version: 1.1.0
+version: 1.2.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "ADAPTED from the upstream `executing-plans` skill. References to un-vendored sibling skills (finishing-a-development-branch, using-git-worktrees, subagent-driven-development) are softened to optional notes. Patronus re-coupling (per ADR-0001): the per-task 'mark as completed' step also runs `bd close <issue-id>` when the plan's tasks were mirrored into beads by writing-plans — closing is what unblocks the next ready task, so a mirrored plan that is never closed stalls `bd ready`. No-ops when beads was not used. The execution discipline is otherwise faithful."
+  note: "ADAPTED from the upstream `executing-plans` skill. References to un-vendored sibling skills (finishing-a-development-branch, using-git-worktrees, subagent-driven-development) are softened to optional notes. Patronus re-coupling (per ADR-0001): the per-task 'mark as completed' step also runs `tk close <id>` when the plan's tasks were mirrored into ticket by writing-plans — closing is what unblocks the next ready task, so a mirrored plan that is never closed stalls `tk ready`. No-ops when ticket was not used. The execution discipline is otherwise faithful."

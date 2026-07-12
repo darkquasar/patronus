@@ -16,7 +16,7 @@ layers:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
     - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
-    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Beads + ai-memory (externalized state); Claude-only, conditional on what's wired
+    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + ai-memory (externalized state); Claude-only, conditional on what's wired
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
     - writing-plans                        # plan a multi-step task before touching code
     - executing-plans                      # execute a plan task-by-task with checkpoints
@@ -65,7 +65,8 @@ layers:
     - ccusage                              # install the ccusage CLI (npm, install-only) — on-demand token-usage/cost reports
     - ccusage-statusline@claude            # Claude-only statusline setting (token usage in the status bar); @claude → no-op on codex/opencode
   orchestration:
-    - beads                                # work-graph discipline (AGENTS.md APPEND) — `requires: [bd]`, so the bd binary recipe is pulled into the install/lock closure automatically
+    - ticket                               # work-graph discipline (AGENTS.md APPEND) — `requires: [tk]`, so the tk binary recipe is pulled into the install/lock closure automatically
+    - session-completion                   # end-of-session discipline: file follow-ups, run the gates, commit, PUSH — tracker-agnostic, no requires edge
     - subagent-driven-development          # execute a plan task-by-task with fresh implementer+reviewer subagents
     - dispatching-parallel-agents          # fan out independent problem domains to concurrent subagents
 todo:

@@ -114,7 +114,14 @@ func TestValidateRecipeRules(t *testing.T) {
 		{"every-valid-source-docker", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceDocker} }, false},
 		{"every-valid-source-cargo", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceCargo} }, false},
 		{"every-valid-source-script", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceScript} }, false},
-		{"every-valid-source-url", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceURL} }, false},
+		// url is the one source with a required shape: it now has a fetcher, and a
+		// url delivery with no url+sha256 would be unfetchable. The other sources
+		// are still names in the closed set with no fields behind them, so a bare
+		// deliver block remains valid for them.
+		{"bare-source-url-rejected", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceURL} }, true},
+		{"every-valid-source-url", func(r *Recipe) {
+			r.Delivery = &Delivery{Source: SourceURL, URL: "https://x/tk", SHA256: "abc"}
+		}, false},
 	}
 	for _, tc := range cases {
 		r := base()
@@ -243,5 +250,82 @@ func TestResolveAsset(t *testing.T) {
 	empty := &Delivery{}
 	if _, err := empty.ResolveAsset("linux", "amd64"); err == nil {
 		t.Error("expected error for no pinned assets")
+	}
+}
+
+func TestResolveURLReturnsPinnedArtifact(t *testing.T) {
+	d := &Delivery{
+		Source:    SourceURL,
+		URL:       "https://example.test/tk",
+		SHA256:    "408f2c113ecc3bc071507593a78386f1b4cc743be6491c9e9f2627efd4d9902b",
+		Platforms: []string{"linux", "darwin"},
+	}
+
+	got, err := d.ResolveURL("darwin")
+	if err != nil {
+		t.Fatalf("ResolveURL(darwin) error = %v, want nil", err)
+	}
+	want := &PinnedURL{
+		URL:    "https://example.test/tk",
+		SHA256: "408f2c113ecc3bc071507593a78386f1b4cc743be6491c9e9f2627efd4d9902b",
+	}
+	if *got != *want {
+		t.Errorf("ResolveURL(darwin) = %+v, want %+v", *got, *want)
+	}
+}
+
+// TestResolveURLPlatformGate is its own function rather than a row in the test
+// above: it exercises the error path, which is different logic and not merely
+// different data.
+func TestResolveURLPlatformGate(t *testing.T) {
+	tests := []struct {
+		name      string
+		platforms []string
+		goos      string
+		wantErr   bool
+	}{
+		{"listed host resolves", []string{"linux", "darwin"}, "darwin", false},
+		{"unlisted host errors", []string{"linux", "darwin"}, "windows", true},
+		{"empty platforms is unrestricted", nil, "windows", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &Delivery{
+				Source:    SourceURL,
+				URL:       "https://example.test/tk",
+				SHA256:    "abc",
+				Platforms: tt.platforms,
+			}
+			_, err := d.ResolveURL(tt.goos)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ResolveURL(%s) error = %v, wantErr %v", tt.goos, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateURLDelivery(t *testing.T) {
+	tests := []struct {
+		name    string
+		d       Delivery
+		wantErr bool
+	}{
+		{"valid", Delivery{Source: SourceURL, URL: "https://x/tk", SHA256: "abc"}, false},
+		{"missing url", Delivery{Source: SourceURL, SHA256: "abc"}, true},
+		{"missing sha256", Delivery{Source: SourceURL, URL: "https://x/tk"}, true},
+		{"assets not allowed", Delivery{
+			Source: SourceURL, URL: "https://x/tk", SHA256: "abc",
+			Assets: []Asset{{OS: "linux", Arch: "amd64"}},
+		}, true},
+		{"unknown source rejected", Delivery{Source: DeliverySource("bogus")}, true},
+		{"github-release unaffected", Delivery{Source: SourceGithubRelease}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDelivery(&tt.d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateDelivery() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

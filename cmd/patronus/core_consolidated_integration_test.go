@@ -18,7 +18,6 @@ func TestStrictCoreConsolidated(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
-	stubBinary(t, home, "bd") // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	// safe-git gives core + git-guardrails; add the tdd-guard enforcement items on
 	// top so all four PreToolUse gates (tdd-guard + block-secrets + gitleaks-guard +

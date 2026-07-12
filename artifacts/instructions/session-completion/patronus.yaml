@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: orchestration                        # L10 — end-of-session discipline: the work is not done until it is pushed
+name: session-completion
+description: "End-of-session discipline: file follow-ups, run the quality gates, update what you touched, and PUSH — work that only exists locally is work the next session cannot see. Tracker-agnostic (it names no specific work-graph tool), so it composes with whatever tracker the project wires. Appended into CLAUDE.md/AGENTS.md."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project

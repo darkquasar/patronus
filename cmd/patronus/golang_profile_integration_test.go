@@ -17,7 +17,6 @@ func TestGolangProfileExtendsCore(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)               // golang inherits core's self-wiring ai-memory
 	stubBinary(t, home, "gitleaks") // ...and core's gitleaks recipe FETCH (offline SKIP)
-	stubBinary(t, home, "bd")       // core wires beads -> requires bd (github-release FETCH SKIPs offline)
 
 	if _, errOut, err := runInstall(t, "--profile", "golang", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
@@ -67,19 +66,18 @@ func TestGolangProfileExtendsCore(t *testing.T) {
 		t.Errorf("re-install should be idempotent (SKIP):\n%s", out)
 	}
 
-	// Selective remove of the LAST composed CLAUDE.md contributor (beads, wired by
-	// core's orchestration slot, appended after the instruction sections) → its
-	// section is stripped while the earlier sections (go-style-uber, agents-spine)
-	// survive. Removing beads (not go-style-uber) targets the last contributor,
-	// which is what surgical un-append guarantees: un-appending a non-last section
-	// is drift-guarded because later sections shift the recorded Prior (a known
-	// composed-APPEND limitation, not exercised here).
-	if _, errOut, err := execRemove(t, "beads", "--global", "--deploy"); err != nil {
-		t.Fatalf("remove beads: %v\n%s", err, errOut)
+	// Selective remove of the LAST composed CLAUDE.md contributor (session-completion,
+	// wired by core's orchestration slot, appended after the instruction sections) →
+	// its section is stripped while the earlier sections (go-style-uber, agents-spine)
+	// survive. Removing the LAST contributor is what surgical un-append guarantees:
+	// un-appending a non-last section is drift-guarded because later sections shift
+	// the recorded Prior (a known composed-APPEND limitation, not exercised here).
+	if _, errOut, err := execRemove(t, "session-completion", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove session-completion: %v\n%s", err, errOut)
 	}
 	cb2 := string(mustRead(t, claudeMd))
-	if strings.Contains(cb2, "patronus:start beads") {
-		t.Errorf("beads section should be gone:\n%s", cb2)
+	if strings.Contains(cb2, "patronus:start session-completion") {
+		t.Errorf("session-completion section should be gone:\n%s", cb2)
 	}
 	if !strings.Contains(cb2, "patronus:start go-style-uber") {
 		t.Errorf("the go-style-uber section should survive selective remove:\n%s", cb2)

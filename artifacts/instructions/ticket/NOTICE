@@ -1,20 +1,21 @@
 This artifact is an AUTHORED Patronus instruction describing how a coding agent
-should use the Beads (`bd`) work-graph in a downstream project. It is NOT a
-reproduction of upstream Beads documentation.
+should use the Ticket (`tk`) work-graph in a downstream project. It is NOT a
+reproduction of upstream Ticket documentation.
 
-The `bd` command surface and the work-graph usage model described in
-INSTRUCTIONS.md are summarized from the upstream project's CLI reference
-(docs/CLI_REFERENCE.md) and README. The upstream repository's own
-AGENT_INSTRUCTIONS.md / AGENTS.md target agents developing Beads itself, not a
-downstream project consuming `bd`, and are therefore not vendored here.
+The `tk` command surface and the work-graph usage model described in
+INSTRUCTIONS.md are summarized from the upstream project's README and the
+`ticket` script's own command dispatcher at the pinned commit.
 
-The `bd` binary itself is delivered by the sibling `bd` recipe (github-release,
-pinned). This instruction `requires: [bd]`.
+The `tk` script itself is delivered by the sibling `tk` recipe (source: url,
+pinned to the commit + sha256). This instruction `requires: [tk]`.
 
-Upstream: https://github.com/steveyegge/beads
-Commit:   b4d999fa9e55cfa174ac2a08aba5a81b09019f96
+Upstream: https://github.com/wedow/ticket
+Commit:   266b9d38d5090f1af4e5184afd21b183b3bbe878
 License:  MIT
-Copyright (c) 2025 Beads Contributors
+Copyright (c) 2025 wedow
+
+(The upstream LICENSE carries the year-only form, "Copyright (c) 2025", with no
+named holder. It is attributed here to the repository owner, wedow.)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -37,7 +37,7 @@ type ProfileLayers struct {
 	Observability StringList `yaml:"observability,omitempty" json:"observability,omitempty"`
 	Eval          StringList `yaml:"eval,omitempty" json:"eval,omitempty"`
 	Guardrails    StringList `yaml:"guardrails,omitempty" json:"guardrails,omitempty"`
-	Orchestration StringList `yaml:"orchestration,omitempty" json:"orchestration,omitempty"` // L10 — work-graph + multi-agent dispatch (Beads + orchestration skills)
+	Orchestration StringList `yaml:"orchestration,omitempty" json:"orchestration,omitempty"` // L10 — work-graph + multi-agent dispatch (Ticket + orchestration skills)
 }
 
 // StringList accepts either a single scalar or a YAML sequence, decoding both to

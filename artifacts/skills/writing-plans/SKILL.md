@@ -151,24 +151,25 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. If you find a spec requirement with no task, add the task.
 
-## Optional: Mirror Tasks Into Beads
+## Optional: Mirror Tasks Into Ticket
 
 The plan's `- [ ]` checkboxes remain the canonical task capture. This mirror is additive, and
 never required.
 
-If beads is available — `bd` on PATH or at `~/.patronus/bin/bd`, and a `.beads/` directory in the
-repo — offer it after the plan is saved:
+If ticket is available — `tk` on PATH or at `~/.patronus/bin/tk` — offer it after the plan is
+saved:
 
-> "Mirror these plan tasks into beads as an epic plus one issue per task, so completion is tracked
-> in the durable work-graph?"
+> "Mirror these plan tasks into the ticket work-graph, so completion is tracked durably?"
 
-If the user accepts: create one `bd` epic for the plan, one issue per task, and add dependency
-edges matching the plan's build order (`bd dep add <task> <depends-on>`). The point is not
-bookkeeping — it is that a checkbox lives in a file the context window may lose, while the
-work-graph survives a compaction, a new session, and a hand-off to another agent. `bd ready` then
-answers "what's next" without re-reading the plan.
+If the user accepts: create one ticket per task with `tk create` (it prints the new id — capture
+it), then add dependency edges matching the plan's build order with `tk dep <task> <depends-on>`.
+The graph is flat: tickets plus edges, with no epic to hang them from.
 
-If beads is absent or the user declines, the checkboxes are the source of truth. Say which one you
+The point is not bookkeeping — it is that a checkbox lives in a file the context window may lose,
+while the work-graph survives a compaction, a new session, and a hand-off to another agent.
+`tk ready` then answers "what's next" without re-reading the plan.
+
+If ticket is absent or the user declines, the checkboxes are the source of truth. Say which one you
 are using, so the next session knows where to look.
 
 ## Execution Handoff

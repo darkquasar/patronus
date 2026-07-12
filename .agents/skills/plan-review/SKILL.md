@@ -58,7 +58,7 @@ Group them Critical / Important / Minor, with task references. Name the lenses t
 Offer the choice plainly: fix the findings, accept them and proceed, or revise the plan. Do not
 block, and do not proceed past a Critical finding without the user explicitly accepting it.
 
-This is also the natural point for the **plan → ticket** offer: once the plan is accepted, mirroring
+This is also the natural point for the **plan → beads** offer: once the plan is accepted, mirroring
 its tasks into the work-graph is what makes them survive a context compaction. See `writing-plans`.
 
 ## The Rubric

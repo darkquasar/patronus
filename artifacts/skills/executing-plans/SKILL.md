@@ -28,10 +28,10 @@ For each task:
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
 4. Mark as completed
-   - If the plan's tasks were mirrored into beads (see the optional beads mirror in
-     **writing-plans**), also close the matching issue: `bd close <issue-id>`. Closing is what
+   - If the plan's tasks were mirrored into ticket (see the optional ticket mirror in
+     **writing-plans**), also close the matching ticket: `tk close <id>`. Closing is what
      unblocks the next ready task in the work-graph, so a mirrored plan that is never closed
-     stalls `bd ready`. Skip this if beads was not used.
+     stalls `tk ready`. Skip this if ticket was not used.
 
 ### Step 3: Complete Development
 

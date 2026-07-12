@@ -84,8 +84,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"ccusage-statusline":       {manifest.TypeSetting, manifest.RoleObservability},
 		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
-		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
-		"beads":                       {manifest.TypeInstruction, manifest.RoleOrchestration},
+		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) + 2 vendored superpowers skills.
+		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
+		// L10 orchestration: end-of-session push discipline. Wholly authored (no
+		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
+		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
@@ -99,7 +102,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"spec-review": {manifest.TypeSkill, manifest.RoleEval},
 		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
 		// Tiered JIT re-grounding hooks (authored; Claude-only): per-turn skill
-		// heartbeat + resume/compaction work-state reground (Beads + ai-memory).
+		// heartbeat + resume/compaction work-state reground (Ticket + ai-memory).
 		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
 		"work-state-reground": {manifest.TypeHook, manifest.RoleCapability},
 		// Core eng-team: SessionStart language-idiom pointer (authored).
@@ -149,8 +152,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"tdd-guard-hook", "verification-before-completion",
 		"git-guardrails",           // block-secrets + gitleaks-guard are authored (no attribution)
 		"skills-dispatch-activate", // ccusage-statusline is authored (no attribution)
-		// P7.6 orchestration: beads (authored-but-attributed instruction) + 2 vendored superpowers skills.
-		"beads", "subagent-driven-development", "dispatching-parallel-agents",
+		// L10 orchestration: ticket (authored-but-attributed instruction) + 2 vendored superpowers skills.
+		"ticket", "subagent-driven-development", "dispatching-parallel-agents",
 		// The remaining vendored superpowers workflow skills.
 		"brainstorming", "using-git-worktrees", "finishing-a-development-branch",
 		"writing-skills", "requesting-code-review", "receiving-code-review",
@@ -202,8 +205,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireModeMcp},
 		// P7.5.6 L8 eval: promptfoo CI gate (install-only npm) — the eval profile.
 		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
-		// P7.6 L10 orchestration: the bd (Beads) work-graph binary — install-only github-release; the `beads` instruction (requires: [bd]) wires it.
-		"bd": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
+		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
+		// (upstream ships no release assets; the tool IS one bash script); the
+		// `ticket` instruction (requires: [tk]) wires it.
+		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))

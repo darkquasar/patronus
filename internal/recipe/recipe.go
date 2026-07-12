@@ -121,39 +121,62 @@ func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
 	}
 }
 
-// fetchDiff builds the FETCH diff for a github-release delivery, pre-classified
-// against the destination on disk (matching sha -> SKIP). It returns the resolved
-// install path (so wireDiffs can substitute {installPath}) and the diff, or
-// ("", nil) when the recipe has no binary to fetch.
+// fetchDiff builds the FETCH diff for a fetchable delivery (github-release or
+// url), pre-classified against the destination on disk (matching sha -> SKIP). It
+// returns the resolved install path (so wireDiffs can substitute {installPath})
+// and the diff, or ("", nil) when the recipe has no binary to fetch — including
+// when this host has no pinned artifact, which is an advisory, not an error.
 func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	rec := req.Recipe
-	if rec.Delivery == nil || rec.Delivery.Source != manifest.SourceGithubRelease {
-		return "", nil
-	}
-	if req.PreferSystemPkg {
-		warn(req, "--prefer-system-pkg is not yet implemented (Phase 8); using github-release floor")
-	}
-
-	asset, err := rec.Delivery.ResolveAsset(goos, goarch)
-	if err != nil {
-		// No pinned asset for this host (e.g. sandbox's TODO upstream): surface a
-		// clear advisory and emit no FETCH rather than a fake download.
-		warn(req, "%s: %v — skipping fetch", rec.Name, err)
+	if rec.Delivery == nil {
 		return "", nil
 	}
 
-	dest := resolveInstallPath(req.Resolver, rec)
-	spec := &diff.FetchSpec{
-		URL:        asset.URL,
-		SHA256:     asset.SHA256,
-		Dest:       dest,
-		Archive:    asset.Archive,
-		BinaryPath: asset.BinaryPath,
-		Label:      fmt.Sprintf("%s (%s/%s)", rec.Name, goos, goarch),
+	var spec *diff.FetchSpec
+	switch rec.Delivery.Source {
+	case manifest.SourceGithubRelease:
+		if req.PreferSystemPkg {
+			warn(req, "--prefer-system-pkg is not yet implemented (Phase 8); using github-release floor")
+		}
+		asset, err := rec.Delivery.ResolveAsset(goos, goarch)
+		if err != nil {
+			// No pinned asset for this host (e.g. sandbox's TODO upstream): surface a
+			// clear advisory and emit no FETCH rather than a fake download.
+			warn(req, "%s: %v — skipping fetch", rec.Name, err)
+			return "", nil
+		}
+		spec = &diff.FetchSpec{
+			URL:        asset.URL,
+			SHA256:     asset.SHA256,
+			Archive:    asset.Archive,
+			BinaryPath: asset.BinaryPath,
+			Label:      fmt.Sprintf("%s (%s/%s)", rec.Name, goos, goarch),
+		}
+
+	case manifest.SourceURL:
+		// One pinned artifact for every supported host — no per-OS/arch matrix.
+		// Platforms gates the hosts it can run on (tk is bash: POSIX only), and an
+		// unsupported host takes the same seam as a missing asset above: warn, emit
+		// no FETCH. Archive stays empty, so classifyFetch verifies the placed file's
+		// sha against the pin on every run.
+		pin, err := rec.Delivery.ResolveURL(goos)
+		if err != nil {
+			warn(req, "%s: %v — skipping fetch", rec.Name, err)
+			return "", nil
+		}
+		spec = &diff.FetchSpec{
+			URL:    pin.URL,
+			SHA256: pin.SHA256,
+			Label:  fmt.Sprintf("%s (%s)", rec.Name, goos),
+		}
+
+	default:
+		return "", nil // docker/cargo/npm/script: no fetcher (package-manager or wire-only)
 	}
 
+	spec.Dest = resolveInstallPath(req.Resolver, rec)
 	d := diff.FileDiff{
-		Path:     dest,
+		Path:     spec.Dest,
 		Action:   classifyFetch(spec),
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
@@ -163,7 +186,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 		Note:     "fetch " + spec.Label,
 		Fetch:    spec,
 	}
-	return dest, &d
+	return spec.Dest, &d
 }
 
 // classifyFetch decides FETCH vs SKIP idempotently. The pinned sha256 verifies

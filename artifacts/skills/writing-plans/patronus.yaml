@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: writing-plans
 description: "Write comprehensive, bite-sized implementation plans before touching code — exact file paths, complete code per step, TDD-shaped tasks, self-review against the spec. Use when you have a spec for a multi-step task."
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "ADAPTED from the upstream `writing-plans` skill. References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes. Patronus re-couplings (per ADR-0001): (1) an OPTIONAL beads mirror offered after the plan is saved — the `- [ ]` checkboxes stay the canonical capture, the bd epic+issues are additive and survive a compaction the checkboxes may not; (2) a pointer to the `plan-review` skill as the independent counterpart to the skill's own Self-Review. The planning discipline is otherwise faithful."
+  note: "ADAPTED from the upstream `writing-plans` skill. References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes. Patronus re-couplings (per ADR-0001): (1) an OPTIONAL ticket mirror offered after the plan is saved — the `- [ ]` checkboxes stay the canonical capture, the tickets + dependency edges are additive and survive a compaction the checkboxes may not (the graph is flat: there is no epic to hang tasks from); (2) a pointer to the `plan-review` skill as the independent counterpart to the skill's own Self-Review. The planning discipline is otherwise faithful."
