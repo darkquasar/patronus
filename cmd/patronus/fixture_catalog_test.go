@@ -25,13 +25,22 @@ import (
 // Do not "simplify" this by importing a real recipe's sha. The invented pin is the
 // whole point (see docs/specs/01-lifecycle-and-test-surface/test-surface-spec.md).
 
+// The two fixture payloads are INERT TEXT, deliberately not programs.
+//
+// Patronus's delivery path is download -> hash against the pin -> write to
+// ~/.patronus/bin/<name>. It never EXECUTES what it places, and neither does any
+// test: the assertions are on the bytes and their digest. So the payload only has
+// to be bytes we invented, whose sha256 the recipe pins. Making them plainly
+// non-executable keeps that honest — there is no shebang here to tempt a later
+// reader (or a later test) into running one.
+
 // fixRawBinary is the `fix-bin` raw-delivery payload. Its sha256 IS the pin.
-var fixRawBinary = []byte("#!/bin/sh\necho fix-bin\n")
+var fixRawBinary = []byte("fixture payload: fix-bin (raw delivery). Not a program.\n")
 
 // fixArchivedBinary is the member inside `fix-archive-bin`'s tarball. The recipe
 // pins the sha256 of the TARBALL (that is what a github-release delivery verifies);
 // this is the digest of what actually lands on disk after extraction.
-var fixArchivedBinary = []byte("#!/bin/sh\necho fix-archive-bin\n")
+var fixArchivedBinary = []byte("fixture payload: fix-archive-bin (extracted from a tar.gz). Not a program.\n")
 
 const (
 	fixRawURL     = testRegistryBase + "/bin/fix-bin"
@@ -133,11 +142,30 @@ version: 1.0.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:
-  scope: project
+  scope: global
 requires: [fix-bin]
 `)
 	write("artifacts/instructions/fix-instruction/INSTRUCTIONS.md",
 		"# Fixture instruction\n\nDrive `fix-bin`.\n")
+
+	// fix-instruction-2 is a SECOND instruction APPENDing to the SAME CLAUDE.md.
+	// Two contributors to one composed file is what the composed-APPEND state
+	// recording and the selective-remove round-trip need: removing one must strip
+	// exactly its fenced section and leave the other's standing.
+	write("artifacts/instructions/fix-instruction-2/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: fix-instruction-2
+description: "Second fixture instruction, sharing one CLAUDE.md with fix-instruction (composed APPEND)."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: global
+`)
+	write("artifacts/instructions/fix-instruction-2/INSTRUCTIONS.md",
+		"# Second fixture instruction\n\nA distinctive fixture rule: always fix the fixture.\n")
 
 	write("artifacts/skills/fix-skill/patronus.yaml", `apiVersion: patronus/v2
 family: artifact
@@ -215,6 +243,7 @@ summary: "Fixture profile filling every layer slot."
 layers:
   instructions:
     - fix-instruction
+    - fix-instruction-2
     - fix-style
   capabilities:
     - fix-skill
