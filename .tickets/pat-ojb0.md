@@ -1,6 +1,6 @@
 ---
 id: pat-ojb0
-status: open
+status: closed
 deps: [pat-mpn7]
 links: []
 created: 2026-07-12T04:47:38Z

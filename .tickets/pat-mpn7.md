@@ -1,6 +1,6 @@
 ---
 id: pat-mpn7
-status: open
+status: closed
 deps: [pat-0y3f, pat-1gyd, pat-k1h1, pat-9v6i, pat-2rf3]
 links: []
 created: 2026-07-12T04:47:38Z

@@ -1,6 +1,6 @@
 ---
 id: pat-2rf3
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:47:38Z

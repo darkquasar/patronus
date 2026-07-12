@@ -1,6 +1,6 @@
 ---
 id: pat-d9bw
-status: open
+status: closed
 deps: [pat-ojb0, pat-udo1]
 links: []
 created: 2026-07-12T04:47:38Z

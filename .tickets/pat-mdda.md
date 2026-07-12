@@ -1,6 +1,6 @@
 ---
 id: pat-mdda
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:46:52Z

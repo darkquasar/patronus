@@ -1,6 +1,6 @@
 ---
 id: pat-il5d
-status: open
+status: closed
 deps: [pat-ojb0]
 links: []
 created: 2026-07-12T04:47:38Z

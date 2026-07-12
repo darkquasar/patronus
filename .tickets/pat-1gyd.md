@@ -1,6 +1,6 @@
 ---
 id: pat-1gyd
-status: open
+status: closed
 deps: [pat-il8m, pat-0y3f]
 links: []
 created: 2026-07-12T04:47:11Z
