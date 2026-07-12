@@ -126,9 +126,10 @@ func TestValidateClean(t *testing.T) {
 	// The shipped shape: an instruction requires a recipe; both known; acyclic.
 	g := map[string][]string{
 		"beads": {"bd"}, "bd": nil,
+		"ticket": {"tk"}, "tk": nil,
 		"tdd-guard-hook": {"tdd-guard"}, "tdd-guard": nil,
 	}
-	if err := Validate([]string{"beads", "bd", "tdd-guard-hook", "tdd-guard"}, mapDeps(g)); err != nil {
+	if err := Validate([]string{"beads", "bd", "ticket", "tk", "tdd-guard-hook", "tdd-guard"}, mapDeps(g)); err != nil {
 		t.Fatalf("Validate on a clean graph = %v, want nil", err)
 	}
 }

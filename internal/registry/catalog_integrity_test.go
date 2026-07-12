@@ -85,7 +85,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
 		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
-		"beads":                       {manifest.TypeInstruction, manifest.RoleOrchestration},
+		"beads": {manifest.TypeInstruction, manifest.RoleOrchestration},
+		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) — supersedes beads.
+		"ticket":                      {manifest.TypeInstruction, manifest.RoleOrchestration},
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
@@ -149,8 +151,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"tdd-guard-hook", "verification-before-completion",
 		"git-guardrails",           // block-secrets + gitleaks-guard are authored (no attribution)
 		"skills-dispatch-activate", // ccusage-statusline is authored (no attribution)
-		// P7.6 orchestration: beads (authored-but-attributed instruction) + 2 vendored superpowers skills.
-		"beads", "subagent-driven-development", "dispatching-parallel-agents",
+		// P7.6 orchestration: beads + ticket (authored-but-attributed instructions) + 2 vendored superpowers skills.
+		"beads", "ticket", "subagent-driven-development", "dispatching-parallel-agents",
 		// The remaining vendored superpowers workflow skills.
 		"brainstorming", "using-git-worktrees", "finishing-a-development-branch",
 		"writing-skills", "requesting-code-review", "receiving-code-review",
