@@ -219,6 +219,32 @@ hook:
   command: fix-archive-bin --check
 `)
 
+	// fix-hook-2: a SECOND PreToolUse hook, script-bearing. Two hooks on one event
+	// is what proves the settings.json compose-FOLD (both land in ONE array) and the
+	// selective-remove round-trip (removing one strips its element + its script, and
+	// the sibling survives). It carries no requires:, so it also proves a hook need
+	// not drag a binary.
+	write("artifacts/hooks/fix-hook-2/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: fix-hook-2
+description: "Second fixture PreToolUse hook, script-bearing, so two hooks fold into one settings array."
+version: 1.0.0
+entry: ""
+files: [fix-hook-2.sh]
+targets: [claude, codex, opencode]
+defaults:
+  scope: global
+hook:
+  event: PreToolUse
+  matcher: Edit|Write
+  command: "{script}"
+  script: fix-hook-2.sh
+`)
+	write("artifacts/hooks/fix-hook-2/fix-hook-2.sh",
+		"#!/bin/sh\n# fixture hook script — never executed by the tests; only placed and removed.\nexit 0\n")
+
 	write("artifacts/output-styles/fix-style/patronus.yaml", `apiVersion: patronus/v2
 family: artifact
 type: output-style
@@ -249,6 +275,8 @@ layers:
     - fix-skill
   eval:
     - fix-hook
+  guardrails:
+    - fix-hook-2
 `)
 
 	write("profiles/fix-extends.yaml", `apiVersion: patronus/v2
