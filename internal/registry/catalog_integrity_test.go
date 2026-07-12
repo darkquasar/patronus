@@ -204,6 +204,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
 		// P7.6 L10 orchestration: the bd (Beads) work-graph binary — install-only github-release; the `beads` instruction (requires: [bd]) wires it.
 		"bd": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
+		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
+		// (upstream ships no release assets; the tool IS one bash script); the
+		// `ticket` instruction (requires: [tk]) wires it. Supersedes bd.
+		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
