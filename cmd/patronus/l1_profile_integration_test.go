@@ -12,6 +12,22 @@ import (
 // and the authored diagram-explain output-style. They prove the output-style flavour
 // diverges per tool AND that two instruction artifacts sharing one AGENTS.md/CLAUDE.md
 // both land, record state, and remove independently (the composed-APPEND fix).
+//
+// CLASS B, and it STAYS deployed on the real catalog. The item names ARE the
+// assertion ("the visual profile really ships agents-spine, agent-rules and
+// diagram-explain"), so renaming them to fixture names would produce a green
+// tautology — exactly what test-surface-plan.md exists to prevent.
+//
+// It is safe here where the other real-catalog profile tests were not, because
+// `visual` wires NO recipe: it is three artifacts and nothing else. Verified, not
+// assumed — a full `--profile visual --deploy` makes 5 in-memory fetcher hits
+// (index + sha sidecar + 3 artifact tarballs) and ZERO binary fetches. It therefore
+// never reads a recipe PIN, never hashes upstream bytes, and cannot be broken by
+// classifyFetch hashing archive binaries.
+//
+// If `visual` ever gains a recipe, this test must move off --deploy (see how
+// golang/hardened/core_consolidated were split) — a real-catalog test may read the
+// catalog's SHAPE, never its PINS.
 
 func TestVisualProfileClaude(t *testing.T) {
 	f := builtRegistry(t)
