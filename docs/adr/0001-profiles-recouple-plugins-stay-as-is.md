@@ -47,7 +47,7 @@ Two distinct delivery lanes, with different mutation rights:
   its maintenance cost — not across every vendored skill.
 - This is the **template for the broader "production-ready virtual engineering team"
   reframe**: sequencing grilling into the design loop, language-idiom auto-detection,
-  spec/plan review gates, and plan→beads sync are all instances of "re-couple loose
+  spec/plan review gates, and plan→ticket sync are all instances of "re-couple loose
   vendored parts into Patronus's orchestrated flow." This ADR governs all of them.
 
 ## Considered alternatives
