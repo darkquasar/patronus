@@ -254,14 +254,14 @@ func runUpdate(t *testing.T, args ...string) (string, string, error) {
 // TestRemoteListBrowsesWithoutFetchingContent proves `list` shows the catalog from
 // the index alone — it must NOT download any artifact tarball just to list.
 func TestRemoteListBrowsesWithoutFetchingContent(t *testing.T) {
-	f := builtRegistry(t)
+	f := fixtureRegistry(t)
 	withRemoteEnv(t, f)
 
 	out, _, err := runList(t)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	for _, want := range []string{"team-research", "pattern-cloudflare", "memory-ai-memory", "cloudflare"} {
+	for _, want := range []string{"fix-instruction", "fix-skill", "fix-hook", "fix-all"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list output missing %q:\n%s", want, out)
 		}
@@ -277,15 +277,15 @@ func TestRemoteListBrowsesWithoutFetchingContent(t *testing.T) {
 // fetches+unpacks one item's source and plans the per-tool transform — the full
 // remote→materialize→adapter path.
 func TestRemoteInstallMaterializesAndTransforms(t *testing.T) {
-	f := builtRegistry(t)
+	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	out, _, err := runInstall(t, "pattern-cloudflare", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("remote install: %v", err)
 	}
 	// The plan must target the Claude skill layout for the materialized artifact.
-	for _, want := range []string{"pattern-cloudflare", "SKILL.md", "CREATE"} {
+	for _, want := range []string{"fix-skill", "SKILL.md", "CREATE"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("plan missing %q:\n%s", want, out)
 		}
@@ -293,28 +293,30 @@ func TestRemoteInstallMaterializesAndTransforms(t *testing.T) {
 	// The source was materialized into the cache (patronus.yaml on disk). Glob the
 	// versioned dir rather than hardcoding the version, so an item version bump
 	// never breaks this — the test asserts materialization, not a specific version.
-	matches, _ := filepath.Glob(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-*", "patronus.yaml"))
+	// (fix-skill-1.* rather than fix-skill-*: the latter would also match the
+	// fix-skill-claude/-codex flavour items.)
+	matches, _ := filepath.Glob(filepath.Join(home, ".patronus", "cache", "items", "fix-skill-1.*", "patronus.yaml"))
 	if len(matches) == 0 {
-		t.Errorf("artifact source not materialized (no pattern-cloudflare-* in cache)")
+		t.Errorf("artifact source not materialized (no fix-skill-1.* in cache)")
 	}
 }
 
 // TestRemoteInstallDeployWritesFiles proves a remote `install --deploy` actually
 // writes the transformed artifact to disk under the (temp) global scope.
 func TestRemoteInstallDeployWritesFiles(t *testing.T) {
-	f := builtRegistry(t)
+	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	_, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--deploy", "--yes")
+	_, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
 		t.Fatalf("remote deploy: %v", err)
 	}
-	skill := filepath.Join(home, ".claude", "skills", "team-research", "SKILL.md")
+	skill := filepath.Join(home, ".claude", "skills", "fix-skill", "SKILL.md")
 	if _, err := os.Stat(skill); err != nil {
 		t.Fatalf("expected installed skill at %s: %v", skill, err)
 	}
 	// Re-running is idempotent (SKIP), proving the same change model end-to-end.
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +328,7 @@ func TestRemoteInstallDeployWritesFiles(t *testing.T) {
 // TestRemoteUpdateRefreshesCache proves `update` writes the cache so a subsequent
 // `list` runs offline (zero further network).
 func TestRemoteUpdateRefreshesCache(t *testing.T) {
-	f := builtRegistry(t)
+	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
 	if _, _, err := runUpdate(t); err != nil {
@@ -350,10 +352,10 @@ func TestRemoteUpdateRefreshesCache(t *testing.T) {
 // registry writes a v2 lock that pins each item PER-ITEM (source + version +
 // sha256 + tarballSha256) and carries NO registry-wide version.
 func TestRemoteLockPinsPerItemProvenance(t *testing.T) {
-	f := builtRegistry(t)
+	f := fixtureRegistry(t)
 	withRemoteEnv(t, f)
 
-	if _, _, err := runLock(t, "--profile", "cloudflare"); err != nil {
+	if _, _, err := runLock(t, "--profile", "fix-all"); err != nil {
 		t.Fatalf("remote lock: %v", err)
 	}
 	// The lock lands in the cwd (the temp work dir).
@@ -366,7 +368,7 @@ func TestRemoteLockPinsPerItemProvenance(t *testing.T) {
 	if !strings.Contains(s, `"version": 2`) {
 		t.Errorf("lock should be schema v2:\n%s", s)
 	}
-	for _, want := range []string{`"source": "registry"`, `"tarballSha256"`, "pattern-cloudflare", "memory-ai-memory"} {
+	for _, want := range []string{`"source": "registry"`, `"tarballSha256"`, "fix-instruction", "fix-skill"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("lock missing %q:\n%s", want, s)
 		}
@@ -380,43 +382,50 @@ func TestRemoteLockPinsPerItemProvenance(t *testing.T) {
 // index's newer latest — proving the lock, not the moving index, drives
 // reproducibility.
 func TestProfileInstallFollowsPerItemLock(t *testing.T) {
-	// Build the baseline registry and serve it.
+	// This test MUTATES the built index, so it keeps the explicit build+serve form
+	// rather than calling fixtureRegistry. Same ordering rule: build while cwd is
+	// the fixture root, BEFORE withRemoteEnv chdirs into a dir where DiscoverRoot
+	// fails by design.
+	root := fixtureCatalog(t)
 	outDir := t.TempDir()
+	t.Chdir(root)
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
-		t.Fatalf("build: %v", err)
+		t.Fatalf("build fixture: %v", err)
 	}
 	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	f.bodies[fixArchiveURL] = fixArchiveTarGz(t)
 	home := withRemoteEnv(t, f)
 
-	// Baseline = the catalog's actual pattern-cloudflare version (read, not
+	// Baseline = the fixture catalog's actual fix-skill version (read, not
 	// hardcoded). The synthetic "newer" version is a fixed value the test fabricates.
 	const newerVer = "99.0.0"
-	baseVer := catalogItemVersion(t, outDir, "pattern-cloudflare")
+	baseVer := catalogItemVersion(t, outDir, "fix-skill")
 
-	// Lock the profile → pins pattern-cloudflare@<baseVer> + its tarball sha.
-	if _, _, err := runLock(t, "--profile", "cloudflare"); err != nil {
+	// Lock the profile → pins fix-skill@<baseVer> + its tarball sha.
+	if _, _, err := runLock(t, "--profile", "fix-all"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
 	if !strings.Contains(string(mustRead(t, filepath.Join(wd, "patronus.lock"))), `"version": "`+baseVer+`"`) {
-		t.Fatalf("expected pattern-cloudflare %s pinned in the lock", baseVer)
+		t.Fatalf("expected fix-skill %s pinned in the lock", baseVer)
 	}
 
-	// Mutate the served index to advertise pattern-cloudflare@<newerVer> (a new,
-	// newer item) while STILL serving the immutable baseline tarball. Also serve a
-	// newer tarball at its own immutable key.
+	// Mutate the served index to advertise fix-skill@<newerVer> (a new, newer item)
+	// while STILL serving the immutable baseline tarball. Also serve a newer tarball
+	// at its own immutable key.
 	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
 	ix, err := registry.LoadIndex(idx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	newTgz := mustTarGz(t, map[string][]byte{
-		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: pattern-cloudflare\ndescription: d\nversion: " + newerVer + "\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: fix-skill\ndescription: d\nversion: " + newerVer + "\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
 		"SKILL.md":      []byte("# v" + newerVer + " body — should NOT be installed"),
 	})
-	newURL := testRegistryBase + "/catalog/pattern-cloudflare/" + newerVer + "/pattern-cloudflare-" + newerVer + ".tar.gz"
+	newURL := testRegistryBase + "/catalog/fix-skill/" + newerVer + "/fix-skill-" + newerVer + ".tar.gz"
 	for i := range ix.Artifacts {
-		if ix.Artifacts[i].Manifest.Name == "pattern-cloudflare" {
+		if ix.Artifacts[i].Manifest.Name == "fix-skill" {
 			ix.Artifacts[i].Manifest.Version = newerVer
 			ix.Artifacts[i].Tarball = registry.Tarball{URL: newURL, SHA256: shaOf(newTgz)}
 		}
@@ -432,13 +441,13 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	}
 
 	// Install the profile against the committed lock → must materialize the baseline.
-	if _, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run"); err != nil {
+	if _, errOut, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--dry-run"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-"+baseVer, "patronus.yaml")); err != nil {
+	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "fix-skill-"+baseVer, "patronus.yaml")); err != nil {
 		t.Errorf("lock should pin %s, but it was not materialized: %v", baseVer, err)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "pattern-cloudflare-"+newerVer, "patronus.yaml")); err == nil {
+	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "fix-skill-"+newerVer, "patronus.yaml")); err == nil {
 		t.Errorf("install fetched the index's newer %s instead of the locked %s", newerVer, baseVer)
 	}
 }
