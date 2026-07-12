@@ -245,6 +245,43 @@ hook:
 	write("artifacts/hooks/fix-hook-2/fix-hook-2.sh",
 		"#!/bin/sh\n# fixture hook script — never executed by the tests; only placed and removed.\nexit 0\n")
 
+	// fix-hook-claude: a CLAUDE-ONLY hook (targets: [claude]). Wired into a profile
+	// as a @claude flavour, it must land on claude and be silently SKIPPED on
+	// codex/opencode — the shape of the real re-grounding hooks, which have no hook
+	// surface on the other tools.
+	write("artifacts/hooks/fix-hook-claude/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: hook
+role: capability
+name: fix-hook-claude
+description: "Claude-only fixture hook: lands on claude, silently skipped on codex/opencode."
+version: 1.0.0
+entry: ""
+files: [fix-hook-claude.sh]
+targets: [claude]
+defaults:
+  scope: global
+hook:
+  event: UserPromptSubmit
+  command: "{script}"
+  script: fix-hook-claude.sh
+`)
+	// The script is PLACED and its bytes asserted; it is executed only by the test
+	// that proves a placed hook script runs (mirroring the real skills-heartbeat).
+	// It enumerates the installed skills dir, exactly as the real heartbeat does.
+	write("artifacts/hooks/fix-hook-claude/fix-hook-claude.sh", `#!/usr/bin/env bash
+# Fixture hook: lists the installed skills, the way skills-heartbeat does.
+set -euo pipefail
+names=""
+if [ -d "${HOME}/.claude/skills" ]; then
+  for d in "${HOME}/.claude/skills"/*/; do
+    [ -d "$d" ] || continue
+    names="${names:+$names, }$(basename "$d")"
+  done
+fi
+printf '{"installedSkills":"%s"}\n' "$names"
+`)
+
 	write("artifacts/output-styles/fix-style/patronus.yaml", `apiVersion: patronus/v2
 family: artifact
 type: output-style
@@ -273,6 +310,7 @@ layers:
     - fix-style
   capabilities:
     - fix-skill
+    - fix-hook-claude@claude
   eval:
     - fix-hook
   guardrails:
