@@ -87,7 +87,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
 		"beads": {manifest.TypeInstruction, manifest.RoleOrchestration},
 		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) — supersedes beads.
-		"ticket":                      {manifest.TypeInstruction, manifest.RoleOrchestration},
+		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
+		// L10 orchestration: end-of-session push discipline. Wholly authored (no
+		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
+		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
