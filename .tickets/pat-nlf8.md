@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 7: The plan→tk mirror's shape". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-12T04:59:27Z**
+
+SCOPE ADDED (2026-07-12): the writing-plans mirror must (a) name the PLAN FILE in --external-ref, (b) put the task's VERBATIM section heading in -d — copied via `grep -n '^## Task' <plan>`, never retyped, and never a bare 'Plan Task N' (a number forces the reader to count into a document that may be reordered), (c) state that docs/specs/ is gitignored, and (d) VERIFY every pointer resolves against the plan file. EVIDENCE: on the first real seeding of this graph the headings were retyped from memory and 9 of 23 were WRONG. A pointer you have not followed is a claim, not a reference.

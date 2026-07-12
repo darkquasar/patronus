@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 2: Kill `tasks.md`". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-12T04:59:27Z**
+
+SCOPE ADDED (2026-07-12): team-implement's Phase-2 seeding recipe must mint a RESOLVABLE pointer — --external-ref docs/specs/NN-slug/<stream>-plan.md (the FILE, not the folder: ADR-0003 guarantees a folder holds many plans, so a folder ref is ambiguous BY CONSTRUCTION), plus a 'PLAN: <file> → <verbatim section heading>' line in -d, plus the note that docs/specs/ is gitignored.

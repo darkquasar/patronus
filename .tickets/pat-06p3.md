@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 1: Tell the truth about tk's command surface". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-12T04:59:27Z**
+
+SCOPE ADDED (2026-07-12): the create surface must also teach a pointer that RESOLVES — --external-ref names the FILE the work is specified in (never a folder holding several candidates), -d names the SECTION verbatim, and the ticket says out loud when the target is in a gitignored dir. Rationale: a ticket whose reference an agent cannot follow is a ticket nobody can do.
