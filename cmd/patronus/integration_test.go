@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	_ "embed"
 	"encoding/hex"
 	"io"
 	"os"
@@ -13,31 +12,8 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/archive"
-	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 )
-
-// tkScript is the pinned upstream `ticket` script, vendored so the offline test
-// fetcher can serve it at the URL recipes/tk.yaml pins.
-//
-// It has to be the REAL bytes: `tk` is a `url` (raw) delivery, so Patronus hashes
-// what it downloads against the recipe's pin (install/apply.go verifySHA256) and
-// re-hashes the placed file on every subsequent run (recipe.go classifyFetch). An
-// archive delivery sidesteps that — classifyFetch SKIPs an archive on mere
-// presence, without hashing it — which is why a dummy stub suffices there and not
-// here.
-//
-// KNOWN DEBT: this couples the test suite to a third-party digest. These tests
-// assert the requires-closure and CLAUDE.md composition; they do not care about
-// tk's bytes. The right fix is a FIXTURE catalog (registry.DiscoverRoot walks up
-// from cwd, so a test can t.Chdir into a temp tree with its own recipes/ and pin a
-// fake artifact to bytes it invents — cf. internal/registry/local_test.go:26).
-// Vendoring is the contained stopgap; do NOT let it become the pattern, and never
-// fetch a real URL from CI (that would execute attacker-controllable bytes in the
-// pipeline if upstream were ever compromised).
-//
-//go:embed testdata/tk
-var tkScript []byte
 
 // These integration tests drive the REAL cobra commands (list/install/lock/update)
 // end-to-end against a remote R2-style registry that is built by `patronus build`
@@ -66,20 +42,23 @@ func (f *servingFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, er
 	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
-// builtRegistry builds the REAL catalog and serves it. DEPRECATED: every Class-A
-// test is migrating to fixtureRegistry (see test-surface-plan.md). It survives
-// only until the last Class-A call site is gone, at which point serveBinaries and
-// testdata/tk are deleted and it stops serving binaries entirely — a real-catalog
-// test may read the catalog's SHAPE, never its PINS.
+// builtRegistry builds the REAL catalog and serves its index + artifact tarballs.
+// It serves NO binaries — a real-catalog test may read the catalog's SHAPE, never
+// its PINS, so it must never fetch or hash an upstream digest. Its callers are the
+// CLASS-B contents tests (core_profile, orchestration, core_consolidated), which
+// assert against profile resolution, the lock, or the plan and never deploy a
+// binary. Every mechanism (Class-A) test uses fixtureRegistry instead.
+//
+// A test that reaches this and then tries to install a binary will FETCH, miss in
+// the served bodies, and fail loudly — which is correct: the bytes it wants are a
+// third party's, and they must never enter CI.
 func builtRegistry(t *testing.T) *servingFetcher {
 	t.Helper()
 	outDir := t.TempDir()
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
 		t.Fatalf("build registry: %v", err)
 	}
-	f := serveTree(t, outDir)
-	serveBinaries(t, f.bodies)
-	return f
+	return serveTree(t, outDir)
 }
 
 // serveTree maps an on-disk R2-layout tree (<dir>/catalog/...) onto a fetcher
@@ -105,37 +84,6 @@ func serveTree(t *testing.T, outDir string) *servingFetcher {
 	// fixtureRegistry adds the fixture's invented ones; a real-catalog test must
 	// not install a binary at all (it may read the catalog's SHAPE, never its PINS).
 	return &servingFetcher{bodies: bodies}
-}
-
-// serveBinaries adds recipe-delivered BINARIES to the fetcher, alongside the
-// registry index and artifact tarballs.
-//
-// An archive delivery can be kept off the fetch path with a dummy stub, because
-// classifyFetch SKIPs an archive whenever the file is merely present without
-// hashing it. A `url` (raw) delivery cannot: its sha is verified on download AND
-// recomputed from the placed file on every run, so tk must be served for real.
-//
-// The URL is read from the recipe rather than restated here, so the pin and the
-// vendored testdata bytes cannot drift apart: if someone bumps recipes/tk.yaml
-// without refreshing testdata/tk, the sha check fails loudly instead of silently
-// serving stale bytes.
-func serveBinaries(t *testing.T, bodies map[string][]byte) {
-	t.Helper()
-	root, err := registry.DiscoverRoot(".")
-	if err != nil {
-		t.Fatalf("discover repo root: %v", err)
-	}
-	rec, err := manifest.LoadRecipe(filepath.Join(root, "recipes", "tk.yaml"))
-	if err != nil {
-		t.Fatalf("load recipes/tk.yaml: %v", err)
-	}
-	sum := sha256.Sum256(tkScript)
-	if got := hex.EncodeToString(sum[:]); got != rec.Delivery.SHA256 {
-		t.Fatalf("testdata/tk sha256 = %s, but recipes/tk.yaml pins %s —\n"+
-			"the vendored script is stale: re-download the pinned URL into cmd/patronus/testdata/tk",
-			got, rec.Delivery.SHA256)
-	}
-	bodies[rec.Delivery.URL] = tkScript
 }
 
 // withRemoteEnv points the commands at a temp HOME (for the cache), a temp cwd
@@ -170,21 +118,6 @@ func withRemoteEnv(t *testing.T, f *servingFetcher) (home string) {
 		fetcherForCommands, registryFetcher, fetcherForDeploy = prevSrc, prevReg, prevDep
 	})
 	return home
-}
-
-// stubBinary pre-places an executable at ~/.patronus/bin/<name> so a recipe's
-// github-release FETCH classifies as SKIP (archive assets SKIP on dest presence),
-// keeping a --deploy test that wires a binary recipe fully offline without needing
-// the real, host-specific, sha-pinned asset bytes.
-func stubBinary(t *testing.T, home, name string) {
-	t.Helper()
-	dir := filepath.Join(home, ".patronus", "bin")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func mustRead(t *testing.T, path string) []byte {
