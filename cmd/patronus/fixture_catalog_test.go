@@ -104,7 +104,7 @@ deliver:
 	// points at the same invented tarball so the fixture works on any host.
 	tgzSum := shaHex(fixArchiveTarGz(t))
 	var assets strings.Builder
-	for _, p := range []struct{ os, arch string }{
+	for _, p := range []struct{ goos, goarch string }{
 		{"linux", "amd64"}, {"linux", "arm64"},
 		{"darwin", "amd64"}, {"darwin", "arm64"},
 		{"windows", "amd64"}, {"windows", "arm64"},
@@ -115,7 +115,7 @@ deliver:
       sha256: "%s"
       archive: tar.gz
       binaryPath: fix-archive-bin
-`, p.os, p.arch, fixArchiveURL, tgzSum)
+`, p.goos, p.goarch, fixArchiveURL, tgzSum)
 	}
 	write("recipes/fix-archive-bin.yaml", `apiVersion: patronus/v2
 family: recipe
