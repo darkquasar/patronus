@@ -31,8 +31,10 @@
 /dist/
 
 # Local planning/design docs — kept out of version control. The canonical home is
-# local-specs/ (a gitignored folder); the root-level patterns below still catch a
-# stray DESIGN.md/design-*.md/plan.md left at the repo root.
+# docs/specs/NN-slug/ (per-feature folders, the convention the skills write to) and
+# local-specs/; the root-level patterns below still catch a stray
+# DESIGN.md/design-*.md/plan.md left at the repo root.
+/docs/specs/
 local-specs/
 DESIGN.md
 design-*.md
