@@ -82,3 +82,43 @@ func TestCounts(t *testing.T) {
 		t.Errorf("counts = %v", c)
 	}
 }
+
+// TestCountsCountsEveryContributor pins the tally to what --deploy will actually
+// APPLY, not to how many FileDiffs happen to represent it.
+//
+// A composed file folds many artifacts into ONE FileDiff: six instructions APPEND
+// into one CLAUDE.md, and eight artifacts MERGE into one settings.json (7 hooks + a
+// statusline + native-sandbox, which turns Claude's sandbox on). The plan TABLE
+// renders a row per contributor — so a footer that counted diffs said "1 APPEND,
+// 2 MERGE" directly beneath eight visible MERGE rows, contradicting itself and
+// under-reporting the change the user is being asked to approve.
+func TestCountsCountsEveryContributor(t *testing.T) {
+	cs := &ChangeSet{Diffs: []FileDiff{
+		{
+			Action: Append, Path: "/h/CLAUDE.md", Artifact: "agents-spine",
+			Contrib: []SectionContrib{
+				{Artifact: "agent-rules"},
+				{Artifact: "go-style-uber"},
+			},
+		},
+		{
+			Action: Merge, Path: "/h/.claude/settings.json", Artifact: "skills-dispatch-activate",
+			SettingContrib: []SettingContrib{
+				{Artifact: "block-secrets"},
+				{Artifact: "native-sandbox"},
+			},
+		},
+		{Action: Create, Path: "/h/.claude/skills/tdd/SKILL.md", Artifact: "tdd"},
+	}}
+
+	c := cs.Counts()
+	if got, want := c[Append], 3; got != want {
+		t.Errorf("APPEND count = %d, want %d (the owner + 2 folded-in contributors)", got, want)
+	}
+	if got, want := c[Merge], 3; got != want {
+		t.Errorf("MERGE count = %d, want %d (the owner + 2 folded-in contributors)", got, want)
+	}
+	if got, want := c[Create], 1; got != want {
+		t.Errorf("CREATE count = %d, want %d", got, want)
+	}
+}

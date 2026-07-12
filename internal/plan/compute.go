@@ -239,6 +239,10 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 					Artifact: d.Artifact,
 					Version:  d.Version,
 					Edit:     d.Setting,
+					// Carry the contributor's OWN type/role so the plan can render an
+					// honest row for it instead of inheriting the owning diff's.
+					Type: d.Type,
+					Role: d.Role,
 				})
 			}
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
