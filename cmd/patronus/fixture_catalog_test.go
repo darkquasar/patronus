@@ -42,9 +42,14 @@ var fixRawBinary = []byte("fixture payload: fix-bin (raw delivery). Not a progra
 // this is the digest of what actually lands on disk after extraction.
 var fixArchivedBinary = []byte("fixture payload: fix-archive-bin (extracted from a tar.gz). Not a program.\n")
 
+// fixMcpBinary is the member inside `fix-mcp-bin`'s tarball — the FETCH+WIRE shape
+// (a delivered binary that is ALSO merged into each tool's MCP config).
+var fixMcpBinary = []byte("fixture payload: fix-mcp-bin (fetch+wire). Not a program.\n")
+
 const (
 	fixRawURL     = testRegistryBase + "/bin/fix-bin"
 	fixArchiveURL = testRegistryBase + "/bin/fix-archive-bin.tar.gz"
+	fixMcpURL     = testRegistryBase + "/bin/fix-mcp-bin.tar.gz"
 )
 
 // shaHex is sha256(b) as lowercase hex — the form a recipe pin takes.
@@ -58,6 +63,13 @@ func shaHex(b []byte) string {
 func fixArchiveTarGz(t *testing.T) []byte {
 	t.Helper()
 	return mustTarGz(t, map[string][]byte{"fix-archive-bin": fixArchivedBinary})
+}
+
+// fixMcpTarGz is the tarball `fix-mcp-bin` delivers, holding its binary at member
+// path "fix-mcp-bin".
+func fixMcpTarGz(t *testing.T) []byte {
+	t.Helper()
+	return mustTarGz(t, map[string][]byte{"fix-mcp-bin": fixMcpBinary})
 }
 
 func fixtureCatalog(t *testing.T) string {
@@ -128,6 +140,48 @@ deliver:
   binary: fix-archive-bin
   assets:
 `+assets.String())
+
+	// The same asset matrix for the fetch+wire recipe, at its own URL and member
+	// name. It carries its own tarball so its extracted member is named after it.
+	mcpTgzSum := shaHex(fixMcpTarGz(t))
+	var mcpAssets strings.Builder
+	for _, p := range []struct{ goos, goarch string }{
+		{"linux", "amd64"}, {"linux", "arm64"},
+		{"darwin", "amd64"}, {"darwin", "arm64"},
+		{"windows", "amd64"}, {"windows", "arm64"},
+	} {
+		fmt.Fprintf(&mcpAssets, `    - os: %s
+      arch: %s
+      url: "%s"
+      sha256: "%s"
+      archive: tar.gz
+      binaryPath: fix-mcp-bin
+`, p.goos, p.goarch, fixMcpURL, mcpTgzSum)
+	}
+
+	// fix-mcp-bin: the FETCH+WIRE shape — a github-release delivery AND an MCP
+	// config merge (the memory-engram shape). Deploying it must BOTH place the
+	// binary and merge a stdio MCP server entry into each tool's own config. It
+	// serves the same invented tarball as fix-archive-bin, under its own name.
+	write("recipes/fix-mcp-bin.yaml", `apiVersion: patronus/v2
+family: recipe
+name: fix-mcp-bin
+role: memory
+summary: "Fixture fetch+wire recipe: an archive-delivered binary that is ALSO merged into each tool's MCP config."
+deliver:
+  source: github-release
+  installTo: "~/.patronus/bin/"
+  binary: fix-mcp-bin
+  assets:
+`+mcpAssets.String()+`
+wire:
+  mode: mcp
+  mcp:
+    transport: stdio
+    command: "{installPath}"
+    args: ["mcp"]
+  tools: [claude, codex, opencode]
+`)
 
 	// --- artifacts ---------------------------------------------------------
 	// fix-instruction requires: [fix-bin] — this edge is what the requires-closure
@@ -492,5 +546,6 @@ func fixtureRegistry(t *testing.T) *servingFetcher {
 	// from the same place (this file), so they cannot drift.
 	f.bodies[fixRawURL] = fixRawBinary
 	f.bodies[fixArchiveURL] = fixArchiveTarGz(t)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
 	return f
 }
