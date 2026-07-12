@@ -6,9 +6,9 @@
 # DISK, not in the context window, before continuing.
 #
 # Re-injection keeps the RULE fresh but cannot restore lost FACTS; externalized
-# state can. This hook bridges the two: it points the agent at the Beads work-graph
-# (what is unblocked / mid-flight) and ai-memory (prior context) — the durable
-# stores that survive a compaction the context window did not.
+# state can. This hook bridges the two: it points the agent at the Ticket
+# work-graph (what is unblocked / mid-flight) and ai-memory (prior context) — the
+# durable stores that survive a compaction the context window did not.
 #
 # Conditional by design (no-duplicate-native-capability / no dead instructions):
 # it only names a source that is actually present, so it never tells the agent to
@@ -19,9 +19,12 @@ set -euo pipefail
 
 cues=""
 
-# --- Beads: a project work-graph db (.beads/ in cwd, or BEADS_DB pointing at one).
-if [ -n "${BEADS_DB:-}" ] || [ -d ".beads" ]; then
-  cues="${cues} Reconcile with the Beads work-graph: run \`bd ready\` to see what is unblocked and what you left mid-flight, and \`bd status\` for the overview — do not rely on memory of the plan that may have been compacted away."
+# --- Ticket: a project work-graph (.tickets/ in cwd — plain markdown, no db).
+# Cue `tk ready` + `tk blocked`, never `tk status`: that is a SETTER
+# (`tk status <id> <status>`), not an overview, and cueing it would invite the
+# agent to mutate a ticket while trying to orient.
+if [ -d ".tickets" ]; then
+  cues="${cues} Reconcile with the Ticket work-graph: run \`tk ready\` to see what is unblocked and what you left mid-flight, and \`tk blocked\` to see what is waiting — do not rely on memory of the plan that may have been compacted away."
 fi
 
 # --- ai-memory: the self-wiring memory recipe (skill body installed, or its binary).
