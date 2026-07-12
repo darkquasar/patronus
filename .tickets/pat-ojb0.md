@@ -19,3 +19,13 @@ Plan Task 11 — THE PRODUCTION SECURITY HOLE. ***CAN ONLY LAND AFTER TASK 10 (p
 
 A tampered binary at ~/.patronus/bin/<x> is DETECTED (classifyFetch -> FETCH, not SKIP); TestTamperedArchiveBinaryIsRefetched passes; a binary with NO recorded digest re-FETCHes
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → 'Task 11: Close the archive-SKIP security hole' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → "## Task 11: Close the archive-`SKIP` security hole". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

@@ -19,3 +19,13 @@ Plan Task 2 (R2). Files: artifacts/skills/team-implement/{SKILL.md,TASKS-TEMPLAT
 
 grep -rn 'tasks.md' artifacts/ -> 0 hits; TASKS-TEMPLATE.md deleted; AND the skill explicitly states that 'no two teammates edit the same file' has DEGRADED into a Team-Lead reading step
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Task 2: Kill tasks.md' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 2: Kill `tasks.md`". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

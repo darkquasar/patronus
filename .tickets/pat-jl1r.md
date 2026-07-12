@@ -19,3 +19,13 @@ Plan Task 6 (R6). Files: artifacts/skills/team-{implement,research}/{SKILL.md,*-
 
 grep -rn 'TeamCreate|TeamDelete|team_name|shutdown_request' artifacts/skills/ -> 0; grep -rn 'Monitor .TaskList' -> 0; team-research has NO worktree phase; patronus.yaml targets: [claude] UNCHANGED
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Task 6: The team protocol — flavour it, and make the lead PULL' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 6: The team protocol — flavour it, and make the lead PULL". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

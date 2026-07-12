@@ -19,3 +19,13 @@ Plan Task 13. A green suite is a CLAIM. This task opens the artifacts: bump a pi
 
 Corrupting the pin in recipes/tk.yaml breaks ZERO tests (today ~30) — SHOWN, not asserted; and commenting grilling out of core.yaml still fails the Class-B test
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → 'Task 13: Verify the acceptance criteria — against the artifacts, not the claims' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → "## Task 13: Verify the acceptance criteria — against the artifacts, not the claims". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

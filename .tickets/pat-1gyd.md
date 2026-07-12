@@ -19,3 +19,13 @@ Plan Task 5. Files: cmd/patronus/{golang_profile,hardened_profile,l1_profile,cor
 
 Each of the 4 files is a separate green commit carrying its classification; core_profile_integration_test.go is NOT among them
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → 'Task 5: Migrate the profile integration tests (Class A)' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/test-surface-plan.md → "## Task 5: Migrate the profile integration tests (Class A)". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

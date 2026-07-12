@@ -19,3 +19,13 @@ Plan Task 10. Files: .agents/skills/plan-review/SKILL.md:61 ('plan -> beads'; th
 
 grep -rn beads .agents/ -> 0; AND patronus scan demonstrably WOULD HAVE CAUGHT the stale team-research skill that started this branch
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Task 10: Fix the .agents/ copy and verify every acceptance criterion' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 10: Fix the `.agents/` copy and verify every acceptance criterion". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.

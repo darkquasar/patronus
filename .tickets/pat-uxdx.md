@@ -19,3 +19,13 @@ Plan Task 5 (R5). Files: artifacts/skills/writing-plans/SKILL.md (:144, :177), e
 
 grep -rn 'If your platform supports' artifacts/skills/ -> 0 hits; grep -rn 'checklist you run yourself' -> 0 hits
 
+
+## Notes
+
+**2026-07-12T04:55:35Z**
+
+PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Task 5: Reviews run in a fresh subagent' — that section carries the exact files, the code, and the step-by-step. ⚠️ docs/specs/ is GITIGNORED: this path exists only in a working tree that has it. If it is absent, the plan was never shared — ask before improvising.
+
+**2026-07-12T04:56:13Z**
+
+PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 5: Reviews run in a fresh subagent". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
