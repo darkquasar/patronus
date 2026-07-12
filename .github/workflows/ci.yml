@@ -8,6 +8,22 @@ on:
     branches: [main]
   pull_request:
 
+# The test job runs on EVERY pull_request, INCLUDING from forks, and `go test`
+# executes repository code — a fork PR can therefore run arbitrary code here. That is
+# safe today ONLY because there is nothing in this workflow to steal: `contents: read`
+# and no `secrets.*` anywhere in it.
+#
+# DECISION (2026-07-12, docs/specs/01-lifecycle-and-test-surface/test-surface-spec.md):
+# this stops being safe the instant anyone adds a secret to this workflow. If a secret
+# is ever needed, EITHER move the secret-requiring step into a separate, manually
+# approved workflow, OR switch that job to pull_request_target guarded by
+#   if: github.event.pull_request.head.repo.full_name == github.repository
+# Do not add a secret to this job.
+#
+# The companion rule lives in the tests: no test may fetch remote bytes (cmd/patronus's
+# TestMain installs a deny-all fetcher that panics with the URL). A test that pulled
+# from raw.githubusercontent.com would execute third-party bytes in this pipeline on
+# every PR, before human review.
 permissions:
   contents: read
 
