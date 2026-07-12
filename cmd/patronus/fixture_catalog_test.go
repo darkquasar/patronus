@@ -320,3 +320,62 @@ func TestFixtureCatalogBuilds(t *testing.T) {
 		t.Errorf("fix-bin.yaml does not pin sha256(fixRawBinary)=%s:\n%s", want, rawYAML)
 	}
 }
+
+// TestFixtureRegistryServesBothDeliveryShapes proves the fetcher can serve BOTH
+// fixture binaries — the raw payload and the tarball — at the URLs their recipes
+// pin. This is what lets an install drive download -> verify -> extract -> place
+// for real, which stubBinary never did.
+func TestFixtureRegistryServesBothDeliveryShapes(t *testing.T) {
+	f := fixtureRegistry(t)
+
+	raw, ok := f.bodies[fixRawURL]
+	if !ok {
+		t.Fatalf("fetcher does not serve the raw binary at %s", fixRawURL)
+	}
+	if shaHex(raw) != shaHex(fixRawBinary) {
+		t.Errorf("served raw bytes do not match fixRawBinary")
+	}
+
+	tgz, ok := f.bodies[fixArchiveURL]
+	if !ok {
+		t.Fatalf("fetcher does not serve the archive at %s", fixArchiveURL)
+	}
+	if shaHex(tgz) != shaHex(fixArchiveTarGz(t)) {
+		t.Errorf("served tarball does not match the fixture tarball")
+	}
+
+	// And the catalog index it serves is the FIXTURE's, not the real one.
+	idx, ok := f.bodies[testRegistryBase+"/catalog/index.json"]
+	if !ok {
+		t.Fatal("fetcher does not serve a catalog index")
+	}
+	if strings.Contains(string(idx), "\"grilling\"") {
+		t.Error("fixture registry served the REAL catalog — DiscoverRoot did not pick the fixture root")
+	}
+}
+
+// fixtureRegistry builds the fixture catalog and serves it from memory: the
+// index, every artifact tarball, AND both fixture binaries at the URLs their
+// recipes pin. The drop-in replacement for builtRegistry at every test that
+// asserts Patronus's BEHAVIOR (Class A) rather than the real catalog's CONTENTS.
+//
+// ORDERING (do not reorder): build runs while cwd is the fixture root, BEFORE any
+// caller invokes withRemoteEnv — withRemoteEnv t.Chdir's into a dir where
+// DiscoverRoot fails by design (that is what selects the Remote registry).
+func fixtureRegistry(t *testing.T) *servingFetcher {
+	t.Helper()
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+
+	t.Chdir(root) // build the FIXTURE, not the repo
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture registry: %v", err)
+	}
+
+	f := serveTree(t, outDir)
+	// Serve the binaries the fixture's recipes pin. The bytes and the pins come
+	// from the same place (this file), so they cannot drift.
+	f.bodies[fixRawURL] = fixRawBinary
+	f.bodies[fixArchiveURL] = fixArchiveTarGz(t)
+	return f
+}

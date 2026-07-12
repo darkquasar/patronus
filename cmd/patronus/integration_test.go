@@ -66,16 +66,20 @@ func (f *servingFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, er
 	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
-// builtRegistry runs `patronus build` against the real checkout into the R2 layout
-// at testRegistryBase, then serves catalog/index.json (+ .sha256) and every item
-// tarball at the URLs the index records.
+// builtRegistry builds the REAL catalog and serves it. DEPRECATED: every Class-A
+// test is migrating to fixtureRegistry (see test-surface-plan.md). It survives
+// only until the last Class-A call site is gone, at which point serveBinaries and
+// testdata/tk are deleted and it stops serving binaries entirely — a real-catalog
+// test may read the catalog's SHAPE, never its PINS.
 func builtRegistry(t *testing.T) *servingFetcher {
 	t.Helper()
 	outDir := t.TempDir()
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
 		t.Fatalf("build registry: %v", err)
 	}
-	return serveTree(t, outDir)
+	f := serveTree(t, outDir)
+	serveBinaries(t, f.bodies)
+	return f
 }
 
 // serveTree maps an on-disk R2-layout tree (<dir>/catalog/...) onto a fetcher
@@ -97,7 +101,9 @@ func serveTree(t *testing.T, outDir string) *servingFetcher {
 		key := filepath.Join(outDir, "catalog", n, v, n+"-"+v+".tar.gz")
 		bodies[a.Tarball.URL] = mustRead(t, key)
 	}
-	serveBinaries(t, bodies)
+	// serveTree serves the CATALOG. Binaries are the caller's business:
+	// fixtureRegistry adds the fixture's invented ones; a real-catalog test must
+	// not install a binary at all (it may read the catalog's SHAPE, never its PINS).
 	return &servingFetcher{bodies: bodies}
 }
 
