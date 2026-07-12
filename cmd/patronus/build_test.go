@@ -224,3 +224,52 @@ func TestProfileSlotsCoversEveryLayer(t *testing.T) {
 		}
 	}
 }
+
+// TestNoRealCatalogTestCanFetchABinary is the STRUCTURAL guard for the rule this whole
+// test surface rests on: a real-catalog test may read the catalog's SHAPE, never its
+// PINS.
+//
+// builtRegistry serves the real catalog's index and artifact tarballs, and NOTHING
+// else — no binaries. So a real-catalog test that tried to install a recipe-delivered
+// binary would FETCH, miss in the served bodies, and fail. That is already true by
+// construction; this test makes it CHECKABLE rather than a convention someone can
+// quietly break by adding one --deploy of a binary-bearing profile.
+//
+// It asserts the property at its source: the fetcher builtRegistry hands out carries
+// no URL that any recipe pins. If someone teaches builtRegistry to serve a binary
+// again — which is how the vendored testdata/tk crept in the first time — this fails.
+func TestNoRealCatalogTestCanFetchABinary(t *testing.T) {
+	f := builtRegistry(t)
+
+	root, err := registry.DiscoverRoot(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cat, err := registry.NewLocalRegistry(root).Catalog(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, e := range cat.Recipes {
+		r := e.Manifest
+		if r.Delivery == nil {
+			continue
+		}
+		pinned := []string{}
+		if r.Delivery.URL != "" {
+			pinned = append(pinned, r.Delivery.URL)
+		}
+		for _, a := range r.Delivery.Assets {
+			pinned = append(pinned, a.URL)
+		}
+		for _, url := range pinned {
+			if _, served := f.bodies[url]; served {
+				t.Errorf("builtRegistry serves %s's binary at %s.\n"+
+					"A real-catalog test must never fetch or hash an UPSTREAM digest: those bytes are a "+
+					"third party's, and `go test` runs on every PR — including fork PRs — before human "+
+					"review. Serve invented bytes from the fixture catalog instead (see fixtureRegistry).",
+					r.Name, url)
+			}
+		}
+	}
+}
