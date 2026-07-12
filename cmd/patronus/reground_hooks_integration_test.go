@@ -34,7 +34,6 @@ func TestRegroundHooksLandOnClaude(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
-	stubBinary(t, home, "bd")
 
 	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install core: %v\n%s", err, e)
@@ -86,7 +85,6 @@ func TestRegroundHooksSkipCodexOpencode(t *testing.T) {
 			home := withRemoteEnv(t, f)
 			withFakeRunner(t)
 			stubBinary(t, home, "gitleaks")
-			stubBinary(t, home, "bd")
 
 			if _, e, err := runInstall(t, "--profile", "core", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install core on %s: %v\n%s", tool, err, e)
@@ -110,7 +108,6 @@ func TestSkillsHeartbeatListsInstalledSkills(t *testing.T) {
 	home := withRemoteEnv(t, f)
 	withFakeRunner(t)
 	stubBinary(t, home, "gitleaks")
-	stubBinary(t, home, "bd")
 
 	if _, e, err := runInstall(t, "--profile", "core", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install core: %v\n%s", err, e)

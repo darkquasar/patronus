@@ -9,8 +9,7 @@ license: MIT
 # Install-only: fetch + verify the pinned script, no wire of its own — the sibling
 # `ticket` instruction artifact (which `requires: [tk]`) APPENDs the AGENTS.md
 # snippet that teaches the agent to use it. Mirrors the gitleaks recipe + guard
-# split and the bd recipe + beads split: recipe delivers the binary, a sibling
-# carries the wiring/prose.
+# split: the recipe delivers the binary, a sibling carries the wiring/prose.
 #
 # `source: url` rather than github-release: upstream ships NO release assets — the
 # tool IS the single `ticket` bash script at the repo root. So there is one pinned
@@ -20,9 +19,8 @@ license: MIT
 # source tarballs are not byte-stable. v0.3.2 == 266b9d38d5090f1af4e5184afd21b183b3bbe878.
 #
 # platforms: [linux, darwin] — tk is bash (leaning on awk/sed/date), so native
-# Windows gets a clear advisory and NO fetch rather than an unusable download. This
-# is a conscious capability regression from bd, which pinned 7 platforms incl. 2
-# Windows. WSL/git-bash users are unaffected (they present as linux).
+# Windows gets a clear advisory and NO fetch rather than an unusable download.
+# WSL/git-bash users are unaffected (they present as linux).
 deliver:
   source: url
   installTo: "~/.patronus/bin/"

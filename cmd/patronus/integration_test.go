@@ -22,10 +22,10 @@ import (
 //
 // It has to be the REAL bytes: `tk` is a `url` (raw) delivery, so Patronus hashes
 // what it downloads against the recipe's pin (install/apply.go verifySHA256) and
-// re-hashes the placed file on every subsequent run (recipe.go classifyFetch).
-// Archive deliveries like bd/gitleaks dodge this — classifyFetch SKIPs an archive
-// on mere presence without hashing it — which is why a 17-byte stubBinary sufficed
-// for them and does not for tk.
+// re-hashes the placed file on every subsequent run (recipe.go classifyFetch). An
+// archive delivery sidesteps that — classifyFetch SKIPs an archive on mere
+// presence, without hashing it — which is why a dummy stub suffices there and not
+// here.
 //
 // KNOWN DEBT: this couples the test suite to a third-party digest. These tests
 // assert the requires-closure and CLAUDE.md composition; they do not care about
@@ -101,13 +101,14 @@ func serveTree(t *testing.T, outDir string) *servingFetcher {
 	return &servingFetcher{bodies: bodies}
 }
 
-// serveBinaries adds recipe-delivered BINARIES to the fetcher. Historically the map
-// held only the registry index + artifact tarballs: every core binary was an archive
-// delivery, and classifyFetch SKIPs an archive whenever the file is merely present,
-// so stubBinary's dummy bytes kept them off the fetch path entirely.
+// serveBinaries adds recipe-delivered BINARIES to the fetcher, alongside the
+// registry index and artifact tarballs.
 //
-// A `url` (raw) delivery cannot be faked that way — its sha is verified on download
-// AND recomputed from the placed file on every run — so tk must be served for real.
+// An archive delivery can be kept off the fetch path with a dummy stub, because
+// classifyFetch SKIPs an archive whenever the file is merely present without
+// hashing it. A `url` (raw) delivery cannot: its sha is verified on download AND
+// recomputed from the placed file on every run, so tk must be served for real.
+//
 // The URL is read from the recipe rather than restated here, so the pin and the
 // vendored testdata bytes cannot drift apart: if someone bumps recipes/tk.yaml
 // without refreshing testdata/tk, the sha check fails loudly instead of silently

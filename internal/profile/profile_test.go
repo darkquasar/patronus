@@ -259,22 +259,22 @@ func hasWarning(ws []string, sub string) bool {
 
 // TestResolvePullsRequiresClosure proves a profile that lists only the dependent
 // item (an instruction) also resolves the item it `requires` (a binary recipe),
-// ordered dependency-before-dependent — the P7.6 beads/bd pairing. The required
+// ordered dependency-before-dependent — the ticket/tk pairing. The required
 // recipe is pulled even though no profile slot names it.
 func TestResolvePullsRequiresClosure(t *testing.T) {
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
 			Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "beads", Requires: []string{"bd"}},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ticket", Requires: []string{"tk"}},
 				Type: manifest.TypeInstruction,
 			},
 		}},
 		Recipes: []registry.RecipeEntry{{
-			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "bd", Role: "orchestration"}},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "tk", Role: "orchestration"}},
 		}},
 		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
 			Meta:   manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
-			Layers: manifest.ProfileLayers{Orchestration: manifest.StringList{"beads"}},
+			Layers: manifest.ProfileLayers{Orchestration: manifest.StringList{"ticket"}},
 		}}},
 	}
 	r, err := Resolve(cat, "p", "all")
@@ -282,17 +282,17 @@ func TestResolvePullsRequiresClosure(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := r.Names()
-	if len(names) != 2 || names[0] != "bd" || names[1] != "beads" {
-		t.Fatalf("resolved %v, want [bd beads] (dep before dependent)", names)
+	if len(names) != 2 || names[0] != "tk" || names[1] != "ticket" {
+		t.Fatalf("resolved %v, want [tk ticket] (dep before dependent)", names)
 	}
-	// bd inherits the dependent's slot for provenance and is classified as a recipe.
+	// tk inherits the dependent's slot for provenance and is classified as a recipe.
 	for _, it := range r.Items {
-		if it.Name == "bd" {
+		if it.Name == "tk" {
 			if it.Family != manifest.FamilyRecipe {
-				t.Errorf("bd family = %v, want recipe", it.Family)
+				t.Errorf("tk family = %v, want recipe", it.Family)
 			}
 			if it.Slot != "orchestration" {
-				t.Errorf("bd slot = %q, want orchestration (inherited from dependent)", it.Slot)
+				t.Errorf("tk slot = %q, want orchestration (inherited from dependent)", it.Slot)
 			}
 		}
 	}
@@ -304,17 +304,17 @@ func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
 			Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "beads", Requires: []string{"bd"}},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ticket", Requires: []string{"tk"}},
 				Type: manifest.TypeInstruction,
 			},
 		}},
 		Recipes: []registry.RecipeEntry{{
-			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "bd", Role: "orchestration"}},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "tk", Role: "orchestration"}},
 		}},
 		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
 			Meta:    manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
-			Without: manifest.StringList{"bd"},
-			Layers:  manifest.ProfileLayers{Orchestration: manifest.StringList{"beads"}},
+			Without: manifest.StringList{"tk"},
+			Layers:  manifest.ProfileLayers{Orchestration: manifest.StringList{"ticket"}},
 		}}},
 	}
 	r, err := Resolve(cat, "p", "all")
@@ -322,8 +322,8 @@ func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, it := range r.Items {
-		if it.Name == "bd" {
-			t.Fatalf("bd resolved despite `without: [bd]`: %v", r.Names())
+		if it.Name == "tk" {
+			t.Fatalf("tk resolved despite `without: [tk]`: %v", r.Names())
 		}
 	}
 }

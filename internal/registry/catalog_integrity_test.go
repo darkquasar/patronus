@@ -86,7 +86,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
 		// P7.6 L10 orchestration: the beads work-graph instruction (requires: [bd]) + 2 vendored superpowers skills.
 		"beads": {manifest.TypeInstruction, manifest.RoleOrchestration},
-		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) — supersedes beads.
+		// L10 orchestration: the ticket work-graph instruction (requires: [tk]).
 		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
@@ -211,7 +211,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"bd": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
 		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
 		// (upstream ships no release assets; the tool IS one bash script); the
-		// `ticket` instruction (requires: [tk]) wires it. Supersedes bd.
+		// `ticket` instruction (requires: [tk]) wires it.
 		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
