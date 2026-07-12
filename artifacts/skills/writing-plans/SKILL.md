@@ -163,7 +163,18 @@ saved:
 
 If the user accepts: create one ticket per task with `tk create` (it prints the new id — capture
 it), then add dependency edges matching the plan's build order with `tk dep <task> <depends-on>`.
-The graph is flat: tickets plus edges, with no epic to hang them from.
+
+Use the **full** create surface — `tk create "<title>" -t task -p <0..4> --tags <concern>
+--acceptance "<the one check that closes it>" -d "PLAN: <file> → '<section heading>'. Files: …"
+--external-ref <the file the work is specified in>`. The defaults cost you: **`tk ready` sorts by
+priority**, so a ticket created without `-p` lands at the default `2` and the ordering signal is
+dead. See the `ticket` instruction for why each flag earns its place.
+
+**Epics group; only `tk dep` orders.** tk *does* have `-t epic` and `--parent` — but they are
+**grouping and display only**: `tk ready` and `tk blocked` read **only `deps`**, never `parent`. An
+epic never blocks and never unblocks anything. So use `--parent`/`--tags` to group a plan's tasks
+under one heading, and use `tk dep` to encode the build order. A dependency edge is checkable; a
+parent link is not.
 
 The point is not bookkeeping — it is that a checkbox lives in a file the context window may lose,
 while the work-graph survives a compaction, a new session, and a hand-off to another agent.
