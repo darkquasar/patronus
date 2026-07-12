@@ -76,6 +76,18 @@ func seedLocalInstall(t *testing.T) (proj string, skillPath, instrPath string, p
 	// Isolate HOME so any global-scope lookups stay in the sandbox.
 	t.Setenv("HOME", t.TempDir())
 
+	// The temp cwd has no artifacts/ + adapters/ above it, so registry selection
+	// picks Remote — and remove's plugin path (pluginRemoveDiffs -> scanCatalog)
+	// then loads the catalog. Serve an EMPTY registry from memory: scanCatalog
+	// degrades to nil on an unavailable catalog (no plugin is seeded here anyway),
+	// and the file-revert path this test is about runs untouched. Without this the
+	// command reached the LIVE registry over the network — which the deny-all
+	// TestMain now catches. Never let a test fetch remote bytes.
+	empty := &servingFetcher{bodies: map[string][]byte{}}
+	prevReg, prevSrc := registryFetcher, fetcherForCommands
+	registryFetcher, fetcherForCommands = empty, empty
+	t.Cleanup(func() { registryFetcher, fetcherForCommands = prevReg, prevSrc })
+
 	// CREATEd skill.
 	skillPath = filepath.Join(proj, ".claude", "skills", "demo", "SKILL.md")
 	skillBody := []byte("# demo skill\n")
