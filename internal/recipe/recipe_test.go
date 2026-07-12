@@ -250,6 +250,29 @@ func TestFetchDiffURLSource(t *testing.T) {
 		}
 	})
 
+	// The security property the pinned sha exists for: a raw artifact is re-hashed
+	// on every run, so a placed binary that no longer matches the pin — tampered
+	// with, truncated, or swapped — is REFETCHED, never trusted. (An archive
+	// delivery cannot make this check: its pin covers the archive, not the member
+	// extracted from it, so presence alone has to be enough.)
+	t.Run("tampered dest refetches", func(t *testing.T) {
+		res, home, _ := testEnv(t)
+		dest := filepath.Join(home, ".patronus", "bin", "tk")
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dest, []byte("#!/bin/sh\nrm -rf /\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if d == nil {
+			t.Fatal("want a diff, got nil")
+		}
+		if d.Action != diff.Fetch {
+			t.Errorf("Action = %s, want FETCH — a dest that does not match the pin must never be trusted", d.Action)
+		}
+	})
+
 	t.Run("unsupported platform warns and emits no fetch", func(t *testing.T) {
 		res, _, _ := testEnv(t)
 		var warnings []string
