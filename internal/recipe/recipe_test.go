@@ -427,3 +427,104 @@ func sha256Hex(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }
+
+// TestClassifyFetchArchiveHashesThePlacedBinary is the regression test for the
+// archive-SKIP security hole: an archive delivery used to classify SKIP on MERE
+// PRESENCE, without ever hashing the file. That made every re-run unverified — once
+// ANY file existed at the dest, Patronus reported "verified, up to date" forever.
+// gitleaks-guard EXECUTES one of these binaries on every commit, so a poisoned file
+// at the dest was laundered as trusted.
+//
+// The fix reads the digest Patronus ALREADY records for the binary it placed
+// (diff.FetchSpec.PlacedSHA256, stamped by install/apply.go and persisted by
+// internal/state) and compares the file against it.
+func TestClassifyFetchArchiveHashesThePlacedBinary(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "somebin")
+
+	good := []byte("the real binary's bytes\n")
+	goodHex := hex.EncodeToString(func() []byte { s := sha256.Sum256(good); return s[:] }())
+
+	spec := &diff.FetchSpec{
+		URL:     "https://example.test/somebin.tar.gz",
+		SHA256:  "deadbeef", // the ARCHIVE's pin; NOT the placed binary's digest
+		Dest:    dest,
+		Archive: "tar.gz",
+	}
+	// The lookup stands in for state.json: "the binary we placed here hashed to X."
+	placed := func(d string) (string, bool) {
+		if d == dest {
+			return goodHex, true
+		}
+		return "", false
+	}
+
+	tests := []struct {
+		name  string
+		bytes []byte // nil = the dest is absent
+		want  diff.Action
+	}{
+		{"absent -> FETCH", nil, diff.Fetch},
+		{"unchanged since we placed it -> SKIP", good, diff.Skip},
+		{"TAMPERED -> FETCH (was SKIP: the security hole)",
+			[]byte("TOTALLY NOT THE REAL BINARY"), diff.Fetch},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_ = os.Remove(dest)
+			if tt.bytes != nil {
+				if err := os.WriteFile(dest, tt.bytes, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got := classifyFetch(spec, placed); got != tt.want {
+				t.Errorf("classifyFetch = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestClassifyFetchArchiveNeverRecorded covers the case with NO recorded digest: a
+// binary Patronus has never verified (hand-placed, or placed before this fix
+// shipped). It must FETCH, because "we have never verified this" is not the same as
+// "this is fine".
+func TestClassifyFetchArchiveNeverRecorded(t *testing.T) {
+	dest := filepath.Join(t.TempDir(), "somebin")
+	if err := os.WriteFile(dest, []byte("who put this here?"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	spec := &diff.FetchSpec{SHA256: "deadbeef", Dest: dest, Archive: "tar.gz"}
+	none := func(string) (string, bool) { return "", false }
+
+	if got := classifyFetch(spec, none); got != diff.Fetch {
+		t.Errorf("an unverified binary classified %v, want FETCH — Patronus must never "+
+			"report an unhashed file as verified", got)
+	}
+	// A nil lookup (no state at all) must fail closed the same way.
+	if got := classifyFetch(spec, nil); got != diff.Fetch {
+		t.Errorf("with no lookup at all, classifyFetch = %v, want FETCH (fail closed)", got)
+	}
+}
+
+// TestClassifyFetchRawUnchanged proves the RAW path is untouched by the fix: its pin
+// IS the placed file's digest, so it is hashed against the pin, as before.
+func TestClassifyFetchRawUnchanged(t *testing.T) {
+	dest := filepath.Join(t.TempDir(), "rawbin")
+	body := []byte("#!/bin/sh\necho raw\n")
+	sum := sha256.Sum256(body)
+	if err := os.WriteFile(dest, body, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	spec := &diff.FetchSpec{SHA256: hex.EncodeToString(sum[:]), Dest: dest} // Archive == ""
+	none := func(string) (string, bool) { return "", false }
+
+	if got := classifyFetch(spec, none); got != diff.Skip {
+		t.Errorf("raw binary matching its pin classified %v, want SKIP", got)
+	}
+	if err := os.WriteFile(dest, []byte("tampered"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := classifyFetch(spec, none); got != diff.Fetch {
+		t.Errorf("tampered raw binary classified %v, want FETCH", got)
+	}
+}

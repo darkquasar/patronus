@@ -549,3 +549,60 @@ func fixtureRegistry(t *testing.T) *servingFetcher {
 	f.bodies[fixMcpURL] = fixMcpTarGz(t)
 	return f
 }
+
+// TestTamperedArchiveBinaryIsRefetched is the end-to-end proof that the archive-SKIP
+// hole is closed. It is the acceptance criterion:
+// "A tampered archive binary at the dest is DETECTED (classifyFetch -> FETCH, not SKIP)."
+//
+// Before the fix, ANY file at the dest classified SKIP forever, unhashed — so a
+// poisoned binary was laundered as "verified, up to date" on every install, and
+// gitleaks-guard executes one of these on every commit.
+func TestTamperedArchiveBinaryIsRefetched(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	// First install: absent -> FETCH -> verify -> extract -> place. Sound.
+	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	dest := filepath.Join(home, ".patronus", "bin", "fix-archive-bin")
+	placed, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("binary not placed: %v", err)
+	}
+	if shaHex(placed) != shaHex(fixArchivedBinary) {
+		t.Fatalf("placed bytes are not the extracted member")
+	}
+
+	// Re-install with the binary UNTOUCHED: it is the one we placed -> SKIP, and no
+	// new fetch happens.
+	before := f.hits
+	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("re-install: %v\n%s", err, errOut)
+	}
+	if f.hits != before {
+		t.Errorf("an unchanged binary was re-fetched (%d new hits) — SKIP is broken", f.hits-before)
+	}
+
+	// Now TAMPER with it, the way a malicious postinstall or a poisoned container
+	// layer would.
+	if err := os.WriteFile(dest, []byte("TOTALLY NOT THE REAL BINARY"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install over a tampered binary: %v\n%s", err, errOut)
+	}
+
+	// The tampered bytes must be GONE — re-fetched, re-verified, re-placed.
+	after, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) == "TOTALLY NOT THE REAL BINARY" {
+		t.Fatal("TAMPERED BINARY SURVIVED: Patronus reported SKIP on a file it never hashed. " +
+			"This is the archive-SKIP security hole — gitleaks-guard EXECUTES this binary on every commit.")
+	}
+	if shaHex(after) != shaHex(fixArchivedBinary) {
+		t.Errorf("re-fetched binary does not match the extracted member")
+	}
+}

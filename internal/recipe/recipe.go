@@ -26,6 +26,14 @@ type Request struct {
 	GOARCH          string // host arch (defaults to runtime.GOARCH)
 	PreferSystemPkg bool   // --prefer-system-pkg (Phase-8 stub; warns + falls through)
 
+	// PlacedDigest reports the sha256 Patronus RECORDED for the binary it placed at
+	// a dest (from state.json). classifyFetch needs it to tell "the binary we placed
+	// and verified" from "some other file that happens to be here": an ARCHIVE's pin
+	// is the tarball's digest, not the extracted member's, so the placed file cannot
+	// be checked against the pin. Nil means no record is available, and classifyFetch
+	// then FETCHes rather than trusting an unhashed file — fail closed.
+	PlacedDigest PlacedDigestFunc
+
 	// Warnf, if set, receives non-fatal advisories (e.g. unresolved upstream,
 	// --prefer-system-pkg not yet implemented). The cmd layer wires it to stderr.
 	Warnf func(format string, args ...any)
@@ -177,7 +185,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	spec.Dest = resolveInstallPath(req.Resolver, rec)
 	d := diff.FileDiff{
 		Path:     spec.Dest,
-		Action:   classifyFetch(spec),
+		Action:   classifyFetch(spec, req.PlacedDigest),
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
@@ -189,26 +197,53 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	return spec.Dest, &d
 }
 
-// classifyFetch decides FETCH vs SKIP idempotently. The pinned sha256 verifies
-// the *download* (the archive, or the raw binary), so it only equals the placed
-// file's sha for a raw-binary asset. Therefore:
-//   - raw binary: SKIP when the dest's sha matches the pinned digest.
-//   - archive: the pinned sha is the archive's, not the extracted member's, so we
-//     cannot recompute it from the placed binary; SKIP on dest presence (the
-//     binary was sha-verified when first placed, and a re-fetch would re-verify).
+// PlacedDigestFunc reports the sha256 (lowercase hex, no "sha256:" prefix) that
+// Patronus RECORDED for the binary it placed at dest, and whether such a record
+// exists. It is threaded in from the caller so this package stays free of
+// internal/state (no new package edge).
+type PlacedDigestFunc func(dest string) (string, bool)
+
+// classifyFetch decides FETCH vs SKIP idempotently, and it NEVER reports a file as
+// verified without hashing it.
 //
-// Absent dest -> FETCH in both cases. Kept here so the diff package stays free of
+//   - raw binary: the pin IS the placed file's digest. SKIP when they match.
+//   - archive: the pin is the ARCHIVE's sha; the extracted member is what lands on
+//     disk, and you cannot recompute one from the other. So compare the file against
+//     the digest Patronus RECORDED when it placed the binary (FetchSpec.PlacedSHA256,
+//     stamped by install/apply.go, persisted by internal/state). Match -> SKIP.
+//     Mismatch, or no record -> FETCH.
+//
+// It used to SKIP an archive on MERE PRESENCE, unhashed. That made every re-run
+// unverified: once ANY file existed at the dest, Patronus reported "verified, up to
+// date" forever, and gitleaks-guard EXECUTES one of these binaries on every commit.
+// A file we have never hashed is NOT a file we have verified. Do not restore that
+// branch.
+//
+// Absent dest -> FETCH in every case. Kept here so the diff package stays free of
 // filesystem + crypto.
-func classifyFetch(spec *diff.FetchSpec) diff.Action {
+func classifyFetch(spec *diff.FetchSpec, placed PlacedDigestFunc) diff.Action {
 	data, err := os.ReadFile(spec.Dest)
 	if err != nil {
 		return diff.Fetch // absent (or unreadable) -> needs fetching
 	}
-	if spec.Archive != "" {
-		return diff.Skip // present; archive sha can't be rechecked against the binary
-	}
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) == normalizeHex(spec.SHA256) {
+	got := hex.EncodeToString(sum[:])
+
+	if spec.Archive != "" {
+		if placed == nil {
+			return diff.Fetch // no way to check -> re-fetch and re-verify
+		}
+		want, ok := placed(spec.Dest)
+		if !ok {
+			return diff.Fetch // never recorded -> never verified -> fetch
+		}
+		if got == normalizeHex(want) {
+			return diff.Skip
+		}
+		return diff.Fetch
+	}
+
+	if got == normalizeHex(spec.SHA256) {
 		return diff.Skip
 	}
 	return diff.Fetch
