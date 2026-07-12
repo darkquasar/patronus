@@ -1,6 +1,6 @@
 ---
 id: pat-2w1b
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T02:28:46Z
