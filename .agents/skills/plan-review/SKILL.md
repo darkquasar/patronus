@@ -30,7 +30,7 @@ re-run per task.
 
 **1. Identify the plan — and the spec it implements.**
 
-Find the plan (`docs/specs/NN-slug/plan.md` in the relevant feature folder) *and* the spec it was written from (`spec.md` in the same folder). You
+Find the plan (`docs/specs/NN-slug/<stream>-plan.md` in the research-effort folder) *and* the spec it was written from (`<stream>-spec.md`, the same `<stream>` prefix, in the same folder). You
 cannot review a plan without both: most of the rubric is a comparison between them.
 
 If there is no spec, say so — a plan with no spec to check against can only be reviewed for
@@ -58,7 +58,7 @@ Group them Critical / Important / Minor, with task references. Name the lenses t
 Offer the choice plainly: fix the findings, accept them and proceed, or revise the plan. Do not
 block, and do not proceed past a Critical finding without the user explicitly accepting it.
 
-This is also the natural point for the **plan → beads** offer: once the plan is accepted, mirroring
+This is also the natural point for the **plan → ticket** offer: once the plan is accepted, mirroring
 its tasks into the work-graph is what makes them survive a context compaction. See `writing-plans`.
 
 ## The Rubric
@@ -83,3 +83,7 @@ Full rubric: [plan-reviewer.md](plan-reviewer.md)
 `brainstorming` → `spec-review` → `writing-plans` → **plan-review** → `executing-plans`.
 
 Its sibling gate, `spec-review`, closes the spec phase the same way.
+
+**Next:** once the findings are addressed, **mirror the plan into the `tk` work-graph** (one epic to
+group it, one ticket per plan task, `tk dep` for the order — see the `ticket` instruction), then run
+**`executing-plans`**.
