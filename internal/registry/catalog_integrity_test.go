@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -297,6 +298,63 @@ func TestRealAdaptersLoad(t *testing.T) {
 		}
 		if ad.Layout.Mcp == nil {
 			t.Errorf("%s: missing mcp layout", tool)
+		}
+	}
+}
+
+// TestSkillsHeartbeatScriptCarriesLoadBearingText asserts the real
+// skills-heartbeat hook script — read THROUGH the catalog, not via a relative
+// path — still emits the two things that are its entire purpose: the 1% skill-
+// dispatch rule it re-injects on every turn, and the enumeration of the installed
+// skills directory. A hook whose behavior (emit JSON) is proven on a fixture does
+// NOT prove the real artifact's TEXT; if a refactor drops the "1% chance" wording
+// or stops reading ~/.claude/skills, this fails loudly instead of shipping a hook
+// that no longer does its job.
+func TestSkillsHeartbeatScriptCarriesLoadBearingText(t *testing.T) {
+	root := repoRoot(t)
+	reg := NewLocalRegistry(root)
+	cat, err := reg.Catalog(context.Background())
+	if err != nil {
+		t.Fatalf("loading real catalog: %v", err)
+	}
+
+	var entry *ArtifactEntry
+	for i := range cat.Artifacts {
+		if cat.Artifacts[i].Manifest.Name == "skills-heartbeat" {
+			entry = &cat.Artifacts[i]
+			break
+		}
+	}
+	if entry == nil {
+		t.Fatal("skills-heartbeat artifact not found in the catalog")
+	}
+	if entry.Manifest.Hook == nil || entry.Manifest.Hook.Script == "" {
+		t.Fatal("skills-heartbeat has no hook.script — cannot locate its bundled script")
+	}
+
+	scriptPath := filepath.Join(entry.Source.LocalDir, entry.Manifest.Hook.Script)
+	data, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatalf("reading hook script via catalog (%s): %v", scriptPath, err)
+	}
+	script := string(data)
+
+	// The load-bearing pieces, each with what breaks if it goes.
+	wants := []struct {
+		substr, why string
+	}{
+		{
+			"if any installed skill might apply (even a 1% chance)",
+			"the 1% skill-dispatch rule is the hook's entire purpose",
+		},
+		{
+			"${HOME}/.claude/skills",
+			"the hook must enumerate the installed skills directory",
+		},
+	}
+	for _, w := range wants {
+		if !strings.Contains(script, w.substr) {
+			t.Errorf("skills-heartbeat.sh no longer contains %q — %s", w.substr, w.why)
 		}
 	}
 }

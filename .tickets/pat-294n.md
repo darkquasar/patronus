@@ -1,6 +1,6 @@
 ---
 id: pat-294n
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T08:34:26Z
@@ -18,3 +18,9 @@ Dropped from reground_hooks_integration_test.go during the pat-k1h1 migration. T
 
 A test fails if skills-heartbeat.sh stops emitting the 1% skill-dispatch rule or stops enumerating ~/.claude/skills
 
+
+## Notes
+
+**2026-07-18T23:49:51Z**
+
+DONE. Added TestSkillsHeartbeatScriptCarriesLoadBearingText to internal/registry/catalog_integrity_test.go (the Class-C catalog validity gate). Reads the real skills-heartbeat.sh THROUGH the catalog (NewLocalRegistry(repoRoot).Catalog() -> find artifact by name -> Source.LocalDir + Hook.Script), not a ../.. relative path. Asserts the two load-bearing pieces: the '(even a 1% chance)' dispatch rule and the '${HOME}/.claude/skills' enumeration, each with a why-message. VERIFIED BY BREAKING IT: sed'd out the 1% wording -> test FAILED with the right message; restored -> PASS. Four gates green (gofmt, vet, golangci-lint 0 issues, go test -race).
