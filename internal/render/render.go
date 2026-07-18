@@ -8,6 +8,7 @@ import (
 	"io"
 	"text/tabwriter"
 
+	"github.com/darkquasar/patronus/internal/drift"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
@@ -301,4 +302,25 @@ func truncate(s string, max int) string {
 		return s[:max]
 	}
 	return s[:max-1] + "…"
+}
+
+// PrintDrift renders the drift findings. It prints NOTHING when everything is OK —
+// a clean scan stays quiet, so the table itself is the signal.
+func PrintDrift(w io.Writer, findings []drift.Finding) {
+	if len(findings) == 0 {
+		return
+	}
+	fmt.Fprintln(w, "\nDrift:")
+	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	fmt.Fprintln(tw, "VERDICT\tITEM\tPATH\tDETAIL")
+	for _, f := range findings {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", f.Verdict, f.Item, f.Path, f.Detail)
+	}
+	tw.Flush()
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  STALE             our source moved on — run `patronus install` to re-deploy")
+	fmt.Fprintln(w, "  USER-EDITED       you changed this since we wrote it — we will NOT overwrite it")
+	fmt.Fprintln(w, "  UNMANAGED-SHADOW  a file sits where Patronus would deploy, but Patronus never wrote it")
+	fmt.Fprintln(w, "  ORPHANED-STATE    recorded as installed, but no longer in the catalog")
+	fmt.Fprintln(w, "  MISSING           recorded as installed, but gone from disk")
 }

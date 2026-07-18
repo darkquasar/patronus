@@ -20,6 +20,11 @@ func (e *Engine) transformCommand(art *manifest.Artifact, ad *manifest.Adapter, 
 		return nil, fmt.Errorf("adapter %q: Command has no %s target", ad.Tool, scope)
 	}
 
+	// Resolve the destination BEFORE reading the source: the path depends only on
+	// the name + layout, never on the body, so a caller that needs to know where a
+	// command WOULD land (drift's shadow hunt) can get it without the source present.
+	path := e.resolvePath(target.Path, art.Name, ad.Tool, scope)
+
 	entry := art.Entry
 	if entry == "" {
 		entry = art.Name + ".md"
@@ -28,8 +33,6 @@ func (e *Engine) transformCommand(art *manifest.Artifact, ad *manifest.Adapter, 
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read command entry: %w", err)
 	}
-
-	path := e.resolvePath(target.Path, art.Name, ad.Tool, scope)
 	return []diff.FileDiff{{
 		Path:   path,
 		Action: diff.Create,
