@@ -13,19 +13,18 @@ You are executing a **spec-driven team implementation**. Research has already be
 
 ## Phase 0: Identify the Research Domain
 
-The user will provide a feature-folder path under `docs/specs/` (e.g. `docs/specs/07-logging-improvement/`). If they didn't, ask for it — or list the folders under `docs/specs/` whose `meta.yaml` shows `spec` and `plan` complete but `tasks` still `false`.
+The user will provide a research-effort folder path under `docs/specs/` (e.g. `docs/specs/07-logging-improvement/`) and, if it holds more than one stream, which stream to implement. A folder is one research effort with many streams; a stream is one spec + one plan (ADR-0003). If they didn't say, ask — or list the folder's streams whose `meta.yaml` entry names a `spec:` and `plan:` but still has `epic: null` (specced and planned, not yet seeded).
 
-1. **Read the folder's `meta.yaml`** — confirm `completeness.spec` and `completeness.plan` are `true` before proceeding. Then scan the folder for these files:
-   - `research.md` — background research and findings
-   - `spec.md` — the specification (required)
-   - `plan.md` — the implementation plan (required)
-   - `tasks.md` — pre-existing task breakdown (optional)
-   - `*-findings.md` — any additional research findings
-2. **Read ALL found files** in the feature folder. Understand the full picture before proceeding.
+1. **Read the folder's `meta.yaml`** — pick your stream from `streams:` and confirm its `spec:` and `plan:` name files that exist before proceeding. Then read, for the whole folder:
+   - `<slug>-research.md` — the shared background research
+   - your stream's `<stream>-spec.md` — the specification (required)
+   - your stream's `<stream>-plan.md` — the implementation plan (required)
+   - `<stream>-<who>-findings.md` — any additional research findings
+2. **Read ALL those files.** Understand the full picture before proceeding.
 3. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's conventions and constraints.
 4. **Read `tasks/lessons.md`** if it exists — internalize past mistakes.
 
-If there is no `spec.md` or `plan.md`, STOP and tell the user: "This domain has no spec or plan. Run `/team-research` first before using `/team-implement`."
+If your stream names no spec or plan, STOP and tell the user: "This stream has no spec or plan. Run `/team-research` (or the `brainstorming` + `writing-plans` skills) first before using `/team-implement`."
 
 ---
 
