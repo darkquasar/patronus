@@ -1,6 +1,6 @@
 ---
 id: pat-d2db
-status: open
+status: closed
 deps: [pat-q360, pat-il8m]
 links: []
 created: 2026-07-12T04:48:50Z
@@ -33,3 +33,22 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 9: Wire the drift guard into `patronus scan`". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-12T10:18:13Z**
+
+DESIGN (found by reading before writing): pass 2 must NOT hand-roll path resolution — and it does not need to. plan.Compute (internal/plan/compute.go:38, the SAME fn install drives via computePlan) already returns []diff.FileDiff{Path, After, Artifact}: Path = where Patronus WOULD deploy, After = the source bytes it WOULD write. That is BOTH inputs drift.Classify needs for pass 2, from the one existing chokepoint. Better than the plan's sketch, which implied resolving the path and reading the source separately (two chances to diverge). adapter.Engine.resolvePath stays private; no new export needed.
+
+**2026-07-18T11:12:33Z**
+
+DESIGN (③ materialize-on-occupancy, user-approved). Reading the code killed ①: a skill deploys SKILL.md PLUS a copyTree subtree, so deploy paths are DATA-DEPENDENT — no pure path-only fn exists, and a DeployPaths reusing resolvePath would silently miss subtree shadows (exactly where a stale skill hides). Paths must come from Transform against a real source. BUT the deploy DIRECTORY is name-only (ResolveMarker(template,tool,scope) is pure). So pass 2: resolve each artifact's target dir from its NAME, materialize+Transform ONLY the artifacts whose dir is OCCUPIED on disk and not installed. Clean machine fetches nothing (honors materializeSelected's 'don't download to browse'). One source of truth (Transform), no parallel path-deriver. Also reorder command/agent/outputstyle transforms (resolvePath before ReadFile) — behavior-preserving, the path never depends on the body; pure debt-paying.
+
+**2026-07-18T11:23:23Z**
+
+TWO BUGS found by running against the REAL machine (Step 6), not the fixture:
+BUG 1 (scope-blind shadow): pass 2 skips an artifact when installed[name] is true, but 'installed' is name-only. brainstorming is installed at LOCAL scope, so a hand-planted shadow at its GLOBAL path (~/.claude/skills/brainstorming) is MISSED — pass 2 skips the whole name. Fix: gate pass 2 on the specific recorded PATHS (the 'recorded' set pass 1 already builds), not on the artifact name. A path pass 1 didn't record is still a shadow even if the same artifact is installed elsewhere.
+BUG 2 (recipe rows in the artifact spine): pass 1 feeds ALL state item names into deployDiffs -> plan.Compute, but recipes (beads/tk/gitleaks/ccusage/context7/tdd-guard) are NOT artifacts -> 'unknown artifact' warnings on every scan. Fix: only pass ARTIFACT names to deployDiffs; a recipe FETCH row is already re-verified by classifyFetch and has no source to diff.
+Also: the guard correctly named team-research + team-implement as ORPHANED-STATE on this machine — the exact stale skills the whole spec was motivated by.
+
+**2026-07-18T11:28:02Z**
+
+ACCEPTANCE MET: planted a real unmanaged shadow at ~/.claude/skills/brainstorming/SKILL.md (brainstorming installed only at project scope) and 'patronus scan' NAMED it UNMANAGED-SHADOW — the file on disk, not a unit test. Also proved on the real machine: team-research + team-implement show as ORPHANED-STATE (the exact stale skills that motivated the spec). Commits: efc8872 (drift pkg), 0275481 (scan wiring). Two real-machine bugs found and fixed + regression-tested (cross-scope shadow; recipe rows in the artifact spine). KNOWN GAP (filed separately, not this ticket): composed/APPEND instruction files aren't drift-checked yet — byte-compare vs a single source can't match a multi-source fold.

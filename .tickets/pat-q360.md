@@ -1,6 +1,6 @@
 ---
 id: pat-q360
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:48:50Z
@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 8: The drift guard (R7)". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-12T10:17:20Z**
+
+DONE. internal/drift/{drift.go,drift_test.go}. 8 subtests green (the 6 required verdicts + 2 ordering cases I added: absent+unrecorded->OK, edited+no-source->USER-EDITED). Premise verified against the code before writing: FileState.Checksum (state.go:52-58) and driftsFromChecksum (remove/compute.go:237) both already existed; this reads them, it does not add a hashing pass. DEVIATION from the plan's Classify: USER-EDITED is checked BEFORE ORPHANED-STATE (the plan had !hasSource first, which would report a user-edited file whose item left the catalog as ORPHANED-STATE and hide the at-risk bytes). Mutation-tested: forcing 'recorded=="" -> OK' (the production state.json-blindness bug) fails the UNMANAGED-SHADOW case; the plan's original ordering fails the edited+no-source case. Commit efc8872.
