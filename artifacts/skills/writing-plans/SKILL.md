@@ -159,37 +159,88 @@ Give the reviewer the plan and the spec, and this checklist:
 
 Fix what it finds. If a spec requirement has no task, add the task.
 
-## Optional: Mirror Tasks Into Ticket
+## Mirror the plan into the tk work-graph
 
-The plan's `- [ ]` checkboxes remain the canonical task capture. This mirror is additive, and
-never required.
+A plan in a gitignored markdown file does not survive a hand-off. The `tk` graph does — it is plain
+markdown under `.tickets/`, committed with the code. **Mirror the plan before execution begins**
+(`tk` is at `~/.patronus/bin/tk`; resolve with `command -v tk || echo ~/.patronus/bin/tk`).
 
-If ticket is available — `tk` on PATH or at `~/.patronus/bin/tk` — offer it after the plan is
-saved:
+```sh
+# ONE epic per plan. It GROUPS and DISPLAYS. It does not schedule — ready/blocked
+# read only `deps`, never `parent`.
+EPIC=$(tk create "<Feature name> — implementation" -t epic -p 1 \
+  --external-ref docs/specs/NN-slug/<stream>-plan.md)
 
-> "Mirror these plan tasks into the ticket work-graph, so completion is tracked durably?"
+# ONE task per PLAN TASK (not per step — a task is the reviewable unit).
+tk create "<Task N's title>" \
+  -t task \
+  -p <from the plan's build order; 0 = highest, and `tk ready` SORTS BY IT> \
+  --parent "$EPIC" \
+  --tags <stream> \
+  --acceptance "<the plan task's verification step, verbatim — the ONE check that closes it>" \
+  -d "PLAN: docs/specs/NN-slug/<stream>-plan.md → '<the task's section heading, VERBATIM>'.
+      NOTE: docs/specs/ is GITIGNORED — that path exists only in a working tree that has it.
+      Files expected to change: path/a.go, path/b.go.
+      <what to build, in a sentence>" \
+  --external-ref docs/specs/NN-slug/<stream>-plan.md
 
-If the user accepts: create one ticket per task with `tk create` (it prints the new id — capture
-it), then add dependency edges matching the plan's build order with `tk dep <task> <depends-on>`.
+# ORDER with edges, from the plan's build order. This — and ONLY this — is what
+# `tk ready` computes from.
+tk dep <task> <depends-on-task>
+```
 
-Use the **full** create surface — `tk create "<title>" -t task -p <0..4> --tags <concern>
---acceptance "<the one check that closes it>" -d "PLAN: <file> → '<section heading>'. Files: …"
---external-ref <the file the work is specified in>`. The defaults cost you: **`tk ready` sorts by
-priority**, so a ticket created without `-p` lands at the default `2` and the ordering signal is
-dead. See the `ticket` instruction for why each flag earns its place.
+Then record the epic's id in this stream's `meta.yaml` entry (`epic: pat-a1b2` — an id you can
+resolve, not a boolean you can only believe), bump `updated:`, and **commit `.tickets/`**.
 
-**Epics group; only `tk dep` orders.** tk *does* have `-t epic` and `--parent` — but they are
-**grouping and display only**: `tk ready` and `tk blocked` read **only `deps`**, never `parent`. An
-epic never blocks and never unblocks anything. So use `--parent`/`--tags` to group a plan's tasks
-under one heading, and use `tk dep` to encode the build order. A dependency edge is checkable; a
-parent link is not.
+**Epics group; only `tk dep` orders.** `tk ready` and `tk blocked` read **only `deps`**, never
+`parent`. Use `--parent`/`--tags` to group a plan's tasks; use `tk dep` to encode the build order.
 
-The point is not bookkeeping — it is that a checkbox lives in a file the context window may lose,
-while the work-graph survives a compaction, a new session, and a hand-off to another agent.
-`tk ready` then answers "what's next" without re-reading the plan.
+### ⚠️ The pointer must RESOLVE. A ticket nobody can follow is a ticket nobody can do.
 
-If ticket is absent or the user declines, the checkboxes are the source of truth. Say which one you
-are using, so the next session knows where to look.
+**`--external-ref` names the PLAN FILE, not the folder.** A folder holds **many** plans (a stream is
+one spec + one plan, and a folder has many streams — ADR-0003), so a folder ref is ambiguous **by
+construction**. An agent handed `docs/specs/NN-slug` has to open the folder, notice there are two
+plans, infer which one from the tag, then count to task N. That is not a pointer; it is a riddle.
+
+**The description names the task's SECTION HEADING, verbatim.** Not "Plan Task 4" — a *number* is a
+pointer into a document that may be reordered, and it forces the reader to count. Copy the heading:
+
+```sh
+# Copy the headings; do not retype them. (Retyping em-dashes and backticks from memory
+# does not survive recall.)
+grep -n '^## Task' docs/specs/NN-slug/<stream>-plan.md
+```
+
+**Say that `docs/specs/` is gitignored.** Every one of these pointers aims into an ignored directory.
+A fresh clone gets a graph full of refs to a path that **is not there**, and nothing tells it so.
+State it in the ticket, and tell the reader to ask rather than improvise from a heading it cannot
+open.
+
+**Then VERIFY every pointer resolves — against the plan file, not against your memory of it:**
+
+```sh
+# Every heading a ticket cites must exist in the plan it cites.
+for f in .tickets/*.md; do
+  ref=$(grep -m1 "^PLAN: " "$f") || continue
+  plan=${ref#PLAN: }; plan=${plan%% →*}
+  head=$(printf '%s' "$ref" | sed -E "s/.*→ '(.*)'.*/\1/")
+  grep -qxF "$head" "$plan" \
+    && echo "  ok      $(basename "$f" .md)" \
+    || echo "  BROKEN  $(basename "$f" .md) -> $plan :: $head"
+done
+```
+
+**A pointer you have not followed is a claim, not a reference.**
+
+**Three things that go wrong if you skip a flag:**
+- **No `-p`** → every ticket defaults to `2`, and `tk ready` — which **sorts by priority** — hands
+  back your work in no meaningful order. The ordering signal is dead.
+- **No `--acceptance`** → "one ticket = one verifiable outcome" becomes unenforceable. Each plan
+  task already *has* its verification step. Copy it in.
+- **No `tk dep`** → the plan's build order exists only in the prose you just gitignored.
+
+If ticket is absent or the user declines, the plan's `- [ ]` checkboxes are the source of truth. Say
+which one you are using, so the next session knows where to look.
 
 ## Execution Handoff
 

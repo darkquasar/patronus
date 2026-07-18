@@ -1,6 +1,6 @@
 ---
 id: pat-nlf8
-status: open
+status: closed
 deps: [pat-06p3, pat-xdxv]
 links: []
 created: 2026-07-12T04:48:50Z
@@ -33,3 +33,7 @@ PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecy
 **2026-07-12T04:59:27Z**
 
 SCOPE ADDED (2026-07-12): the writing-plans mirror must (a) name the PLAN FILE in --external-ref, (b) put the task's VERBATIM section heading in -d — copied via `grep -n '^## Task' <plan>`, never retyped, and never a bare 'Plan Task N' (a number forces the reader to count into a document that may be reordered), (c) state that docs/specs/ is gitignored, and (d) VERIFY every pointer resolves against the plan file. EVIDENCE: on the first real seeding of this graph the headings were retyped from memory and 9 of 23 were WRONG. A pointer you have not followed is a claim, not a reference.
+
+**2026-07-18T23:47:13Z**
+
+DONE (Task 7). writing-plans now specifies the plan->tk mirror: one epic to group, one ticket per PLAN TASK (reviewable unit, not per step), plan's verification step copied verbatim into --acceptance, build order as tk dep edges, -p from the ordering (tk ready SORTS BY PRIORITY). The RESOLVE discipline: --external-ref names the PLAN FILE not the folder (a folder holds many plans, ADR-0003 — folder ref ambiguous by construction); -d names the SECTION HEADING verbatim (grep '^## Task' and COPY, never 'Plan Task 4'); say docs/specs/ is gitignored. Plus the verification loop 'every cited heading must exist in the plan it cites'. Replaced the older 'Optional: Mirror Tasks Into Ticket' section. VERIFIED against the LIVE graph: ran the resolver over all .tickets/ -> 23 resolve, 0 broken; tk ready sorts P0>P2>P3; no dep cycles. This is the shape team-implement Phase 2 + plan-review's Next both assume. Clean-body rule applied.
