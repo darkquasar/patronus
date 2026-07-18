@@ -264,4 +264,10 @@ When all streams are in, synthesize the one `<slug>-research.md` and each stream
 and `<stream>-plan.md` yourself (the Team Lead's core job). The findings files are the audit trail;
 there is nothing to merge or clean up.
 
+---
+
+**Next:** each stream's spec is written. Consider **`spec-review`** before planning — a fresh
+subagent reads what the spec *says*, which the author structurally cannot. Then `writing-plans`.
+(Suggestion, not a gate.)
+
 $ARGUMENTS

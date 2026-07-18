@@ -27,9 +27,9 @@ You MUST create a task for each of these items and complete them in order:
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write spec** — into a research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit — `docs/specs/` is gitignored by default.
-7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+7. **Spec placeholder scan** — cheap inline check for placeholders and internal contradictions only; the real review is `spec-review` in a fresh subagent (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+9. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `writing-plans`. Each hop is a suggestion the user may decline.
 
 ## Process Flow
 
@@ -41,9 +41,9 @@ digraph brainstorming {
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
-    "Spec self-review\n(fix inline)" [shape=box];
+    "Spec placeholder scan\n(fix inline)" [shape=box];
     "User reviews spec?" [shape=diamond];
-    "Invoke writing-plans skill" [shape=doublecircle];
+    "Spec written\n(next: spec-review)" [shape=doublecircle];
 
     "Explore project context" -> "Ask clarifying questions";
     "Ask clarifying questions" -> "Propose 2-3 approaches";
@@ -51,14 +51,14 @@ digraph brainstorming {
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
-    "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
+    "Write design doc" -> "Spec placeholder scan\n(fix inline)";
+    "Spec placeholder scan\n(fix inline)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User reviews spec?" -> "Spec written\n(next: spec-review)" [label="approved"];
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `writing-plans`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → writing-plans → plan-review → build, and each hop is a suggestion the user may decline.
 
 ## The Process
 
@@ -208,27 +208,35 @@ Confirm `docs/specs/` is gitignored before writing into it: `git check-ignore -q
 If it is not, add `/docs/specs/` to `.gitignore` and tell the user you did. Leave `docs/adr/`
 tracked. Do not *assert* it is ignored — check.
 
-**Spec Self-Review:**
-After writing the spec document, look at it with fresh eyes:
+**Spec placeholder scan (cheap, inline):**
 
-1. **Placeholder scan:** Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
-2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
-3. **Scope check:** Is this focused enough for a single implementation plan, or does it need decomposition?
-4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+After writing the spec, scan it for the mechanical failures only — the ones that need no fresh
+perspective to catch:
 
-Fix any issues inline. No need to re-review — just fix and move on.
+1. **Placeholders:** any "TBD", "TODO", or an empty section? Fill them.
+2. **Internal contradictions:** does one section say the opposite of another?
+
+Fix them and move on.
+
+**This is NOT the spec review.** The real review is `spec-review`, and it runs in a **fresh
+subagent** — because the author cannot have fresh eyes on their own work. You know what you *meant*;
+a reviewer with a clean context window reads only what you *wrote*. Offer it (see Next, below); do
+not substitute this scan for it. When `spec-review` runs, it dispatches with
+`spec-document-reviewer-prompt.md` — that companion is the review's prompt, not a second review path.
 
 **User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+After the placeholder scan, ask the user to review the written spec before proceeding:
 
 > "Spec written to `<path>` (kept local — `docs/specs/` is gitignored). Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 
-**Implementation:**
+**Next:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+> "Spec written to `docs/specs/NN-slug/<stream>-spec.md`. Want me to run **`spec-review`** over it
+>  first — a fresh subagent, clean context, reading only what the spec *says*? Then `writing-plans`."
+
+The user may skip straight to `writing-plans`. Do not gate on the review — each hop is a suggestion.
 
 ## Key Principles
 

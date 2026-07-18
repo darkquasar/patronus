@@ -191,3 +191,7 @@ The Self-Review above is your own pass over the plan. For an independent one —
 reads what the plan *says* rather than what you meant — run the **plan-review** skill before
 handing off. It applies the same coverage / placeholder / type-consistency checks plus engineering,
 design, DevEx, and strategy lenses, and it is advisory: it closes planning, it does not block it.
+
+**Next:** the plan is written. Consider **`plan-review`** before building — a fresh subagent reads
+what each step *says*, where the author knows what each step *meant*. Then `executing-plans`.
+(Suggestion, not a gate.)

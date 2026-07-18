@@ -83,3 +83,7 @@ Full rubric: [plan-reviewer.md](plan-reviewer.md)
 `brainstorming` → `spec-review` → `writing-plans` → **plan-review** → `executing-plans`.
 
 Its sibling gate, `spec-review`, closes the spec phase the same way.
+
+**Next:** once the findings are addressed, **mirror the plan into the `tk` work-graph** (one epic to
+group it, one ticket per plan task, `tk dep` for the order — see the `ticket` instruction), then run
+**`executing-plans`**.

@@ -79,3 +79,6 @@ committed to something.
 `brainstorming` (or `team-research`) → **spec-review** → `writing-plans` → `plan-review` → build.
 
 Its sibling gate, `plan-review`, closes the planning phase the same way.
+
+**Next:** once the findings are addressed (or consciously declined), the next hop is
+**`writing-plans`**.

@@ -1,6 +1,6 @@
 ---
 id: pat-27x6
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:48:22Z
@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 4: The playbook — pointers, not gates". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-18T23:40:14Z**
+
+DONE (Task 4). Through-line closes: grilling now has an OUTBOUND exit (team-research | brainstorming, offer-not-gate) it never had. brainstorming's contradiction resolved — terminal state is the WRITTEN SPEC, next hop is spec-review (it forbade that hop before via 'the ONLY skill you invoke after brainstorming is writing-plans'; the process-flow doublecircle + Implementation block both fixed). Duplicate review mechanisms reconciled: the inline 'fresh eyes' self-review is demoted to a cheap PLACEHOLDER SCAN (author cannot have fresh eyes on own work), the real review delegated to spec-review's fresh subagent; spec-document-reviewer-prompt.md kept as that review's PROMPT, not a 2nd path. Successor 'Next:' pointers added to team-research, spec-review, plan-review, writing-plans. NOTICE files preserved (ADR-0001). Clean-body rule applied. Acceptance: all 6 skills name a successor; contradiction grep = 0; NOTICEs present.
