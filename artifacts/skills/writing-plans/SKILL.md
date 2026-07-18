@@ -141,15 +141,23 @@ Every step must contain the actual content an engineer needs. These are **plan f
 
 ## Self-Review
 
-After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself.
+**Dispatch a reviewer. If subagents are available, dispatch one.** A fresh subagent starts with a
+clean context window, unsullied by the accumulated context of the session that produced the work. If
+the host has no subagents, do it inline and say so.
 
-**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
+*The author cannot have fresh eyes on their own work.* You know what each step *meant*; a reviewer
+with a clean context reads only what each step *says*. That gap is the entire value of the review —
+running the checklist against yourself closes none of it.
 
-**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
+Give the reviewer the plan and the spec, and this checklist:
 
-**3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+1. **Spec coverage:** point to the task implementing each spec requirement. List the gaps.
+2. **Placeholder scan:** any "TBD", "add appropriate error handling", "similar to Task N", or a step
+   that says *what* without showing *how*?
+3. **Type consistency:** do the types, signatures, and names in later tasks match what earlier tasks
+   defined? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
-If you find issues, fix them inline. If you find a spec requirement with no task, add the task.
+Fix what it finds. If a spec requirement has no task, add the task.
 
 ## Optional: Mirror Tasks Into Ticket
 
@@ -185,7 +193,10 @@ are using, so the next session knows where to look.
 
 ## Execution Handoff
 
-After saving the plan, hand off to the **executing-plans** skill to implement it task-by-task with review checkpoints. If your platform supports dispatching subagents, a fresh subagent per task (with review between tasks) gives higher-quality results than inline execution.
+After saving the plan, hand off to the **executing-plans** skill to implement it task-by-task with
+review checkpoints. **If subagents are available, dispatch one per task** (with review between
+tasks) — a fresh subagent starts with a clean context window, unsullied by the accumulated context
+of the session that produced the work. If the host has no subagents, execute inline and say so.
 
 The Self-Review above is your own pass over the plan. For an independent one — a fresh reviewer who
 reads what the plan *says* rather than what you meant — run the **plan-review** skill before

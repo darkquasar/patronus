@@ -1,6 +1,6 @@
 ---
 id: pat-uxdx
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:48:22Z
@@ -29,3 +29,7 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 5: Reviews run in a fresh subagent". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-18T23:45:15Z**
+
+DONE (Task 5). Two review skills that reviewed their OWN output inline under the name 'fresh eyes' now dispatch a fresh subagent. writing-plans Self-Review: 'a checklist you run yourself' -> 'Dispatch a reviewer' + the standard sentence + the rationale (the author cannot have fresh eyes on their own work). All 3 'If your platform supports dispatching subagents' hedges (writing-plans:188, executing-plans:14,72) replaced with the one standard sentence. Acceptance: hedges=0, 'checklist you run yourself'=0, standard sentence x4, rationale stated. NOTICE preserved. This also clears the last blocker on Task 10's full capstone battery.

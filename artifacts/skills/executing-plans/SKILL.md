@@ -11,7 +11,7 @@ Load plan, review critically, execute all tasks, report when complete.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-**Note:** This discipline works much better with access to subagents. If your platform supports dispatching a fresh subagent per task with review between tasks, prefer that — the quality of the work will be significantly higher.
+**Note:** This discipline depends on fresh context per task. **If subagents are available, dispatch one per task**, with a review between tasks — a fresh subagent starts with a clean context window, unsullied by the accumulated context of the session that produced the work. If the host has no subagents, execute inline and say so.
 
 ## The Process
 
@@ -69,4 +69,4 @@ After all tasks complete and verified:
 ## Integration
 
 - **writing-plans** — creates the plan this skill executes.
-- If your platform supports it, dispatch a fresh subagent per task and review between tasks instead of executing inline.
+- **If subagents are available, dispatch a fresh subagent per task and review between tasks** — rather than executing inline. If the host has no subagents, execute inline and say so.
