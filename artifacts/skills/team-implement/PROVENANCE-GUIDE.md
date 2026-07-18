@@ -4,38 +4,37 @@ Provenance tracks which spec drove which code changes. Instead of embedding head
 
 ## Where Provenance Lives
 
-Each research domain directory gets a `provenance.md` alongside its other artifacts:
+Each research-effort folder gets a `provenance.md` alongside its other artifacts:
 
 ```
-research/<domain>/<feature>/
-  research.md
-  spec.md
-  plan.md
-  tasks.md
-  provenance.md   ← tracks what files this spec changed
+docs/specs/NN-slug/
+  <slug>-research.md
+  <stream>-spec.md
+  <stream>-plan.md
+  provenance.md   ← tracks what files this stream changed
 ```
 
 ## provenance.md Format
 
 ```markdown
-# <Feature Name> — Provenance
+# <Stream Name> — Provenance
 
-| File | Tasks | Change Summary |
-|------|-------|----------------|
-| path/to/file.ts | A1, A2 | Description of what changed |
-| path/to/other.sql | B1 | Description of what changed |
+| File | Tickets | Change Summary |
+|------|---------|----------------|
+| path/to/file.ts | pat-a1b2, pat-c3d4 | Description of what changed |
+| path/to/other.sql | pat-e5f6 | Description of what changed |
 ```
 
 - **File**: path relative to project root
-- **Tasks**: task IDs from `tasks.md` that drove the change
+- **Tickets**: ticket ids from the tk graph (e.g. `pat-a1b2`) that drove the change
 - **Change Summary**: one-line description of what was modified
 
 ## Rules
 
-1. **One provenance.md per spec** — lives in the research domain directory, not in source code.
+1. **One provenance.md per stream** — lives in the research-effort folder, not in source code.
 2. **Do NOT add provenance headers to source files.** No `@spec`, `@plan`, `@changed` comments in code.
 3. **Every created or significantly modified file must appear in the table.** Trivial changes (typo, whitespace) can be skipped.
-4. **Reverse lookup**: to find all specs that touched a file, use `grep -r "filename" research/**/provenance.md`.
+4. **Reverse lookup**: to find all streams that touched a file, use `grep -r "filename" docs/specs/**/provenance.md`.
 5. **The Team Lead writes provenance.md** during Phase 6 (merge), not teammates during implementation.
 
 ## Why Not In-Code Headers?

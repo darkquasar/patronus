@@ -1,6 +1,6 @@
 ---
 id: pat-2dgf
-status: open
+status: closed
 deps: [pat-06p3, pat-xdxv]
 links: []
 created: 2026-07-12T04:48:22Z
@@ -33,3 +33,7 @@ PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecy
 **2026-07-12T04:59:27Z**
 
 SCOPE ADDED (2026-07-12): team-implement's Phase-2 seeding recipe must mint a RESOLVABLE pointer — --external-ref docs/specs/NN-slug/<stream>-plan.md (the FILE, not the folder: ADR-0003 guarantees a folder holds many plans, so a folder ref is ambiguous BY CONSTRUCTION), plus a 'PLAN: <file> → <verbatim section heading>' line in -d, plus the note that docs/specs/ is gitignored.
+
+**2026-07-18T23:36:48Z**
+
+DONE (Task 2). tasks.md is dead: Phase 2 'Check for tasks.md' -> 'Seed the tk work-graph' (one epic to group, one task per plan task, tk dep for order, --external-ref names the PLAN FILE + -d names the SECTION HEADING verbatim + GITIGNORED warning). Phase 3 reads from tk graph. PROVENANCE-GUIDE: task ids -> ticket ids (pat-a1b2), research/<domain> layout -> docs/specs/NN-slug/, prefixed names. TASKS-TEMPLATE.md deleted (git rm). TWO LOSSES stated in the skill: (1) ids opaque, no --id flag, concern lives in --tags; (2) tk query reads only frontmatter so 'no two teammates edit the same file' DEGRADES from a lookup to a Team-Lead READING step. Acceptance: grep tasks.md|TASKS-TEMPLATE across artifacts/ = 0; template gone; invariant + 'reading step' both stated. Clean-body rule applied.

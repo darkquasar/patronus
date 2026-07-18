@@ -39,24 +39,56 @@ Before defining any boundaries, you MUST understand the existing project structu
 
 ---
 
-## Phase 2: Check for tasks.md
+## Phase 2: Seed the tk work-graph
 
-Look for `tasks.md` in the feature folder. This is the implementation task breakdown.
+The work-graph is `tk` — plain markdown under `.tickets/`, committed like any other file, surviving
+across sessions, context compaction, and hand-offs between agents. (`tk` is at `~/.patronus/bin/tk` —
+resolve it with `command -v tk || echo ~/.patronus/bin/tk`.)
 
-**If `tasks.md` does NOT exist**, you must create it before proceeding:
+**If the plan has not been mirrored into tk yet, mirror it now**, one ticket per plan task:
 
-1. Enter plan mode.
-2. Analyze `spec.md` and `plan.md` to extract every discrete implementation task.
-3. Group tasks by concern boundary (the domains that will become teammate assignments).
-4. Write `tasks.md` in the feature folder, then set `tasks: true` in the folder's `meta.yaml` and bump `updated:`. See [TASKS-TEMPLATE.md](TASKS-TEMPLATE.md) for the format.
+```sh
+# One epic per plan — it GROUPS; it does not schedule.
+EPIC=$(tk create "<Feature name>" -t epic -p 1 \
+  --external-ref docs/specs/NN-slug/<stream>-plan.md)
 
-**Present `tasks.md` to the user for review before proceeding.** Do not spawn teammates until the user approves the task breakdown.
+# One task per plan task. -p carries the plan's ordering; --tags carries the stream.
+# The POINTER MUST RESOLVE: --external-ref names the PLAN FILE (a folder holds many),
+# and -d names the task's SECTION HEADING verbatim, copied from
+# `grep -n '^## Task' <plan>` — never retyped.
+tk create "<Plan task N's title>" \
+  -t task -p 1 --parent "$EPIC" --tags <stream> \
+  --acceptance "<the plan task's verification step — the ONE check that closes it>" \
+  -d "PLAN: docs/specs/NN-slug/<stream>-plan.md → '<the task's section heading, VERBATIM>'.
+      NOTE: docs/specs/ is GITIGNORED — that path exists only in a working tree that has it.
+      Files expected to change: path/a.go, path/b.go." \
+  --external-ref docs/specs/NN-slug/<stream>-plan.md
+
+# Order with EDGES, never with prose or with the epic.
+tk dep <task> <depends-on-task>
+```
+
+Then record this stream's epic id in **its** entry in `meta.yaml` — `epic: pat-a1b2` — and bump
+`updated:`.
+
+**Present the seeded graph** — `tk ls` + `tk ready` — **before spawning teammates.** Do not spawn
+until the user approves the breakdown.
+
+> **Two things the work-graph does NOT give you for free — set them up, and know their limits:**
+>
+> 1. **Ids are opaque.** tk generates `pat-a1b2`; there is no `--id` flag, so a readable per-concern
+>    id is not available. **The concern lives in `--tags`** — set them, and filter with
+>    `tk ls -T <concern>` / `tk ready -T <concern>`.
+> 2. **The file list is NOT machine-queryable.** `tk query` reads only frontmatter, and no field
+>    holds a file list. So the invariant below — **"no two teammates edit the same file"** — is a
+>    **reading step, and it is YOURS.** Before you spawn, read every ticket's `-d` file list and
+>    confirm the concerns are disjoint. An invariant nobody checks is not an invariant.
 
 ---
 
 ## Phase 3: Define Concern Boundaries
 
-From `tasks.md`, identify 2-5 concern boundaries that become teammates. Each boundary must:
+From the tk graph (`tk ls -T` to see the concerns, `tk show <epic>` to see the breakdown), identify 2-5 concern boundaries that become teammates. Each boundary must:
 
 1. **Own a separable set of files** — no two teammates should edit the same file. If overlap exists, either merge those concerns into one teammate or define a clear contract (e.g., "teammate A writes the type, teammate B imports it").
 2. **Have clear inputs and outputs** — what does this boundary produce that others consume? (types, schemas, API contracts, config entries)
