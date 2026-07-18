@@ -7,7 +7,7 @@ description: "/team-implement — Spec-Driven Team Implementation. Use when the 
 
 You are executing a **spec-driven team implementation**. Research has already been done by someone else. Your job is to read the specs, understand the architecture, define concern boundaries, and spin up a team of agents to build it.
 
-**You are the Team Lead.** Your job is to orchestrate, not to write the code yourself: you plan, create worktrees, spawn parallel teammates, coordinate, then merge their branches and clean up. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 4.
+**You are the Team Lead.** Your job is to orchestrate, not to write the code yourself: you plan, spawn parallel teammates in native worktree isolation, coordinate, then merge their branches and clean up. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 4.
 
 ---
 
@@ -69,59 +69,68 @@ From `tasks.md`, identify 2-5 concern boundaries that become teammates. Each bou
 
 ## Phase 4: Spawn the Team
 
-Follow the [Coordination Protocol](#coordination-protocol) at the end of this skill. Implementers WRITE code, so each needs an isolated git worktree on its own branch that you (the Team Lead) own and merge back:
+Follow the [Coordination Protocol](#coordination-protocol) at the end of this skill.
 
-1. **Create the task board** — `TaskCreate` for every item in `tasks.md`, with `addBlockedBy`/`addBlocks` for dependency ordering.
-2. **Create one worktree + branch per teammate** that you control (so you can merge them afterward), branching from the current HEAD:
-   ```bash
-   git worktree add .claude/worktrees/<teammate-name> -b team/<team-name>/<teammate-name> HEAD
-   ```
-3. **Spawn teammates** — issue ALL spawns in a **single message with parallel `Agent` calls**. For each: `subagent_type: "general-purpose"`, a stable `name` (how you address it via `SendMessage`), optional `run_in_background: true`, and a `prompt` (see [TEAMMATE-TEMPLATE.md](TEAMMATE-TEMPLATE.md)) that directs the teammate to `cd` into its assigned worktree as its first action and confirm the `cd` before doing anything else. Do NOT pass the deprecated `team_name`, and do NOT use the `Agent` tool's `isolation: "worktree"` here — you created the worktrees yourself so you retain ownership of the branches to merge.
+**Implementers WRITE code in parallel — that is the one and only reason they need isolation.**
+Get it from the `Agent` tool's `isolation: "worktree"`; the tool creates the worktree and branch,
+so you don't set up any git worktree yourself.
 
-**Why parent-created worktrees (not the `Agent` tool's `isolation: "worktree"`)**: per Anthropic's
-docs, worktree-isolated subagents (a) branch from your **default branch (origin/HEAD), NOT the
-parent's current HEAD** unless `worktree.baseRef: "head"` is set — so on a feature branch they'd
-get a stale baseline and diffs that may not merge cleanly — and (b) are **never auto-merged back**:
-a changed worktree is just *preserved on its branch*, and the subagent returns only a text summary,
-not a diff. By creating the worktrees yourself from the current `HEAD`, you branch from the right
-baseline AND own branches you can merge. (Anthropic's only first-party parallel-code pattern,
-`/batch`, sidesteps merging entirely by having each agent open a **pull request** — a valid
-alternative if you'd rather integrate via PRs than direct merge.) Coordinate via `SendMessage` (by
-name) and track via the `Task*` board.
+```
+Agent({ subagent_type: "general-purpose", name: "<teammate>", isolation: "worktree",
+        run_in_background: true, prompt: <TEAMMATE-TEMPLATE, filled in> })
+```
+
+Issue **ALL spawns in a single message** with parallel `Agent` calls.
+
+**Record what the spawn RETURNS**, not what you named it:
+- **`agentId`** and **`worktreeBranch`** are the durable handles.
+- **The branch name is `worktree-agent-<id>`; you don't choose it.** Read it from the result.
+- **A task's `owner` field is agent-set data and can drift from the name you assigned** — address
+  teammates by the name you spawned them with, not by a task's `owner`.
+
+The agent commits to `worktree-agent-<id>`, that commit is reachable from the main repo, and the
+lead merges it back with `git merge worktree-agent-<id> --no-ff` (Phase 6).
+
+**⚠️ A worktree with a commit is not auto-reclaimed, and `.claude/` is gitignored, so the leftover
+is invisible to `git status`. Cleanup is MANDATORY and it is yours (Phase 6, Cleanup).**
 
 ### Critical Spawn Rules
 
 - **Do NOT paste code into the prompt.** Do NOT tell teammates HOW to implement things. Define the boundary, point to the specs, and let them figure it out. They have full access to the codebase and can read any file.
-- **Do NOT assign individual tasks in the prompt.** Point them to `tasks.md` and their concern section. They will pick up tasks themselves.
-- **Spawn all teammates in a single message** with parallel `Task` calls.
+- **Do NOT assign individual tasks in the prompt.** Point them at their concern's ready set — `tk ready -T <concern>`. They will pull tasks themselves.
+- **Spawn all teammates in a single message** with parallel `Agent` calls.
 
 ---
 
-## Phase 5: Monitor and Coordinate
+## Phase 5: Coordinate, then PULL
 
 While teammates work:
 
-1. **Monitor** `TaskList` for progress.
-2. **Coordinate dependencies** — when teammate A completes work that teammate B needs, use `SendMessage` to tell B to pull from A's branch.
-3. **Unblock** — if a teammate is stuck, provide targeted guidance. Point to patterns in the codebase, clarify spec intent. Still do not write their code.
-4. **Do NOT do the teammates' work.** Your job is orchestration, not implementation.
+1. **Coordinate dependencies** — when teammate A completes work that teammate B needs, use `SendMessage` to tell B to pull from A's branch.
+2. **Unblock** — if a teammate is stuck, provide targeted guidance. Point to patterns in the codebase, clarify spec intent. Still do not write their code.
+3. **Do NOT do the teammates' work.** Your job is orchestration, not implementation.
+4. **The lead PULLS — it does not wait to be pushed.** See the Coordination Protocol's PULL rule. A returned message is not the deliverable; the committed branch is. When a background agent notifies you it has finished, go and confirm the commit exists on `worktree-agent-<id>` — do not synthesize from a status.
 
 ---
 
 ## Phase 6: Merge and Verify
 
-When all teammates' tasks are complete (you're notified as each background agent finishes):
+When all teammates' tasks are complete (a background agent auto-notifies on completion — that notification is your signal to go PULL, not the deliverable itself):
 
-1. **Merge branches** sequentially into the parent branch with `--no-ff` (a completed agent has already returned — there is nothing to shut down).
-2. **Resolve conflicts** if any — do not force-push or skip.
+1. **Confirm each branch has the commit** — the deliverable is the commit on `worktree-agent-<id>`, not a returned message. Read the branch name from each spawn's result; never trust a task's `owner`.
+2. **Merge branches** sequentially into the parent branch with `--no-ff` (a completed agent has already returned — there is nothing to shut down):
+   ```bash
+   git merge worktree-agent-<id> --no-ff -m "Merge <teammate> work: <summary>"
+   ```
+3. **Resolve conflicts** if any — do not force-push or skip.
 4. **Run verification**:
    - Type checking (e.g., `tsc --noEmit`, `mypy`, `cargo check`)
    - Tests (e.g., `npm test`, `pytest`, `cargo test`)
    - Any spec-defined verification steps
-5. **Update `tasks.md`** — mark all completed tasks with `[x]`.
-6. **Write `provenance.md`** — in the feature folder, list every created/modified file with task IDs and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
-7. **Mark implementation complete in `meta.yaml`** — the feature folder's `meta.yaml` already has `tasks: true`; bump `updated:`. (Optionally record an `implemented: true` flag — the manifest is extensible.) Do not rename the folder; the `NN-slug` name is stable.
-8. **Cleanup** — remove the worktrees you created and delete the teammate branches (see the Coordination Protocol's Cleanup step).
+5. **Close the finished tickets** — `tk close <id>` for each. Closing is what unblocks the next ready item; work left open stalls whoever picks up next.
+6. **Write `provenance.md`** — in the feature folder, list every created/modified file with ticket ids and change summaries. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
+7. **Record this stream's `epic:` in `meta.yaml`** — the tk epic id printed at seeding — and bump `updated:`. Do not rename the folder; the `NN-slug` name is stable.
+8. **Cleanup (MANDATORY)** — remove the native worktrees and delete the teammate branches (see the Coordination Protocol's Cleanup step). Nothing is reclaimed once a worktree has a commit, and `.claude/` is gitignored, so a leak is invisible to `git status`.
 
 ---
 
@@ -157,75 +166,99 @@ See `<research-domain>/provenance.md` for full file-to-spec traceability.
 
 ## Hard Rules (Non-Negotiable)
 
-1. **Never start coding without an approved `tasks.md`.**
+1. **Never start coding without an approved tk graph.**
 2. **Never prescribe code to teammates.** Define boundaries, point to specs, let them write.
 3. **Maximum 5 teammates.** Prefer fewer when the work allows it.
 4. **No two teammates should edit the same file.** Resolve overlaps before spawning.
 5. **Write `provenance.md`** in the feature folder listing every created/modified file. Do NOT add provenance headers to source files. See [PROVENANCE-GUIDE.md](PROVENANCE-GUIDE.md).
 6. **Run verification before declaring done.** A description of a test is not a test.
-7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** (plan, create worktrees, spawn parallel teammates, coordinate, merge, cleanup).
-8. **Present `tasks.md` to user for approval** before spawning any teammates.
+7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** (plan, spawn parallel teammates in native isolation, coordinate, PULL, merge, cleanup).
+8. **Present the seeded graph (`tk ls` + `tk ready`) to the user for approval** before spawning any teammates.
+9. **The lead PULLS.** Completion is the artifact — a committed branch — never a status or a returned message. Do not synthesize from a status.
 
 ---
 
 ## Coordination Protocol
 
 This is the protocol the Team Lead follows end-to-end. Implementation **writes code**, so each
-teammate works in a dedicated git worktree on its own branch — created and owned by YOU (the
-Team Lead) so you can merge each branch back after completion. Spawn teammates as parallel
-`Agent` calls (there is a single implicit team — no team to create, no `team_name` to pass).
-Coordinate by `name` via `SendMessage`; track via the `Task*` board.
+teammate works in an isolated worktree on its own branch. Get that isolation from the `Agent`
+tool's `isolation: "worktree"`; the tool creates the worktree and its `worktree-agent-<id>` branch,
+that branch is reachable from the main repo, and the lead merges it back. Spawn teammates as
+parallel `Agent` calls and coordinate by `name` via `SendMessage`.
 
 **Team sizing:** Maximum 5 teammates for implementation work — coordination overhead dominates
 beyond that. Use 2 for focused parallel work, 3–5 for broader feature builds with distinct
 domains. Every teammate must own a clearly separable domain (files, modules, layers); if two
 would edit the same files, merge them into one.
 
-### Step 1: Plan & create the task board
+### The lead PULLS. Completion is the artifact, not a message.
+
+A subagent can finish its work and go idle **without ever reporting it back** — even one told its
+findings must be its final message. Treat delivery as your job to collect, not the member's job to
+push:
+
+1. **Assign each member an explicit output at spawn** — for implementers, the deliverable is a
+   **commit on its `worktree-agent-<id>` branch**; for read-only members, a `<workdir>/<member>-findings.md`
+   path you choose and put in the prompt.
+2. **Go and read that artifact.** A returned message is a convenience, not the deliverable.
+3. **Completion = the artifact exists** — the commit is on the branch, or the file is non-empty. A
+   `completed` status can accompany a stream that produced nothing, so confirm the artifact itself.
+4. **If the artifact is missing after the agent has terminated, the stream did not happen.** Re-run
+   it, or do it inline — do not synthesize from a status.
+5. Members also return their findings as text, as a redundant channel; read the artifact regardless.
+
+**⚠️ The patience clause.** A missing artifact while the agent is **still running** means nothing —
+wait. Background agents auto-notify on completion, and *that* notification is your cue to go read the
+artifact. Do not poll early and do not declare an agent dead before it terminates.
+
+**Do not use `TaskList` as a progress signal.** A self-reported status is neither liveness nor a
+deliverable — read the artifact after the agent terminates.
+
+**`git status` after every member terminates**, to confirm no teammate left the working tree
+mutated outside its worktree branch.
+
+### Step 1: Plan & seed the tk graph
 1. Enter plan mode. Identify the parallel work streams. Each stream becomes a teammate.
-2. `TaskCreate` to define all work items upfront with clear descriptions and acceptance criteria.
-3. `TaskUpdate` with `addBlockedBy`/`addBlocks` to express ordering constraints.
+2. Seed the tk graph from the plan: one epic to group, one ticket per plan task, `tk dep` for order. Tag each ticket with its concern (`--tags <concern>`) so teammates can pull with `tk ready -T <concern>`.
+3. Present the seeded graph (`tk ls` + `tk ready`) to the user and get approval before spawning.
 
-### Step 2: Set up worktrees (MANDATORY before spawning)
-Determine the parent branch (the branch you are on now — typically `main` or a feature branch). Create one worktree + branch per teammate that you own:
-```bash
-# Repeat for each teammate
-git worktree add .claude/worktrees/<teammate-name> -b team/<team-name>/<teammate-name> HEAD
-```
-Naming convention: `team/<team-name>/<teammate-name>` (e.g., `team/auth-feature/backend`).
-
-### Step 3: Spawn teammates
+### Step 2: Spawn teammates in native isolation
 Spawn ALL teammates in a **single message with parallel `Agent` calls** for maximum concurrency.
-For each: `subagent_type: "general-purpose"`, a stable `name` (how you address it via
-`SendMessage`), optional `run_in_background: true`, and a prompt that directs the teammate to
-`cd` into its assigned worktree as its FIRST action and confirm the `cd` before doing anything
-else. Do NOT pass the deprecated `team_name`, and do NOT use the `Agent` tool's built-in
-`isolation: "worktree"` — you created the worktrees yourself so you own the branches to merge.
+For each: `subagent_type: "general-purpose"`, `isolation: "worktree"`, a stable `name`, optional
+`run_in_background: true`, and a filled-in [TEAMMATE-TEMPLATE.md](TEAMMATE-TEMPLATE.md) prompt. The
+tool creates the worktree and its branch for you. **Record the returned `agentId` and
+`worktreeBranch`**; the branch name is assigned by the tool, and a task's `owner` field is not a
+reliable handle — address teammates by the name you gave them.
 
-### Step 4: Assign & coordinate
-- `TaskUpdate` with `owner` to assign tasks; teammates report status via `TaskUpdate`.
+### Step 3: Coordinate, then PULL
 - `SendMessage` (address teammates by `name`) to unblock, redirect, or share context. When a
   teammate completes work another depends on, notify the downstream teammate to pull.
-- Monitor `TaskList`/`TaskGet` for progress. Do NOT do the teammates' work — you orchestrate.
+- **PULL, per the rule above.** When a background agent notifies completion, go and confirm the
+  commit exists on `worktree-agent-<id>`. Orchestrate; do not do the teammates' work.
 
-### Step 5: Merge (Orchestrator only)
-When all teammates' tasks are complete (you're notified as each background agent finishes) and
-each has committed to its branch:
+### Step 4: Merge (Orchestrator only)
+When all teammates have committed to their branches (confirmed by PULL, not by status):
 1. **Merge each branch into the parent** sequentially, from the main project directory (NOT a worktree), resolving conflicts as you go:
    ```bash
-   git merge team/<team-name>/<teammate-name> --no-ff -m "Merge <teammate-name> work: <summary>"
+   git merge worktree-agent-<id> --no-ff -m "Merge <teammate> work: <summary>"
    # ... repeat for each teammate
    ```
    Use `--no-ff` to preserve branch history. If a merge conflicts, resolve it manually — do not force or skip.
 2. **Verify the merged result** — run tests, check for regressions, confirm everything integrates.
 
-### Step 6: Cleanup
-After successful merge and verification:
+### Step 5: Clean up (MANDATORY)
+A worktree with a commit is not auto-reclaimed, and `.claude/` is gitignored — **so the leftover is
+invisible to `git status`.** For each member:
 ```bash
-git worktree remove .claude/worktrees/<teammate-name>   # repeat per teammate
-git branch -d team/<team-name>/<teammate-name>          # repeat per teammate
-rmdir .claude/worktrees 2>/dev/null
+git worktree remove --force .claude/worktrees/agent-<id>
+git branch -D worktree-agent-<id>
 ```
-**If something goes wrong during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a teammate needs to rebase.
+Then `git worktree list` and `git status` to confirm the tree is clean. **If something goes wrong
+during merge:** do not force it — stop, re-plan, and consider whether work needs redoing or a
+teammate needs to rebase.
+
+### Step 6: Let agents terminate on their own
+Background agents auto-notify on completion; there is no shutdown handshake to perform and no team to
+tear down. Track status with `TaskUpdate`, not with structured JSON status messages.
 
 $ARGUMENTS

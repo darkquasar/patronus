@@ -77,7 +77,7 @@ Follow the [Coordination Protocol](#coordination-protocol) at the end of this sk
    - `name`: a stable researcher name (e.g. `researcher-auth`) — how you address it via `SendMessage`.
    - `prompt`: the stream's question + brief (see [RESEARCHER-TEMPLATE.md](RESEARCHER-TEMPLATE.md)). Direct the researcher to write its findings to its own `*-findings.md` in the research directory and to call `TaskUpdate` to mark its task complete.
    - Optionally `run_in_background: true` to run async and be notified on completion.
-   Do NOT pass the deprecated `team_name`, and do NOT create git worktrees — research writes only findings files, which don't conflict.
+   Researchers need no git worktrees — each writes only its own findings file, so nothing conflicts.
 
 **Why parallel agents**: each researcher investigates one unknown concurrently and writes its own `*-findings.md` — no shared mutable state, no file conflicts, no merge step. The Team Lead coordinates via `SendMessage` (by name) and tracks via the `Task*` board, then synthesizes the findings.
 
@@ -89,13 +89,13 @@ Follow the [Coordination Protocol](#coordination-protocol) at the end of this sk
 
 ---
 
-## Phase 4: Monitor and Coordinate
+## Phase 4: Coordinate, then PULL
 
 While researchers work:
 
-1. **Monitor** `TaskList` for progress.
-2. **Cross-pollinate** — if researcher A discovers something that affects researcher B's stream, use `SendMessage` to share the context.
-3. **Redirect** — if a researcher hits a dead end, provide alternative angles or reframe the question.
+1. **Cross-pollinate** — if researcher A discovers something that affects researcher B's stream, use `SendMessage` to share the context.
+2. **Redirect** — if a researcher hits a dead end, provide alternative angles or reframe the question.
+3. **PULL each stream's findings yourself** (see the Coordination Protocol's PULL rule). When a background agent notifies completion, go and read its `*-findings.md` — a returned message is not the deliverable. Track status with `TaskUpdate`, not by watching a progress board.
 4. **Do NOT do the researchers' work.** Your job is orchestration, not investigation.
 
 ---
@@ -120,7 +120,7 @@ When all researchers' tasks are complete (you're notified as each background age
      tasks:    false
    ```
 
-(Researchers are read-only `Explore` agents writing findings files — there are no branches to merge and nothing to shut down; a completed agent has already returned.)
+(Researchers are read-only `Explore` agents writing findings files — no branches to merge, no cleanup. A completed background agent has already returned; let it terminate on its own.)
 
 ### Deliverable Gate (MANDATORY before proceeding)
 
@@ -194,8 +194,8 @@ Run `/team-implement <research-dir>` to begin implementation.
 
 This is the protocol the Team Lead follows end-to-end. Research is **read-only**: researchers
 investigate the codebase/web and each writes its own `*-findings.md`. Because no researcher
-edits shared files, there are **no git worktrees, no branches, and no merge step** — the
-machinery that team-*implement* needs does not apply here.
+edits shared files, they need **no git worktrees, no branches, and no merge step** — that isolation
+machinery is only for teammates that write code (that is team-implement's job, not this one's).
 
 **Team sizing:** Maximum 4 researchers — coordination overhead dominates beyond that. Use 2 for
 a focused question, 3–4 for a broad domain with distinct unknowns. Each researcher owns one
@@ -211,19 +211,35 @@ Spawn ALL researchers in a **single message with parallel `Agent` calls** for ma
 concurrency. For each: `subagent_type: "Explore"` (read-only), a stable `name` (how you address
 it via `SendMessage`), and a `prompt` carrying the stream question + brief. Optionally
 `run_in_background: true` for async completion notifications. Tell each researcher to write its
-findings to its own `*-findings.md` and to `TaskUpdate` its task to complete when done. Do NOT
-pass `team_name` (deprecated/ignored) and do NOT create worktrees — research writes no shared
-code.
+findings to its own `*-findings.md` and to `TaskUpdate` its task to complete when done. Researchers
+need no worktrees — they write no shared code.
+
+### The lead PULLS. Completion is the artifact, not a message.
+
+A researcher can finish and go idle **without ever reporting back** — even one told its findings must
+be its final message. So collect delivery yourself rather than waiting to be pushed:
+
+1. **Assign each researcher an explicit output path at spawn** — `<research-dir>/<stream>-findings.md`.
+   You choose it and put it in the prompt.
+2. **Go and read that file.** A returned message is a convenience, not the deliverable.
+3. **Completion = the file exists and is non-empty.** A `completed` status can accompany a stream
+   that produced nothing, so confirm the file itself.
+4. **If the file is missing after the agent has terminated, the stream did not happen** — re-run it
+   or do it inline; do not synthesize from a status.
+
+**⚠️ The patience clause.** A missing file while the agent is **still running** means nothing — wait.
+Background agents auto-notify on completion, and that notification is your cue to go read the file.
+Do not poll early.
 
 ### Step 3: Coordinate
 - `SendMessage` (address researchers by `name`) to share cross-stream context or redirect a
   researcher that hits a dead end. Researchers report status via `TaskUpdate`, not JSON messages.
-- Monitor progress with `TaskList`/`TaskGet`. Do NOT do the researchers' work — your job is
-  orchestration and, ultimately, synthesis.
+- Orchestrate, and ultimately synthesize; do not do the researchers' work. Read the findings files
+  after each agent terminates rather than watching a progress board.
 
 ### Step 4: Collect & synthesize
-As each researcher completes (you're notified for background agents), read its `*-findings.md`.
+As each researcher terminates (you're notified for background agents), read its `*-findings.md`.
 When all streams are in, synthesize `research.md` + `spec.md` + `plan.md` yourself (the Team
-Lead's core job). There is nothing to merge or clean up — the findings files are the audit trail.
+Lead's core job). The findings files are the audit trail; there is nothing to merge or clean up.
 
 $ARGUMENTS

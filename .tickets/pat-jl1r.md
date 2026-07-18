@@ -1,6 +1,6 @@
 ---
 id: pat-jl1r
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:48:50Z
@@ -29,3 +29,11 @@ PLAN: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → 'Tas
 **2026-07-12T04:56:13Z**
 
 PLAN SECTION (verbatim heading): docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md → "## Task 6: The team protocol — flavour it, and make the lead PULL". It carries the exact files, the code, and the step-by-step. NOTE: docs/specs/ is GITIGNORED — this path exists only in a working tree that has it. If it is absent the plan was never shared; ask, do not improvise.
+
+**2026-07-18T22:05:35Z**
+
+DONE (pat-jl1r/Task 6). team-{implement,research} SKILL.md + both templates rewritten: native isolation:worktree (ban reversed), lead PULLS (completion=artifact, patience clause), team-research has no worktree phase, Monitor-TaskList removed, shutdown handshake removed. User steer applied: bodies are POSITIVE present-tense for a fresh LLM — all backward-referencing archaeology ('do not pass deprecated team_name', 'this reverses an earlier ban', 'used to mandate') was STRIPPED, not just reworded, because a fresh session never knew the prior state. Acceptance: grep for TeamCreate|TeamDelete|team_name|shutdown_request AND Monitor TaskList both = 0; patronus.yaml targets:[claude] UNCHANGED; suite green. Codex flavour filed as pat-7i2i.
+
+**2026-07-18T22:05:35Z**
+
+RESIDUE FOR pat-2dgf (Task 2, blocked on pat-xdxv): Phase 0 + Phase 2 of team-implement/SKILL.md still reference tasks.md / completeness: / TASKS-TEMPLATE.md. I did NOT touch those — that full kill is pat-2dgf's verifiable outcome. My Task-6 edits use the tk seam vocabulary the plan's Task 6 gives (tk ready -T <concern>, seed the tk graph), so TEAMMATE-TEMPLATE + Coordination Protocol are already tk-based; pat-2dgf must reconcile Phase 0/2 to match and delete TASKS-TEMPLATE.md.

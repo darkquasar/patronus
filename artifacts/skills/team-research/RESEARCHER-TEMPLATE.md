@@ -39,10 +39,13 @@ Your findings file MUST include:
 2. **Touch the actual code.** Don't theorize about how something works — read it, trace it, test it.
 3. **Note surprises.** If something behaves differently than expected, that's a critical finding.
 4. **Stay in your lane.** Answer YOUR question. Don't speculatively investigate other streams.
-5. **Write your findings file** to the path above when done — that file is your deliverable
-   (you are read-only; do not commit or modify other files).
+5. **Write your findings file** to the path above when done — **that file is your deliverable.** The
+   Team Lead reads it directly; it will go and read your file rather than wait for you to report.
+   Summarize in your final message too, as a courtesy, but the file is what counts. You are
+   read-only: do not commit or modify other files.
 6. Use SendMessage to flag blockers to the Team Lead by name.
-7. Use TaskUpdate to mark your task `in_progress` when starting and `completed` when done.
+7. Use TaskUpdate to mark your task `in_progress` when starting and `completed` when done — and only
+   mark it complete once the findings file actually exists and is non-empty.
 
 Read CLAUDE.md Section 2B for your full operating instructions.
 ```
