@@ -95,6 +95,54 @@ func Classify(current []byte, exists bool, recorded string, source []byte, hasSo
 	return OK
 }
 
+// ClassifySection reconciles ONE fenced section of a composed APPEND file
+// (CLAUDE.md / AGENTS.md), where several artifacts each fold a
+// `<!-- patronus:start <name> -->` block into one shared file. Whole-file
+// Classify cannot judge these: the deployed file is a fold of MANY sources, so it
+// never equals any single source's would-be bytes, and every contributor records
+// the SAME whole-file checksum — so a second contributor's legitimate append reads
+// as a user edit. The reconciliation that IS meaningful is per section body.
+//
+//   - onDisk/present: the body currently inside this file's fenced block for this
+//     section (present=false means the block is absent from the deployed file).
+//   - source/hasSource: the body the catalog would fold in now for this section
+//     (hasSource=false means the artifact is no longer in the catalog).
+//
+// Deliberate limitation: state records a whole-file checksum per APPEND, never a
+// per-section one, so there is no recorded section body to diff against. This means
+// a section whose on-disk body differs from the source is reported STALE — the
+// actionable verdict, since `install`'s AppendSection is idempotent and re-folds it
+// — rather than distinguishing "the user hand-edited our block" from "the source
+// moved on." Both resolve the same way (re-run install), so the merged verdict
+// loses no actionable information; recording a per-section checksum to split them is
+// future work.
+func ClassifySection(onDisk []byte, present bool, source []byte, hasSource bool) Verdict {
+	if !present {
+		// We recorded folding this section in, and the block is gone from the file.
+		return Missing
+	}
+	if !hasSource {
+		// Our block is still in the file, but the catalog no longer has the artifact
+		// that owns it — the record diverged from reality (e.g. a removed instruction).
+		return OrphanedState
+	}
+	// Compare on the fence's OWN normalization. The composer trims trailing newlines
+	// off the body before writing it between the markers, and the extractor trims
+	// surrounding newlines off what it reads back — so the raw source body (which may
+	// carry a trailing newline the fence would drop) must be trimmed the same way, or
+	// every section reads as STALE over a newline the file never stored.
+	if !bytes.Equal(trimFence(onDisk), trimFence(source)) {
+		return Stale
+	}
+	return OK
+}
+
+// trimFence normalizes a section body the way the fenced-block composer/extractor
+// do — stripping surrounding newlines — so a source body and an on-disk body are
+// compared on the bytes the fence actually stores, not on incidental trailing
+// whitespace.
+func trimFence(b []byte) []byte { return bytes.Trim(b, "\n") }
+
 // checksum matches the form internal/state records ("sha256:<hex>"), so the two can
 // be compared directly. It mirrors state.checksum and remove.driftsFromChecksum —
 // the same digest, finally read on a path other than `remove`.

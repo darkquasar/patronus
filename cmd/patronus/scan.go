@@ -264,6 +264,14 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		item     string
 		checksum string
 	}
+	// One recorded APPEND section of a composed file (CLAUDE.md/AGENTS.md). Several
+	// of these can share a path — one per contributing artifact — which is exactly
+	// why they cannot be keyed by path like the whole-file rows.
+	type recordedSection struct {
+		item    string
+		path    string
+		section string
+	}
 	// The catalog's artifact names. Only these go through the adapter spine — a
 	// recipe (tk, gitleaks, …) FETCHes a binary with no source to diff, so feeding
 	// its name to plan.Compute would just raise "unknown artifact".
@@ -273,6 +281,8 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	}
 
 	rows := map[string]recordedFile{}
+	var sectionRows []recordedSection
+	appendPath := map[string]bool{} // paths reconciled per-section, not whole-file
 	installedArtifacts := map[string]bool{}
 	for _, dir := range []string{inv.Home, inv.ProjectDir} {
 		if dir == "" {
@@ -293,9 +303,23 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 				if f.Action == string(diff.Fetch) {
 					continue
 				}
+				// A composed APPEND (CLAUDE.md/AGENTS.md) is a fold of many sources
+				// into one file; its whole-file checksum never matches any single
+				// source, so it is reconciled PER SECTION below, not here.
+				if f.Action == string(diff.Append) && f.Section != "" {
+					sectionRows = append(sectionRows, recordedSection{item: it.Artifact, path: f.Path, section: f.Section})
+					appendPath[f.Path] = true
+					continue
+				}
 				rows[f.Path] = recordedFile{item: it.Artifact, checksum: f.Checksum}
 			}
 		}
+	}
+	// A path that ANY contributor appended to is a composed file; never also
+	// whole-file reconcile it (a non-section MERGE row for the same file would
+	// otherwise re-introduce the false whole-file compare).
+	for p := range appendPath {
+		delete(rows, p)
 	}
 
 	// Materialize ONLY the installed artifacts, so their source bytes are on disk for
@@ -312,7 +336,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	// What the INSTALLED artifacts would deploy now: for each of their paths, the
 	// bytes the catalog source would write there. Pass 1 reads this to tell STALE
 	// from OK. Non-installed artifacts are pass 2's job (and need no source).
-	would := wouldDeploy(cat, inv, adapters, wd, names, warnf)
+	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, names, warnf)
 
 	var findings []drift.Finding
 	recorded := map[string]bool{}
@@ -330,6 +354,31 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		findings = append(findings, drift.Finding{
 			Path:    path,
 			Item:    row.item,
+			Verdict: v,
+			Detail:  driftDetail(v),
+		})
+	}
+
+	// PASS 1b: composed APPEND files, reconciled PER SECTION. A CLAUDE.md/AGENTS.md
+	// is a fold of many fenced sections from different artifacts; whole-file Classify
+	// cannot judge it (§ drift.ClassifySection). For each recorded section, compare
+	// the body inside its fence on disk against the body the source would fold now.
+	for _, sr := range sectionRows {
+		recorded[sr.path] = true
+		current, exists := readIfExists(sr.path)
+		var onDisk []byte
+		present := false
+		if exists {
+			onDisk, present = adapter.SectionBody(current, sr.section)
+		}
+		src, hasSource := wouldSection[sectionKey{sr.path, sr.section}]
+		v := drift.ClassifySection(onDisk, present, src, hasSource)
+		if v == drift.OK {
+			continue
+		}
+		findings = append(findings, drift.Finding{
+			Path:    sr.path,
+			Item:    sr.item,
 			Verdict: v,
 			Detail:  driftDetail(v),
 		})
@@ -569,18 +618,36 @@ type wouldWrite struct {
 	item   string
 }
 
+// sectionKey identifies one fenced APPEND section within a shared composed file.
+type sectionKey struct {
+	path    string
+	section string
+}
+
 // wouldDeploy maps every path the NAMED artifacts would deploy to -> what they would
-// write there. Pass 1 reads this to tell STALE from OK for the installed set.
-func wouldDeploy(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, names []string, warnf func(string, ...any)) map[string]wouldWrite {
+// write there (for whole-file STALE/OK), AND every composed APPEND section
+// (path+name) -> the body the catalog would fold in there now (for per-section
+// reconciliation of CLAUDE.md/AGENTS.md). deployDiffs computes one artifact at a
+// time, so each artifact's own diff carries ITS section's Body — which is exactly
+// the per-section source a fold cannot recover from the merged whole file.
+func wouldDeploy(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, names []string, warnf func(string, ...any)) (map[string]wouldWrite, map[sectionKey][]byte) {
 	diffs := deployDiffs(cat, inv, adapters, wd, names, warnf)
 	out := make(map[string]wouldWrite, len(diffs))
+	sections := map[sectionKey][]byte{}
 	for _, d := range diffs {
 		if d.IsDir {
 			continue
 		}
 		out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
+		// Capture the section body whenever the diff carries one — including when
+		// plan.Compute has already downgraded the APPEND to SKIP because the section
+		// is present and unchanged (the reclassify keeps Section intact, only Action
+		// changes). Gating on Action==Append would miss exactly the OK case.
+		if d.Section != nil {
+			sections[sectionKey{d.Path, d.Section.Name}] = d.Section.Body
+		}
 	}
-	return out
+	return out, sections
 }
 
 // readIfExists returns a file's bytes and whether it is there. An unreadable file

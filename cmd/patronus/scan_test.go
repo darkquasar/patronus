@@ -365,3 +365,90 @@ func TestScanReportsStale(t *testing.T) {
 		t.Errorf("an untouched deployed file must NEVER be reported USER-EDITED:\n%s", out)
 	}
 }
+
+// hasDriftItem is hasDrift plus the ITEM column: a composed CLAUDE.md carries one
+// row per fenced section, all sharing the file path, so the section's OWNING
+// artifact is the only thing that tells them apart.
+func hasDriftItem(out, verdict, item, path string) bool {
+	for _, ln := range strings.Split(out, "\n") {
+		f := strings.Fields(ln)
+		if len(f) >= 3 && f[0] == verdict && f[1] == item && f[2] == path {
+			return true
+		}
+	}
+	return false
+}
+
+// TestScanReportsComposedSectionDrift is the acceptance gate for the composed/APPEND
+// gap (pat-wkp3). A CLAUDE.md/AGENTS.md is a fold of many fenced sections from
+// different artifacts; whole-file Classify cannot judge it, because the file never
+// equals any single source and every contributor records the same whole-file
+// checksum. So drift reconciles PER SECTION.
+//
+// This installs TWO instructions into ONE CLAUDE.md, moves ONLY the first one's
+// source, and asserts the scan reports STALE for that section's artifact while the
+// untouched section stays silent — proving the verdict is per section, not per file.
+//
+// Class A: it asserts Patronus's BEHAVIOR, so it binds to the fixture catalog.
+func TestScanReportsComposedSectionDrift(t *testing.T) {
+	root := fixtureCatalog(t)
+	manifestPath := filepath.Join(root, "artifacts", "instructions", "fix-instruction", "patronus.yaml")
+	src := filepath.Join(root, "artifacts", "instructions", "fix-instruction", "INSTRUCTIONS.md")
+
+	f := serveFixtureFrom(t, root)
+	home := withRemoteEnv(t, f)
+
+	// Both instructions fold into ONE global CLAUDE.md as distinct fenced sections.
+	if _, errOut, err := runInstall(t, "fix-instruction", "fix-instruction-2", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")
+	cb := string(mustRead(t, claudeMd))
+	for _, want := range []string{"patronus:start fix-instruction", "patronus:start fix-instruction-2"} {
+		if !strings.Contains(cb, want) {
+			t.Fatalf("precondition: CLAUDE.md missing %q:\n%s", want, cb)
+		}
+	}
+
+	// ONLY fix-instruction's source moves on (new version, new body).
+	bumped := strings.Replace(string(mustRead(t, manifestPath)), "version: 1.0.0", "version: 1.1.0", 1)
+	if !strings.Contains(bumped, "version: 1.1.0") {
+		t.Fatal("precondition: could not bump fix-instruction's version")
+	}
+	if err := os.WriteFile(manifestPath, []byte(bumped), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(src, []byte("# Fixture instruction\n\nThe source section says something NEW.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f2 := serveFixtureFrom(t, root)
+	fetcherForCommands, registryFetcher, fetcherForDeploy = f2, f2, f2
+	t.Chdir(t.TempDir())
+	if err := os.RemoveAll(filepath.Join(home, ".patronus", "cache")); err != nil {
+		t.Fatal(err)
+	}
+
+	// The deployed CLAUDE.md is untouched — nothing re-folded it.
+	if got := string(mustRead(t, claudeMd)); got != cb {
+		t.Fatalf("precondition: deployed CLAUDE.md must be untouched")
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	if !hasDriftItem(out, "STALE", "fix-instruction", claudeMd) {
+		t.Errorf("scan did not report the moved-on SECTION as STALE — composed files "+
+			"were the known gap, reconciled per section now:\n%s", out)
+	}
+	// The untouched section's source did NOT move, so it must not be flagged. A
+	// whole-file compare would have wrongly flagged BOTH (or neither).
+	if hasDriftItem(out, "STALE", "fix-instruction-2", claudeMd) {
+		t.Errorf("scan wrongly reported the UNCHANGED section as STALE — the verdict is "+
+			"not per-section:\n%s", out)
+	}
+	if hasVerdict(out, "USER-EDITED") {
+		t.Errorf("an untouched composed file must NEVER be reported USER-EDITED:\n%s", out)
+	}
+}

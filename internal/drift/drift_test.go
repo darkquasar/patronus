@@ -102,3 +102,65 @@ func TestClassify(t *testing.T) {
 		})
 	}
 }
+
+// TestClassifySection covers the per-section reconciliation of composed APPEND
+// files (CLAUDE.md/AGENTS.md), which whole-file Classify cannot judge: the file is
+// a fold of many sources, so it never equals any single one, and every contributor
+// records the same whole-file checksum. The verdict that matters here is STALE — it
+// is what finally catches a section (e.g. agent-rules) whose source moved on while
+// the composed file was never re-folded.
+func TestClassifySection(t *testing.T) {
+	ours := []byte("the section body we fold in\n")
+	moved := []byte("the section body the source has NOW\n")
+
+	tests := []struct {
+		name      string
+		onDisk    []byte
+		present   bool
+		source    []byte
+		hasSource bool
+		want      Verdict
+	}{
+		{
+			name:   "section present and current -> OK",
+			onDisk: ours, present: true, source: ours, hasSource: true,
+			want: OK,
+		},
+		{
+			// The composed-file bug this task closes: the source section moved on
+			// (agent-rules gained a heuristic) but the file was never re-folded.
+			name:   "source section moved on -> STALE",
+			onDisk: ours, present: true, source: moved, hasSource: true,
+			want: Stale,
+		},
+		{
+			// A trailing newline the fence drops must NOT read as drift — the composer
+			// trims it on write, the extractor trims it on read, so the comparison does
+			// too. Without this, every section is a false STALE.
+			name:   "differs only by a trailing newline the fence drops -> OK",
+			onDisk: []byte("body"), present: true, source: []byte("body\n"), hasSource: true,
+			want: OK,
+		},
+		{
+			// Our fenced block is gone from the file (e.g. beads, replaced by ticket).
+			name:   "section block absent -> MISSING",
+			onDisk: nil, present: false, source: ours, hasSource: true,
+			want: Missing,
+		},
+		{
+			// The block is still there, but the artifact that owns it left the catalog.
+			name:   "section present, source gone -> ORPHANED-STATE",
+			onDisk: ours, present: true, source: nil, hasSource: false,
+			want: OrphanedState,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ClassifySection(tt.onDisk, tt.present, tt.source, tt.hasSource)
+			if got != tt.want {
+				t.Errorf("ClassifySection = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
