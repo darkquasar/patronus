@@ -46,6 +46,26 @@ jobs:
       - name: test
         run: go test -race ./...
 
+  # Enforces CONTRIBUTING.md's version-bump rule on every pull_request: an artifact
+  # whose CONTENT changed must also bump its patronus.yaml version:. Runs only on PRs
+  # (a push to main has no base to diff against and is already merged). fetch-depth: 0
+  # gives it the full history so origin/main and the merge-base are present; without
+  # it the check degrades to silence rather than failing. The R2 write-once catalog
+  # keys make a missed bump a DEPLOY failure on main — this moves that signal to
+  # review. (pat-3mz5)
+  version-bump:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: check version bumps
+        run: go run ./cmd/patronus check-versions --base "origin/${{ github.base_ref }}"
+
   lint:
     runs-on: ubuntu-latest
     steps:
