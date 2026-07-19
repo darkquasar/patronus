@@ -1,7 +1,7 @@
 ---
 id: pat-tcem
 status: open
-deps: [pat-4v2t, pat-nfi7]
+deps: [pat-4v2t, pat-nfi7, pat-kwwi]
 links: []
 created: 2026-07-19T01:56:53Z
 type: task
@@ -9,7 +9,7 @@ priority: 3
 assignee: darkquasar
 external-ref: profiles/core.yaml
 parent: pat-7i2i
-tags: [codex-flavour]
+tags: [codex-parity]
 ---
 # Wire team-{implement,research}@codex into profiles/core.yaml
 

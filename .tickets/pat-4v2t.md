@@ -1,7 +1,7 @@
 ---
 id: pat-4v2t
 status: open
-deps: []
+deps: [pat-kwwi]
 links: []
 created: 2026-07-19T01:56:53Z
 type: task
@@ -9,7 +9,7 @@ priority: 3
 assignee: darkquasar
 external-ref: docs/specs/01-lifecycle-and-test-surface/lifecycle-skills-plan.md
 parent: pat-7i2i
-tags: [codex-flavour]
+tags: [codex-parity]
 ---
 # Author team-implement-codex artifact
 
