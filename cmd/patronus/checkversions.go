@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/registry"
-	"github.com/darkquasar/patronus/internal/versionbump"
 )
 
 // artifactsDir is the tree whose items carry a version: that must move on a content
@@ -27,6 +26,58 @@ const _artifactsDir = "artifacts"
 // of it must not, by itself, demand a bump.
 const _manifestFile = "patronus.yaml"
 
+// artifactChange is the reconciled state of one artifact directory across a PR diff.
+// gatherChanges fills it from `git diff` (ContentChanged) and the version: line read
+// on each side (BaseVersion at the merge-base, HeadVersion in the working tree).
+type artifactChange struct {
+	// Name is the artifact directory's relative path, used to name it in a failure.
+	Name string
+	// ContentChanged reports whether any file OTHER than patronus.yaml changed.
+	// patronus.yaml is never counted as content: a canonical re-marshal or a
+	// version-only edit must not, by itself, demand a bump.
+	ContentChanged bool
+	// ExistedInBase is false for an artifact added in this PR — a new artifact has
+	// no baseline version to compare against, so it can never violate the rule.
+	ExistedInBase bool
+	// BaseVersion is the version: at the merge-base (empty when unreadable/absent).
+	BaseVersion string
+	// HeadVersion is the version: in the working tree (empty when absent).
+	HeadVersion string
+}
+
+// violation is one artifact that changed content without bumping its version.
+type violation struct {
+	Name    string
+	Version string // the un-bumped version, shown so the author sees what to move past
+}
+
+func (v violation) String() string {
+	return fmt.Sprintf("%s: content changed but version: is still %s — bump it", v.Name, v.Version)
+}
+
+// checkVersions returns the artifacts that changed content without a version bump. It
+// is the pure heart of the guard — no git, no I/O — so it is table-driven testable.
+// It preserves input order and returns nil when everything is clean.
+//
+// An artifact is a violation exactly when: it existed at the base, its content
+// changed, and its version: is unchanged from base to head. Every other shape is
+// allowed — a new artifact (no base to compare), a deleted one (no head content), a
+// version-only change, a content change WITH a bump, or a no-op (git lists no changed
+// content, so ContentChanged is false).
+func checkVersions(changes []artifactChange) []violation {
+	var out []violation
+	for _, c := range changes {
+		if !c.ContentChanged || !c.ExistedInBase {
+			continue
+		}
+		if c.HeadVersion != c.BaseVersion {
+			continue // bumped (or cleared) — the rule is satisfied
+		}
+		out = append(out, violation{Name: c.Name, Version: c.HeadVersion})
+	}
+	return out
+}
+
 // newCheckVersionsCmd is the PR-side guard for pat-3mz5: it fails when an artifact's
 // CONTENT changed against the PR base but its patronus.yaml version: did not. The
 // rule lives in CONTRIBUTING.md ("bump version: on any content change") but was
@@ -34,8 +85,9 @@ const _manifestFile = "patronus.yaml"
 // surfaced post-merge, when publish-catalog hit R2's write-once key. This catches it
 // at review instead.
 //
-// The real decision is internal/versionbump.Check (pure, table-driven); this wrapper
-// only gathers its inputs from git — mirroring how scan.go wraps internal/drift.
+// The real decision is checkVersions (pure, table-driven); this wrapper only gathers
+// its inputs from git. checkVersions lives in this package, not internal/, because it
+// has exactly one caller — mirroring build.go's own in-package helpers.
 func newCheckVersionsCmd() *cobra.Command {
 	var base string
 	cmd := &cobra.Command{
@@ -56,7 +108,7 @@ func newCheckVersionsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			violations := versionbump.Check(gatherChanges(cmd.Context(), root, base))
+			violations := checkVersions(gatherChanges(cmd.Context(), root, base))
 			if len(violations) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "version-bump check: ok")
 				return nil
@@ -72,10 +124,10 @@ func newCheckVersionsCmd() *cobra.Command {
 }
 
 // gatherChanges walks the artifact dirs touched between the merge-base of base..HEAD
-// and the working tree, and reconciles each into a versionbump.Change. It shells out
-// to git rather than importing a git library — the same dependency-light choice the
-// rest of cmd/patronus makes, and the diff is trivial plumbing.
-func gatherChanges(ctx context.Context, root, base string) []versionbump.Change {
+// and the working tree, and reconciles each into an artifactChange. It shells out to
+// git rather than importing a git library — the same dependency-light choice the rest
+// of cmd/patronus makes, and the diff is trivial plumbing.
+func gatherChanges(ctx context.Context, root, base string) []artifactChange {
 	// Diff the merge-base (base...HEAD) against the working tree, so commits on base
 	// after the branch forked don't count as this PR's changes. A missing base ref /
 	// no merge-base is a CI-setup shape, not a content violation: degrade to "nothing
@@ -88,9 +140,9 @@ func gatherChanges(ctx context.Context, root, base string) []versionbump.Change 
 	}
 
 	dirs := artifactDirs(names)
-	changes := make([]versionbump.Change, 0, len(dirs))
+	changes := make([]artifactChange, 0, len(dirs))
 	for _, dir := range dirs {
-		c := versionbump.Change{Name: dir}
+		c := artifactChange{Name: dir}
 		// Content changed if ANY touched file under this dir is not patronus.yaml.
 		for _, n := range names {
 			if artifactDirOf(n) == dir && filepath.Base(n) != _manifestFile {
