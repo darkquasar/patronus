@@ -13,6 +13,16 @@ do **not** try to `git add .tickets/`; the ignore rule makes it a no-op. If you 
 to hand the graph to another machine or contributor, share it out of band rather than
 through git.
 
+## Deployed skills are not tracked
+
+This repo dogfoods its own `core` profile, so `patronus install` writes deploy output
+into the tree. That output is **not** committed — it is regenerated from `artifacts/`,
+and committing it just invites drift between source and deployment (the exact thing
+`patronus scan`'s drift guard exists to catch). Specifically, `.agents/skills/` (the
+codex project-scope skill target) and the tracked bits of `.claude/` are deploy output.
+Edit the **source** under `artifacts/`, never the deployed copy, and re-run
+`patronus install` to redeploy.
+
 ## Versioning artifacts
 
 **Every artifact carries a `version:` in its `patronus.yaml` (SemVer). If you

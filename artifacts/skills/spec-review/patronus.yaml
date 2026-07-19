@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: spec-review
 description: "Critically review a written spec/design doc before planning — spec basics (testable, complete, unambiguous, scoped, idiom-aware) plus engineering / design / devex / strategy lenses, surfaced as Critical/Important/Minor findings. Advisory: it closes the spec phase, it does not block it. Ships the `spec-reviewer.md` prompt the dispatched reviewer subagent fills. Use at the END of the spec phase, before writing-plans; its sibling `plan-review` closes planning the same way."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [spec-reviewer.md]
 targets: [claude, codex, opencode]

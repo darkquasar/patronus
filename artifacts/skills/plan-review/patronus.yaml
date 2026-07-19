@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: plan-review
 description: "Critically review an implementation plan at the END of planning, before implementation — plan basics (coverage, bite-sized, no placeholders, type consistency, idiom-aligned) plus engineering / design / devex / strategy lenses, surfaced as Critical/Important/Minor findings. Its sharpest check is coverage: every spec requirement maps to a task, or it does not ship. Advisory: it closes the planning phase, it does not block it, and it is NOT a per-task implementation pre-flight. Ships the `plan-reviewer.md` prompt the dispatched reviewer subagent fills. Sibling of `spec-review`."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: [plan-reviewer.md]
 targets: [claude, codex, opencode]

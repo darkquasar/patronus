@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: team-implement
 description: "Spec-Driven Team Implementation — implement a feature from existing research (spec.md + plan.md) with parallel teammate agents, each owning a concern boundary."
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: []
 targets: [claude]   # Claude-flavoured: body uses Agent/SendMessage/Task*/isolation:worktree (Claude-only). Codex parity is a separate codex-flavoured artifact (codex exec + worktrees + supervisor); opencode TBD.
