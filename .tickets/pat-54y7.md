@@ -1,6 +1,6 @@
 ---
 id: pat-54y7
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-07-12T04:48:22Z
