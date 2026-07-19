@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: agent-rules
 description: "Distilled design-discipline rules for an AI coding agent — domain-driven design and refactoring, as compact decision/trigger checklists. Appended into CLAUDE.md/AGENTS.md."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

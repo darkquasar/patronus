@@ -44,6 +44,13 @@ design-*.md
 # CONTRIBUTING.md "The work-graph is local"). The graph is working state, not a
 # shipped artifact of the catalog.
 /.tickets/
+
+# Patronus's own DEPLOYED skills for the codex runtime — `patronus install` writes
+# project-scope codex skills to `.agents/skills/` (see internal/adapter/builtin/
+# codex.yaml). This is deploy OUTPUT, regenerated from artifacts/, not source — so
+# it is not tracked (the same reason `.claude/` deploy output is not). The `.agents/`
+# path is a cross-runtime skills alias (Codex/Copilot/Gemini); only skills land here.
+/.agents/skills/
 plan.md
 # …but vendored skill/artifact content is legitimate even when a file happens to
 # be named like a design doc (e.g. codebase-design's DESIGN-IT-TWICE.md). The
