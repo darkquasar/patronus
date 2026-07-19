@@ -21,6 +21,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newInstallCmd())
 	root.AddCommand(newLockCmd())
 	root.AddCommand(newBuildCmd())
+	root.AddCommand(newCheckVersionsCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newRemoveCmd("remove", []string{"revert"}))
 	addStubCommands(root)
