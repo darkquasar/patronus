@@ -25,6 +25,13 @@ func (e *Engine) transformOutputStyle(art *manifest.Artifact, ad *manifest.Adapt
 		return nil, fmt.Errorf("adapter %q: output-style has no %s target", ad.Tool, scope)
 	}
 
+	// Resolve the CREATE destination BEFORE reading the source: the path depends only
+	// on the name + layout, never on the body, so a caller that needs to know where an
+	// output-style WOULD land (drift's shadow hunt) can get it without the source
+	// present. The appendSection flavour has no per-artifact spot, so it keeps its
+	// path resolution in-branch.
+	path := e.resolvePath(target.File, art.Name, ad.Tool, scope)
+
 	entry := art.Entry
 	if entry == "" {
 		return nil, fmt.Errorf("adapter: output-style %q missing entry", art.Name)
@@ -36,8 +43,8 @@ func (e *Engine) transformOutputStyle(art *manifest.Artifact, ad *manifest.Adapt
 
 	// APPEND flavour (AGENTS.md): delegate to the shared section helper.
 	if target.Action == "appendSection" {
-		path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
-		d, err := e.appendSectionDiff(path, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
+		p := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
+		d, err := e.appendSectionDiff(p, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +54,6 @@ func (e *Engine) transformOutputStyle(art *manifest.Artifact, ad *manifest.Adapt
 	// CREATE flavour (Claude output-styles/{name}.md): passthrough body, like a
 	// skill's SKILL.md. The authored body already carries any required frontmatter
 	// (e.g. keep-coding-instructions: true) — passthrough never reshapes it.
-	path := e.resolvePath(target.File, art.Name, ad.Tool, scope)
 	return []diff.FileDiff{{
 		Path:   path,
 		Action: diff.Create,

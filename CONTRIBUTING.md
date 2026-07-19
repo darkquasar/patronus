@@ -3,6 +3,16 @@
 House rules for changing this repo. The closest `AGENTS.md` to the code you are
 editing still wins for local conventions; this file covers repo-wide procedure.
 
+## The work-graph is local here
+
+This repo uses `tk`, whose shared instruction says to **commit** the `.tickets/`
+work-graph. **This project overrides that default: `.tickets/` is gitignored** (see
+`.gitignore`) and is treated as local working state, not a committed artifact of the
+catalog. Use `tk` exactly as usual — create, `dep`, `start`, `close`, add notes — but
+do **not** try to `git add .tickets/`; the ignore rule makes it a no-op. If you need
+to hand the graph to another machine or contributor, share it out of band rather than
+through git.
+
 ## Versioning artifacts
 
 **Every artifact carries a `version:` in its `patronus.yaml` (SemVer). If you

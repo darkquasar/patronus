@@ -4,7 +4,7 @@ type: instruction
 role: orchestration                        # L10 — teaches the agent to use tk as its cross-session work-graph
 name: ticket
 description: "Work-graph discipline: drive Ticket (`tk`) as the durable, git-native task graph across sessions — capture work as tickets with dependencies, pull the ready set, and close as you go instead of relying on in-context TODOs. The graph is plain markdown in `.tickets/`, committed like any other file. Appended into CLAUDE.md/AGENTS.md. Requires the `tk` binary (delivered by the sibling `tk` recipe)."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

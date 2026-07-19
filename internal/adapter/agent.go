@@ -26,6 +26,11 @@ func (e *Engine) transformAgent(art *manifest.Artifact, ad *manifest.Adapter, sc
 		return nil, fmt.Errorf("adapter %q: Agent has no %s target", ad.Tool, scope)
 	}
 
+	// Resolve the destination BEFORE reading the source: the path depends only on
+	// the name + layout, never on the body, so a caller that needs to know where an
+	// agent WOULD land (drift's shadow hunt) can get it without the source present.
+	path := e.resolvePath(target.Path, art.Name, ad.Tool, scope)
+
 	entry := art.Entry
 	if entry == "" {
 		entry = "agent.md"
@@ -41,8 +46,6 @@ func (e *Engine) transformAgent(art *manifest.Artifact, ad *manifest.Adapter, sc
 	if err != nil {
 		return nil, err
 	}
-
-	path := e.resolvePath(target.Path, art.Name, ad.Tool, scope)
 	return []diff.FileDiff{{
 		Path:   path,
 		Action: diff.Create,

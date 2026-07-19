@@ -37,14 +37,20 @@ hook:
   command: smoke-guard --check
 `
 
-// serveHookFixture builds the real baseline registry, injects the throwaway
+// serveHookFixture builds the FIXTURE baseline registry, injects the throwaway
 // smoke-hook artifact (+ its tarball) into the served index, and refreshes the
 // client cache. Returns the temp HOME.
+//
+// The baseline is the fixture catalog, not the real one. This file already INVENTS
+// its item (smoke-hook) — it only ever needed a valid catalog to inject into, and
+// building the real one dragged every real recipe, and every real upstream pin, in
+// for no reason.
 func serveHookFixture(t *testing.T) string {
 	t.Helper()
 	outDir := t.TempDir()
+	t.Chdir(fixtureCatalog(t)) // baseline = the fixture; no real pins inherited
 	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
-		t.Fatalf("build: %v", err)
+		t.Fatalf("build fixture: %v", err)
 	}
 	f := serveTree(t, outDir)
 	home := withRemoteEnv(t, f)

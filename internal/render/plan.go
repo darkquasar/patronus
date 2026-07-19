@@ -77,6 +77,29 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 			}
 			cg.paths = append(cg.paths, displayPath(r, d.Path))
 		}
+
+		// The same for a composed MERGE: several artifacts fold into one settings
+		// file (7 hooks + a statusline + native-sandbox all land in one
+		// settings.json), and only the FIRST owns the diff. Without this, the plan
+		// named one artifact and applied all of them.
+		//
+		// The plan is the screen a user reads before approving --deploy, and one of
+		// these folded edits turns ON Claude's sandbox and auto-approves bash inside
+		// it. A change the user is not shown is a change they cannot consent to.
+		//
+		// Each contributor carries its OWN type/role, so the row is honest about what
+		// it is: the user needs to see that native-sandbox is a `setting` at the
+		// `sandbox` layer, not another hook.
+		for _, c := range d.SettingContrib {
+			ck := key{c.Artifact, string(diff.Merge), c.Type, c.Role, d.Tool, d.Scope, ""}
+			cg, ok := groups[ck]
+			if !ok {
+				cg = &group{key: ck}
+				groups[ck] = cg
+				order = append(order, ck)
+			}
+			cg.paths = append(cg.paths, displayPath(r, d.Path))
+		}
 	}
 
 	headers := []string{"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope"}

@@ -10,3 +10,18 @@ Ask the questions one at a time, waiting for feedback on each question before co
 If a question can be answered by exploring the codebase, explore the codebase instead.
 
 When what you're interrogating is structural — a control flow, a data flow, a component boundary, a state machine — draw it as a compact ASCII diagram before or alongside the question (diagram-explain charset: `+---+` boxes, `=>` sync, `~>` async, `>` `<` `^` `v` arrows, ≤100 wide). Ambiguity that survives prose rarely survives a picture: the gap you're probing becomes a box nobody can label, or an arrow nobody can point.
+
+---
+
+## When the grilling is done
+
+The point of the interview is to make the idea sharp enough to *act on*. When it is:
+
+> "The idea looks sharp now. Two ways forward — your call:
+>  - **The domain has real unknowns** (several things you'd have to go investigate before the
+>    design is even tractable) → `/team-research`.
+>  - **You know the domain; it's the design that needs settling** → the `brainstorming` skill.
+>
+>  Or neither, if you'd rather just build it."
+
+**Offer; do not gate.** The user may decline and proceed however they like.

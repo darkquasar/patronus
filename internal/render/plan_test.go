@@ -290,3 +290,61 @@ func TestUnifiedMethod(t *testing.T) {
 		t.Errorf("skip should yield empty unified diff")
 	}
 }
+
+// TestPlanRendersEverySettingsContributor is the regression test for a CONSENT
+// defect: when several artifacts MERGE into one settings.json, the plan showed only
+// the FIRST one and silently omitted the rest.
+//
+// The plan is the screen a user reads before approving --deploy. Installing the
+// `hardened` profile folds 8 artifacts into ~/.claude/settings.json — 7 hooks, a
+// statusline, and native-sandbox, which turns ON Claude's sandbox and AUTO-APPROVES
+// bash commands inside it. The user saw ONE row naming ONE artifact, and got all
+// eight. They consented to a security-posture change they were never shown.
+//
+// The data was always right: internal/plan records every folded artifact in
+// FileDiff.SettingContrib, and internal/state reads it (which is why `remove` has
+// always been able to strip exactly one artifact's edit). The RENDERER just never
+// looked at it — it emits a row per Contrib (the composed-APPEND fold) but never per
+// SettingContrib (its MERGE-side twin).
+func TestPlanRendersEverySettingsContributor(t *testing.T) {
+	settings := "/home/u/.claude/settings.json"
+	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{{
+		// One composed MERGE, owned by whichever artifact's diff landed first...
+		Action: diff.Merge, Path: settings, Artifact: "skills-dispatch-activate",
+		Type: "hook", Role: "capability", Tool: "claude", Scope: "global",
+		Setting: &diff.SettingEdit{},
+		// ...with every other contributor folded in behind it.
+		SettingContrib: []diff.SettingContrib{
+			{Artifact: "block-secrets", Edit: &diff.SettingEdit{}, Type: "hook", Role: "guardrail"},
+			{Artifact: "native-sandbox", Edit: &diff.SettingEdit{}, Type: "setting", Role: "sandbox"},
+			{Artifact: "ccusage-statusline", Edit: &diff.SettingEdit{}, Type: "setting", Role: "observability"},
+		},
+	}}}
+
+	var b bytes.Buffer
+	PrintPlan(&b, cs, testResolver(), false)
+	out := b.String()
+
+	for _, want := range []string{
+		"skills-dispatch-activate", // the owner
+		"block-secrets",            // folded in
+		"native-sandbox",           // folded in — the security switch
+		"ccusage-statusline",       // folded in
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the plan does not name %q, yet --deploy would apply its edit to settings.json.\n"+
+				"A user cannot consent to a change they are not shown.\n%s", want, out)
+		}
+	}
+
+	// And each contributor's row carries its OWN type/role, not the owning diff's —
+	// so native-sandbox reads as a `setting` at the `sandbox` layer (a security
+	// switch), not as another hook.
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "native-sandbox") {
+			if !strings.Contains(line, "setting") || !strings.Contains(line, "sandbox") {
+				t.Errorf("native-sandbox's row must show its own type/role (setting/sandbox), got:\n%s", line)
+			}
+		}
+	}
+}

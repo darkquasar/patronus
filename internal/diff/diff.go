@@ -202,6 +202,14 @@ type SettingContrib struct {
 	Artifact string
 	Version  string
 	Edit     *SettingEdit
+
+	// Type and Role are the contributor's OWN ontology axes, carried so the plan
+	// can render an honest row for it rather than inheriting the owning diff's.
+	// They matter: several artifacts fold into one settings.json, and a user
+	// reading the plan needs to see that native-sandbox is a `setting` at the
+	// `sandbox` layer (it turns the sandbox on) and not, say, another hook.
+	Type string
+	Role string
 }
 
 // Classify decides the terminal Action for a proposed change, preserving
@@ -260,6 +268,17 @@ func (cs *ChangeSet) Counts() map[Action]int {
 			continue
 		}
 		out[d.Action]++
+		// A COMPOSED file folds several artifacts into ONE FileDiff: six instructions
+		// APPEND into one CLAUDE.md; eight artifacts MERGE into one settings.json (7
+		// hooks + a statusline + native-sandbox, which turns Claude's sandbox on).
+		//
+		// Count each folded contributor too, so the tally matches what --deploy will
+		// APPLY — and matches the plan table, which already renders a row per
+		// contributor. Counting FileDiffs instead made the footer say "2 MERGE"
+		// directly beneath eight visible MERGE rows: the summary contradicted the
+		// table and under-reported the change the user was being asked to approve.
+		out[Append] += len(d.Contrib)
+		out[Merge] += len(d.SettingContrib)
 	}
 	return out
 }

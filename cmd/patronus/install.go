@@ -294,6 +294,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 				Tool:            in.tool,
 				Scope:           in.scope,
 				PreferSystemPkg: in.preferSystemPkg,
+				PlacedDigest:    placedDigestFromState(in.inv),
 				Warnf:           in.warnf,
 			})
 			if err != nil {
@@ -652,6 +653,50 @@ func statePath(scope string, opts deployOptions) string {
 		return filepath.Join(opts.home, ".patronus", "state.json")
 	}
 	return filepath.Join(opts.projectDir, ".patronus", "state.json")
+}
+
+// placedDigestFromState builds the recipe.PlacedDigestFunc that classifyFetch uses to
+// decide whether an already-present ARCHIVE-delivered binary is the one Patronus
+// placed and verified — as opposed to some other file that merely happens to be at
+// that path.
+//
+// The datum was already there. install/apply.go stamps FetchSpec.PlacedSHA256 with the
+// digest of the binary it actually wrote (the extracted member, for an archive), and
+// internal/state persists it as the FETCH row's Checksum ("sha256:<hex>") — with a
+// comment naming this exact missing use: "so a later scan can tell 'unchanged' from
+// 'user-replaced'." Nothing on the install path ever read it back, which is precisely
+// why a poisoned binary at the dest was reported as "verified, up to date" forever.
+//
+// Both scopes are merged: ~/.patronus/bin/ is global by construction, but a recipe may
+// set a project-scoped installTo, and a digest recorded in either state file is still a
+// digest Patronus recorded. An unreadable or absent state yields no records at all, so
+// classifyFetch FETCHes — fail closed, because "we have never verified this" is not the
+// same as "this is fine".
+func placedDigestFromState(inv *scan.Inventory) recipe.PlacedDigestFunc {
+	byDest := map[string]string{}
+	if inv == nil {
+		return func(string) (string, bool) { return "", false }
+	}
+	for _, dir := range []string{inv.Home, inv.ProjectDir} {
+		if dir == "" {
+			continue
+		}
+		s, err := state.Load(filepath.Join(dir, ".patronus", "state.json"))
+		if err != nil {
+			continue // unreadable state -> we know nothing about it -> verify everything
+		}
+		for _, it := range s.Items {
+			for _, f := range it.Files {
+				if f.Action == string(diff.Fetch) && f.Checksum != "" {
+					byDest[f.Path] = strings.TrimPrefix(f.Checksum, "sha256:")
+				}
+			}
+		}
+	}
+	return func(dest string) (string, bool) {
+		sum, ok := byDest[dest]
+		return sum, ok
+	}
 }
 
 // conflictPrompt builds the interactive resolver for CONFLICT files. In
