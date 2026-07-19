@@ -105,6 +105,34 @@ func TestAppendBecomesUnappend(t *testing.T) {
 	}
 }
 
+func TestAppendSectionAlreadyGoneRetiresRow(t *testing.T) {
+	// The recorded APPEND section is ALREADY ABSENT from the file — e.g. a later
+	// rebuild dropped it (the `beads` case: beads→ticket migration removed the
+	// section, but its state row survived). The file work is already done, so remove
+	// must UNAPPEND-as-no-op (After == current) — landing in Applied, which is what
+	// retires the orphaned state row — NOT SKIP, which would strand the row forever
+	// and keep `scan` reporting MISSING with no way to clean it up.
+	other := adapter.AppendSection([]byte("# Notes\n"), "keep", []byte("a different section"))
+	items := []state.Item{{
+		Artifact: "gone", Tool: "claude", Scope: "local",
+		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "gone", Prior: nil, Checksum: sum([]byte("whatever was recorded"))}},
+	}}
+	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": other}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Errorf("an already-absent section is not drift; want no warnings, got %+v", warns)
+	}
+	d := cs.Diffs[0]
+	if d.Action != diff.Unappend {
+		t.Fatalf("already-absent section must UNAPPEND (no-op) so the row is retired, got %s", d.Action)
+	}
+	if !bytes.Equal(d.After, other) {
+		t.Errorf("the no-op un-append must leave the file byte-identical (the OTHER section survives):\n got %q\nwant %q", d.After, other)
+	}
+}
+
 func TestAppendDriftSkipsWithIntent(t *testing.T) {
 	prior := []byte("# Notes\n\nuser prose\n")
 	installed := adapter.AppendSection(prior, "ap", []byte("injected"))

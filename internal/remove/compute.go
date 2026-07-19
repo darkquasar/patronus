@@ -120,8 +120,19 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting) (diff.FileDif
 		}
 		stripped, found := adapter.RemoveSection(current, f.Section)
 		if !found {
-			base.Action = diff.Skip
-			base.Note = "section absent — nothing to un-append"
+			// Our fenced section is ALREADY GONE from the file (e.g. a later rebuild
+			// dropped it — the beads→ticket migration is the canonical case). The file
+			// work is already done, so this is a SUCCESSFUL no-op, not a skip: emit an
+			// UNAPPEND whose After is the unchanged file. That lands it in the applier's
+			// Applied set, which is what retires the orphaned state row — a SKIP would
+			// strand the row forever, and `--force` cannot rescue it (a SKIP with no
+			// Intended action has nothing to promote), so `scan` would report MISSING
+			// with no way to ever clean it up.
+			base.Action = diff.Unappend
+			base.Before = current
+			base.After = current
+			base.Section = &diff.SectionEdit{Name: f.Section}
+			base.Note = "section already absent — retiring the record (no file change)"
 			return base, nil, nil
 		}
 		// Drift: the user changed the file outside our fenced section since install.
