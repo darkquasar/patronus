@@ -38,6 +38,12 @@
 local-specs/
 DESIGN.md
 design-*.md
+
+# The tk work-graph — local to this project, NOT committed. The shared `ticket`
+# instruction's default is to commit `.tickets/`; this repo overrides that (see
+# CONTRIBUTING.md "The work-graph is local"). The graph is working state, not a
+# shipped artifact of the catalog.
+/.tickets/
 plan.md
 # …but vendored skill/artifact content is legitimate even when a file happens to
 # be named like a design doc (e.g. codebase-design's DESIGN-IT-TWICE.md). The
