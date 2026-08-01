@@ -4,7 +4,7 @@ type: hook
 role: capability
 name: skills-dispatch-activate
 description: "Activates the skill-first discipline at session start — a SessionStart hook that injects the installed skills-dispatch skill body as session context, so the agent checks the ENTIRE installed skill set for an applicable skill before its first response. Pairs with (and requires) the skills-dispatch skill."
-version: 1.0.0
+version: 1.0.1
 entry: ""
 files: [inject-skills-dispatch.sh]
 targets: [claude, codex, opencode]

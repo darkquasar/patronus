@@ -139,6 +139,10 @@ func TestInstructionLayoutPointerDirForScope(t *testing.T) {
 	}
 }
 
+// A hook with no authored intent defaults to nudge, and that default is
+// materialized (Validate mutates the spec) — so the explicit intent rides into the
+// re-marshalled manifest. Changing an existing hook's serialized bytes this way
+// REQUIRES a version bump (the R2 immutability guard enforces it).
 func TestHookIntentDefaultsToNudge(t *testing.T) {
 	a := &Artifact{
 		Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Name: "h", Description: "d"},

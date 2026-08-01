@@ -4,7 +4,7 @@ type: hook
 role: memory                              # L3 — ai-memory lifecycle integration
 name: ai-memory-pre-tool-use
 description: "Records each tool invocation (before) into ai-memory (fire-and-forget). Part of the ai-memory lifecycle hook set; forwards the event to the local ai-memory server (127.0.0.1:49374). requires: [memory-ai-memory] (the recipe that delivers + runs the server)."
-version: 1.0.0
+version: 1.0.1
 entry: ""
 files: [ai-memory-pre-tool-use.sh]
 targets: [claude]

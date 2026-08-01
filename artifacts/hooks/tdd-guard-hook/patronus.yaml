@@ -4,7 +4,7 @@ type: hook
 role: eval
 name: tdd-guard-hook
 description: "Test-first ENFORCEMENT — a PreToolUse hook that blocks implementation writes (Write/Edit/MultiEdit) unless a failing test justifies them. This is what makes `core` strict by design. Pairs with the `tdd-guard` recipe, which installs the binary the hook invokes."
-version: 1.0.0
+version: 1.0.1
 targets: [claude, codex, opencode]
 defaults:
   scope: project
