@@ -47,6 +47,8 @@ layout:
     # OpenCode reads AGENTS.md/CLAUDE.md and an `instructions: []` glob array in config.
     global: { file: "~/.config/opencode/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }
+    pointerDirGlobal: "~/.config/opencode/patronus/instructions/{name}.md"
+    pointerDirProject: ".config/opencode/patronus/instructions/{name}.md"
 
   output-style:
     # OpenCode has no output-styles surface; the style body lands as an AGENTS.md

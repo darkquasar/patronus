@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: ddd-distilled
+description: "Distilled Domain-Driven Design decision/trigger rules (after Vernon's DDD Distilled) — subdomains, bounded contexts, ubiquitous language, aggregates, domain events. A skill: loads on relevance (designing a module, modeling a domain) via description dispatch. LLM-derived, not the book."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/ciembor/agent-rules-books
+  license: MIT
+  copyright: "Copyright (c) 2026 Maciej Ciemborowicz"
+  commit: 9c8763613514e4047d75c089533e09bc4b493c28
+  note: "Vendored `mini` variant only (most abstracted) of domain-driven-design-distilled. LLM-generated and inspired by, NOT a reproduction of, Vaughn Vernon's DDD Distilled; never present as the book itself."

@@ -10,7 +10,9 @@ summary: "Visual-explanation environment: agent house rules + design discipline,
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
-    - agent-rules                          # distilled DDD + refactoring discipline
     - diagram-explain                      # output-style — ASCII diagrams on by default
   capabilities: []                         # filled by Task 2 (ported clean skills), Task 6 (gstack-pr-review)
+  context:
+    - ddd-distilled                        # distilled DDD discipline (dispatched on relevance)
+    - refactoring-distilled                # distilled refactoring discipline (dispatched on relevance)
   guardrails: []                           # filled by Task 3 (freeze-folder hook + skill)

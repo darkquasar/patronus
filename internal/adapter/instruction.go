@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -32,12 +33,61 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 		return nil, fmt.Errorf("adapter: read instruction entry: %w", err)
 	}
 
-	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
-	d, err := e.appendSectionDiff(path, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
+	ctrlPath := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
+
+	if art.Mode == "pointer" {
+		dir := ad.Layout.Instruction.PointerDirFor(scope)
+		if !dir.OK() {
+			return nil, fmt.Errorf("adapter %q: pointer-mode instruction has no %s pointerDir", ad.Tool, scope)
+		}
+		bodyPath := e.resolvePath(dir.Path, art.Name, ad.Tool, scope)
+		relPath := strings.ReplaceAll(dir.Path, "{name}", art.Name)
+		createDiff := diff.FileDiff{
+			Path:   bodyPath,
+			Action: diff.Create,
+			After:  body,
+			Tool:   ad.Tool,
+			Scope:  scope,
+			Role:   string(art.Role),
+		}
+		stanza := renderPointer(art, relPath)
+		appendDiff, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), art.Name, stanza, readExisting)
+		if err != nil {
+			return nil, err
+		}
+		return []diff.FileDiff{createDiff, appendDiff}, nil
+	}
+
+	// inline (default): unchanged single APPEND of the full body.
+	d, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
 	if err != nil {
 		return nil, err
 	}
 	return []diff.FileDiff{d}, nil
+}
+
+// renderPointer builds the thin pointer stanza appended into CLAUDE.md/AGENTS.md
+// for a pointer-mode instruction. relPath is the tool-relative path to the
+// standalone body file (with {name} already substituted), shown to the agent so
+// it reads correctly regardless of machine. The trigger comes verbatim from the
+// artifact's pointer block — validation guarantees it is non-empty, so there is
+// no fallback path. The summary is pointer.summary when set, else Description.
+func renderPointer(art *manifest.Artifact, relPath string) []byte {
+	summary := art.Pointer.Summary
+	if summary == "" {
+		summary = art.Description
+	}
+	var buf bytes.Buffer
+	buf.WriteString("### ")
+	buf.WriteString(art.Name)
+	buf.WriteString("\n\n")
+	buf.WriteString(summary)
+	buf.WriteString(" **Load the full rules from `")
+	buf.WriteString(relPath)
+	buf.WriteString("` ")
+	buf.WriteString(art.Pointer.Trigger)
+	buf.WriteString("** — apply them then; you do not need them otherwise.\n")
+	return buf.Bytes()
 }
 
 // appendSectionDiff folds body into the named fenced section of the target file

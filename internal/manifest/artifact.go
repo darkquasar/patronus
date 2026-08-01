@@ -16,6 +16,18 @@ type Artifact struct {
 	Attribution *Attribution                      `yaml:"attribution,omitempty" json:"attribution,omitempty"` // set on vendored content
 	Hook        *HookSpec                         `yaml:"hook,omitempty" json:"hook,omitempty"`               // required for Type==hook; the event/matcher/command to register
 	Setting     *SettingSpec                      `yaml:"setting,omitempty" json:"setting,omitempty"`         // required for Type==setting; the dotted path + value to merge into the agent's settings
+	Mode        string                            `yaml:"mode,omitempty" json:"mode,omitempty"`               // inline (default) | pointer — instruction only
+	Pointer     *InstructionPointer               `yaml:"pointer,omitempty" json:"pointer,omitempty"`         // required iff mode==pointer; the soft-load stanza
+}
+
+// InstructionPointer carries the soft-pointer stanza for a pointer-mode
+// instruction. Trigger is the natural-language "when to load" phrase rendered
+// verbatim into CLAUDE.md/AGENTS.md — the load-bearing signal telling the agent
+// when to read the standalone body file. Summary is an optional short gloss;
+// when empty the artifact's Description is used.
+type InstructionPointer struct {
+	Trigger string `yaml:"trigger" json:"trigger"`                     // e.g. "when writing or reviewing Go"
+	Summary string `yaml:"summary,omitempty" json:"summary,omitempty"` // optional; falls back to Description
 }
 
 // SettingSpec is the declarative definition of a setting artifact (Type==setting):
@@ -84,6 +96,9 @@ func DecodeArtifact(data []byte) (*Artifact, error) {
 }
 
 func finishArtifact(a *Artifact) (*Artifact, error) {
+	if a.Type == TypeInstruction && a.Mode == "" {
+		a.Mode = "inline"
+	}
 	if err := a.Validate(); err != nil {
 		return nil, err
 	}
@@ -122,6 +137,21 @@ func (a *Artifact) Validate() error {
 		if a.Attribution.Upstream == "" || a.Attribution.License == "" || a.Attribution.Copyright == "" {
 			return fmt.Errorf("attribution requires upstream, license, and copyright")
 		}
+	}
+	if a.Mode != "" {
+		if a.Type != TypeInstruction {
+			return fmt.Errorf("mode is only valid on instruction artifacts")
+		}
+		if a.Mode != "inline" && a.Mode != "pointer" {
+			return fmt.Errorf("invalid instruction mode %q", a.Mode)
+		}
+	}
+	if a.Mode == "pointer" {
+		if a.Pointer == nil || a.Pointer.Trigger == "" {
+			return fmt.Errorf("pointer-mode instruction %q: pointer.trigger is required", a.Name)
+		}
+	} else if a.Pointer != nil {
+		return fmt.Errorf("pointer is only valid with mode: pointer")
 	}
 	return nil
 }

@@ -193,10 +193,15 @@ func (l *SettingLayout) ForScope(scope string) FileTarget {
 	return l.Project
 }
 
-// InstructionLayout describes the APPEND-section target for instructions.
+// InstructionLayout describes the APPEND-section target for instructions, plus
+// the per-scope directory a pointer-mode instruction's standalone body file
+// lands in (PointerDir*, templated with {name}). PointerDir is unset for tools
+// or scopes that model no pointer surface.
 type InstructionLayout struct {
-	Global  FileTarget `yaml:"global"`
-	Project FileTarget `yaml:"project"`
+	Global            FileTarget `yaml:"global"`
+	Project           FileTarget `yaml:"project"`
+	PointerDirGlobal  PathTarget `yaml:"pointerDirGlobal,omitempty"`
+	PointerDirProject PathTarget `yaml:"pointerDirProject,omitempty"`
 }
 
 // ForScope returns the file/path target for the given scope ("global"|"local").
@@ -206,6 +211,15 @@ func (l *InstructionLayout) ForScope(scope string) FileTarget {
 		return l.Global
 	}
 	return l.Project
+}
+
+// PointerDirFor returns the standalone-body directory template for the given
+// scope, or an unset PathTarget when this tool/scope models no pointer surface.
+func (l *InstructionLayout) PointerDirFor(scope string) PathTarget {
+	if scope == "global" {
+		return l.PointerDirGlobal
+	}
+	return l.PointerDirProject
 }
 
 // OutputStyleLayout describes where an output-style is written. The action is

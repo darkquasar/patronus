@@ -57,7 +57,6 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"pattern-mcp":        {manifest.TypeSkill, manifest.RoleContext},
 		// P7.2-L1 vendored/authored instructions + the diagram-explain output-style.
 		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
-		"agent-rules":     {manifest.TypeInstruction, manifest.RoleInstruction},
 		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
 		// P7.2-L2 vendored capability skills (superpowers + mattpocock subset).
 		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
@@ -69,8 +68,12 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.2-L4 vendored context/design-vocabulary skills (mattpocock).
 		"codebase-design": {manifest.TypeSkill, manifest.RoleContext},
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
-		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
-		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// agent-rules split into two skills, each dispatched on its own trigger.
+		"ddd-distilled":         {manifest.TypeSkill, manifest.RoleContext},
+		"refactoring-distilled": {manifest.TypeSkill, manifest.RoleContext},
+		// Distilled Go-idiomatic guide (Uber Go Style Guide) — a skill, dispatched on
+		// relevance (writing/reviewing Go) rather than inlined into CLAUDE.md.
+		"go-style-uber": {manifest.TypeSkill, manifest.RoleContext},
 		// Core eng-team: work-on-a-branch disposition (authored, advisory).
 		"branch-first": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
@@ -145,7 +148,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	// Vendored content must carry complete attribution (§3) so the catalog records
 	// upstream provenance and the build packs a NOTICE.
 	for _, name := range []string{
-		"agents-spine", "agent-rules", "diagram-explain",
+		"agents-spine", "ddd-distilled", "refactoring-distilled", "diagram-explain",
 		"skills-dispatch", "writing-plans", "executing-plans",
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
