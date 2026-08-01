@@ -4,7 +4,7 @@ type: hook
 role: guardrail
 name: git-guardrails
 description: "Blocks destructive git commands (push, reset --hard, clean -f, branch -D, checkout/restore .) before the agent runs them — a PreToolUse Bash hook backed by a small bundled script. Stops accidental history/working-tree loss; it is a guardrail, not a security boundary (the agent could still craft an unmatched variant)."
-version: 1.0.0
+version: 1.0.1
 entry: ""
 files: [block-dangerous-git.sh]
 targets: [claude, codex, opencode]
