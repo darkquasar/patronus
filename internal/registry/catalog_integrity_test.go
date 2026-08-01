@@ -245,6 +245,14 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		if m.Wire.Method != want.method {
 			t.Errorf("%s: wire.method = %q, want %q", m.Name, m.Wire.Method, want.method)
 		}
+		// graphify's uv install MUST carry the [mcp] extra, or graphify-mcp dies with
+		// ModuleNotFoundError: No module named 'mcp'. Guard it so a ref edit can't
+		// silently drop the extra and re-break the MCP server.
+		if m.Name == "graphify" {
+			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, "graphifyy[mcp]") {
+				t.Errorf("graphify install command %q must include the [mcp] extra", cmd)
+			}
+		}
 		if m.Wire.Actor != want.actor {
 			t.Errorf("%s: wire.actor = %q, want %q", m.Name, m.Wire.Actor, want.actor)
 		}

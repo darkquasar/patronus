@@ -10,11 +10,18 @@ license: Apache-2.0
 # the MCP server, NOT graphify's own `graphify <platform> install` — Patronus
 # replicates the always-on nudges natively (graphify-hint hook + graphify-query-first
 # instruction) so they are drift-guarded and cleanly removable.
+#
+# The [mcp] EXTRA is REQUIRED: graphify-mcp imports mcp.server.stdio, and without
+# the extra the mcp/starlette/uvicorn deps are absent from the tool venv, so the
+# MCP entrypoint dies with ModuleNotFoundError: No module named 'mcp' (the opaque
+# -32000 reconnect failure Claude surfaces). The CLI (`graphify query`) works either
+# way; only the MCP server needs the extra. The extra rides in the ref (a PEP 508
+# requirement string: name[extra]==version → `uv tool install graphifyy[mcp]==0.9.31`).
 deliver:
   via: package-manager
   install:
     - manager: uv
-      ref: graphifyy==0.9.31    # PINNED. PyPI latest is 0.9.31 (verified 2026-08-01); the GitHub v1.0.0 tag is NOT on PyPI — do NOT use ==1.0.0 (nonexistent) or bare graphifyy (tracks latest)
+      ref: graphifyy[mcp]==0.9.31    # PINNED + [mcp] extra. PyPI latest is 0.9.31 (verified 2026-08-01); the GitHub v1.0.0 tag is NOT on PyPI — do NOT drop the [mcp] extra (breaks the MCP server) or use ==1.0.0 (nonexistent)/bare graphifyy (tracks latest)
   binary: graphify
 
 wire:
