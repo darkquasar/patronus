@@ -48,11 +48,11 @@ const defaultInstallTo = "~/.patronus/bin/"
 // and stats the fetch destination (for FETCH SKIP detection), but downloads
 // nothing — the applier does that.
 //
-// The productions, by wire mode (§4) and delivery source:
-//   - deliver.source github-release -> one FETCH diff for the host asset.
-//   - wire.mode mcp   -> one MERGE diff per tool (via MergeConfig).
-//   - wire.mode run   -> one display-only EXEC diff per command×tool (Patronus-run).
-//   - wire.mode self  -> one display-only EXEC diff per command×tool (self-managing).
+// The productions, by wire method (§4) and delivery source:
+//   - deliver.source github-release   -> one FETCH diff for the host asset.
+//   - wire.method merge               -> one MERGE diff per tool (via MergeConfig).
+//   - wire.method exec, actor patronus -> one EXEC diff per command×tool (Patronus-run).
+//   - wire.method exec, actor external -> one display-only EXEC diff per command×tool.
 func Compute(req Request) ([]diff.FileDiff, error) {
 	rec := req.Recipe
 	scope := req.Scope
@@ -77,20 +77,22 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 		diffs = append(diffs, *fetch)
 	}
 
-	// 2) Wiring — dispatch on the single wire.mode discriminator: run/self EXEC
-	// commands, mcp MERGEs the config. The shape (wire-only|fetch+wire|fetch+run)
-	// is the computed display label, but the dispatch is mode, not shape.
+	// 2) Wiring — dispatch on the wire.method discriminator: exec runs commands,
+	// merge MERGEs the config. The actor axis (patronus|external) decides whether an
+	// exec is advisory, not which branch we take. The shape
+	// (wire-only|fetch+wire|fetch+run) is the computed display label, but the
+	// dispatch is method, not shape.
 	tools := resolveTools(req.Tool, rec)
-	switch rec.Wire.Mode {
-	case manifest.WireModeRun, manifest.WireModeSelf:
+	switch rec.Wire.Method {
+	case manifest.WireExec:
 		diffs = append(diffs, execDiffs(rec, tools, scope)...)
-	case manifest.WireModeMcp:
+	case manifest.WireMerge:
 		merges, err := wireDiffs(req, tools, scope, installPath)
 		if err != nil {
 			return nil, err
 		}
 		diffs = append(diffs, merges...)
-	case "":
+	case manifest.WireNone:
 		// install-only: deliver a package and stop. A package-manager source has no
 		// FETCH (npm/cargo resolve the host themselves), so surface the install
 		// command as a display-only advisory row — Patronus never silently runs a
@@ -386,21 +388,21 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath, tool string) ada
 	return adapter.ServerSpec{Name: name, Transport: wm.Transport, Values: vals}
 }
 
-// execDiffs builds EXEC rows for a run/self recipe: each wire.run command, with
+// execDiffs builds EXEC rows for an exec-method recipe: each wire.run command, with
 // {tool} substituted, per targeted tool. The applier always skips these; the cmd
 // layer runs them on --deploy UNLESS they are advisory.
 //
-//   - mode: run  — Patronus runs the commands we specified (auto-run on --deploy).
-//   - mode: self — the recipe wires ITSELF via its OWN installer (e.g. ai-memory
-//     install-hooks). That presupposes the tool's CLI is already on $PATH —
-//     something Patronus did not deliver (ai-memory ships via Docker/cargo, not a
-//     fetched binary). Auto-running it therefore errors on any machine where the
-//     user hasn't installed the tool yet. So a self-managed EXEC is ADVISORY:
+//   - actor: patronus — Patronus runs the commands we specified (auto-run on --deploy).
+//   - actor: external — something outside Patronus wires it via its OWN installer
+//     (e.g. ai-memory install-hooks). That presupposes the tool's CLI is already on
+//     $PATH — something Patronus did not deliver (ai-memory ships via Docker/cargo,
+//     not a fetched binary). Auto-running it therefore errors on any machine where
+//     the user hasn't installed the tool yet. So an external EXEC is ADVISORY:
 //     Patronus DISPLAYS the wiring command but never executes it. SelfManaged is
 //     the provenance state records; Advisory is what keeps a missing binary from
-//     failing the install.
+//     failing the install. Both bits are derived from actor == external.
 func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDiff {
-	selfManaged := rec.Wire.Mode == manifest.WireModeSelf
+	external := rec.Wire.Actor == manifest.ActorExternal
 	var out []diff.FileDiff
 	for _, tool := range tools {
 		for _, raw := range rec.Wire.Run {
@@ -418,7 +420,7 @@ func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDi
 				Tool:     tool,
 				Scope:    scope,
 				Note:     "run: " + line,
-				Exec:     &diff.ExecSpec{Command: argv, Display: line, SelfManaged: selfManaged, Advisory: selfManaged},
+				Exec:     &diff.ExecSpec{Command: argv, Display: line, SelfManaged: external, Advisory: external},
 			})
 		}
 	}

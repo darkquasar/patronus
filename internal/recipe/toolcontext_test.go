@@ -60,7 +60,8 @@ func serenaLikeRecipe() *manifest.Recipe {
 			Role:       manifest.RoleContext,
 		},
 		Wire: manifest.Wire{
-			Mode: manifest.WireModeMcp,
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
 			Mcp: &manifest.WireMcp{
 				Transport: "stdio",
 				Command:   "uvx",

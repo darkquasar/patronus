@@ -79,9 +79,10 @@ func engramRecipe() *manifest.Recipe {
 			},
 		},
 		Wire: manifest.Wire{
-			Mode:  manifest.WireModeMcp,
-			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "{installPath}", Args: []string{"serve"}},
-			Tools: []string{"claude", "codex", "opencode"},
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
+			Mcp:    &manifest.WireMcp{Transport: "stdio", Command: "{installPath}", Args: []string{"serve"}},
+			Tools:  []string{"claude", "codex", "opencode"},
 		},
 	}
 }
@@ -302,9 +303,10 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	rec := &manifest.Recipe{
 		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "github", Role: manifest.RoleTools},
 		Wire: manifest.Wire{
-			Mode:  manifest.WireModeMcp,
-			Mcp:   &manifest.WireMcp{Transport: "http", URL: "https://api.example/mcp/"},
-			Tools: []string{"claude"},
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
+			Mcp:    &manifest.WireMcp{Transport: "http", URL: "https://api.example/mcp/"},
+			Tools:  []string{"claude"},
 		},
 	}
 	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "claude", Scope: "local"})
@@ -324,13 +326,14 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	}
 }
 
-func TestComputeSelfMode_EmitsExec(t *testing.T) {
+func TestComputeExternalActor_EmitsAdvisoryExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: manifest.RoleMemory},
 		Delivery: &manifest.Delivery{Source: manifest.SourceDocker}, // no fetch
 		Wire: manifest.Wire{
-			Mode: manifest.WireModeSelf,
+			Method: manifest.WireExec,
+			Actor:  manifest.ActorExternal,
 			Run: []string{
 				"ai-memory install-mcp --client {tool} --apply",
 				"ai-memory install-hooks --agent {tool} --apply",
@@ -357,15 +360,15 @@ func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	}
 	found := false
 	for _, e := range execs {
-		// A mode: self exec is ADVISORY (Patronus surfaces the self-wiring command
-		// but never runs it — the recipe's own CLI may not be installed) AND
-		// self-managed (provenance). This keeps a missing ai-memory binary from
-		// failing the install.
+		// An actor: external exec is ADVISORY (Patronus surfaces the self-wiring
+		// command but never runs it — the recipe's own CLI may not be installed) AND
+		// self-managed (provenance). Both bits derive from actor == external. This
+		// keeps a missing ai-memory binary from failing the install.
 		if !e.Exec.Advisory {
-			t.Errorf("self-mode exec %q should be advisory (display-only)", e.Exec.Display)
+			t.Errorf("external-actor exec %q should be advisory (display-only)", e.Exec.Display)
 		}
 		if !e.Exec.SelfManaged {
-			t.Errorf("self-mode exec %q should be self-managed", e.Exec.Display)
+			t.Errorf("external-actor exec %q should be self-managed", e.Exec.Display)
 		}
 		if e.Exec.Display == "ai-memory install-mcp --client claude --apply" {
 			found = true
