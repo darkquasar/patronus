@@ -2,8 +2,14 @@ package adapter
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
 func TestAppendSectionNewFile(t *testing.T) {
@@ -163,5 +169,127 @@ func TestSectionBody(t *testing.T) {
 	}
 	if _, found := SectionBody(existing, "nope"); found {
 		t.Error("found a nonexistent section body")
+	}
+}
+
+func pointerInstructionArtifact() *manifest.Artifact {
+	return &manifest.Artifact{
+		Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ticket", Role: manifest.RoleOrchestration},
+		Type: manifest.TypeInstruction,
+		Mode: "pointer",
+		Pointer: &manifest.InstructionPointer{
+			Trigger: "for multi-session or multi-agent work",
+			Summary: "Drive tk as the durable work-graph.",
+		},
+		Entry: "INSTRUCTIONS.md",
+	}
+}
+
+func writeInstruction(t *testing.T, body string) string {
+	t.Helper()
+	src := t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "INSTRUCTIONS.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
+// Pointer mode emits exactly two diffs: a CREATE of the standalone body file and
+// an APPEND of the thin pointer stanza into CLAUDE.md.
+func TestTransformInstructionPointerTwoDiffs(t *testing.T) {
+	src := writeInstruction(t, "FULL BODY of the ticket instruction\n")
+	home, proj := t.TempDir(), t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, proj))
+
+	diffs, err := eng.Transform(pointerInstructionArtifact(), loadAdapter(t, "claude"), "local", src, noExisting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 2 {
+		t.Fatalf("want 2 diffs, got %d: %+v", len(diffs), diffs)
+	}
+
+	create, appendD := diffs[0], diffs[1]
+	if create.Action != diff.Create {
+		t.Errorf("diff[0].Action = %s, want CREATE", create.Action)
+	}
+	wantBody := filepath.Join(proj, ".claude", "patronus", "instructions", "ticket.md")
+	if create.Path != wantBody {
+		t.Errorf("body path = %q, want %q", create.Path, wantBody)
+	}
+	if string(create.After) != "FULL BODY of the ticket instruction\n" {
+		t.Errorf("body not passed through verbatim: %q", create.After)
+	}
+
+	if appendD.Action != diff.Append {
+		t.Errorf("diff[1].Action = %s, want APPEND", appendD.Action)
+	}
+	wantCtrl := filepath.Join(proj, "CLAUDE.md")
+	if appendD.Path != wantCtrl {
+		t.Errorf("stanza path = %q, want %q", appendD.Path, wantCtrl)
+	}
+	s := string(appendD.After)
+	// Trigger rendered verbatim, tool-relative path shown, summary present, full body absent.
+	if !strings.Contains(s, "for multi-session or multi-agent work") {
+		t.Errorf("trigger not verbatim in stanza: %q", s)
+	}
+	if !strings.Contains(s, ".claude/patronus/instructions/ticket.md") {
+		t.Errorf("tool-relative path missing: %q", s)
+	}
+	if !strings.Contains(s, "Drive tk as the durable work-graph.") {
+		t.Errorf("summary missing: %q", s)
+	}
+	if strings.Contains(s, "FULL BODY") {
+		t.Errorf("full body leaked into stanza: %q", s)
+	}
+	if !strings.Contains(s, "<!-- patronus:start ticket -->") {
+		t.Errorf("stanza not fenced: %q", s)
+	}
+}
+
+// Re-running pointer mode against the already-written stanza is idempotent.
+func TestTransformInstructionPointerIdempotent(t *testing.T) {
+	src := writeInstruction(t, "BODY\n")
+	home, proj := t.TempDir(), t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, proj))
+
+	first, err := eng.Transform(pointerInstructionArtifact(), loadAdapter(t, "claude"), "local", src, noExisting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stanza := first[1].After
+
+	second, err := eng.Transform(pointerInstructionArtifact(), loadAdapter(t, "claude"), "local", src, existingBytes(stanza))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(second[1].After, stanza) {
+		t.Errorf("stanza not idempotent:\n first %q\nsecond %q", stanza, second[1].After)
+	}
+}
+
+// The pointer stanza reverses cleanly: RemoveSection strips it back to the
+// original control-file bytes (mirror of the APPEND), and the CREATE's inverse
+// is a plain DELETE of the standalone file.
+func TestTransformInstructionPointerRemoveRoundTrip(t *testing.T) {
+	src := writeInstruction(t, "BODY\n")
+	home, proj := t.TempDir(), t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, proj))
+
+	prior := []byte("# CLAUDE.md\n\nexisting house rules\n")
+	diffs, err := eng.Transform(pointerInstructionArtifact(), loadAdapter(t, "claude"), "local", src, existingBytes(prior))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withStanza := diffs[1].After
+	if !bytes.Contains(withStanza, []byte("existing house rules")) {
+		t.Fatalf("prose not preserved: %q", withStanza)
+	}
+	back, found := RemoveSection(withStanza, "ticket")
+	if !found {
+		t.Fatal("stanza section not found on remove")
+	}
+	if !bytes.Equal(back, prior) {
+		t.Errorf("remove did not round-trip:\n got %q\nwant %q", back, prior)
 	}
 }
