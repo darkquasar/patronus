@@ -10,7 +10,8 @@ license: Apache-2.0
 # single stdio-MCP config MERGE. Shape (computed) = wire-only. Pinned reference:
 # superradcompany/microsandbox @9f76f59 (the microVM engine `msb` backs the MCP).
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: npx

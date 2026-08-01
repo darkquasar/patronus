@@ -12,7 +12,8 @@ license: MIT
 # client config. --access-mode=restricted is the safe default (read-only + guarded).
 # Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: uvx

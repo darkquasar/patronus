@@ -11,7 +11,8 @@ license: MIT
 # a per-user secret, so Patronus does NOT bake it in — add it as a header in your MCP
 # client config. Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: http
     url: "https://mcp.context7.com/mcp"

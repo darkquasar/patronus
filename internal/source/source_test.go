@@ -154,7 +154,8 @@ name: foo-mcp
 role: tools
 summary: Local recipe.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: http
     url: "https://example.com/mcp/"

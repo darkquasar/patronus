@@ -9,7 +9,8 @@ license: MIT
 # REMOTE (http) MCP: nothing to download, so NO deliver block — install is a
 # single config MERGE. Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: http
     url: "https://api.githubcopilot.com/mcp/"

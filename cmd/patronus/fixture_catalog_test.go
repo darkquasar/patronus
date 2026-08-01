@@ -175,7 +175,8 @@ deliver:
   assets:
 `+mcpAssets.String()+`
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: "{installPath}"

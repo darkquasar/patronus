@@ -16,7 +16,8 @@ deliver:
 # rather than an MCP server; the mcp block below is a placeholder so the recipe
 # validates — finalized (mode/transport/command) once the upstream is chosen.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: "{installPath}"   # TODO: confirm the sandbox MCP launch command

@@ -183,36 +183,37 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 
 	// --- Recipes: family=recipe, declared role, COMPUTED Shape (§6). ----------
 	wantRecipes := map[string]struct {
-		role  manifest.Role
-		shape manifest.RecipeShape
-		mode  manifest.WireMode
+		role   manifest.Role
+		shape  manifest.RecipeShape
+		method manifest.WireMethod
+		actor  manifest.WireActor
 	}{
-		"github":           {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
-		"memory-engram":    {manifest.RoleMemory, manifest.ShapeFetchWire, manifest.WireModeMcp},
-		"memory-ai-memory": {manifest.RoleMemory, manifest.ShapeFetchRun, manifest.WireModeSelf},
-		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireModeMcp},
+		"github":           {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"memory-engram":    {manifest.RoleMemory, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
+		"memory-ai-memory": {manifest.RoleMemory, manifest.ShapeFetchRun, manifest.WireExec, manifest.ActorExternal},
+		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L4 context recipes (live docs + local semantic search) — wire-only MCP.
-		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireModeMcp},
-		"serena":   {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"serena":   {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L5 tool recipes (opt-in) — all wire-only MCP (npx/uvx on demand, or hosted).
-		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
-		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
-		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.5.2 L8 eval: install-only recipe (deliver: npm) for the tdd-guard CLI; no wire.
-		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
+		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireNone, ""},
 		// P7.5.3 L9 guardrails: install-only recipe (github-release fetch) for the gitleaks binary; no wire.
-		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireMode("")},
+		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireNone, ""},
 		// P7.5.4 L7 observability: install-only recipe (deliver: npm) for the ccusage CLI; no wire.
-		"ccusage": {manifest.RoleObservability, manifest.ShapeInstall, manifest.WireMode("")},
+		"ccusage": {manifest.RoleObservability, manifest.ShapeInstall, manifest.WireNone, ""},
 		// P7.5.5 L6 sandbox: srt (install-only npm, @opencode) + microsandbox (wire-only MCP, hard-isolation).
-		"sandbox-runtime": {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireMode("")},
-		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireModeMcp},
+		"sandbox-runtime": {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireNone, ""},
+		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.5.6 L8 eval: promptfoo CI gate (install-only npm) — the eval profile.
-		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireMode("")},
+		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireNone, ""},
 		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
 		// (upstream ships no release assets; the tool IS one bash script); the
 		// `ticket` instruction (requires: [tk]) wires it.
-		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireMode("")},
+		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireNone, ""},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
@@ -233,8 +234,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		if got := m.Shape(); got != want.shape {
 			t.Errorf("%s: Shape() = %q, want %q", m.Name, got, want.shape)
 		}
-		if m.Wire.Mode != want.mode {
-			t.Errorf("%s: wire.mode = %q, want %q", m.Name, m.Wire.Mode, want.mode)
+		if m.Wire.Method != want.method {
+			t.Errorf("%s: wire.method = %q, want %q", m.Name, m.Wire.Method, want.method)
+		}
+		if m.Wire.Actor != want.actor {
+			t.Errorf("%s: wire.actor = %q, want %q", m.Name, m.Wire.Actor, want.actor)
 		}
 	}
 

@@ -61,7 +61,8 @@ scope:
 # Engram is NOT self-wiring — Patronus performs the MCP-config MERGE itself.
 # `engram mcp` launches the MCP server over stdio. Shape (computed) = fetch+wire.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: "{installPath}"
