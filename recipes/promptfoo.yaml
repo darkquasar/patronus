@@ -9,7 +9,9 @@ license: MIT
 # Install-only: promptfoo is a CLI/CI tool you invoke (`promptfoo eval`), not
 # something wired into the agent. Patronus surfaces the npm install as an advisory.
 deliver:
-  source: npm
-  ref: promptfoo
+  via: package-manager
+  install:
+    - manager: npm
+      ref: promptfoo
   binary: promptfoo
 # no wire: — installing the package IS the whole job (Shape: install-only)

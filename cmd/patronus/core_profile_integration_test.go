@@ -140,6 +140,27 @@ func TestCoreOmitsTddEnforcementButShipsTheSkill(t *testing.T) {
 	}
 }
 
+// TestCoreNoLongerHasSerena is CLASS B: Serena moved out of core (it decomposes a
+// codebase, an opt-in concern) into the code-intel profile.
+func TestCoreNoLongerHasSerena(t *testing.T) {
+	names := resolvedNames(t, "core", "claude")
+	if strings.Contains(names, "serena") {
+		t.Errorf("serena should have moved out of core into code-intel — resolved: %s", names)
+	}
+}
+
+// TestCodeIntelHasSerenaAndGraphify is the inverse: the opt-in code-intel profile
+// wires both codebase-decomposition tools — Serena (moved out of core) and Graphify
+// (pulled transitively via the graphify artifacts' requires: [graphify]).
+func TestCodeIntelHasSerenaAndGraphify(t *testing.T) {
+	names := resolvedNames(t, "code-intel", "claude")
+	for _, want := range []string{"serena", "graphify", "graphify-hint", "graphify-query-first"} {
+		if !strings.Contains(names, want) {
+			t.Errorf("code-intel missing %q — resolved: %s", want, names)
+		}
+	}
+}
+
 // TestTddEnforcedProfileAddsEnforcement is the CLASS-B inverse: the opt-in
 // tdd-enforced profile (extends core) ADDS the test-first gate — the tdd-guard recipe
 // and the tdd-guard-hook — on top of the full core spine.

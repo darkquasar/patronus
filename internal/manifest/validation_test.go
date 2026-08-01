@@ -12,20 +12,21 @@ func TestShapeMatrix(t *testing.T) {
 	cases := []struct {
 		name     string
 		delivery *Delivery
-		mode     WireMode
+		method   WireMethod
+		actor    WireActor
 		want     RecipeShape
 	}{
-		{"nil-delivery+mcp", nil, WireModeMcp, ShapeWireOnly},
-		{"nil-delivery+run", nil, WireModeRun, ShapeWireOnly},   // no delivery wins
-		{"nil-delivery+self", nil, WireModeSelf, ShapeWireOnly}, // no delivery wins
-		{"delivery+mcp", &Delivery{Source: SourceGithubRelease}, WireModeMcp, ShapeFetchWire},
-		{"delivery+run", &Delivery{Source: SourceScript}, WireModeRun, ShapeFetchRun},
-		{"delivery+self", &Delivery{Source: SourceDocker}, WireModeSelf, ShapeFetchRun},
-		{"delivery+no-wire", &Delivery{Source: SourceNpm}, "", ShapeInstall}, // install-only
-		{"nil-delivery+no-wire", nil, "", ShapeWireOnly},                     // no delivery wins (degenerate)
+		{"nil-delivery+merge", nil, WireMerge, ActorPatronus, ShapeWireOnly},
+		{"nil-delivery+exec-patronus", nil, WireExec, ActorPatronus, ShapeWireOnly}, // no delivery wins
+		{"nil-delivery+exec-external", nil, WireExec, ActorExternal, ShapeWireOnly}, // no delivery wins
+		{"delivery+merge", &Delivery{Via: ViaFetch}, WireMerge, ActorPatronus, ShapeFetchWire},
+		{"delivery+exec-patronus", &Delivery{Via: ViaScript}, WireExec, ActorPatronus, ShapeFetchRun},
+		{"delivery+exec-external", &Delivery{Via: ViaDocker}, WireExec, ActorExternal, ShapeFetchRun},
+		{"delivery+no-wire", &Delivery{Via: ViaPackageManager}, WireNone, "", ShapeInstall}, // install-only
+		{"nil-delivery+no-wire", nil, WireNone, "", ShapeWireOnly},                          // no delivery wins (degenerate)
 	}
 	for _, tc := range cases {
-		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Mode: tc.mode}}
+		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Method: tc.method, Actor: tc.actor}}
 		if got := r.Shape(); got != tc.want {
 			t.Errorf("%s: Shape() = %q, want %q", tc.name, got, tc.want)
 		}
@@ -66,6 +67,14 @@ func TestValidateArtifact(t *testing.T) {
 			a.Type = TypeHook
 			a.Hook = &HookSpec{Event: "PreToolUse"}
 		}, true},
+		{"hook-gate-intent-valid", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "x", Intent: HookGate}
+		}, false},
+		{"hook-bad-intent", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "x", Intent: "bogus"}
+		}, true},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
 		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
 		{"attribution-complete", func(a *Artifact) {
@@ -89,12 +98,12 @@ func TestValidateArtifact(t *testing.T) {
 }
 
 // TestValidateRecipeRules covers the recipe accept/reject branches beyond the
-// wire-mode cases in manifest_test.go: family, role, delivery source.
+// wire-method cases in manifest_test.go: family, role, delivery via.
 func TestValidateRecipeRules(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
 			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "r"},
-			Wire: Wire{Mode: WireModeMcp, Mcp: &WireMcp{Transport: "http", URL: "https://x"}},
+			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://x"}},
 		}
 	}
 	cases := []struct {
@@ -107,20 +116,21 @@ func TestValidateRecipeRules(t *testing.T) {
 		{"wrong-family", func(r *Recipe) { r.Family = FamilyArtifact }, true},
 		{"missing-role", func(r *Recipe) { r.Role = "" }, true},
 		{"missing-name", func(r *Recipe) { r.Name = "" }, true},
-		{"bad-wire-mode", func(r *Recipe) { r.Wire.Mode = "teleport" }, true},
-		{"empty-wire-mode", func(r *Recipe) { r.Wire.Mode = "" }, true},
-		{"valid-delivery-source", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceGithubRelease} }, false},
-		{"bad-delivery-source", func(r *Recipe) { r.Delivery = &Delivery{Source: "ftp"} }, true},
-		{"every-valid-source-docker", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceDocker} }, false},
-		{"every-valid-source-cargo", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceCargo} }, false},
-		{"every-valid-source-script", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceScript} }, false},
-		// url is the one source with a required shape: it now has a fetcher, and a
-		// url delivery with no url+sha256 would be unfetchable. The other sources
-		// are still names in the closed set with no fields behind them, so a bare
-		// deliver block remains valid for them.
-		{"bare-source-url-rejected", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceURL} }, true},
-		{"every-valid-source-url", func(r *Recipe) {
-			r.Delivery = &Delivery{Source: SourceURL, URL: "https://x/tk", SHA256: "abc"}
+		{"bad-wire-method", func(r *Recipe) { r.Wire.Method = "teleport" }, true},
+		{"empty-wire-method-no-deliver", func(r *Recipe) { r.Wire = Wire{} }, true},
+		{"valid-delivery-via-fetch", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaFetch} }, false},
+		{"bad-delivery-via", func(r *Recipe) { r.Delivery = &Delivery{Via: "ftp"} }, true},
+		{"every-valid-via-docker", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaDocker} }, false},
+		{"every-valid-via-script", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaScript} }, false},
+		{"via-package-manager-needs-candidate", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaPackageManager} }, true},
+		{"via-package-manager-with-candidate", func(r *Recipe) {
+			r.Delivery = &Delivery{Via: ViaPackageManager, Install: []InstallCandidate{{Manager: PMNpm}}}
+		}, false},
+		// A url fetch needs url+sha256: a url with no sha256 is unfetchable and
+		// rejected; a full url+sha256 fetch is valid.
+		{"url-fetch-without-sha-rejected", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaFetch, URL: "https://x/tk"} }, true},
+		{"url-fetch-with-sha-valid", func(r *Recipe) {
+			r.Delivery = &Delivery{Via: ViaFetch, URL: "https://x/tk", SHA256: "abc"}
 		}, false},
 	}
 	for _, tc := range cases {
@@ -144,9 +154,10 @@ family: recipe
 name: scripted
 role: tools
 deliver:
-  source: script
+  via: script
 wire:
-  mode: run
+  method: exec
+  actor: patronus
   run:
     - "curl -sSf https://example/install.sh | sh"
   tools: [claude]
@@ -161,7 +172,7 @@ wire:
 	if r.Shape() != ShapeFetchRun {
 		t.Errorf("Shape() = %q, want fetch+run", r.Shape())
 	}
-	if r.Wire.Mode != WireModeRun || len(r.Wire.Run) != 1 {
+	if r.Wire.Method != WireExec || len(r.Wire.Run) != 1 {
 		t.Errorf("wire = %+v", r.Wire)
 	}
 	if r.Header().Family != FamilyRecipe {
@@ -219,15 +230,15 @@ func TestDecodeArtifactAndRecipe(t *testing.T) {
 		t.Error("DecodeArtifact accepted bogus type")
 	}
 
-	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x\n"))
+	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n"))
 	if err != nil {
 		t.Fatalf("DecodeRecipe: %v", err)
 	}
 	if r.Shape() != ShapeWireOnly {
 		t.Errorf("Shape() = %q, want wire-only", r.Shape())
 	}
-	if _, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  mode: mcp\n")); err == nil {
-		t.Error("DecodeRecipe accepted mcp mode with no mcp block")
+	if _, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n")); err == nil {
+		t.Error("DecodeRecipe accepted merge method with no mcp block")
 	}
 }
 
@@ -255,7 +266,7 @@ func TestResolveAsset(t *testing.T) {
 
 func TestResolveURLReturnsPinnedArtifact(t *testing.T) {
 	d := &Delivery{
-		Source:    SourceURL,
+		Via:       ViaFetch,
 		URL:       "https://example.test/tk",
 		SHA256:    "408f2c113ecc3bc071507593a78386f1b4cc743be6491c9e9f2627efd4d9902b",
 		Platforms: []string{"linux", "darwin"},
@@ -291,7 +302,7 @@ func TestResolveURLPlatformGate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Delivery{
-				Source:    SourceURL,
+				Via:       ViaFetch,
 				URL:       "https://example.test/tk",
 				SHA256:    "abc",
 				Platforms: tt.platforms,
@@ -304,21 +315,23 @@ func TestResolveURLPlatformGate(t *testing.T) {
 	}
 }
 
-func TestValidateURLDelivery(t *testing.T) {
+func TestValidateFetchDelivery(t *testing.T) {
 	tests := []struct {
 		name    string
 		d       Delivery
 		wantErr bool
 	}{
-		{"valid", Delivery{Source: SourceURL, URL: "https://x/tk", SHA256: "abc"}, false},
-		{"missing url", Delivery{Source: SourceURL, SHA256: "abc"}, true},
-		{"missing sha256", Delivery{Source: SourceURL, URL: "https://x/tk"}, true},
-		{"assets not allowed", Delivery{
-			Source: SourceURL, URL: "https://x/tk", SHA256: "abc",
+		{"url+sha valid", Delivery{Via: ViaFetch, URL: "https://x/tk", SHA256: "abc"}, false},
+		// A fetch with neither url nor assets is a stub whose upstream isn't pinned
+		// yet (the sandbox recipe) — valid, emits no FETCH until assets land.
+		{"bare fetch is a stub", Delivery{Via: ViaFetch}, false},
+		{"url without sha256 rejected", Delivery{Via: ViaFetch, URL: "https://x/tk"}, true},
+		{"url and assets both rejected", Delivery{
+			Via: ViaFetch, URL: "https://x/tk", SHA256: "abc",
 			Assets: []Asset{{OS: "linux", Arch: "amd64"}},
 		}, true},
-		{"unknown source rejected", Delivery{Source: DeliverySource("bogus")}, true},
-		{"github-release unaffected", Delivery{Source: SourceGithubRelease}, false},
+		{"asset-matrix fetch valid", Delivery{Via: ViaFetch, Assets: []Asset{{OS: "linux", Arch: "amd64"}}}, false},
+		{"unknown via rejected", Delivery{Via: DeliverVia("bogus")}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

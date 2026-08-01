@@ -11,7 +11,8 @@ license: MIT
 # differs (claude->claude-code, codex->codex, opencode->ide); {toolContext} resolves
 # it per tool so ONE recipe flavours all three. Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: uvx

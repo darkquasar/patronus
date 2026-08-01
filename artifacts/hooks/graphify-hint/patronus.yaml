@@ -1,0 +1,20 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: context
+name: graphify-hint
+description: "PreToolUse nudge — before a grep/rg/find search command, nudges the agent to prefer `graphify query \"<question>\"` over grepping raw files, when a graphify graph exists and graphify is on PATH. Fails open (never blocks). Native on claude + codex (hooks); on opencode the graphify-query-first instruction carries the nudge."
+version: 1.0.0
+entry: ""
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+requires: [graphify]
+hook:
+  event: PreToolUse
+  matcher: Bash
+  intent: nudge
+  command: >-
+    sh -c 'c=$(cat); q=$(printf "%s" "$c" | jq -r ".tool_input.command // empty" 2>/dev/null);
+    case "$q" in *grep*|*"rg "*|*"find "*) if [ -f graphify-out/graph.json ] && command -v graphify >/dev/null 2>&1;
+    then echo "hint: a graphify graph exists — consider graphify query \"<question>\" instead of grepping." >&2; fi ;; esac; exit 0'

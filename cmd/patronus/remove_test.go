@@ -214,3 +214,13 @@ func TestRemoveMutuallyExclusiveScope(t *testing.T) {
 		t.Error("expected error for --global and --local together")
 	}
 }
+
+func TestRemoveSurfacesUninstallAdvisory(t *testing.T) {
+	it := state.Item{Artifact: "graphify", SelfWired: true, PostInstall: []string{"uv tool install graphifyy"}}
+	var buf bytes.Buffer
+	surfaceUninstallAdvisory(&buf, it)
+	got := buf.String()
+	if !strings.Contains(got, "graphify") || !strings.Contains(got, "uv tool install graphifyy") {
+		t.Fatalf("want an uninstall advisory naming graphify and its install command, got %q", got)
+	}
+}

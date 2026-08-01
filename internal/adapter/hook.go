@@ -29,13 +29,34 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 	if ad.Layout.Hook == nil {
 		return nil, fmt.Errorf("adapter %q: no Hook layout", ad.Tool)
 	}
+	spec := art.Hook
+	if spec == nil {
+		return nil, fmt.Errorf("adapter: hook artifact %q missing hook block", art.Name)
+	}
+
+	// OpenCode has no declarative hooks block: a gate maps to its `permission`
+	// config; a nudge is delivered by a paired instruction (AGENTS.md), so it emits
+	// no hook diff here. Other tools fall through to the settings-list merge below.
+	if ad.Tool == "opencode" {
+		if spec.Intent == manifest.HookGate {
+			return e.transformGateOpenCode(art, ad, scope, spec, readExisting)
+		}
+		return nil, nil // nudge: the paired instruction artifact carries it on OpenCode
+	}
+
 	target := ad.Layout.Hook.ForScope(scope)
 	if !target.OK() {
 		return nil, nil // tool models no hook surface at this scope — honest skip
 	}
-	spec := art.Hook
-	if spec == nil {
-		return nil, fmt.Errorf("adapter: hook artifact %q missing hook block", art.Name)
+
+	// A script-bearing hook can only wire on a tool that has somewhere to put the
+	// script. A tool with a hook surface but NO hook-script dir (Codex references an
+	// absolute command; it places no bundled script) is an honest skip for such a
+	// hook, not an error — a cross-tool profile installs cleanly and the hook lands
+	// only where its script can. A hook that inlines its command (no script) still
+	// wires everywhere.
+	if spec.Script != "" && !ad.Layout.Hook.ScriptDirFor(scope).OK() {
+		return nil, nil
 	}
 
 	// A hook may ship a helper script: place it (CREATE) and resolve the command's
@@ -83,6 +104,46 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 			Elem:        elem,
 		},
 	}), nil
+}
+
+// transformGateOpenCode maps a gate hook to OpenCode's declarative permission
+// config: permission.<matcher> = "deny". OpenCode has no hooks block, so a gate is
+// expressed as a deny rule rather than a PreToolUse handler. A gate always denies —
+// ask/allow are not a gate's job — so no Decision field is needed.
+func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
+	target := ad.Layout.Hook.ForScope(scope)
+	if !target.OK() {
+		return nil, nil
+	}
+	key := spec.Matcher
+	if key == "" {
+		return nil, fmt.Errorf("adapter: opencode gate hook %q needs a matcher (the permission key to deny)", art.Name)
+	}
+	dotted := target.Path + "." + key // permission.<key>
+	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
+	existing, _, err := readExisting(path)
+	if err != nil {
+		return nil, fmt.Errorf("adapter: read settings for gate %q: %w", art.Name, err)
+	}
+	after, err := MergeSettings(existing, target, dotted, "deny")
+	if err != nil {
+		return nil, fmt.Errorf("adapter: wire gate %q: %w", art.Name, err)
+	}
+	return []diff.FileDiff{{
+		Path:   path,
+		Action: diff.Merge,
+		Before: existing,
+		After:  after,
+		Tool:   ad.Tool,
+		Scope:  scope,
+		Role:   string(art.Role),
+		Note:   "gate " + spec.Matcher + ": " + art.Name,
+		Setting: &diff.SettingEdit{
+			Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
+			Dotted:      dotted,
+			ScalarValue: "deny",
+		},
+	}}, nil
 }
 
 // placeHookScript emits the CREATE diff that writes the hook's bundled helper

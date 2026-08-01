@@ -25,13 +25,13 @@ func sampleCatalog() *registry.Catalog {
 		Recipes: []registry.RecipeEntry{
 			{Manifest: &manifest.Recipe{
 				Meta:    manifest.Meta{Family: manifest.FamilyRecipe, Name: "github", Role: manifest.RoleTools},
-				Summary: "hosted MCP", Wire: manifest.Wire{Mode: manifest.WireModeMcp, Mcp: &manifest.WireMcp{Transport: "http", URL: "https://x"}},
+				Summary: "hosted MCP", Wire: manifest.Wire{Method: manifest.WireMerge, Actor: manifest.ActorPatronus, Mcp: &manifest.WireMcp{Transport: "http", URL: "https://x"}},
 			}},
 			{Manifest: &manifest.Recipe{
 				Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-engram", Role: manifest.RoleMemory},
 				Summary:  "engram",
-				Delivery: &manifest.Delivery{Source: manifest.SourceGithubRelease},
-				Wire:     manifest.Wire{Mode: manifest.WireModeMcp, Mcp: &manifest.WireMcp{Transport: "stdio", Command: "x"}},
+				Delivery: &manifest.Delivery{Via: manifest.ViaFetch},
+				Wire:     manifest.Wire{Method: manifest.WireMerge, Actor: manifest.ActorPatronus, Mcp: &manifest.WireMcp{Transport: "stdio", Command: "x"}},
 			}},
 		},
 		Profiles: []registry.ProfileEntry{

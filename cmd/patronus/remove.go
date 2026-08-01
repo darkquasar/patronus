@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -227,7 +229,10 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 		if runner == nil {
 			runner = execRunner{cmd: cmd}
 		}
-		if _, execErr := runExecs(cmd, cs, runner); execErr != nil {
+		// remove never installs packages: a no-install consent (yes, not allow) keeps
+		// every package-install advisory surface-only.
+		consent := installConsent{yes: true, look: exec.LookPath, out: cmd.OutOrStdout()}
+		if _, execErr := runExecs(cmd, cs, runner, consent); execErr != nil {
 			applyErr = execErr
 		}
 	}
@@ -250,9 +255,12 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 			}
 		}
 		// A self-wired recipe with no files is never "removed" — its wiring can't be
-		// auto-reverted, so we leave its record for manual cleanup.
+		// auto-reverted, so we leave its record for manual cleanup. When Patronus
+		// installed a package for it (with consent), surface the manual-uninstall
+		// reminder: global-ish package state may be shared, so we never auto-uninstall.
 		if it.SelfWired && len(it.Files) == 0 {
 			fullyUndone = false
+			surfaceUninstallAdvisory(out, it)
 		}
 		if fullyUndone {
 			if s := loaded[it.Scope]; s != nil {
@@ -272,6 +280,16 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 
 	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", len(result.Applied), len(result.Skipped))
 	return applyErr
+}
+
+// surfaceUninstallAdvisory prints a manual-uninstall reminder for a package-install
+// item. Patronus installed the package (with consent) but does NOT auto-uninstall —
+// global-ish package state may be shared. It surfaces each recorded install command
+// so the user can reverse it deliberately.
+func surfaceUninstallAdvisory(out io.Writer, it state.Item) {
+	for _, cmd := range it.PostInstall {
+		fmt.Fprintf(out, "ADVISORY (uninstall yourself): package for %q was installed via `%s` — remove it manually if unused\n", it.Artifact, cmd)
+	}
 }
 
 // removeStatePath returns the state file for a scope (mirrors install's statePath

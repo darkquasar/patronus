@@ -39,9 +39,11 @@ layout:
         keys: { type: "remote", url: "{url}", headers: "{headers}" }
 
   hook:
-    # TODO: OpenCode hook surface — confirm before authoring hook artifacts.
-    global: null
-    project: null
+    # OpenCode has no declarative hooks block. A gate-intent hook merges into the
+    # declarative `permission` config; a nudge-intent hook is delivered by a paired
+    # instruction (AGENTS.md), so it emits no hook here. See transformGateOpenCode.
+    global: { file: "~/.config/opencode/opencode.json", format: json, path: "permission", action: merge }
+    project: { file: "opencode.json", format: json, path: "permission", action: merge }
 
   instruction:
     # OpenCode reads AGENTS.md/CLAUDE.md and an `instructions: []` glob array in config.

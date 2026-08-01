@@ -198,10 +198,11 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		}
 		it := get(d)
 		if d.Action == diff.Exec {
-			// A wire.run/self command: not a file, recorded as forward-compat revert
-			// data on the recipe's item. SelfWired tracks the self-managing
-			// (wire.mode:self) provenance — these have no Patronus-recorded inverse,
-			// which is what remove reports as "not auto-revertable."
+			// A wire exec command (or a package-install advisory): not a file,
+			// recorded as forward-compat revert data on the recipe's item. SelfWired
+			// tracks the self-managing (actor:external, or a consented package install)
+			// provenance — these have no Patronus-recorded inverse, which is what
+			// remove reports as "not auto-revertable."
 			if d.Exec != nil {
 				it.SelfWired = it.SelfWired || d.Exec.SelfManaged
 				it.PostInstall = append(it.PostInstall, d.Exec.Display)

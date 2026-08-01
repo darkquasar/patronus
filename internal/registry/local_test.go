@@ -79,7 +79,7 @@ func TestCatalogLoadsScaffoldedItems(t *testing.T) {
 	writeManifest(t, filepath.Join(root, "artifacts", "skills", "demo"), "patronus.yaml",
 		"apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: demo\ndescription: d\nversion: 1.0.0\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n")
 	writeManifest(t, filepath.Join(root, "recipes"), "rec.yaml",
-		"apiVersion: patronus/v2\nfamily: recipe\nname: rec\nrole: tools\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x\n")
+		"apiVersion: patronus/v2\nfamily: recipe\nname: rec\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n")
 	writeManifest(t, filepath.Join(root, "profiles"), "prof.yaml",
 		"apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: prof\nlayers:\n  capabilities: [demo]\n")
 
@@ -101,7 +101,7 @@ func TestCatalogRejectsNameCollision(t *testing.T) {
 	writeManifest(t, filepath.Join(root, "artifacts", "skills", "dup"), "patronus.yaml",
 		"apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nname: dup\ndescription: d\ntargets: [claude]\ndefaults:\n  scope: project\n")
 	writeManifest(t, filepath.Join(root, "recipes"), "dup.yaml",
-		"apiVersion: patronus/v2\nfamily: recipe\nname: dup\nrole: tools\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x\n")
+		"apiVersion: patronus/v2\nfamily: recipe\nname: dup\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n")
 
 	if _, err := NewLocalRegistry(root).Catalog(context.Background()); err == nil {
 		t.Error("expected name-collision error across artifact and recipe")

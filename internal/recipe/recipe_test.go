@@ -70,7 +70,7 @@ func engramRecipe() *manifest.Recipe {
 			Role:       manifest.RoleMemory,
 		},
 		Delivery: &manifest.Delivery{
-			Source:    manifest.SourceGithubRelease,
+			Via:       manifest.ViaFetch,
 			InstallTo: "~/.patronus/bin/",
 			Binary:    "engram",
 			Assets: []manifest.Asset{
@@ -79,9 +79,10 @@ func engramRecipe() *manifest.Recipe {
 			},
 		},
 		Wire: manifest.Wire{
-			Mode:  manifest.WireModeMcp,
-			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "{installPath}", Args: []string{"serve"}},
-			Tools: []string{"claude", "codex", "opencode"},
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
+			Mcp:    &manifest.WireMcp{Transport: "stdio", Command: "{installPath}", Args: []string{"serve"}},
+			Tools:  []string{"claude", "codex", "opencode"},
 		},
 	}
 }
@@ -194,7 +195,7 @@ func tkRecipe(sha string) *manifest.Recipe {
 			Role: manifest.RoleOrchestration, Name: "tk", Version: "0.3.2",
 		},
 		Delivery: &manifest.Delivery{
-			Source:    manifest.SourceURL,
+			Via:       manifest.ViaFetch,
 			URL:       "https://example.test/ticket",
 			SHA256:    sha,
 			Platforms: []string{"linux", "darwin"},
@@ -302,9 +303,10 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	rec := &manifest.Recipe{
 		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "github", Role: manifest.RoleTools},
 		Wire: manifest.Wire{
-			Mode:  manifest.WireModeMcp,
-			Mcp:   &manifest.WireMcp{Transport: "http", URL: "https://api.example/mcp/"},
-			Tools: []string{"claude"},
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
+			Mcp:    &manifest.WireMcp{Transport: "http", URL: "https://api.example/mcp/"},
+			Tools:  []string{"claude"},
 		},
 	}
 	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "claude", Scope: "local"})
@@ -324,13 +326,14 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	}
 }
 
-func TestComputeSelfMode_EmitsExec(t *testing.T) {
+func TestComputeExternalActor_EmitsAdvisoryExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: manifest.RoleMemory},
-		Delivery: &manifest.Delivery{Source: manifest.SourceDocker}, // no fetch
+		Delivery: &manifest.Delivery{Via: manifest.ViaDocker}, // no fetch
 		Wire: manifest.Wire{
-			Mode: manifest.WireModeSelf,
+			Method: manifest.WireExec,
+			Actor:  manifest.ActorExternal,
 			Run: []string{
 				"ai-memory install-mcp --client {tool} --apply",
 				"ai-memory install-hooks --agent {tool} --apply",
@@ -357,15 +360,15 @@ func TestComputeSelfMode_EmitsExec(t *testing.T) {
 	}
 	found := false
 	for _, e := range execs {
-		// A mode: self exec is ADVISORY (Patronus surfaces the self-wiring command
-		// but never runs it — the recipe's own CLI may not be installed) AND
-		// self-managed (provenance). This keeps a missing ai-memory binary from
-		// failing the install.
+		// An actor: external exec is ADVISORY (Patronus surfaces the self-wiring
+		// command but never runs it — the recipe's own CLI may not be installed) AND
+		// self-managed (provenance). Both bits derive from actor == external. This
+		// keeps a missing ai-memory binary from failing the install.
 		if !e.Exec.Advisory {
-			t.Errorf("self-mode exec %q should be advisory (display-only)", e.Exec.Display)
+			t.Errorf("external-actor exec %q should be advisory (display-only)", e.Exec.Display)
 		}
 		if !e.Exec.SelfManaged {
-			t.Errorf("self-mode exec %q should be self-managed", e.Exec.Display)
+			t.Errorf("external-actor exec %q should be self-managed", e.Exec.Display)
 		}
 		if e.Exec.Display == "ai-memory install-mcp --client claude --apply" {
 			found = true
@@ -387,7 +390,7 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "tdd-guard", Role: manifest.RoleEval},
-		Delivery: &manifest.Delivery{Source: manifest.SourceNpm, Ref: "tdd-guard", Binary: "tdd-guard"},
+		Delivery: &manifest.Delivery{Via: manifest.ViaPackageManager, Install: []manifest.InstallCandidate{{Manager: manifest.PMNpm, Ref: "tdd-guard"}}, Binary: "tdd-guard"},
 		// no Wire — install-only
 	}
 	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "all", Scope: "global"})
@@ -412,6 +415,55 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	}
 	if d.Tool != "-" {
 		t.Errorf("tool = %q, want '-' (a global install is tool-agnostic)", d.Tool)
+	}
+	// The advisory carries its ordered candidate list so the consent layer can
+	// detect the manager on PATH and run the command.
+	if d.Exec == nil || len(d.Exec.Candidates) != 1 || d.Exec.Candidates[0].Manager != "npm" ||
+		d.Exec.Candidates[0].Command != "npm install -g tdd-guard" {
+		t.Errorf("advisory candidates wrong: %+v", d.Exec)
+	}
+}
+
+// A via:package-manager recipe that ALSO wires an MCP server (the graphify shape)
+// emits BOTH the package-install advisory AND the MERGE. The install is delivery-
+// driven, orthogonal to wiring — without it the recipe would wire an MCP server
+// whose binary was never installed.
+func TestComputePackageManagerPlusWire_EmitsInstallAndMerge(t *testing.T) {
+	res, _, _ := testEnv(t)
+	rec := &manifest.Recipe{
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "graphify", Role: manifest.RoleContext},
+		Delivery: &manifest.Delivery{
+			Via:     manifest.ViaPackageManager,
+			Install: []manifest.InstallCandidate{{Manager: manifest.PMUv, Ref: "graphifyy==0.9.31"}},
+			Binary:  "graphify",
+		},
+		Wire: manifest.Wire{
+			Method: manifest.WireMerge, Actor: manifest.ActorPatronus,
+			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "graphify-mcp"},
+			Tools: []string{"claude"},
+		},
+	}
+	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "claude", Scope: "global"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var advisory, merge *diff.FileDiff
+	for i := range diffs {
+		switch diffs[i].Action {
+		case diff.Exec:
+			advisory = &diffs[i]
+		case diff.Merge:
+			merge = &diffs[i]
+		}
+	}
+	if advisory == nil {
+		t.Fatal("want a package-install advisory EXEC")
+	}
+	if advisory.Exec == nil || advisory.Exec.Display != "uv tool install graphifyy==0.9.31" {
+		t.Errorf("advisory command wrong: %+v", advisory.Exec)
+	}
+	if merge == nil {
+		t.Fatal("want an MCP MERGE alongside the install advisory")
 	}
 }
 

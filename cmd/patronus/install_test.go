@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"errors"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -252,8 +256,8 @@ func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
 		return "", false
 	}, home, proj)
 
-	// A NON-advisory exec (e.g. a mode: run recipe whose commands Patronus does run)
-	// — proves runDeployWith executes it and records the provenance. (A mode: self
+	// A NON-advisory exec (an actor:patronus recipe whose commands Patronus does run)
+	// — proves runDeployWith executes it and records the provenance. (An actor:external
 	// recipe's exec is advisory and would be surfaced, not run; that path is covered
 	// by the recipe-layer test + the advisory branch in runExecs.)
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{
@@ -298,7 +302,7 @@ func TestRunExecsStopsOnFailure(t *testing.T) {
 		{Action: diff.Exec, Exec: &diff.ExecSpec{Command: []string{"a"}, Display: "a"}},
 		{Action: diff.Exec, Exec: &diff.ExecSpec{Command: []string{"b"}, Display: "b"}},
 	}}
-	ran, err := runExecs(cmd, cs, failRunner{})
+	ran, err := runExecs(cmd, cs, failRunner{}, installConsent{look: exec.LookPath, out: &out})
 	if err == nil {
 		t.Fatal("expected failure")
 	}
@@ -310,6 +314,138 @@ func TestRunExecsStopsOnFailure(t *testing.T) {
 type failRunner struct{}
 
 func (failRunner) Run([]string) error { return os.ErrPermission }
+
+// pkgInstallCS builds a change set with one package-install advisory carrying the
+// given ordered candidates.
+func pkgInstallCS(artifact string, cands ...diff.InstallCandidateSpec) *diff.ChangeSet {
+	return &diff.ChangeSet{Diffs: []diff.FileDiff{{
+		Action: diff.Exec, Artifact: artifact,
+		Exec: &diff.ExecSpec{Advisory: true, Display: cands[0].Command, Candidates: cands},
+	}}}
+}
+
+func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	rows := readinessReport(cs, func(string) (string, error) { return "", errors.New("nope") })
+	if len(rows) != 1 || rows[0].Satisfiable {
+		t.Fatalf("want 1 unsatisfiable row, got %+v", rows)
+	}
+	if len(rows[0].Missing) != 1 || rows[0].Missing[0] != "uv" {
+		t.Errorf("want uv missing, got %+v", rows[0])
+	}
+}
+
+func TestPreflightAllOrNothingErrorsWhenMissing(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	if err := preflightAllOrNothing(cs, func(string) (string, error) { return "", errors.New("no") }); err == nil {
+		t.Fatal("want preflight error when no manager present")
+	}
+	if err := preflightAllOrNothing(cs, func(string) (string, error) { return "/x", nil }); err != nil {
+		t.Fatalf("want no error when a manager is present, got %v", err)
+	}
+}
+
+func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	runner := &fakeRunner{}
+	consent := installConsent{allow: true, look: func(string) (string, error) { return "/x", nil }, out: io.Discard}
+	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.ran) != 1 || runner.ran[0][0] != "uv" {
+		t.Fatalf("want the uv install to run, ran=%v", runner.ran)
+	}
+}
+
+func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
+	// uv (preferred) is absent; brew (fallback) is present → install via brew.
+	cs := pkgInstallCS("graphify",
+		diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"},
+		diff.InstallCandidateSpec{Manager: "brew", Command: "brew install graphify"},
+	)
+	runner := &fakeRunner{}
+	var out bytes.Buffer
+	look := func(bin string) (string, error) {
+		if bin == "brew" {
+			return "/opt/brew", nil
+		}
+		return "", errors.New("absent")
+	}
+	if _, err := runExecs(newInstallCmd(), cs, runner, installConsent{allow: true, look: look, out: &out}); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.ran) != 1 || runner.ran[0][0] != "brew" {
+		t.Fatalf("want the brew fallback to run, ran=%v", runner.ran)
+	}
+	if !strings.Contains(out.String(), "uv not available; using brew") {
+		t.Errorf("want a fell-off-preferred note, got:\n%s", out.String())
+	}
+}
+
+func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	runner := &fakeRunner{}
+	var out bytes.Buffer
+	consent := installConsent{allow: true, look: func(string) (string, error) { return "", errors.New("no") }, out: &out}
+	ran, err := runExecs(newInstallCmd(), cs, runner, consent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.ran) != 0 {
+		t.Fatalf("nothing should run when no manager present, ran=%v", runner.ran)
+	}
+	// Still recorded (state remembers the recipe) and surfaced + summarised.
+	if len(ran) != 1 {
+		t.Fatalf("advisory should still be recorded, got %d", len(ran))
+	}
+	if !strings.Contains(out.String(), "Skipped package installs") {
+		t.Errorf("want a skip summary, got:\n%s", out.String())
+	}
+}
+
+func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	runner := &fakeRunner{}
+	var out bytes.Buffer
+	consent := installConsent{
+		look: func(string) (string, error) { return "/x", nil },
+		in:   bufio.NewReader(strings.NewReader("n\n")),
+		out:  &out,
+	}
+	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.ran) != 0 {
+		t.Fatalf("a declined install must not run, ran=%v", runner.ran)
+	}
+}
+
+func TestConsentInteractiveAcceptRuns(t *testing.T) {
+	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	runner := &fakeRunner{}
+	var out bytes.Buffer
+	consent := installConsent{
+		look: func(string) (string, error) { return "/x", nil },
+		in:   bufio.NewReader(strings.NewReader("y\n")),
+		out:  &out,
+	}
+	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.ran) != 1 {
+		t.Fatalf("an accepted install must run, ran=%v", runner.ran)
+	}
+}
+
+func TestAllowPackageInstallsFlagRegistered(t *testing.T) {
+	cmd := newInstallCmd()
+	if cmd.Flags().Lookup("allow-package-installs") == nil {
+		t.Fatal("--allow-package-installs not registered")
+	}
+	if cmd.Flags().Lookup("prefer-system-pkg") != nil {
+		t.Fatal("--prefer-system-pkg should be removed")
+	}
+}
 
 // TestComputePlanDispatchesPlugin proves a plugin name routes to the plugin
 // install path (not the artifact fall-through). The plugin has a "claude-code"

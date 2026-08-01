@@ -7,7 +7,7 @@ upstream: TODO                              # §9.4 open: confirm the exact open
 license: TODO
 
 deliver:
-  source: github-release
+  via: fetch
   installTo: "~/.patronus/bin/"
   # TODO: pin per-OS/arch asset URLs + sha256 once the upstream is chosen.
   assets: []
@@ -16,7 +16,8 @@ deliver:
 # rather than an MCP server; the mcp block below is a placeholder so the recipe
 # validates — finalized (mode/transport/command) once the upstream is chosen.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: "{installPath}"   # TODO: confirm the sandbox MCP launch command

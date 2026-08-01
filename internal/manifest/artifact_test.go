@@ -138,3 +138,17 @@ func TestInstructionLayoutPointerDirForScope(t *testing.T) {
 		t.Errorf("local pointerDir = %q", got.Path)
 	}
 }
+
+func TestHookIntentDefaultsToNudge(t *testing.T) {
+	a := &Artifact{
+		Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Name: "h", Description: "d"},
+		Type: TypeHook,
+		Hook: &HookSpec{Event: "PreToolUse", Command: "x"},
+	}
+	if err := a.Validate(); err != nil {
+		t.Fatalf("valid hook rejected: %v", err)
+	}
+	if a.Hook.Intent != HookNudge {
+		t.Errorf("intent = %q, want defaulted to nudge", a.Hook.Intent)
+	}
+}

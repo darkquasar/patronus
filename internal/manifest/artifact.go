@@ -39,6 +39,18 @@ type SettingSpec struct {
 	Value any    `yaml:"value" json:"value"` // the value to set there (scalar or object)
 }
 
+// HookIntent is what a hook DOES, which decides how each tool wires it. A gate can
+// block/ask (declarative on all tools); a nudge injects context (declarative on
+// claude/codex, instruction-fallback on opencode, which has no nudge mechanism).
+type HookIntent string
+
+const (
+	HookGate  HookIntent = "gate"
+	HookNudge HookIntent = "nudge"
+)
+
+var hookIntents = map[HookIntent]bool{HookGate: true, HookNudge: true}
+
 // HookSpec is the declarative definition of a hook artifact (Type==hook). Rather
 // than parsing a hook out of a body file, the event/matcher/command are
 // structured data the adapter merges into the agent's settings at the layout's
@@ -46,12 +58,13 @@ type SettingSpec struct {
 // planner and remove path use to register exactly one array element and pull it
 // back out — so two hooks on one event coexist and revert independently.
 type HookSpec struct {
-	Event   string `yaml:"event" json:"event"`                         // e.g. PreToolUse | SessionStart
-	Matcher string `yaml:"matcher,omitempty" json:"matcher,omitempty"` // tool/glob filter; "" means "all" (omitted)
-	Command string `yaml:"command" json:"command"`                     // the shell command the hook runs; may contain {script} when Script is set
-	Script  string `yaml:"script,omitempty" json:"script,omitempty"`   // optional bundled helper script (a files: entry) PLACED in the tool's hook-script dir; {script} in Command resolves to its installed path
-	Type    string `yaml:"type,omitempty" json:"type,omitempty"`       // hook handler type; defaults to "command"
-	Timeout int    `yaml:"timeout,omitempty" json:"timeout,omitempty"` // seconds; omitted when zero (tool default)
+	Event   string     `yaml:"event" json:"event"`                         // e.g. PreToolUse | SessionStart
+	Matcher string     `yaml:"matcher,omitempty" json:"matcher,omitempty"` // tool/glob filter; "" means "all" (omitted)
+	Command string     `yaml:"command" json:"command"`                     // the shell command the hook runs; may contain {script} when Script is set
+	Script  string     `yaml:"script,omitempty" json:"script,omitempty"`   // optional bundled helper script (a files: entry) PLACED in the tool's hook-script dir; {script} in Command resolves to its installed path
+	Type    string     `yaml:"type,omitempty" json:"type,omitempty"`       // hook handler type; defaults to "command"
+	Timeout int        `yaml:"timeout,omitempty" json:"timeout,omitempty"` // seconds; omitted when zero (tool default)
+	Intent  HookIntent `yaml:"intent,omitempty" json:"intent,omitempty"`   // gate | nudge; defaults to nudge
 }
 
 // Attribution records the upstream provenance of vendored (de-vendored) artifact
@@ -127,6 +140,12 @@ func (a *Artifact) Validate() error {
 		}
 		if a.Hook.Event == "" || a.Hook.Command == "" {
 			return fmt.Errorf("hook artifact %q: hook requires event and command", a.Name)
+		}
+		if a.Hook.Intent == "" {
+			a.Hook.Intent = HookNudge // default: a hook that injects/advises
+		}
+		if !hookIntents[a.Hook.Intent] {
+			return fmt.Errorf("hook artifact %q: invalid hook intent %q (want gate|nudge)", a.Name, a.Hook.Intent)
 		}
 	}
 	if a.Type == TypeSetting {

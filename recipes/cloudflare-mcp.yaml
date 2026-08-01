@@ -11,7 +11,8 @@ license: Apache-2.0
 # account-scoped servers (bindings/observability/etc.) need OAuth and are NOT wired
 # here. Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: http
     url: "https://docs.mcp.cloudflare.com/mcp"

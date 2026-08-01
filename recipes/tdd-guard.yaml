@@ -12,7 +12,9 @@ license: MIT
 # silently runs a global package install). The settings wiring is the sibling
 # `tdd-guard-hook` artifact's job — clean altitude split: recipe delivers, hook wires.
 deliver:
-  source: npm
-  ref: tdd-guard                           # the npm package name
+  via: package-manager
+  install:
+    - manager: npm
+      ref: tdd-guard                       # the npm package name
   binary: tdd-guard                         # the command the hook references
 # no wire: — installing the package IS the whole job (Shape: install-only)

@@ -9,7 +9,8 @@ license: Apache-2.0
 # npx fetches + runs @playwright/mcp on demand, so NO deliver block — install is a
 # single stdio-MCP config MERGE. Shape (computed) = wire-only.
 wire:
-  mode: mcp
+  method: merge
+  actor: patronus
   mcp:
     transport: stdio
     command: npx

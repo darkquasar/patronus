@@ -34,7 +34,6 @@ layers:
     - ddd-distilled                        # distilled DDD discipline — dispatched when designing/modeling a domain
     - refactoring-distilled                # distilled refactoring discipline — dispatched when changing existing code
     - context7                             # live, version-specific library docs (hosted MCP)
-    - serena                               # semantic code navigation of the local repo (LSP MCP)
     - pattern-cloudflare                   # in-repo context skill
     - pattern-mcp                          # in-repo context skill
   tools:

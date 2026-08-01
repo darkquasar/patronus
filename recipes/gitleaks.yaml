@@ -12,7 +12,7 @@ license: MIT
 # holds a bare `gitleaks` binary at its root. Note the upstream uses `x64` in
 # asset names where GOARCH is `amd64`.
 deliver:
-  source: github-release
+  via: fetch
   installTo: "~/.patronus/bin/"
   binary: gitleaks
   assets:

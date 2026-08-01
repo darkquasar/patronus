@@ -23,59 +23,86 @@ type Recipe struct {
 // Header returns the recipe's shared identity header (implements Installable).
 func (r *Recipe) Header() Meta { return r.Meta }
 
-// DeliverySource is the closed set of ways a recipe's binary/script is obtained.
-type DeliverySource string
+// DeliverVia is the MECHANISM by which a recipe's payload is obtained. It
+// separates the mechanism (how) from the manager (which tool), which the old
+// DeliverySource enum conflated.
+type DeliverVia string
 
 const (
-	SourceGithubRelease DeliverySource = "github-release"
-	SourceDocker        DeliverySource = "docker"
-	SourceCargo         DeliverySource = "cargo"
-	SourceNpm           DeliverySource = "npm"
-	SourceScript        DeliverySource = "script"
-	SourceURL           DeliverySource = "url"
+	ViaFetch          DeliverVia = "fetch"           // a pinned binary/archive (per-OS Assets) or single URL artifact
+	ViaPackageManager DeliverVia = "package-manager" // installed via a PackageManager candidate list
+	ViaDocker         DeliverVia = "docker"          // a container image
+	ViaScript         DeliverVia = "script"          // a self-installing script
 )
 
-var deliverySources = map[DeliverySource]bool{
-	SourceGithubRelease: true, SourceDocker: true, SourceCargo: true,
-	SourceNpm: true, SourceScript: true, SourceURL: true,
+var deliverVias = map[DeliverVia]bool{ViaFetch: true, ViaPackageManager: true, ViaDocker: true, ViaScript: true}
+
+// PackageManager is the shared vocabulary of package managers, used by every
+// InstallCandidate (blessed or fallback). One enum, one detection map.
+type PackageManager string
+
+const (
+	PMNpm    PackageManager = "npm"
+	PMCargo  PackageManager = "cargo"
+	PMUv     PackageManager = "uv"
+	PMBrew   PackageManager = "brew"
+	PMScoop  PackageManager = "scoop"
+	PMWinget PackageManager = "winget"
+	PMAur    PackageManager = "aur"
+)
+
+var packageManagers = map[PackageManager]bool{
+	PMNpm: true, PMCargo: true, PMUv: true, PMBrew: true, PMScoop: true, PMWinget: true, PMAur: true,
 }
 
-// pmInstallTemplates renders the global-install command for a package-manager
-// delivery source. A package-install recipe (e.g. tdd-guard via npm) surfaces
-// this command as a display-only advisory row — Patronus does not silently run a
-// global package install; the user (or a future --prefer-system-pkg path) runs it.
-var pmInstallTemplates = map[DeliverySource]string{
-	SourceNpm:   "npm install -g %s",
-	SourceCargo: "cargo install %s",
+// pmInstallTemplates renders the user-scope install command per manager. A
+// manager absent here has no known install command and cannot render one.
+// NOTE: npm uses -g (user-scope on nvm/brew node; fails with a permission error
+// on a system-prefix rather than escalating — Patronus never runs sudo).
+var pmInstallTemplates = map[PackageManager]string{
+	PMNpm:   "npm install -g %s",
+	PMCargo: "cargo install %s",
+	PMUv:    "uv tool install %s",
 }
 
-// InstallCommand returns the global package-install command for a package-manager
-// delivery (npm/cargo), or "" for a source that is fetched/built differently
-// (github-release, docker, script, url). ref defaults to the recipe name when the
-// deliver block omits it.
-func (d *Delivery) InstallCommand(recipeName string) string {
-	tmpl, ok := pmInstallTemplates[d.Source]
+// InstallCandidate is one (manager, ref) way to install the recipe. The list is
+// ordered by Preference (lower first); the first candidate whose manager is on
+// PATH wins. A fallback is simply a lower-preference candidate — there is no
+// separate Fallback concept.
+type InstallCandidate struct {
+	Manager    PackageManager `yaml:"manager" json:"manager"`
+	Ref        string         `yaml:"ref,omitempty" json:"ref,omitempty"` // package name in that manager; defaults to recipe name
+	Preference int            `yaml:"preference,omitempty" json:"preference,omitempty"`
+}
+
+// InstallCommand renders this candidate's user-scope install command, or "" if
+// the manager has no template. ref defaults to recipeName.
+func (c InstallCandidate) InstallCommand(recipeName string) string {
+	tmpl, ok := pmInstallTemplates[c.Manager]
 	if !ok {
 		return ""
 	}
-	ref := d.Ref
+	ref := c.Ref
 	if ref == "" {
 		ref = recipeName
 	}
 	return fmt.Sprintf(tmpl, ref)
 }
 
-// Delivery describes how the recipe's binary/script is obtained (§4b).
+// Delivery describes how the recipe's payload is obtained (§4b). Via is the
+// mechanism; the mechanism-specific fields carry the rest.
 type Delivery struct {
-	Source    DeliverySource `yaml:"source" json:"source"`                           // github-release | docker | cargo | npm | script | url
-	Ref       string         `yaml:"ref,omitempty" json:"ref,omitempty"`             // package name for a PM source (npm/cargo); defaults to the recipe name
-	Fallbacks []Fallback     `yaml:"fallbacks,omitempty" json:"fallbacks,omitempty"` // opt-in system-PM alternatives (--prefer-system-pkg)
-	InstallTo string         `yaml:"installTo,omitempty" json:"installTo,omitempty"`
-	Binary    string         `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
-	Assets    []Asset        `yaml:"assets,omitempty" json:"assets,omitempty"`
+	Via DeliverVia `yaml:"via" json:"via"` // fetch | package-manager | docker | script
+	// Install is the ordered candidate list for via: package-manager (first
+	// present-on-PATH wins). Empty for fetch/docker/script.
+	Install   []InstallCandidate `yaml:"install,omitempty" json:"install,omitempty"`
+	InstallTo string             `yaml:"installTo,omitempty" json:"installTo,omitempty"`
+	Binary    string             `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
+	Assets    []Asset            `yaml:"assets,omitempty" json:"assets,omitempty"` // via: fetch, per-OS matrix
 
-	// url source: a single platform-independent artifact (e.g. a shell script).
-	// There is no per-OS/arch matrix — Platforms gates which hosts it runs on.
+	// via: fetch single artifact — a single platform-independent artifact (e.g. a
+	// shell script). There is no per-OS/arch matrix — Platforms gates which hosts
+	// it runs on.
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	SHA256    string   `yaml:"sha256,omitempty" json:"sha256,omitempty"`       // hex digest; pinned
 	Platforms []string `yaml:"platforms,omitempty" json:"platforms,omitempty"` // GOOS allow-list; empty = unrestricted
@@ -116,15 +143,6 @@ func (d *Delivery) supportsOS(goos string) bool {
 	return false
 }
 
-// Fallback is one opt-in system-package-manager alternative to the blessed
-// delivery source, consulted only under --prefer-system-pkg. A package manager
-// that doesn't (yet) carry the recipe simply isn't listed — there is no
-// "false" placeholder (which is what the old map[string]interface{} encoded).
-type Fallback struct {
-	PM  string `yaml:"pm" json:"pm"`   // brew | scoop | winget | cargo | aur | npm | ...
-	Ref string `yaml:"ref" json:"ref"` // package name / install ref in that PM
-}
-
 // Asset is one pinned per-OS/arch github-release artifact (§4b floor, pinned
 // trust model). Archive/BinaryPath are set when the asset is a tar.gz/zip rather
 // than a bare binary; the FETCH step extracts BinaryPath.
@@ -160,29 +178,37 @@ type RecipeScope struct {
 	Global string `yaml:"global,omitempty" json:"global,omitempty"`
 }
 
-// WireMode is the SINGLE source of wiring truth — replacing the old
-// SelfWiring bool + implicit (which-of-Mcp/PostInstall-is-set) signalling.
-type WireMode string
+// WireMethod is WHAT KIND of wiring operation a recipe performs (one axis).
+type WireMethod string
 
 const (
-	WireModeMcp  WireMode = "mcp"  // Patronus performs the MCP-config MERGE itself
-	WireModeRun  WireMode = "run"  // Patronus runs the commands we specify (EXEC)
-	WireModeSelf WireMode = "self" // the recipe's own installer wires it (EXEC, self-managing)
+	WireMerge WireMethod = "merge" // Patronus merges structured config (MCP block, settings, hook array)
+	WireExec  WireMethod = "exec"  // the wiring is one or more shell commands
+	WireNone  WireMethod = ""      // no wiring — delivering the package is the whole job
 )
 
-var wireModes = map[WireMode]bool{WireModeMcp: true, WireModeRun: true, WireModeSelf: true}
+// WireActor is WHO performs the wiring (the orthogonal axis).
+type WireActor string
 
-// Wire describes how the recipe is bound to each agent. Mode is the single
-// discriminator; the mode-specific field (Mcp for mcp, Run for run/self) carries
-// the payload.
+const (
+	ActorPatronus WireActor = "patronus" // Patronus runs it and owns the reversal (state-tracked)
+	ActorExternal WireActor = "external" // something outside Patronus does it; surfaced as advisory, remove reports manual-cleanup
+)
+
+var wireMethods = map[WireMethod]bool{WireMerge: true, WireExec: true, WireNone: true}
+var wireActors = map[WireActor]bool{ActorPatronus: true, ActorExternal: true}
+
+// Wire describes how the recipe is bound to each agent. Method and Actor are the
+// two orthogonal discriminators; the method-specific field carries the payload.
 type Wire struct {
-	Mode  WireMode `yaml:"mode" json:"mode"`
-	Tools []string `yaml:"tools,omitempty" json:"tools,omitempty"`
-	Mcp   *WireMcp `yaml:"mcp,omitempty" json:"mcp,omitempty"` // present iff mode == mcp
-	Run   []string `yaml:"run,omitempty" json:"run,omitempty"` // present iff mode == run or self (was: postInstall)
+	Method WireMethod `yaml:"method,omitempty" json:"method,omitempty"`
+	Actor  WireActor  `yaml:"actor,omitempty" json:"actor,omitempty"`
+	Tools  []string   `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Mcp    *WireMcp   `yaml:"mcp,omitempty" json:"mcp,omitempty"` // present iff method == merge
+	Run    []string   `yaml:"run,omitempty" json:"run,omitempty"` // present iff method == exec
 }
 
-// WireMcp is the MCP-config entry Patronus merges for a mode: mcp recipe.
+// WireMcp is the MCP-config entry Patronus merges for a method:merge recipe.
 type WireMcp struct {
 	Transport string   `yaml:"transport" json:"transport"` // http | stdio
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
@@ -201,16 +227,16 @@ const (
 	ShapeInstall   RecipeShape = "install-only" // deliver a package, no wiring (tdd-guard via npm)
 )
 
-// Shape derives the recipe's type from deliver × wire. It is a pure function with
-// no ambiguous case — honest only because Delivery is nil-or-present and
-// Wire.Mode is a single enum (possibly empty for an install-only recipe).
+// Shape derives the recipe's type from deliver × wire method. Actor does not
+// affect shape (a run and a self-wiring command are both fetch+run) — it only
+// affects whether the emitted EXEC is advisory (see internal/recipe).
 func (r *Recipe) Shape() RecipeShape {
 	switch {
 	case r.Delivery == nil:
 		return ShapeWireOnly
-	case r.Wire.Mode == "":
+	case r.Wire.Method == WireNone:
 		return ShapeInstall // deliver a package and stop; something else (a hook) wires it
-	case r.Wire.Mode == WireModeRun || r.Wire.Mode == WireModeSelf:
+	case r.Wire.Method == WireExec:
 		return ShapeFetchRun
 	default:
 		return ShapeFetchWire
@@ -254,49 +280,68 @@ func validateRecipe(r *Recipe) error {
 			return err
 		}
 	}
-	// An empty wire.mode is the install-only recipe (deliver a package, wire
+	// An empty wire.method is the install-only recipe (deliver a package, wire
 	// nothing — a hook or another item does the wiring). It is valid ONLY with a
 	// deliver block; a recipe that neither delivers nor wires does nothing.
-	if r.Wire.Mode == "" {
+	if r.Wire.Method == WireNone {
 		if r.Delivery == nil {
-			return fmt.Errorf("recipe does nothing: needs a wire.mode or a deliver block")
+			return fmt.Errorf("recipe does nothing: needs a wire.method or a deliver block")
 		}
 		return nil
 	}
-	if !wireModes[r.Wire.Mode] {
-		return fmt.Errorf("invalid wire.mode %q (want mcp|run|self, or omit for an install-only deliver recipe)", r.Wire.Mode)
+	if !wireMethods[r.Wire.Method] {
+		return fmt.Errorf("invalid wire.method %q (want merge|exec, or omit for an install-only deliver recipe)", r.Wire.Method)
 	}
-	switch r.Wire.Mode {
-	case WireModeMcp:
-		if r.Wire.Mcp == nil {
-			return fmt.Errorf("wire.mode mcp requires a wire.mcp block")
+	if !wireActors[r.Wire.Actor] {
+		return fmt.Errorf("wire.method %s requires wire.actor (patronus|external)", r.Wire.Method)
+	}
+	switch r.Wire.Method {
+	case WireMerge:
+		if r.Wire.Actor != ActorPatronus {
+			return fmt.Errorf("wire.method merge requires actor: patronus (Patronus performs the merge)")
 		}
-	case WireModeRun, WireModeSelf:
+		if r.Wire.Mcp == nil {
+			return fmt.Errorf("wire.method merge requires a wire.mcp block")
+		}
+	case WireExec:
 		if len(r.Wire.Run) == 0 {
-			return fmt.Errorf("wire.mode %s requires wire.run commands", r.Wire.Mode)
+			return fmt.Errorf("wire.method exec requires wire.run commands")
 		}
 	}
 	return nil
 }
 
-// validateDelivery checks the source-specific shape of a deliver block. The
-// source enum itself is closed; each source then has its own required fields.
+// validateDelivery checks the mechanism-specific shape of a deliver block. The
+// via enum is closed; each mechanism then has its own required fields.
 func validateDelivery(d *Delivery) error {
-	if !deliverySources[d.Source] {
-		return fmt.Errorf("invalid deliver.source %q", d.Source)
+	if !deliverVias[d.Via] {
+		return fmt.Errorf("invalid deliver.via %q (want fetch|package-manager|docker|script)", d.Via)
 	}
-	if d.Source != SourceURL {
-		return nil
-	}
-	// A url delivery is a single pinned artifact, not a per-OS/arch matrix.
-	if d.URL == "" {
-		return errors.New("deliver: source url requires a url")
-	}
-	if d.SHA256 == "" {
-		return errors.New("deliver: source url requires a sha256 (the pinned trust anchor)")
-	}
-	if len(d.Assets) > 0 {
-		return errors.New("deliver: source url takes a single url, not assets")
+	switch d.Via {
+	case ViaPackageManager:
+		if len(d.Install) == 0 {
+			return errors.New("deliver.via package-manager requires at least one install candidate")
+		}
+		for _, c := range d.Install {
+			if !packageManagers[c.Manager] {
+				return fmt.Errorf("invalid install candidate manager %q", c.Manager)
+			}
+		}
+	case ViaFetch:
+		// A single-URL fetch is a pinned artifact needing url+sha256; an
+		// asset-matrix fetch carries per-OS assets. The two are distinguished by
+		// which field is set (URL vs Assets), not a separate via. A fetch with
+		// NEITHER is a stub whose upstream isn't pinned yet (the sandbox recipe):
+		// still valid, it simply emits no FETCH for any host until assets land —
+		// the pre-refactor github-release behaviour.
+		if d.URL != "" {
+			if d.SHA256 == "" {
+				return errors.New("deliver.via fetch with a url requires a sha256 (the pinned trust anchor)")
+			}
+			if len(d.Assets) > 0 {
+				return errors.New("deliver.via fetch takes a single url OR assets, not both")
+			}
+		}
 	}
 	return nil
 }

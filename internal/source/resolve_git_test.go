@@ -67,7 +67,7 @@ func TestResolveGitArtifactItem(t *testing.T) {
 
 func TestResolveGitRecipeItem(t *testing.T) {
 	tgz := hostTarball(t, "kit", "main", map[string]string{
-		"foo-mcp.yaml": "apiVersion: patronus/v2\nfamily: recipe\nname: foo-mcp\nrole: tools\nsummary: s\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x/\n",
+		"foo-mcp.yaml": "apiVersion: patronus/v2\nfamily: recipe\nname: foo-mcp\nrole: tools\nsummary: s\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x/\n",
 	})
 	url := "https://github.com/me/kit/archive/main.tar.gz"
 	rs := &Resolver{Fetcher: fakeFetcher{bodies: map[string][]byte{url: tgz}}, CacheDir: t.TempDir()}
@@ -114,7 +114,7 @@ func TestResolveHTTPSArtifact(t *testing.T) {
 }
 
 func TestResolveHTTPSRecipe(t *testing.T) {
-	recipeYAML := "apiVersion: patronus/v2\nfamily: recipe\nname: hosted-mcp\nrole: tools\nsummary: s\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x/\n"
+	recipeYAML := "apiVersion: patronus/v2\nfamily: recipe\nname: hosted-mcp\nrole: tools\nsummary: s\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x/\n"
 	url := "https://example.com/hosted-mcp.yaml"
 	rs := &Resolver{Fetcher: fakeFetcher{bodies: map[string][]byte{url: []byte(recipeYAML)}}, CacheDir: t.TempDir()}
 	ref, _ := Parse(url)
