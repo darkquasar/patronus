@@ -1,10 +1,14 @@
 apiVersion: patronus/v2
 family: artifact
 type: instruction
+mode: pointer
+pointer:
+  trigger: "at the start of a task and whenever deciding how to approach the work"
+  summary: "Ambient house rules — mindset, workflow, and core working principles."
 role: instruction
 name: agent-principles
 description: "Ambient house rules for how an AI coding agent should think and work — mindset, workflow, task management, and core principles. Appended into CLAUDE.md/AGENTS.md."
-version: 1.0.1
+version: 1.1.0
 entry: INSTRUCTIONS.md       # the portable body appended as a delimited section
 targets: [claude, codex, opencode]
 defaults:
