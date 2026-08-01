@@ -63,6 +63,10 @@ layout:
   instruction:
     global: { file: "~/.claude/CLAUDE.md", action: appendSection }
     project: { file: "CLAUDE.md", action: appendSection }
+    # pointer mode: the standalone body file lands here; only a thin stanza
+    # appends into CLAUDE.md above.
+    pointerDirGlobal: "~/.claude/patronus/instructions/{name}.md"
+    pointerDirProject: ".claude/patronus/instructions/{name}.md"
     # appendSection inserts/replaces ONLY a fenced block keyed by {name}:
     #   <!-- patronus:start {name} --> … <!-- patronus:end {name} -->
 
