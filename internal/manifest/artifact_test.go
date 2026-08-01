@@ -95,3 +95,16 @@ func TestValidatePointerModeValid(t *testing.T) {
 		t.Errorf("valid pointer artifact rejected: %v", err)
 	}
 }
+
+func TestInstructionLayoutPointerDirForScope(t *testing.T) {
+	l := &InstructionLayout{
+		PointerDirGlobal:  PathTarget{Path: "~/g/{name}.md", Set: true},
+		PointerDirProject: PathTarget{Path: "p/{name}.md", Set: true},
+	}
+	if got := l.PointerDirFor("global"); got.Path != "~/g/{name}.md" {
+		t.Errorf("global pointerDir = %q", got.Path)
+	}
+	if got := l.PointerDirFor("local"); got.Path != "p/{name}.md" {
+		t.Errorf("local pointerDir = %q", got.Path)
+	}
+}
