@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/adapter"
@@ -17,14 +18,13 @@ import (
 
 // Request is the input to Compute. It mirrors plan.Request's shape for recipes.
 type Request struct {
-	Recipe          *manifest.Recipe
-	Adapters        map[string]*manifest.Adapter // keyed by tool, for the Mcp layout
-	Resolver        toolpath.Resolver
-	Tool            string // "claude"|"codex"|"opencode"|"all"|"" (=> recipe's wire.tools)
-	Scope           string // "global"|"local"|"" (=> "global" for recipes)
-	GOOS            string // host OS for asset resolution (defaults to runtime.GOOS)
-	GOARCH          string // host arch (defaults to runtime.GOARCH)
-	PreferSystemPkg bool   // --prefer-system-pkg (Phase-8 stub; warns + falls through)
+	Recipe   *manifest.Recipe
+	Adapters map[string]*manifest.Adapter // keyed by tool, for the Mcp layout
+	Resolver toolpath.Resolver
+	Tool     string // "claude"|"codex"|"opencode"|"all"|"" (=> recipe's wire.tools)
+	Scope    string // "global"|"local"|"" (=> "global" for recipes)
+	GOOS     string // host OS for asset resolution (defaults to runtime.GOOS)
+	GOARCH   string // host arch (defaults to runtime.GOARCH)
 
 	// PlacedDigest reports the sha256 Patronus RECORDED for the binary it placed at
 	// a dest (from state.json). classifyFetch needs it to tell "the binary we placed
@@ -34,8 +34,8 @@ type Request struct {
 	// then FETCHes rather than trusting an unhashed file — fail closed.
 	PlacedDigest PlacedDigestFunc
 
-	// Warnf, if set, receives non-fatal advisories (e.g. unresolved upstream,
-	// --prefer-system-pkg not yet implemented). The cmd layer wires it to stderr.
+	// Warnf, if set, receives non-fatal advisories (e.g. an unresolved upstream
+	// with no pinned asset for this host). The cmd layer wires it to stderr.
 	Warnf func(format string, args ...any)
 }
 
@@ -48,8 +48,9 @@ const defaultInstallTo = "~/.patronus/bin/"
 // and stats the fetch destination (for FETCH SKIP detection), but downloads
 // nothing — the applier does that.
 //
-// The productions, by wire method (§4) and delivery source:
-//   - deliver.source github-release   -> one FETCH diff for the host asset.
+// The productions, by wire method (§4) and delivery via:
+//   - deliver.via fetch               -> one FETCH diff for the host asset/artifact.
+//   - deliver.via package-manager     -> one advisory EXEC carrying the ordered candidates.
 //   - wire.method merge               -> one MERGE diff per tool (via MergeConfig).
 //   - wire.method exec, actor patronus -> one EXEC diff per command×tool (Patronus-run).
 //   - wire.method exec, actor external -> one display-only EXEC diff per command×tool.
@@ -93,11 +94,11 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 		}
 		diffs = append(diffs, merges...)
 	case manifest.WireNone:
-		// install-only: deliver a package and stop. A package-manager source has no
-		// FETCH (npm/cargo resolve the host themselves), so surface the install
-		// command as a display-only advisory row — Patronus never silently runs a
-		// global package install; the user (or a future --prefer-system-pkg path)
-		// runs it. Something else (a hook artifact) does the wiring.
+		// install-only: deliver a package and stop. A via:package-manager delivery
+		// has no FETCH (the manager resolves the host itself), so surface the install
+		// command as an advisory row carrying every ordered candidate — Patronus does
+		// not silently run a package install; the consent layer (cmd) decides whether
+		// to run it. Something else (a hook artifact) does the wiring.
 		if d := installAdvisory(rec, scope); d != nil {
 			diffs = append(diffs, *d)
 		}
@@ -106,48 +107,81 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 	return diffs, nil
 }
 
-// installAdvisory builds the display-only EXEC row for an install-only recipe: a
-// package-install command the user runs (marked self-managed so the applier skips
-// it and remove reports it as not-auto-revertable). Returns nil when the source
-// is not a package manager (it has its own FETCH path instead).
+// installAdvisory builds the advisory EXEC row for a via:package-manager
+// install-only recipe. It sorts the candidate list by preference (lower first),
+// carries the whole ordered list on the ExecSpec (so the consent layer can detect
+// managers on PATH and pick one), and displays the most-preferred command. It is
+// marked self-managed + advisory so the applier skips it by default. Returns nil
+// when the recipe does not install via a package manager (it has its own FETCH
+// path) or no candidate renders a command.
 func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
-	if rec.Delivery == nil {
+	if rec.Delivery == nil || rec.Delivery.Via != manifest.ViaPackageManager {
 		return nil
 	}
-	cmd := rec.Delivery.InstallCommand(rec.Name)
-	if cmd == "" {
+	cands := append([]manifest.InstallCandidate(nil), rec.Delivery.Install...)
+	sort.SliceStable(cands, func(i, j int) bool { return cands[i].Preference < cands[j].Preference })
+	specs := candidateSpecs(cands, rec.Name)
+	if len(specs) == 0 {
 		return nil
 	}
+	cmd := specs[0].Command
 	return &diff.FileDiff{
 		Path:     cmd,
 		Action:   diff.Exec,
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
-		Tool:     "-", // a global package install is tool-agnostic
+		Tool:     "-", // a package install is tool-agnostic
 		Scope:    scope,
 		Note:     "install: " + cmd,
-		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true},
+		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true, Candidates: specs},
 	}
 }
 
-// fetchDiff builds the FETCH diff for a fetchable delivery (github-release or
-// url), pre-classified against the destination on disk (matching sha -> SKIP). It
-// returns the resolved install path (so wireDiffs can substitute {installPath})
-// and the diff, or ("", nil) when the recipe has no binary to fetch — including
-// when this host has no pinned artifact, which is an advisory, not an error.
+// candidateSpecs renders each install candidate to a (manager, command) spec for
+// the consent layer, dropping any candidate whose manager has no install template.
+func candidateSpecs(cands []manifest.InstallCandidate, recipeName string) []diff.InstallCandidateSpec {
+	var out []diff.InstallCandidateSpec
+	for _, c := range cands {
+		if cmd := c.InstallCommand(recipeName); cmd != "" {
+			out = append(out, diff.InstallCandidateSpec{Manager: string(c.Manager), Command: cmd})
+		}
+	}
+	return out
+}
+
+// fetchDiff builds the FETCH diff for a via:fetch delivery, pre-classified against
+// the destination on disk (matching sha -> SKIP). A fetch is one of two sub-shapes,
+// distinguished by which field is set: a per-OS/arch asset MATRIX (Assets) or a
+// single pinned URL artifact (URL). It returns the resolved install path (so
+// wireDiffs can substitute {installPath}) and the diff, or ("", nil) when the
+// recipe has no binary to fetch — including when this host has no pinned artifact,
+// which is an advisory, not an error. docker/package-manager/script deliveries have
+// no fetcher.
 func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	rec := req.Recipe
-	if rec.Delivery == nil {
-		return "", nil
+	if rec.Delivery == nil || rec.Delivery.Via != manifest.ViaFetch {
+		return "", nil // docker/package-manager/script or wire-only: no fetcher
 	}
 
 	var spec *diff.FetchSpec
-	switch rec.Delivery.Source {
-	case manifest.SourceGithubRelease:
-		if req.PreferSystemPkg {
-			warn(req, "--prefer-system-pkg is not yet implemented (Phase 8); using github-release floor")
+	if rec.Delivery.URL != "" {
+		// One pinned artifact for every supported host — no per-OS/arch matrix.
+		// Platforms gates the hosts it can run on (tk is bash: POSIX only), and an
+		// unsupported host takes the same seam as a missing asset: warn, emit no
+		// FETCH. Archive stays empty, so classifyFetch verifies the placed file's sha
+		// against the pin on every run.
+		pin, err := rec.Delivery.ResolveURL(goos)
+		if err != nil {
+			warn(req, "%s: %v — skipping fetch", rec.Name, err)
+			return "", nil
 		}
+		spec = &diff.FetchSpec{
+			URL:    pin.URL,
+			SHA256: pin.SHA256,
+			Label:  fmt.Sprintf("%s (%s)", rec.Name, goos),
+		}
+	} else {
 		asset, err := rec.Delivery.ResolveAsset(goos, goarch)
 		if err != nil {
 			// No pinned asset for this host (e.g. sandbox's TODO upstream): surface a
@@ -162,26 +196,6 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 			BinaryPath: asset.BinaryPath,
 			Label:      fmt.Sprintf("%s (%s/%s)", rec.Name, goos, goarch),
 		}
-
-	case manifest.SourceURL:
-		// One pinned artifact for every supported host — no per-OS/arch matrix.
-		// Platforms gates the hosts it can run on (tk is bash: POSIX only), and an
-		// unsupported host takes the same seam as a missing asset above: warn, emit
-		// no FETCH. Archive stays empty, so classifyFetch verifies the placed file's
-		// sha against the pin on every run.
-		pin, err := rec.Delivery.ResolveURL(goos)
-		if err != nil {
-			warn(req, "%s: %v — skipping fetch", rec.Name, err)
-			return "", nil
-		}
-		spec = &diff.FetchSpec{
-			URL:    pin.URL,
-			SHA256: pin.SHA256,
-			Label:  fmt.Sprintf("%s (%s)", rec.Name, goos),
-		}
-
-	default:
-		return "", nil // docker/cargo/npm/script: no fetcher (package-manager or wire-only)
 	}
 
 	spec.Dest = resolveInstallPath(req.Resolver, rec)

@@ -70,7 +70,7 @@ func engramRecipe() *manifest.Recipe {
 			Role:       manifest.RoleMemory,
 		},
 		Delivery: &manifest.Delivery{
-			Source:    manifest.SourceGithubRelease,
+			Via:       manifest.ViaFetch,
 			InstallTo: "~/.patronus/bin/",
 			Binary:    "engram",
 			Assets: []manifest.Asset{
@@ -195,7 +195,7 @@ func tkRecipe(sha string) *manifest.Recipe {
 			Role: manifest.RoleOrchestration, Name: "tk", Version: "0.3.2",
 		},
 		Delivery: &manifest.Delivery{
-			Source:    manifest.SourceURL,
+			Via:       manifest.ViaFetch,
 			URL:       "https://example.test/ticket",
 			SHA256:    sha,
 			Platforms: []string{"linux", "darwin"},
@@ -330,7 +330,7 @@ func TestComputeExternalActor_EmitsAdvisoryExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: manifest.RoleMemory},
-		Delivery: &manifest.Delivery{Source: manifest.SourceDocker}, // no fetch
+		Delivery: &manifest.Delivery{Via: manifest.ViaDocker}, // no fetch
 		Wire: manifest.Wire{
 			Method: manifest.WireExec,
 			Actor:  manifest.ActorExternal,
@@ -390,7 +390,7 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
 		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "tdd-guard", Role: manifest.RoleEval},
-		Delivery: &manifest.Delivery{Source: manifest.SourceNpm, Ref: "tdd-guard", Binary: "tdd-guard"},
+		Delivery: &manifest.Delivery{Via: manifest.ViaPackageManager, Install: []manifest.InstallCandidate{{Manager: manifest.PMNpm, Ref: "tdd-guard"}}, Binary: "tdd-guard"},
 		// no Wire — install-only
 	}
 	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "all", Scope: "global"})
@@ -415,6 +415,12 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	}
 	if d.Tool != "-" {
 		t.Errorf("tool = %q, want '-' (a global install is tool-agnostic)", d.Tool)
+	}
+	// The advisory carries its ordered candidate list so the consent layer can
+	// detect the manager on PATH and run the command.
+	if d.Exec == nil || len(d.Exec.Candidates) != 1 || d.Exec.Candidates[0].Manager != "npm" ||
+		d.Exec.Candidates[0].Command != "npm install -g tdd-guard" {
+		t.Errorf("advisory candidates wrong: %+v", d.Exec)
 	}
 }
 
