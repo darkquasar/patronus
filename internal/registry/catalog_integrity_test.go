@@ -69,8 +69,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.2-L4 vendored context/design-vocabulary skills (mattpocock).
 		"codebase-design": {manifest.TypeSkill, manifest.RoleContext},
 		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
-		// P7.3 distilled Go-idiomatic instruction (Uber Go Style Guide) — golang profile.
-		"go-style-uber": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// Distilled Go-idiomatic guide (Uber Go Style Guide) — a skill, dispatched on
+		// relevance (writing/reviewing Go) rather than inlined into CLAUDE.md.
+		"go-style-uber": {manifest.TypeSkill, manifest.RoleContext},
 		// Core eng-team: work-on-a-branch disposition (authored, advisory).
 		"branch-first": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).

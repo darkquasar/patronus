@@ -1,3 +1,8 @@
+---
+name: go-style-uber
+description: Idiomatic Go conventions distilled from the Uber Go Style Guide — error handling, concurrency, struct/enum/slice discipline, naming, and performance, as compact decision and trigger rules. Use when writing or reviewing Go code.
+---
+
 # Idiomatic Go conventions (distilled from the Uber Go Style Guide)
 
 Apply these when writing or reviewing Go. They are decision rules with their

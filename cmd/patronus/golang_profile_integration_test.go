@@ -36,14 +36,17 @@ func TestGolangProfileWiresGoStyleOnTopOfCore(t *testing.T) {
 	}
 
 	// golang's own overlay AND core's inherited L1 spine both target ONE CLAUDE.md.
-	for _, want := range []string{"agents-spine", "agent-rules", "go-style-uber"} {
+	for _, want := range []string{"agents-spine", "agent-rules"} {
 		if !planHas(out, want, filepath.Join("~", ".claude", "CLAUDE.md")) {
 			t.Errorf("golang plan does not APPEND %q into ~/.claude/CLAUDE.md:\n%s", want, out)
 		}
 	}
 
+	// go-style-uber is a SKILL now (dispatched on relevance), so the golang profile
+	// CREATEs it under skills/ rather than appending it into CLAUDE.md.
 	// The inherited core skills + the diagram-explain output-style are planned too.
 	for _, tc := range []struct{ item, path string }{
+		{"go-style-uber", filepath.Join("~", ".claude", "skills", "go-style-uber")},
 		{"tdd", filepath.Join("~", ".claude", "skills", "tdd")},
 		{"codebase-design", filepath.Join("~", ".claude", "skills", "codebase-design")},
 		{"diagram-explain", filepath.Join("~", ".claude", "output-styles", "diagram-explain.md")},

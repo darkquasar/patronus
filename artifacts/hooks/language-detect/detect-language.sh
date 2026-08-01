@@ -22,7 +22,7 @@ hits=""
 # --- Go
 if [ -f "$root/go.mod" ]; then
   hits="${hits}
-- Go (go.mod) — follow Go idioms; apply the go-style-uber instruction if installed."
+- Go (go.mod) — follow Go idioms; load the go-style-uber skill if installed."
 fi
 
 # --- Rust

@@ -5,11 +5,11 @@ name: golang
 summary: "Go project environment: the full core spine PLUS idiomatic Go conventions (Uber Go Style Guide, distilled). core + Go guidelines."
 # golang = core, extended. `extends: core` pulls in every core layer (L1 spine +
 # diagram-explain, L2 skills, L4 design-vocab + Context7/Serena, L5 github, ai-memory);
-# this profile only ADDS the Go-idiomatic instruction overlay. List slots append, so
-# go-style-uber joins core's instructions rather than replacing them.
+# this profile only ADDS the Go-idiomatic overlay. List slots append, so go-style-uber
+# joins core's L4 context items rather than replacing them.
 extends: core
 layers:
-  instructions:
-    - go-style-uber                        # idiomatic Go conventions distilled from the Uber Go Style Guide
+  context:
+    - go-style-uber                        # idiomatic Go conventions (Uber Go Style Guide, distilled) — a skill, dispatched when writing/reviewing Go
 todo:
   - "Source a Go eval (go test/vet + golangci-lint loop) when L8 lands (P7.5)."
