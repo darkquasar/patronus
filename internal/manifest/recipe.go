@@ -23,59 +23,86 @@ type Recipe struct {
 // Header returns the recipe's shared identity header (implements Installable).
 func (r *Recipe) Header() Meta { return r.Meta }
 
-// DeliverySource is the closed set of ways a recipe's binary/script is obtained.
-type DeliverySource string
+// DeliverVia is the MECHANISM by which a recipe's payload is obtained. It
+// separates the mechanism (how) from the manager (which tool), which the old
+// DeliverySource enum conflated.
+type DeliverVia string
 
 const (
-	SourceGithubRelease DeliverySource = "github-release"
-	SourceDocker        DeliverySource = "docker"
-	SourceCargo         DeliverySource = "cargo"
-	SourceNpm           DeliverySource = "npm"
-	SourceScript        DeliverySource = "script"
-	SourceURL           DeliverySource = "url"
+	ViaFetch          DeliverVia = "fetch"           // a pinned binary/archive (per-OS Assets) or single URL artifact
+	ViaPackageManager DeliverVia = "package-manager" // installed via a PackageManager candidate list
+	ViaDocker         DeliverVia = "docker"          // a container image
+	ViaScript         DeliverVia = "script"          // a self-installing script
 )
 
-var deliverySources = map[DeliverySource]bool{
-	SourceGithubRelease: true, SourceDocker: true, SourceCargo: true,
-	SourceNpm: true, SourceScript: true, SourceURL: true,
+var deliverVias = map[DeliverVia]bool{ViaFetch: true, ViaPackageManager: true, ViaDocker: true, ViaScript: true}
+
+// PackageManager is the shared vocabulary of package managers, used by every
+// InstallCandidate (blessed or fallback). One enum, one detection map.
+type PackageManager string
+
+const (
+	PMNpm    PackageManager = "npm"
+	PMCargo  PackageManager = "cargo"
+	PMUv     PackageManager = "uv"
+	PMBrew   PackageManager = "brew"
+	PMScoop  PackageManager = "scoop"
+	PMWinget PackageManager = "winget"
+	PMAur    PackageManager = "aur"
+)
+
+var packageManagers = map[PackageManager]bool{
+	PMNpm: true, PMCargo: true, PMUv: true, PMBrew: true, PMScoop: true, PMWinget: true, PMAur: true,
 }
 
-// pmInstallTemplates renders the global-install command for a package-manager
-// delivery source. A package-install recipe (e.g. tdd-guard via npm) surfaces
-// this command as a display-only advisory row — Patronus does not silently run a
-// global package install; the user (or a future --prefer-system-pkg path) runs it.
-var pmInstallTemplates = map[DeliverySource]string{
-	SourceNpm:   "npm install -g %s",
-	SourceCargo: "cargo install %s",
+// pmInstallTemplates renders the user-scope install command per manager. A
+// manager absent here has no known install command and cannot render one.
+// NOTE: npm uses -g (user-scope on nvm/brew node; fails with a permission error
+// on a system-prefix rather than escalating — Patronus never runs sudo).
+var pmInstallTemplates = map[PackageManager]string{
+	PMNpm:   "npm install -g %s",
+	PMCargo: "cargo install %s",
+	PMUv:    "uv tool install %s",
 }
 
-// InstallCommand returns the global package-install command for a package-manager
-// delivery (npm/cargo), or "" for a source that is fetched/built differently
-// (github-release, docker, script, url). ref defaults to the recipe name when the
-// deliver block omits it.
-func (d *Delivery) InstallCommand(recipeName string) string {
-	tmpl, ok := pmInstallTemplates[d.Source]
+// InstallCandidate is one (manager, ref) way to install the recipe. The list is
+// ordered by Preference (lower first); the first candidate whose manager is on
+// PATH wins. A fallback is simply a lower-preference candidate — there is no
+// separate Fallback concept.
+type InstallCandidate struct {
+	Manager    PackageManager `yaml:"manager" json:"manager"`
+	Ref        string         `yaml:"ref,omitempty" json:"ref,omitempty"` // package name in that manager; defaults to recipe name
+	Preference int            `yaml:"preference,omitempty" json:"preference,omitempty"`
+}
+
+// InstallCommand renders this candidate's user-scope install command, or "" if
+// the manager has no template. ref defaults to recipeName.
+func (c InstallCandidate) InstallCommand(recipeName string) string {
+	tmpl, ok := pmInstallTemplates[c.Manager]
 	if !ok {
 		return ""
 	}
-	ref := d.Ref
+	ref := c.Ref
 	if ref == "" {
 		ref = recipeName
 	}
 	return fmt.Sprintf(tmpl, ref)
 }
 
-// Delivery describes how the recipe's binary/script is obtained (§4b).
+// Delivery describes how the recipe's payload is obtained (§4b). Via is the
+// mechanism; the mechanism-specific fields carry the rest.
 type Delivery struct {
-	Source    DeliverySource `yaml:"source" json:"source"`                           // github-release | docker | cargo | npm | script | url
-	Ref       string         `yaml:"ref,omitempty" json:"ref,omitempty"`             // package name for a PM source (npm/cargo); defaults to the recipe name
-	Fallbacks []Fallback     `yaml:"fallbacks,omitempty" json:"fallbacks,omitempty"` // opt-in system-PM alternatives (--prefer-system-pkg)
-	InstallTo string         `yaml:"installTo,omitempty" json:"installTo,omitempty"`
-	Binary    string         `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
-	Assets    []Asset        `yaml:"assets,omitempty" json:"assets,omitempty"`
+	Via DeliverVia `yaml:"via" json:"via"` // fetch | package-manager | docker | script
+	// Install is the ordered candidate list for via: package-manager (first
+	// present-on-PATH wins). Empty for fetch/docker/script.
+	Install   []InstallCandidate `yaml:"install,omitempty" json:"install,omitempty"`
+	InstallTo string             `yaml:"installTo,omitempty" json:"installTo,omitempty"`
+	Binary    string             `yaml:"binary,omitempty" json:"binary,omitempty"` // installed binary filename (defaults to recipe name)
+	Assets    []Asset            `yaml:"assets,omitempty" json:"assets,omitempty"` // via: fetch, per-OS matrix
 
-	// url source: a single platform-independent artifact (e.g. a shell script).
-	// There is no per-OS/arch matrix — Platforms gates which hosts it runs on.
+	// via: fetch single artifact — a single platform-independent artifact (e.g. a
+	// shell script). There is no per-OS/arch matrix — Platforms gates which hosts
+	// it runs on.
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	SHA256    string   `yaml:"sha256,omitempty" json:"sha256,omitempty"`       // hex digest; pinned
 	Platforms []string `yaml:"platforms,omitempty" json:"platforms,omitempty"` // GOOS allow-list; empty = unrestricted
@@ -114,15 +141,6 @@ func (d *Delivery) supportsOS(goos string) bool {
 		}
 	}
 	return false
-}
-
-// Fallback is one opt-in system-package-manager alternative to the blessed
-// delivery source, consulted only under --prefer-system-pkg. A package manager
-// that doesn't (yet) carry the recipe simply isn't listed — there is no
-// "false" placeholder (which is what the old map[string]interface{} encoded).
-type Fallback struct {
-	PM  string `yaml:"pm" json:"pm"`   // brew | scoop | winget | cargo | aur | npm | ...
-	Ref string `yaml:"ref" json:"ref"` // package name / install ref in that PM
 }
 
 // Asset is one pinned per-OS/arch github-release artifact (§4b floor, pinned
@@ -293,24 +311,37 @@ func validateRecipe(r *Recipe) error {
 	return nil
 }
 
-// validateDelivery checks the source-specific shape of a deliver block. The
-// source enum itself is closed; each source then has its own required fields.
+// validateDelivery checks the mechanism-specific shape of a deliver block. The
+// via enum is closed; each mechanism then has its own required fields.
 func validateDelivery(d *Delivery) error {
-	if !deliverySources[d.Source] {
-		return fmt.Errorf("invalid deliver.source %q", d.Source)
+	if !deliverVias[d.Via] {
+		return fmt.Errorf("invalid deliver.via %q (want fetch|package-manager|docker|script)", d.Via)
 	}
-	if d.Source != SourceURL {
-		return nil
-	}
-	// A url delivery is a single pinned artifact, not a per-OS/arch matrix.
-	if d.URL == "" {
-		return errors.New("deliver: source url requires a url")
-	}
-	if d.SHA256 == "" {
-		return errors.New("deliver: source url requires a sha256 (the pinned trust anchor)")
-	}
-	if len(d.Assets) > 0 {
-		return errors.New("deliver: source url takes a single url, not assets")
+	switch d.Via {
+	case ViaPackageManager:
+		if len(d.Install) == 0 {
+			return errors.New("deliver.via package-manager requires at least one install candidate")
+		}
+		for _, c := range d.Install {
+			if !packageManagers[c.Manager] {
+				return fmt.Errorf("invalid install candidate manager %q", c.Manager)
+			}
+		}
+	case ViaFetch:
+		// A single-URL fetch is a pinned artifact needing url+sha256; an
+		// asset-matrix fetch carries per-OS assets. The two are distinguished by
+		// which field is set (URL vs Assets), not a separate via. A fetch with
+		// NEITHER is a stub whose upstream isn't pinned yet (the sandbox recipe):
+		// still valid, it simply emits no FETCH for any host until assets land —
+		// the pre-refactor github-release behaviour.
+		if d.URL != "" {
+			if d.SHA256 == "" {
+				return errors.New("deliver.via fetch with a url requires a sha256 (the pinned trust anchor)")
+			}
+			if len(d.Assets) > 0 {
+				return errors.New("deliver.via fetch takes a single url OR assets, not both")
+			}
+		}
 	}
 	return nil
 }

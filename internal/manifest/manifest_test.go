@@ -146,17 +146,17 @@ func TestValidateRecipeWireMethod(t *testing.T) {
 		t.Errorf("valid exec×external recipe rejected: %v", err)
 	}
 
-	// bad delivery source is invalid.
+	// bad delivery via is invalid.
 	r = base()
-	r.Delivery = &Delivery{Source: "ftp"}
+	r.Delivery = &Delivery{Via: "ftp"}
 	if err := validateRecipe(r); err == nil {
-		t.Error("expected error for invalid deliver.source")
+		t.Error("expected error for invalid deliver.via")
 	}
 
 	// install-only: empty wire.method is valid WITH a deliver block.
 	r = base()
 	r.Wire = Wire{}
-	r.Delivery = &Delivery{Source: SourceNpm, Ref: "tdd-guard"}
+	r.Delivery = &Delivery{Via: ViaPackageManager, Install: []InstallCandidate{{Manager: PMNpm, Ref: "tdd-guard"}}}
 	if err := validateRecipe(r); err != nil {
 		t.Errorf("install-only recipe (empty method + deliver) rejected: %v", err)
 	}
@@ -170,22 +170,23 @@ func TestValidateRecipeWireMethod(t *testing.T) {
 	}
 }
 
-func TestDeliveryInstallCommand(t *testing.T) {
-	cases := []struct {
-		name   string
-		d      Delivery
-		recipe string
-		want   string
+func TestInstallCommand(t *testing.T) {
+	tests := []struct {
+		name      string
+		candidate InstallCandidate
+		recipe    string
+		want      string
 	}{
-		{"npm with ref", Delivery{Source: SourceNpm, Ref: "tdd-guard"}, "tdd-guard", "npm install -g tdd-guard"},
-		{"npm defaults ref to recipe name", Delivery{Source: SourceNpm}, "ccusage", "npm install -g ccusage"},
-		{"cargo", Delivery{Source: SourceCargo, Ref: "ripgrep"}, "rg", "cargo install ripgrep"},
-		{"non-PM source has no install command", Delivery{Source: SourceGithubRelease}, "engram", ""},
+		{"npm with ref", InstallCandidate{Manager: PMNpm, Ref: "tdd-guard"}, "tdd-guard", "npm install -g tdd-guard"},
+		{"npm defaults ref", InstallCandidate{Manager: PMNpm}, "ccusage", "npm install -g ccusage"},
+		{"cargo", InstallCandidate{Manager: PMCargo, Ref: "ripgrep"}, "rg", "cargo install ripgrep"},
+		{"uv", InstallCandidate{Manager: PMUv, Ref: "graphifyy"}, "graphify", "uv tool install graphifyy"},
+		{"manager without a template has no command", InstallCandidate{Manager: PMAur, Ref: "x"}, "x", ""},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.d.InstallCommand(tc.recipe); got != tc.want {
-				t.Errorf("InstallCommand = %q, want %q", got, tc.want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.candidate.InstallCommand(tt.recipe); got != tt.want {
+				t.Errorf("InstallCommand = %q, want %q", got, tt.want)
 			}
 		})
 	}

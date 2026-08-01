@@ -133,17 +133,30 @@ type FetchSpec struct {
 
 // ExecSpec is one wire.run command. Command is the argv; Display is the
 // human-readable form shown in the dry run. SelfManaged is true when the command
-// comes from a wire.mode:self recipe (the recipe's own installer wires it), which
-// is what remove reports as "not auto-revertable"; false for a wire.mode:run
+// comes from an actor:external recipe (something outside Patronus wires it), which
+// is what remove reports as "not auto-revertable"; false for an actor:patronus
 // command that Patronus itself runs. Advisory is true for a display-only command
-// Patronus must NOT run (an install-only recipe's package-install line): it is
-// shown so the user can run it, but the EXEC runner skips it — distinct from
-// SelfManaged, which IS executed.
+// Patronus must NOT run by default (an install-only recipe's package-install
+// line): it is shown so the user can run it, but the EXEC runner skips it unless
+// the consent layer opts in — distinct from a plain SelfManaged exec, which is
+// never run.
 type ExecSpec struct {
 	Command     []string
 	Display     string
 	SelfManaged bool
 	Advisory    bool
+	// Candidates is the ordered package-manager install options for an
+	// install-only recipe (via: package-manager). The consent layer picks the
+	// first whose manager is on PATH. Empty for non-package-install execs.
+	Candidates []InstallCandidateSpec
+}
+
+// InstallCandidateSpec is one resolved (manager, command) install option, carried
+// on an advisory EXEC so the consent layer can detect the manager on PATH and run
+// the command.
+type InstallCandidateSpec struct {
+	Manager string
+	Command string
 }
 
 // SectionEdit captures the inputs of an appendSection edit so it can be re-applied
