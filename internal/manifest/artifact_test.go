@@ -3,7 +3,32 @@ package manifest
 import (
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
+
+// The catalog build re-marshals each manifest into its tarball, so the marshalled
+// form of an unchanged, mode-less instruction must be byte-stable across releases —
+// in particular it must NOT sprout a `mode:` line. This is the exact regression that
+// tripped the R2 immutability guard when finishArtifact normalized "" -> inline.
+func TestMarshalOmitsEmptyMode(t *testing.T) {
+	a := &Artifact{
+		Meta: Meta{APIVersion: "patronus/v2", Family: FamilyArtifact, Name: "agents-spine", Version: "1.0.0"},
+		Type: TypeInstruction, Entry: "INSTRUCTIONS.md", Targets: []string{"claude"},
+	}
+	a.Description = "d"
+	got, err := finishArtifact(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := yaml.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "mode:") {
+		t.Errorf("marshalled mode-less instruction must not contain a mode: line:\n%s", b)
+	}
+}
 
 func pointerArtifact() *Artifact {
 	return &Artifact{
@@ -17,7 +42,12 @@ func pointerArtifact() *Artifact {
 	// Description is set per-test.
 }
 
-func TestValidateModeNormalizesEmptyToInline(t *testing.T) {
+// An instruction with no mode: must stay mode-empty after load — NOT normalized to
+// "inline". Normalizing would materialize `mode: inline` into the re-marshalled
+// manifest the catalog build packs, changing every instruction's tarball bytes with
+// no authored change and tripping the R2 immutability guard. Empty already means
+// inline at every read site.
+func TestValidateModeStaysEmptyWhenUnset(t *testing.T) {
 	a := &Artifact{
 		Meta: Meta{APIVersion: "patronus/v2", Family: FamilyArtifact, Name: "x", Version: "1.0.0"},
 		Type: TypeInstruction, Entry: "I.md", Targets: []string{"claude"},
@@ -27,8 +57,8 @@ func TestValidateModeNormalizesEmptyToInline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Mode != "inline" {
-		t.Errorf("Mode = %q, want inline", got.Mode)
+	if got.Mode != "" {
+		t.Errorf("Mode = %q, want empty (inline is implicit, not materialized)", got.Mode)
 	}
 }
 

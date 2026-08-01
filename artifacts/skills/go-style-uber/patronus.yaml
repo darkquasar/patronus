@@ -4,7 +4,7 @@ type: skill
 role: context
 name: go-style-uber
 description: "Idiomatic Go conventions distilled from the Uber Go Style Guide — error handling, concurrency, struct/enum/slice discipline, naming, and performance, as compact decision/trigger rules. A skill: loads on relevance (writing or reviewing Go) via description dispatch."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 targets: [claude, codex, opencode]
 defaults:

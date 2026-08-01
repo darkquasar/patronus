@@ -96,9 +96,13 @@ func DecodeArtifact(data []byte) (*Artifact, error) {
 }
 
 func finishArtifact(a *Artifact) (*Artifact, error) {
-	if a.Type == TypeInstruction && a.Mode == "" {
-		a.Mode = "inline"
-	}
+	// Mode is intentionally NOT normalized ("" ⇒ inline) here: doing so would
+	// materialize `mode: inline` into every instruction manifest, and since the
+	// catalog build re-marshals patronus.yaml into each tarball, that changes the
+	// tarball bytes of every instruction with no authored change and no version
+	// bump — which the R2 immutability guard then rejects. An empty Mode already
+	// means inline everywhere it is read (transformInstruction checks == "pointer";
+	// Validate guards with != ""), so the default stays implicit.
 	if err := a.Validate(); err != nil {
 		return nil, err
 	}
