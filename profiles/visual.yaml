@@ -2,17 +2,22 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: visual
-summary: "Visual-explanation environment: agent house rules + design discipline, ASCII diagrams on by default (diagram-explain), plus portable gstack workflow skills and a directory edit-fence (garrytan/gstack, MIT)."
-# An L1 overlay that also carries a few additive L2/L9 items (ported gstack skills +
-# the freeze-folder edit-fence). It still composes onto a base profile for the rest
-# (Memory L3, Tools L5, etc.) rather than extending core itself — kept deliberately
-# as an overlay, NOT `extends: core`.
+summary: "Visual-explanation and docs environment: build interactive marimo/Colab notebooks that explain a decision, a concept, or a whole topic, instead of answering in prose. Carries the three notebook skills plus the design-discipline context they lean on. An overlay — compose it onto `core` for the rest of the environment."
+# An L1/L2 overlay: it adds the notebook-authoring capability and the design
+# vocabulary those explanations draw on. It composes ONTO a base profile (core)
+# rather than `extends: core`, so it stays additive.
+#
+# The three skills are chained by `requires:`, so installing marimo-teach-topic
+# alone still pulls its two siblings and, transitively, the uv and mermaid-cli
+# recipes it needs to bootstrap and render.
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
     - diagram-explain                      # output-style — ASCII diagrams on by default
-  capabilities: []                         # filled by Task 2 (ported clean skills), Task 6 (gstack-pr-review)
+  capabilities:
+    - generate-notebooks                   # Colab/.ipynb + marimo scaffolding, uv venv bootstrap, headless verify (requires: uv)
+    - marimo-visual-explanation            # explain ONE decision or concept visually (requires: generate-notebooks, mermaid-cli)
+    - marimo-teach-topic                   # a multi-section LESSON notebook (requires: both siblings)
   context:
     - ddd-distilled                        # distilled DDD discipline (dispatched on relevance)
     - refactoring-distilled                # distilled refactoring discipline (dispatched on relevance)
-  guardrails: []                           # filled by Task 3 (freeze-folder hook + skill)

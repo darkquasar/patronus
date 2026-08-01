@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: marimo-teach-topic
+description: "Build a LESSON — a multi-section marimo notebook that teaches a whole topic end to end with explanatory visuals and interactive lenses, under a depth control. Use for 'teach me how Kubernetes works', 'make me a lesson/course/tutorial on <topic>', 'explain <topic> in depth'. Quizzes are off unless asked for."
+version: 1.0.0
+entry: SKILL.md
+files: [references/, scripts/, assets/]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+# Shells into both siblings' installed scripts (verify.sh, serve.sh,
+# bootstrap_env.sh), so installed alone it breaks at Step 3. uv and mermaid-cli
+# arrive transitively through them.
+requires: [marimo-visual-explanation, generate-notebooks]

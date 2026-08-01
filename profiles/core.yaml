@@ -11,6 +11,7 @@ layers:
     - agents-spine                         # the AGENTS.md format spine
     - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
+    - writing-style-first                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-style skill
   capabilities:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
@@ -26,6 +27,7 @@ layers:
     - using-git-worktrees                  # start feature work in an isolated workspace
     - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
     - writing-skills                       # author/edit/verify skills (the meta-skill)
+    - writing-style                        # the house writing style + the editorial review that applies it
     - team-research@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
     - team-implement@claude                # spec-driven parallel implementation (Claude tools; codex flavour is a separate artifact)
   context:

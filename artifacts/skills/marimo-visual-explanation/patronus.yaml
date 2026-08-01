@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: marimo-visual-explanation
+description: "Explain a decision or a concept as an interactive marimo notebook rather than in prose — option mind maps, Mermaid diagrams, a weighted decision matrix, comparison tables, tangle widgets, an Excalidraw sketch. Use for 'X vs Y', 'help me choose', 'explain how OAuth2/Raft/our rate limiter works', 'walk me through this architecture'."
+version: 1.0.0
+entry: SKILL.md
+files: [references/, scripts/, assets/]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+# Owns the mermaid rendering scripts, so it owns the mermaid-cli edge; it shells
+# into generate-notebooks' bootstrap_env.sh, which is the skill→skill edge.
+requires: [generate-notebooks, mermaid-cli]

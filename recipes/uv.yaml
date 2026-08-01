@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: recipe
+name: uv
+role: tools                                # L5 — the Python substrate the notebook skills run on
+summary: "Installs uv, the fast Python package/venv manager. Install-only: the notebook skills call it through their own bootstrap_env.sh to create a pinned 3.12 venv. uv provisions its own interpreter, so it is the sole Python prerequisite — there is no separate python recipe."
+upstream: github.com/astral-sh/uv
+license: MIT
+
+# Install-only: there is nothing to wire into the agent (no MCP server, no hook).
+# Installing the package IS the whole job; the skills invoke `uv` on demand.
+deliver:
+  via: package-manager
+  install:
+    - manager: brew
+      ref: uv
+    - manager: cargo
+      ref: uv
+  binary: uv
+# no wire: — install-only

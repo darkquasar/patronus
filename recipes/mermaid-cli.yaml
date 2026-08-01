@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: recipe
+name: mermaid-cli
+role: tools                                # L5 — diagram rendering for the visual profile
+summary: "Installs mermaid-cli (`mmdc`), which renders Mermaid diagrams to SVG/PNG for the visual-explanation notebooks. Install-only. It pulls a Chromium via Puppeteer, which is a real download — accepted as the cost of rendering diagrams offline."
+upstream: github.com/mermaid-js/mermaid-cli
+license: MIT
+
+# Install-only: nothing to wire into the agent. The marimo-visual-explanation
+# scripts shell out to `mmdc` when they need a rendered diagram.
+deliver:
+  via: package-manager
+  install:
+    - manager: npm
+      ref: "@mermaid-js/mermaid-cli"
+    - manager: brew
+      ref: mermaid-cli
+  binary: mmdc
+# no wire: — install-only
