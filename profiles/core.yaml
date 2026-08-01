@@ -9,7 +9,6 @@ summary: "The opinionated default environment — agent house rules + design dis
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
-    - agent-rules                          # distilled DDD + refactoring discipline
     - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
   capabilities:
@@ -32,6 +31,8 @@ layers:
   context:
     - codebase-design                      # deep-module design vocabulary
     - domain-modeling                      # ubiquitous-language + ADR discipline
+    - ddd-distilled                        # distilled DDD discipline — dispatched when designing/modeling a domain
+    - refactoring-distilled                # distilled refactoring discipline — dispatched when changing existing code
     - context7                             # live, version-specific library docs (hosted MCP)
     - serena                               # semantic code navigation of the local repo (LSP MCP)
     - pattern-cloudflare                   # in-repo context skill

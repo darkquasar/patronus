@@ -7,7 +7,9 @@ status: stub                               # installer warns: caveman not yet so
 layers:
   instructions:
     - agents-spine
-    - agent-rules
     # - caveman   TODO: source the caveman terse-output style overlay (L1, P7.x)
+  context:
+    - ddd-distilled                        # distilled DDD discipline (dispatched on relevance)
+    - refactoring-distilled                # distilled refactoring discipline (dispatched on relevance)
 todo:
   - "Source the caveman terse-output style overlay (MIT) and add it to instructions."

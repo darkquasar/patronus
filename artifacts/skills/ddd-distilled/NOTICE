@@ -1,14 +1,12 @@
 This artifact vendors distilled design rules from ciembor/agent-rules-books.
 
-IMPORTANT CAVEAT: the upstream content is LLM-GENERATED from classic software books
-and has had no legal review. Patronus vendors only the `mini` variants (the most
-abstracted form), deduplicated to one domain-driven-design rule-set and one
-refactoring rule-set. This material is INSPIRED BY, AND IS NOT A REPRODUCTION OF, the
-source books — do not present it as the books or as an authoritative summary of them.
+IMPORTANT CAVEAT: the upstream content is LLM-GENERATED from a classic software book
+and has had no legal review. Patronus vendors only the `mini` variant (the most
+abstracted form). This material is INSPIRED BY, AND IS NOT A REPRODUCTION OF, the
+source book — do not present it as the book or as an authoritative summary of it.
 
-Vendored files (upstream paths):
+Vendored file (upstream path):
   - domain-driven-design-distilled/domain-driven-design-distilled.mini.md
-  - refactoring/refactoring.mini.md
 
 Upstream: https://github.com/ciembor/agent-rules-books
 Commit:   9c8763613514e4047d75c089533e09bc4b493c28

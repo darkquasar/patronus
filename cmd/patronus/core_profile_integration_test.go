@@ -76,7 +76,7 @@ func resolvedNames(t *testing.T, profileName, tool string) string {
 // the diagram-explain output-style.
 func TestCoreProfileWiresTheSkillSpine(t *testing.T) {
 	names := resolvedNames(t, "core", "claude")
-	for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain"}, coreSkills...) {
+	for _, want := range append([]string{"agents-spine", "diagram-explain", "ddd-distilled", "refactoring-distilled"}, coreSkills...) {
 		if !strings.Contains(names, want) {
 			t.Errorf("core does not wire %q — resolved: %s", want, names)
 		}
@@ -91,7 +91,7 @@ func TestCoreProfileWiresTheSpineOnEveryTool(t *testing.T) {
 	for _, tool := range []string{"codex", "opencode"} {
 		t.Run(tool, func(t *testing.T) {
 			names := resolvedNames(t, "core", tool)
-			for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain"}, coreSkills...) {
+			for _, want := range append([]string{"agents-spine", "diagram-explain", "ddd-distilled", "refactoring-distilled"}, coreSkills...) {
 				if !strings.Contains(names, want) {
 					t.Errorf("core/%s does not wire %q — resolved: %s", tool, want, names)
 				}
@@ -116,7 +116,7 @@ func TestCoreProfileLockPinsEveryItem(t *testing.T) {
 	if !strings.Contains(s, `"version": 2`) {
 		t.Errorf("lock should be schema v2:\n%s", s)
 	}
-	for _, want := range append([]string{"agents-spine", "agent-rules", "diagram-explain", "tarballSha256"}, coreSkills...) {
+	for _, want := range append([]string{"agents-spine", "diagram-explain", "ddd-distilled", "refactoring-distilled", "tarballSha256"}, coreSkills...) {
 		if !strings.Contains(s, want) {
 			t.Errorf("lock missing %q:\n%s", want, s)
 		}

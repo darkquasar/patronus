@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: refactoring-distilled
+description: "Distilled Refactoring decision/trigger rules (after Fowler's Refactoring) — behavior-preserving change in small steps, code smells, safety nets, when to extract/rename/inline. A skill: loads on relevance (changing or cleaning up existing code) via description dispatch. LLM-derived, not the book."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/ciembor/agent-rules-books
+  license: MIT
+  copyright: "Copyright (c) 2026 Maciej Ciemborowicz"
+  commit: 9c8763613514e4047d75c089533e09bc4b493c28
+  note: "Vendored `mini` variant only (most abstracted) of refactoring. LLM-generated and inspired by, NOT a reproduction of, Martin Fowler's Refactoring; never present as the book itself."
