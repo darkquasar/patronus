@@ -73,3 +73,28 @@ func TestCollapseHome(t *testing.T) {
 		}
 	}
 }
+
+func TestRelativeTo(t *testing.T) {
+	r := New(envFrom(map[string]string{"HOME": "/home/u"}), "/home/u", "/proj")
+	cases := map[string]string{
+		// Inside the project: relative.
+		"/proj/.claude/skills/x": ".claude/skills/x",
+		"/proj":                  ".",
+		// Escapes the project: degrades to the absolute input.
+		"/home/u/.claude/skills/x": "/home/u/.claude/skills/x",
+		"/proj-other/skills/x":     "/proj-other/skills/x",
+	}
+	for in, want := range cases {
+		if got := r.RelativeTo(filepath.FromSlash(in)); got != filepath.FromSlash(want) {
+			t.Errorf("RelativeTo(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestRelativeToNoProjectDir(t *testing.T) {
+	r := New(envFrom(map[string]string{"HOME": "/home/u"}), "/home/u", "")
+	in := filepath.FromSlash("/anywhere/x")
+	if got := r.RelativeTo(in); got != in {
+		t.Errorf("RelativeTo(%q) = %q, want unchanged", in, got)
+	}
+}

@@ -118,6 +118,24 @@ func (r Resolver) ExpandHome(p string) string {
 	return filepath.FromSlash(p)
 }
 
+// RelativeTo expresses an absolute path relative to the project directory, for
+// callers that want a path a checked-in file can carry. A path that escapes the
+// project (a leading ".." segment) or that cannot be made relative degrades to
+// the absolute input rather than emitting a path climbing out of the repo.
+func (r Resolver) RelativeTo(p string) string {
+	if r.projectDir == "" {
+		return p
+	}
+	rel, err := filepath.Rel(r.projectDir, p)
+	if err != nil {
+		return p
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return p
+	}
+	return rel
+}
+
 // CollapseHome is the inverse of ExpandHome for display: an absolute path under
 // the home directory is rewritten with a leading ~. Paths outside home are
 // returned unchanged.
