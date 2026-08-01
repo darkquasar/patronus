@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/spf13/cobra"
 
@@ -84,9 +85,21 @@ func newUpdateCmd() *cobra.Command {
 			}
 			type candidate struct {
 				name, tool, scope, installed, latest string
+				isRecipe                             bool
 			}
 			var candidates []candidate
 			anyInstalled := false
+
+			// A recipe records several state rows (one MERGE per wired tool + a
+			// tool-agnostic "-" install row), so it needs collecting across rows before
+			// we know which tools to refresh. recipeToolSet accumulates the REAL tools a
+			// recipe was installed on, keyed by identity, so an update refreshes exactly
+			// those — honoring "originally installed to", the contract artifacts already
+			// get — rather than re-fanning across every wire.tool.
+			type recipeKey struct{ name, scope string }
+			recipeToolSet := map[recipeKey]map[string]bool{}
+			var recipeOrder []recipeKey // insertion order, for deterministic output
+
 			for _, scope := range []string{"global", "local"} {
 				sp := removeStatePath(scope, home, wd)
 				s, err := state.Load(sp)
@@ -98,11 +111,41 @@ func newUpdateCmd() *cobra.Command {
 					if !all && !want[it.Artifact] {
 						continue
 					}
-					latest := latestVersion(cat, it.Artifact)
+					if isRecipe(cat, it.Artifact) {
+						k := recipeKey{it.Artifact, it.Scope}
+						if recipeToolSet[k] == nil {
+							recipeToolSet[k] = map[string]bool{}
+							recipeOrder = append(recipeOrder, k)
+						}
+						recipeToolSet[k][it.Tool] = true // includes "-" (the tool-agnostic install row)
+						continue
+					}
 					candidates = append(candidates, candidate{
 						name: it.Artifact, tool: it.Tool, scope: it.Scope,
-						installed: it.ItemVersion, latest: latest,
+						installed: it.ItemVersion, latest: latestVersion(cat, it.Artifact),
 					})
+				}
+			}
+
+			// Emit one recipe candidate per recorded REAL tool, dropping the "-"
+			// pseudo-tool (its package install rides along with any real tool's
+			// reinstall). A recipe wired on claude+codex refreshes claude and codex, not
+			// opencode. When "-" is the only row (an install-only recipe with no wiring),
+			// keep a single no-tool refresh so the install still runs.
+			for _, k := range recipeOrder {
+				realTools := make([]string, 0, len(recipeToolSet[k]))
+				for tl := range recipeToolSet[k] {
+					if tl != "-" {
+						realTools = append(realTools, tl)
+					}
+				}
+				sort.Strings(realTools) // deterministic order across runs (map iteration is not)
+				if len(realTools) == 0 {
+					candidates = append(candidates, candidate{name: k.name, scope: k.scope, isRecipe: true})
+					continue
+				}
+				for _, tl := range realTools {
+					candidates = append(candidates, candidate{name: k.name, tool: tl, scope: k.scope, isRecipe: true})
 				}
 			}
 
@@ -117,8 +160,18 @@ func newUpdateCmd() *cobra.Command {
 			updated := 0
 			for _, c := range candidates {
 				switch {
+				case c.isRecipe:
+					// Recipes carry no version, so there is nothing to compare — a recipe's
+					// behaviour (install command, MCP wiring) changes in place. An explicit
+					// `update <recipe>` always refreshes it. (TODO(pat-78oj): version recipes
+					// like any other item so this becomes an ordinary version compare.)
+					fmt.Fprintf(out, "%s: recipe (unversioned) — refreshing from registry\n", c.name)
+					if err := reinstall(cmd, c.name, c.tool, c.scope, deploy); err != nil {
+						return err
+					}
+					updated++
 				case c.latest == "":
-					fmt.Fprintf(out, "%s: not in registry (or unversioned) — leaving as-is\n", c.name)
+					fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", c.name)
 				case c.installed == "":
 					// We never recorded a version (pre-Phase-8 install, or a recipe).
 					fmt.Fprintf(out, "%s: installed version unknown — refreshing to %s\n", c.name, c.latest)
@@ -182,12 +235,27 @@ func latestVersion(cat *registry.Catalog, name string) string {
 	return ""
 }
 
+// isRecipe reports whether name is a recipe in the catalog. Recipes carry no
+// version, so update refreshes them unconditionally rather than doing a version
+// compare (which latestVersion, artifact-only, can't answer for them).
+func isRecipe(cat *registry.Catalog, name string) bool {
+	for i := range cat.Recipes {
+		if cat.Recipes[i].Manifest != nil && cat.Recipes[i].Manifest.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // reinstall re-drives the install command for one item at its recorded tool/scope,
 // reusing the entire materialize → plan → deploy → state-record pipeline (so the
 // new version is recorded the same way a fresh install records it). Honors --deploy;
 // without it, install renders a dry-run plan.
 func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error {
 	args := []string{name}
+	// An empty tool means "all the recipe's wire.tools" (used for an install-only
+	// recipe with no per-tool wiring); the caller has already dropped the "-"
+	// tool-agnostic pseudo-tool, so a real tool name selects exactly that tool.
 	if tool != "" {
 		args = append(args, "--tool", tool)
 	}

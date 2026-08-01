@@ -63,3 +63,8 @@ plan.md
 
 # Local env / secrets — never commit
 .env
+
+# Serena's per-project state (LSP cache + onboarding memories). Local tooling
+# output, regenerated per machine from the code itself — same reason `.claude/`
+# deploy output is not tracked.
+/.serena/
