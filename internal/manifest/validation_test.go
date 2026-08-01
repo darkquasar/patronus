@@ -67,6 +67,14 @@ func TestValidateArtifact(t *testing.T) {
 			a.Type = TypeHook
 			a.Hook = &HookSpec{Event: "PreToolUse"}
 		}, true},
+		{"hook-gate-intent-valid", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "x", Intent: HookGate}
+		}, false},
+		{"hook-bad-intent", func(a *Artifact) {
+			a.Type = TypeHook
+			a.Hook = &HookSpec{Event: "PreToolUse", Command: "x", Intent: "bogus"}
+		}, true},
 		{"every-valid-type-instruction", func(a *Artifact) { a.Type = TypeInstruction }, false},
 		{"every-valid-type-output-style", func(a *Artifact) { a.Type = TypeOutputStyle }, false},
 		{"attribution-complete", func(a *Artifact) {

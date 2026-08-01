@@ -109,9 +109,14 @@ func TestLayoutDecodeCodexShapeByKey(t *testing.T) {
 		}
 	}
 
-	// Hook is null for Codex -> no usable file target.
-	if ad.Layout.Hook == nil || ad.Layout.Hook.Global.File != "" {
-		t.Errorf("Codex Hook.global should be null: %+v", ad.Layout.Hook)
+	// Codex ships Claude-style hooks: config.toml merged at hooks.{event}, with no
+	// hook-script dir (a Codex hook references an absolute command).
+	if ad.Layout.Hook == nil || ad.Layout.Hook.Global.File != "~/.codex/config.toml" ||
+		ad.Layout.Hook.Global.Format != "toml" || ad.Layout.Hook.Global.Path != "hooks.{event}" {
+		t.Errorf("Codex Hook.global = %+v, want config.toml/toml/hooks.{event}", ad.Layout.Hook)
+	}
+	if ad.Layout.Hook.GlobalScriptDir.Set {
+		t.Error("Codex should have no hook-script dir")
 	}
 
 	// OutputStyle on Codex is the APPEND flavour: AGENTS.md, action appendSection.

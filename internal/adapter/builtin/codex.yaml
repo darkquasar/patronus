@@ -40,9 +40,12 @@ layout:
         keys: { url: "{url}", bearer_token_env_var: "{bearerTokenEnvVar}", http_headers: "{headers}" }
 
   hook:
-    # TODO: Codex hook/event model — confirm settings surface before authoring hook artifacts.
-    global: null
-    project: null
+    # Codex ships Claude-style lifecycle hooks (on by default). We merge into the
+    # [hooks] tables of config.toml at hooks.{event}. TOML is handled by the shared
+    # settings merger. No hook-script dir: a Codex hook references an absolute
+    # command, so a bundled script is not placed under ~/.codex.
+    global: { file: "~/.codex/config.toml", format: toml, path: "hooks.{event}", action: merge }
+    project: { file: ".codex/config.toml", format: toml, path: "hooks.{event}", action: merge }
 
   # Codex config lives in config.toml; a setting artifact MERGEs its value at the
   # artifact's own dotted path (e.g. native-sandbox -> sandbox_mode).

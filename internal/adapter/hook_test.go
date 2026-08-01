@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/diff"
@@ -105,22 +106,54 @@ func TestTransformHookIdempotent(t *testing.T) {
 	}
 }
 
-// Codex/OpenCode model no hook surface (null Hook target), so a hook artifact is
-// an honest no-op there rather than an error — a cross-tool profile installs
-// cleanly and only hook-capable tools get the hook.
-func TestTransformHookNoSurfaceSkips(t *testing.T) {
+// A nudge hook wires natively on Codex (Claude-style hooks in config.toml) but is
+// a no-op on OpenCode (which has no nudge mechanism — the paired instruction
+// carries it). So the same nudge yields a Codex diff and no OpenCode diff.
+func TestTransformNudgeHookPerTool(t *testing.T) {
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := hookArtifact("tdd-guard", "PreToolUse", "Edit", "tdd-guard")
+	art := hookArtifact("tdd-guard", "PreToolUse", "Edit", "tdd-guard") // default intent: nudge
 
-	for _, tool := range []string{"codex", "opencode"} {
-		diffs, err := eng.Transform(art, loadAdapter(t, tool), "global", "", noExisting)
-		if err != nil {
-			t.Errorf("%s: unexpected error %v", tool, err)
-		}
-		if len(diffs) != 0 {
-			t.Errorf("%s: want 0 diffs (no hook surface), got %d", tool, len(diffs))
-		}
+	codex, err := eng.Transform(art, loadAdapter(t, "codex"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("codex: %v", err)
+	}
+	if len(codex) != 1 || codex[0].Action != diff.Merge {
+		t.Errorf("codex nudge: want 1 MERGE diff, got %+v", codex)
+	}
+	if !strings.Contains(codex[0].Path, "config.toml") {
+		t.Errorf("codex hook should target config.toml, got %q", codex[0].Path)
+	}
+
+	oc, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("opencode: %v", err)
+	}
+	if len(oc) != 0 {
+		t.Errorf("opencode nudge: want 0 diffs (instruction carries it), got %d", len(oc))
+	}
+}
+
+// A gate hook on OpenCode maps to a deny rule in the declarative permission config
+// (permission.<matcher> = "deny"), OpenCode having no hooks block.
+func TestTransformGateHookOpenCode(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("no-bash", "PreToolUse", "bash", "block")
+	art.Hook.Intent = manifest.HookGate
+
+	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("opencode gate: %v", err)
+	}
+	if len(diffs) != 1 || diffs[0].Action != diff.Merge {
+		t.Fatalf("want 1 MERGE diff, got %+v", diffs)
+	}
+	if diffs[0].Setting == nil || diffs[0].Setting.Dotted != "permission.bash" || diffs[0].Setting.ScalarValue != "deny" {
+		t.Errorf("gate should deny permission.bash, got %+v", diffs[0].Setting)
+	}
+	if !strings.Contains(string(diffs[0].After), "deny") {
+		t.Errorf("merged config should contain a deny:\n%s", diffs[0].After)
 	}
 }
 

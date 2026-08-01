@@ -173,25 +173,35 @@ func TestHookArtifactMergesIntoClaudeSettings(t *testing.T) {
 	}
 }
 
-// TestHookArtifactSkipsToolsWithoutHookSurface proves the honest per-tool
-// divergence: Codex/OpenCode model no hook surface, so installing the same hook
-// there writes no settings file and is a clean no-op (not an error).
-func TestHookArtifactSkipsToolsWithoutHookSurface(t *testing.T) {
-	for _, tool := range []string{"codex", "opencode"} {
-		t.Run(tool, func(t *testing.T) {
-			home := serveHookFixture(t)
-			out, errOut, err := runInstall(t, "smoke-hook", "--tool", tool, "--global", "--deploy", "--yes")
-			if err != nil {
-				t.Fatalf("install: %v\n%s", err, errOut)
-			}
-			// Nothing to write — the plan is empty of file changes for this artifact.
-			if strings.Contains(out, "MERGE") {
-				t.Errorf("%s: hook should produce no MERGE (no hook surface):\n%s", tool, out)
-			}
-			// No Claude settings leaked into this tool's tree either.
-			if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); err == nil {
-				t.Errorf("%s: unexpected claude settings.json written", tool)
-			}
-		})
-	}
+// TestNudgeHookPerToolNativeVsFallback proves the per-tool divergence of a nudge
+// hook: Codex wires it natively (config.toml merge); OpenCode has no nudge surface,
+// so installing the same hook there is a clean no-op (the paired instruction carries
+// it) rather than an error.
+func TestNudgeHookPerToolNativeVsFallback(t *testing.T) {
+	t.Run("codex wires natively", func(t *testing.T) {
+		home := serveHookFixture(t)
+		out, errOut, err := runInstall(t, "smoke-hook", "--tool", "codex", "--global", "--deploy", "--yes")
+		if err != nil {
+			t.Fatalf("install: %v\n%s", err, errOut)
+		}
+		if !strings.Contains(out, "MERGE") {
+			t.Errorf("codex nudge should MERGE into config.toml:\n%s", out)
+		}
+		if _, err := os.Stat(filepath.Join(home, ".codex", "config.toml")); err != nil {
+			t.Errorf("codex config.toml not written: %v", err)
+		}
+	})
+	t.Run("opencode is a no-op", func(t *testing.T) {
+		home := serveHookFixture(t)
+		out, errOut, err := runInstall(t, "smoke-hook", "--tool", "opencode", "--global", "--deploy", "--yes")
+		if err != nil {
+			t.Fatalf("install: %v\n%s", err, errOut)
+		}
+		if strings.Contains(out, "MERGE") {
+			t.Errorf("opencode nudge should produce no MERGE (instruction carries it):\n%s", out)
+		}
+		if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); err == nil {
+			t.Errorf("unexpected claude settings.json written")
+		}
+	})
 }
