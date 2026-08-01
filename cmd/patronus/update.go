@@ -84,6 +84,7 @@ func newUpdateCmd() *cobra.Command {
 			}
 			type candidate struct {
 				name, tool, scope, installed, latest string
+				isRecipe                             bool
 			}
 			var candidates []candidate
 			anyInstalled := false
@@ -93,15 +94,30 @@ func newUpdateCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
+				seenRecipe := map[string]bool{} // recipe name+scope: refresh once, not per tool-row
 				for _, it := range s.Items {
 					anyInstalled = true
 					if !all && !want[it.Artifact] {
 						continue
 					}
-					latest := latestVersion(cat, it.Artifact)
+					rec := isRecipe(cat, it.Artifact)
+					if rec {
+						// A recipe records several state rows (one per wired tool + a
+						// tool-agnostic install row). Refresh it ONCE per scope; install
+						// fans back out across the recipe's own wire.tools.
+						key := it.Artifact + "\x00" + it.Scope
+						if seenRecipe[key] {
+							continue
+						}
+						seenRecipe[key] = true
+						candidates = append(candidates, candidate{
+							name: it.Artifact, tool: "", scope: it.Scope, isRecipe: true,
+						})
+						continue
+					}
 					candidates = append(candidates, candidate{
 						name: it.Artifact, tool: it.Tool, scope: it.Scope,
-						installed: it.ItemVersion, latest: latest,
+						installed: it.ItemVersion, latest: latestVersion(cat, it.Artifact),
 					})
 				}
 			}
@@ -117,8 +133,18 @@ func newUpdateCmd() *cobra.Command {
 			updated := 0
 			for _, c := range candidates {
 				switch {
+				case c.isRecipe:
+					// Recipes carry no version, so there is nothing to compare — a recipe's
+					// behaviour (install command, MCP wiring) changes in place. An explicit
+					// `update <recipe>` always refreshes it. (TODO: version recipes like any
+					// other item so this becomes an ordinary version compare — see pat ticket.)
+					fmt.Fprintf(out, "%s: recipe (unversioned) — refreshing from registry\n", c.name)
+					if err := reinstall(cmd, c.name, c.tool, c.scope, deploy); err != nil {
+						return err
+					}
+					updated++
 				case c.latest == "":
-					fmt.Fprintf(out, "%s: not in registry (or unversioned) — leaving as-is\n", c.name)
+					fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", c.name)
 				case c.installed == "":
 					// We never recorded a version (pre-Phase-8 install, or a recipe).
 					fmt.Fprintf(out, "%s: installed version unknown — refreshing to %s\n", c.name, c.latest)
@@ -182,13 +208,28 @@ func latestVersion(cat *registry.Catalog, name string) string {
 	return ""
 }
 
+// isRecipe reports whether name is a recipe in the catalog. Recipes carry no
+// version, so update refreshes them unconditionally rather than doing a version
+// compare (which latestVersion, artifact-only, can't answer for them).
+func isRecipe(cat *registry.Catalog, name string) bool {
+	for i := range cat.Recipes {
+		if cat.Recipes[i].Manifest != nil && cat.Recipes[i].Manifest.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // reinstall re-drives the install command for one item at its recorded tool/scope,
 // reusing the entire materialize → plan → deploy → state-record pipeline (so the
 // new version is recorded the same way a fresh install records it). Honors --deploy;
 // without it, install renders a dry-run plan.
 func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error {
 	args := []string{name}
-	if tool != "" {
+	// "-" is the tool-agnostic pseudo-tool a recipe's package-install advisory
+	// records; it is not a real --tool value. Treat it like "" so install fans out
+	// across the recipe's own wire.tools (the default) rather than erroring.
+	if tool != "" && tool != "-" {
 		args = append(args, "--tool", tool)
 	}
 	switch scope {

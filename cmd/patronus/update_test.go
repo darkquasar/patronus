@@ -108,6 +108,41 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	}
 }
 
+// TestUpdateRefreshesUnversionedRecipe proves an installed RECIPE (which carries no
+// version) is refreshed by `update <name> --deploy` rather than silently skipped.
+// Recipes have no version to compare, so update must refresh them unconditionally;
+// the earlier bug left them "unversioned — leaving as-is" and never re-applied a
+// changed recipe. Uses the fixture's fetch+wire recipe (fix-mcp-bin) — a mechanism
+// test on a fixture item, not a real catalog name.
+func TestUpdateRefreshesUnversionedRecipe(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	withRemoteEnv(t, f)
+
+	// Install the fetch+wire recipe on claude/global (records recipe state rows).
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, e)
+	}
+
+	// update <recipe> --deploy must REFRESH it, not leave it as-is.
+	out, e, err := runUpdate(t, "fix-mcp-bin", "--deploy")
+	if err != nil {
+		t.Fatalf("update recipe: %v\n%s", err, e)
+	}
+	if strings.Contains(out, "leaving as-is") {
+		t.Errorf("recipe was left as-is instead of refreshed:\n%s", out)
+	}
+	if !strings.Contains(out, "recipe (unversioned) — refreshing") {
+		t.Errorf("expected the recipe-refresh message:\n%s", out)
+	}
+}
+
 // TestUpdateUnknownItemErrors proves updating a name that isn't installed fails
 // clearly rather than silently doing nothing.
 func TestUpdateUnknownItemErrors(t *testing.T) {
