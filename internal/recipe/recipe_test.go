@@ -424,6 +424,49 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	}
 }
 
+// A via:package-manager recipe that ALSO wires an MCP server (the graphify shape)
+// emits BOTH the package-install advisory AND the MERGE. The install is delivery-
+// driven, orthogonal to wiring — without it the recipe would wire an MCP server
+// whose binary was never installed.
+func TestComputePackageManagerPlusWire_EmitsInstallAndMerge(t *testing.T) {
+	res, _, _ := testEnv(t)
+	rec := &manifest.Recipe{
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "graphify", Role: manifest.RoleContext},
+		Delivery: &manifest.Delivery{
+			Via:     manifest.ViaPackageManager,
+			Install: []manifest.InstallCandidate{{Manager: manifest.PMUv, Ref: "graphifyy==0.9.31"}},
+			Binary:  "graphify",
+		},
+		Wire: manifest.Wire{
+			Method: manifest.WireMerge, Actor: manifest.ActorPatronus,
+			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "graphify-mcp"},
+			Tools: []string{"claude"},
+		},
+	}
+	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "claude", Scope: "global"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var advisory, merge *diff.FileDiff
+	for i := range diffs {
+		switch diffs[i].Action {
+		case diff.Exec:
+			advisory = &diffs[i]
+		case diff.Merge:
+			merge = &diffs[i]
+		}
+	}
+	if advisory == nil {
+		t.Fatal("want a package-install advisory EXEC")
+	}
+	if advisory.Exec == nil || advisory.Exec.Display != "uv tool install graphifyy==0.9.31" {
+		t.Errorf("advisory command wrong: %+v", advisory.Exec)
+	}
+	if merge == nil {
+		t.Fatal("want an MCP MERGE alongside the install advisory")
+	}
+}
+
 func TestResolveAssetNoMatch(t *testing.T) {
 	rec := engramRecipe()
 	if _, err := rec.Delivery.ResolveAsset("windows", "arm64"); err == nil {

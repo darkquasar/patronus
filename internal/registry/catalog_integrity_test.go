@@ -90,6 +90,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
 		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) + 2 vendored superpowers skills.
 		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
+		// L4 context: the graphify cluster — a PreToolUse nudge hook + an always-on
+		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
+		"graphify-hint":        {manifest.TypeHook, manifest.RoleContext},
+		"graphify-query-first": {manifest.TypeInstruction, manifest.RoleContext},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
 		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
@@ -214,6 +218,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// (upstream ships no release assets; the tool IS one bash script); the
 		// `ticket` instruction (requires: [tk]) wires it.
 		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireNone, ""},
+		// L4 context: graphify — a via:package-manager (uv) delivery AND a stdio MCP
+		// merge (fetch+wire shape). The opt-in code-intel profile pulls it via the
+		// graphify artifacts' requires: [graphify].
+		"graphify": {manifest.RoleContext, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
@@ -261,7 +269,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"ai-memory", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "tdd-enforced", "python", "quiet", "terse", "visual", "web-dev"}
+	wantProfiles := []string{"ai-memory", "code-intel", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "tdd-enforced", "python", "quiet", "terse", "visual", "web-dev"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}

@@ -70,19 +70,27 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 
 	var diffs []diff.FileDiff
 
-	// 1) FETCH — only for a github-release delivery. docker/cargo/script sources
-	// and wire-only remote MCP (Delivery == nil) produce no download diff.
+	// 1) DELIVERY — obtaining the payload, independent of wiring:
+	//   - via: fetch          -> a FETCH diff for the host asset/artifact.
+	//   - via: package-manager -> an advisory EXEC carrying the ordered install
+	//     candidates. This fires for EVERY package-manager delivery, not only
+	//     install-only recipes: a recipe that installs a CLI via uv AND wires its
+	//     MCP server (graphify) needs both the install advisory and the merge. The
+	//     manager resolves the host itself, so there is no FETCH for this path.
+	//     Patronus never silently runs the install — the consent layer (cmd) decides.
 	installPath := ""
 	if d, fetch := fetchDiff(req, goos, goarch); fetch != nil {
 		installPath = d
 		diffs = append(diffs, *fetch)
 	}
+	if d := installAdvisory(rec, scope); d != nil {
+		diffs = append(diffs, *d)
+	}
 
 	// 2) Wiring — dispatch on the wire.method discriminator: exec runs commands,
 	// merge MERGEs the config. The actor axis (patronus|external) decides whether an
-	// exec is advisory, not which branch we take. The shape
-	// (wire-only|fetch+wire|fetch+run) is the computed display label, but the
-	// dispatch is method, not shape.
+	// exec is advisory, not which branch we take. WireNone wires nothing (the
+	// delivery above was the whole job, or a hook artifact does the wiring).
 	tools := resolveTools(req.Tool, rec)
 	switch rec.Wire.Method {
 	case manifest.WireExec:
@@ -94,14 +102,8 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 		}
 		diffs = append(diffs, merges...)
 	case manifest.WireNone:
-		// install-only: deliver a package and stop. A via:package-manager delivery
-		// has no FETCH (the manager resolves the host itself), so surface the install
-		// command as an advisory row carrying every ordered candidate — Patronus does
-		// not silently run a package install; the consent layer (cmd) decides whether
-		// to run it. Something else (a hook artifact) does the wiring.
-		if d := installAdvisory(rec, scope); d != nil {
-			diffs = append(diffs, *d)
-		}
+		// Nothing to wire: a package/binary was delivered above, and something else
+		// (a hook artifact, or the user) does any wiring.
 	}
 
 	return diffs, nil
