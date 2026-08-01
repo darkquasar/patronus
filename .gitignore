@@ -68,3 +68,7 @@ plan.md
 # output, regenerated per machine from the code itself — same reason `.claude/`
 # deploy output is not tracked.
 /.serena/
+
+# Graphify's extracted knowledge graph (graph.json, graph.html, GRAPH_REPORT.md).
+# Derived from the code by `graphify update .`; rebuild rather than track it.
+/graphify-out/
