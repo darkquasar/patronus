@@ -181,6 +181,9 @@ func TestInstallCommand(t *testing.T) {
 		{"npm defaults ref", InstallCandidate{Manager: PMNpm}, "ccusage", "npm install -g ccusage"},
 		{"cargo", InstallCandidate{Manager: PMCargo, Ref: "ripgrep"}, "rg", "cargo install ripgrep"},
 		{"uv", InstallCandidate{Manager: PMUv, Ref: "graphifyy"}, "graphify", "uv tool install graphifyy"},
+		// A PEP 508 requirement string carries an extra + pin in one ref — this is how
+		// graphify pulls its [mcp] extra (without it the MCP entrypoint can't import mcp).
+		{"uv with extra and pin", InstallCandidate{Manager: PMUv, Ref: "graphifyy[mcp]==0.9.31"}, "graphify", "uv tool install graphifyy[mcp]==0.9.31"},
 		{"manager without a template has no command", InstallCandidate{Manager: PMAur, Ref: "x"}, "x", ""},
 	}
 	for _, tt := range tests {
