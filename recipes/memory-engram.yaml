@@ -11,10 +11,9 @@ upstream: github.com/Gentleman-Programming/engram
 license: MIT
 
 deliver:
-  source: github-release                   # Model A floor — fetch+verify per-OS/arch asset + sha256
+  via: fetch                               # Model A floor — fetch+verify per-OS/arch asset + sha256
   installTo: "~/.patronus/bin/"
   binary: engram                           # installed filename (engram[.exe])
-  fallbacks: []                            # opt-in only via --prefer-system-pkg; not in any system PM today
   # Pinned to v1.16.1 (§9.3 trust model = pinned). sha256 from the release's
   # checksums.txt; each archive holds a bare `engram` binary at its root.
   assets:

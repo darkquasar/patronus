@@ -7,7 +7,7 @@ upstream: TODO                              # §9.4 open: confirm the exact open
 license: TODO
 
 deliver:
-  source: github-release
+  via: fetch
   installTo: "~/.patronus/bin/"
   # TODO: pin per-OS/arch asset URLs + sha256 once the upstream is chosen.
   assets: []

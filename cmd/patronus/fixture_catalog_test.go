@@ -95,7 +95,7 @@ func fixtureCatalog(t *testing.T) string {
 	copyDir(t, filepath.Join(realRoot, "adapters"), filepath.Join(root, "adapters"))
 
 	// --- recipes -----------------------------------------------------------
-	// fix-bin: a RAW (source: url) delivery. Patronus hashes the download against
+	// fix-bin: a RAW single-url fetch delivery. Patronus hashes the download against
 	// this pin AND re-hashes the placed file on every run (classifyFetch).
 	write("recipes/fix-bin.yaml", `apiVersion: patronus/v2
 family: recipe
@@ -103,7 +103,7 @@ name: fix-bin
 role: orchestration
 summary: "Fixture raw-delivery binary. Pin = sha256 of bytes this test invented."
 deliver:
-  source: url
+  via: fetch
   installTo: "~/.patronus/bin/"
   binary: fix-bin
   url: "`+fixRawURL+`"
@@ -135,7 +135,7 @@ name: fix-archive-bin
 role: guardrail
 summary: "Fixture archive-delivery binary. Pin = sha256 of a tarball this test built."
 deliver:
-  source: github-release
+  via: fetch
   installTo: "~/.patronus/bin/"
   binary: fix-archive-bin
   assets:
@@ -169,7 +169,7 @@ name: fix-mcp-bin
 role: memory
 summary: "Fixture fetch+wire recipe: an archive-delivered binary that is ALSO merged into each tool's MCP config."
 deliver:
-  source: github-release
+  via: fetch
   installTo: "~/.patronus/bin/"
   binary: fix-mcp-bin
   assets:

@@ -11,7 +11,9 @@ license: MIT
 # as an advisory the user runs; thereafter `ccusage` is invoked on demand. Its
 # Claude statusline is the separate ccusage-statusline setting artifact (@claude).
 deliver:
-  source: npm
-  ref: ccusage
+  via: package-manager
+  install:
+    - manager: npm
+      ref: ccusage
   binary: ccusage
 # no wire: — installing the package IS the whole job (Shape: install-only)

@@ -31,18 +31,18 @@ import (
 
 func newInstallCmd() *cobra.Command {
 	var (
-		tool            string
-		global          bool
-		local           bool
-		deploy          bool
-		dryRun          bool
-		verbose         bool
-		force           bool
-		yes             bool
-		recipeSel       string
-		profileSel      string
-		preferSystemPkg bool
-		regSel          registrySel
+		tool             string
+		global           bool
+		local            bool
+		deploy           bool
+		dryRun           bool
+		verbose          bool
+		force            bool
+		yes              bool
+		recipeSel        string
+		profileSel       string
+		allowPkgInstalls bool
+		regSel           registrySel
 	)
 
 	cmd := &cobra.Command{
@@ -185,15 +185,14 @@ func newInstallCmd() *cobra.Command {
 			res := toolpath.New(env, toolpath.HomeDir(env), wd)
 
 			cs, err := computePlan(planInputs{
-				cat:             cat,
-				inv:             inv,
-				adapters:        adapterMap(adapters),
-				res:             res,
-				names:           names,
-				tool:            tool,
-				scope:           scope,
-				preferSystemPkg: preferSystemPkg,
-				warnf:           warnf,
+				cat:      cat,
+				inv:      inv,
+				adapters: adapterMap(adapters),
+				res:      res,
+				names:    names,
+				tool:     tool,
+				scope:    scope,
+				warnf:    warnf,
 			})
 			if err != nil {
 				return err
@@ -211,7 +210,7 @@ func newInstallCmd() *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, home: toolpath.HomeDir(env), projectDir: wd})
+			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: toolpath.HomeDir(env), projectDir: wd})
 		},
 	}
 
@@ -226,22 +225,22 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().StringVar(&recipeSel, "recipe", "", "pick a specific recipe for a capability (e.g. memory-engram)")
 	cmd.Flags().StringVar(&profileSel, "profile", "", "install a curated bundle across layers (§5d)")
 	addRegistryFlags(cmd, &regSel)
-	cmd.Flags().BoolVar(&preferSystemPkg, "prefer-system-pkg", false, "use brew/scoop/winget if present (Phase 8; currently falls through to github-release)")
+	cmd.Flags().BoolVar(&allowPkgInstalls, "allow-package-installs", false,
+		"with --deploy: let Patronus run package-manager installs (npm/cargo/uv) non-interactively; all-or-nothing — errors if any required manager is absent")
 	return cmd
 }
 
 // planInputs carries everything computePlan needs to build a change set across a
 // mix of artifact and recipe names.
 type planInputs struct {
-	cat             *registry.Catalog
-	inv             *scan.Inventory
-	adapters        map[string]*manifest.Adapter
-	res             toolpath.Resolver
-	names           []string
-	tool            string
-	scope           string
-	preferSystemPkg bool
-	warnf           func(string, ...any)
+	cat      *registry.Catalog
+	inv      *scan.Inventory
+	adapters map[string]*manifest.Adapter
+	res      toolpath.Resolver
+	names    []string
+	tool     string
+	scope    string
+	warnf    func(string, ...any)
 
 	// pluginProbe decides executed-vs-advised for plugin installs; a test seam.
 	// Production leaves it nil → plugin.ExecProbe (real `<tool> plugin --help`).
@@ -288,14 +287,13 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		}
 		if rec := findRecipe(in.cat, name); rec != nil {
 			diffs, err := recipe.Compute(recipe.Request{
-				Recipe:          rec.Manifest,
-				Adapters:        in.adapters,
-				Resolver:        in.res,
-				Tool:            in.tool,
-				Scope:           in.scope,
-				PreferSystemPkg: in.preferSystemPkg,
-				PlacedDigest:    placedDigestFromState(in.inv),
-				Warnf:           in.warnf,
+				Recipe:       rec.Manifest,
+				Adapters:     in.adapters,
+				Resolver:     in.res,
+				Tool:         in.tool,
+				Scope:        in.scope,
+				PlacedDigest: placedDigestFromState(in.inv),
+				Warnf:        in.warnf,
 			})
 			if err != nil {
 				return nil, err
@@ -502,10 +500,11 @@ func adapterMap(adapters []*manifest.Adapter) map[string]*manifest.Adapter {
 
 // deployOptions carries the inputs runDeploy needs beyond the change set.
 type deployOptions struct {
-	force      bool
-	yes        bool
-	home       string // for ~/.patronus/state.json
-	projectDir string // for <project>/.patronus/state.json
+	force            bool
+	yes              bool
+	allowPkgInstalls bool   // --allow-package-installs: run package installs non-interactively, all-or-nothing
+	home             string // for ~/.patronus/state.json
+	projectDir       string // for <project>/.patronus/state.json
 }
 
 // commandRunner runs a self-wiring recipe's post-install command. The real impl

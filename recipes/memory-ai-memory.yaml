@@ -7,12 +7,10 @@ upstream: github.com/akitaonrails/ai-memory
 license: MIT
 
 deliver:
-  source: docker                           # blessed path: daemon on 127.0.0.1:49374 (multi-platform image)
-  fallbacks:
-    - pm: cargo                            # native binary build (Docker-free)
-      ref: ai-memory
-    - pm: aur
-      ref: ai-memory
+  via: docker                              # blessed path: daemon on 127.0.0.1:49374 (multi-platform image)
+  # The Docker-free cargo/aur builds were carried as dead fallbacks (never wired —
+  # --prefer-system-pkg only warned). Re-add them as via: package-manager install
+  # candidates if/when a PM-installed ai-memory is actually supported.
 
 scope:
   marker: ".ai-memory.toml"                # per-repo isolation marker; stable-UUID project scoping

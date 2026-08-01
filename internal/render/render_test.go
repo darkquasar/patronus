@@ -30,7 +30,7 @@ func sampleCatalog() *registry.Catalog {
 			{Manifest: &manifest.Recipe{
 				Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-engram", Role: manifest.RoleMemory},
 				Summary:  "engram",
-				Delivery: &manifest.Delivery{Source: manifest.SourceGithubRelease},
+				Delivery: &manifest.Delivery{Via: manifest.ViaFetch},
 				Wire:     manifest.Wire{Method: manifest.WireMerge, Actor: manifest.ActorPatronus, Mcp: &manifest.WireMcp{Transport: "stdio", Command: "x"}},
 			}},
 		},
