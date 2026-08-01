@@ -206,6 +206,11 @@ func newInstallCmd() *cobra.Command {
 			}
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
 
+			// Always-on package-install readiness: for every package-install item,
+			// report which candidate managers are present/missing on this host. Shown
+			// on dry-run too, so the user sees what they'd need before deploying.
+			printReadiness(cmd.OutOrStdout(), readinessReport(cs, exec.LookPath))
+
 			// Without --deploy this is a safe dry run: plan shown, nothing written.
 			if !deploy {
 				return nil
@@ -553,6 +558,21 @@ func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, op
 func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) error {
 	out := cmd.OutOrStdout()
 
+	consent := installConsent{
+		allow: opts.allowPkgInstalls,
+		yes:   opts.yes,
+		look:  exec.LookPath,
+		in:    bufio.NewReader(cmd.InOrStdin()),
+		out:   out,
+	}
+	// Under --allow-package-installs we never deploy a subset: if any required item
+	// has no manager on PATH, error before writing anything.
+	if consent.allow {
+		if err := preflightAllOrNothing(cs, consent.look); err != nil {
+			return err
+		}
+	}
+
 	app := &install.Applier{
 		Force:    opts.force,
 		Conflict: conflictPrompt(cmd, res, opts.yes),
@@ -569,7 +589,7 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 		if runner == nil {
 			runner = execRunner{cmd: cmd}
 		}
-		ran, execErr := runExecs(cmd, cs, runner)
+		ran, execErr := runExecs(cmd, cs, runner, consent)
 		realized = append(realized, ran...)
 		if execErr != nil {
 			applyErr = execErr
@@ -593,20 +613,60 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 // runExecs runs each EXEC diff's command in order and returns the ones that ran
 // (for state recording). The first failure stops, mirroring the applier's
 // Terraform-style partial-on-failure.
-func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner) ([]diff.FileDiff, error) {
+//
+// A package-install advisory (one carrying Candidates) consults consent: run it
+// via the first present manager if consented, else surface it. Every other advisory
+// (an external-actor self-wiring command) stays surface-only.
+func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner, consent installConsent) ([]diff.FileDiff, error) {
 	var ran []diff.FileDiff
-	for _, d := range cs.Diffs {
+	var skipped []string // package installs declined/unsatisfiable — summarised at the end
+	for i := range cs.Diffs {
+		d := cs.Diffs[i]
 		if d.Action != diff.Exec || d.Exec == nil {
 			continue
 		}
+
+		// Package-install advisory: consult consent.
+		if d.Exec.Advisory && len(d.Exec.Candidates) > 0 {
+			chosen, preferred, ok := firstPresentCandidate(d.Exec.Candidates, consent.look)
+			install := false
+			switch {
+			case !ok:
+				// No manager on PATH — surface only (preflight already errored under --allow).
+			case consent.allow:
+				install = true
+			case consent.yes:
+				// Non-interactive without --allow: do not install, surface.
+			default:
+				install = promptInstall(consent, d.Artifact, chosen)
+			}
+			if install {
+				if !preferred {
+					fmt.Fprintf(consent.out, "note: %s not available; using %s instead\n",
+						d.Exec.Candidates[0].Manager, chosen.Manager)
+				}
+				fmt.Fprintf(consent.out, "EXEC %s\n", chosen.Command)
+				if err := runner.Run(strings.Fields(chosen.Command)); err != nil {
+					return ran, fmt.Errorf("package install %q: %w", chosen.Command, err)
+				}
+				// Stamp the command Patronus actually ran onto the diff's Exec so
+				// recordState persists it in Item.PostInstall (remove surfaces the
+				// uninstall advisory from there). d.Exec is a pointer, so this reaches
+				// the diff recordState later reads.
+				d.Exec.Display = chosen.Command
+				ran = append(ran, d)
+				continue
+			}
+			skipped = append(skipped, d.Artifact)
+			fmt.Fprintf(consent.out, "ADVISORY (run yourself): %s\n", d.Exec.Display)
+			ran = append(ran, d)
+			continue
+		}
+
+		// Non-package advisory (external-actor self-wiring) stays surface-only. It
+		// is still recorded so state remembers the recipe and remove can report the
+		// manual-cleanup.
 		if d.Exec.Advisory {
-			// Display-only. Two cases produce an advisory EXEC: an install-only
-			// recipe's package-install line, and a mode: self recipe's self-wiring
-			// command (which presupposes the tool's own CLI is already installed —
-			// something Patronus did not deliver). In both, Patronus surfaces the
-			// command for the user to run rather than executing it, so a missing
-			// binary never fails the install. It is still recorded (in `ran`) so
-			// state remembers the recipe and remove can report the manual-cleanup.
 			fmt.Fprintf(cmd.OutOrStdout(), "ADVISORY (run yourself): %s\n", d.Exec.Display)
 			ran = append(ran, d)
 			continue
@@ -616,6 +676,11 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner) ([]d
 			return ran, fmt.Errorf("post-install %q: %w", d.Exec.Display, err)
 		}
 		ran = append(ran, d)
+	}
+	if len(skipped) > 0 {
+		// One line naming what was not installed, so a per-item decline in
+		// interactive mode is visible rather than lost in the scroll.
+		fmt.Fprintf(consent.out, "\nSkipped package installs (run them yourself): %v\n", skipped)
 	}
 	return ran, nil
 }
