@@ -79,55 +79,71 @@ description: y
 	}
 }
 
-func TestRecipeShape(t *testing.T) {
-	cases := []struct {
+func TestShape(t *testing.T) {
+	tests := []struct {
 		name string
-		r    Recipe
+		rec  Recipe
 		want RecipeShape
 	}{
-		{"wire-only", Recipe{Wire: Wire{Mode: WireModeMcp}}, ShapeWireOnly},
-		{"fetch+wire", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeMcp}}, ShapeFetchWire},
-		{"fetch+run", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeRun}}, ShapeFetchRun},
-		{"fetch+self", Recipe{Delivery: &Delivery{}, Wire: Wire{Mode: WireModeSelf}}, ShapeFetchRun},
-		{"install-only", Recipe{Delivery: &Delivery{Source: SourceNpm}, Wire: Wire{}}, ShapeInstall},
+		{"wire-only merge", Recipe{Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{}}}, ShapeWireOnly},
+		{"fetch+wire", Recipe{Delivery: &Delivery{}, Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{}}}, ShapeFetchWire},
+		{"fetch+run patronus", Recipe{Delivery: &Delivery{}, Wire: Wire{Method: WireExec, Actor: ActorPatronus, Run: []string{"x"}}}, ShapeFetchRun},
+		{"fetch+run external", Recipe{Delivery: &Delivery{}, Wire: Wire{Method: WireExec, Actor: ActorExternal, Run: []string{"x"}}}, ShapeFetchRun},
+		{"install-only", Recipe{Delivery: &Delivery{}, Wire: Wire{Method: WireNone}}, ShapeInstall},
 	}
-	for _, tc := range cases {
-		if got := tc.r.Shape(); got != tc.want {
-			t.Errorf("%s: Shape() = %s, want %s", tc.name, got, tc.want)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.rec.Shape(); got != tt.want {
+				t.Errorf("Shape() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestValidateRecipeWireMode(t *testing.T) {
+func TestValidateRecipeWireMethod(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
 			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "x"},
-			Wire: Wire{Mode: WireModeMcp, Mcp: &WireMcp{Transport: "http", URL: "https://example"}},
+			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://example"}},
 		}
 	}
 	if err := validateRecipe(base()); err != nil {
-		t.Fatalf("valid mcp recipe rejected: %v", err)
+		t.Fatalf("valid merge recipe rejected: %v", err)
 	}
 
-	// mcp mode without an mcp block is invalid.
+	// merge method without an mcp block is invalid.
 	r := base()
 	r.Wire.Mcp = nil
 	if err := validateRecipe(r); err == nil {
-		t.Error("expected error for mcp mode without mcp block")
+		t.Error("expected error for merge method without mcp block")
 	}
 
-	// run mode without run commands is invalid.
+	// merge method with a non-patronus actor is invalid.
 	r = base()
-	r.Wire = Wire{Mode: WireModeRun}
+	r.Wire.Actor = ActorExternal
 	if err := validateRecipe(r); err == nil {
-		t.Error("expected error for run mode without run commands")
+		t.Error("expected error for merge method with actor: external")
 	}
 
-	// self mode with run commands is valid.
+	// exec method without run commands is invalid.
 	r = base()
-	r.Wire = Wire{Mode: WireModeSelf, Run: []string{"installer --apply"}}
+	r.Wire = Wire{Method: WireExec, Actor: ActorPatronus}
+	if err := validateRecipe(r); err == nil {
+		t.Error("expected error for exec method without run commands")
+	}
+
+	// exec method without an actor is invalid.
+	r = base()
+	r.Wire = Wire{Method: WireExec, Run: []string{"installer --apply"}}
+	if err := validateRecipe(r); err == nil {
+		t.Error("expected error for exec method without an actor")
+	}
+
+	// exec×external with run commands is valid (self-wiring).
+	r = base()
+	r.Wire = Wire{Method: WireExec, Actor: ActorExternal, Run: []string{"installer --apply"}}
 	if err := validateRecipe(r); err != nil {
-		t.Errorf("valid self recipe rejected: %v", err)
+		t.Errorf("valid exec×external recipe rejected: %v", err)
 	}
 
 	// bad delivery source is invalid.
@@ -137,15 +153,15 @@ func TestValidateRecipeWireMode(t *testing.T) {
 		t.Error("expected error for invalid deliver.source")
 	}
 
-	// install-only: empty wire.mode is valid WITH a deliver block.
+	// install-only: empty wire.method is valid WITH a deliver block.
 	r = base()
 	r.Wire = Wire{}
 	r.Delivery = &Delivery{Source: SourceNpm, Ref: "tdd-guard"}
 	if err := validateRecipe(r); err != nil {
-		t.Errorf("install-only recipe (empty mode + deliver) rejected: %v", err)
+		t.Errorf("install-only recipe (empty method + deliver) rejected: %v", err)
 	}
 
-	// ...but empty wire.mode WITHOUT a deliver block does nothing — invalid.
+	// ...but empty wire.method WITHOUT a deliver block does nothing — invalid.
 	r = base()
 	r.Wire = Wire{}
 	r.Delivery = nil

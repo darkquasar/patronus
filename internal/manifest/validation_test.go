@@ -12,20 +12,21 @@ func TestShapeMatrix(t *testing.T) {
 	cases := []struct {
 		name     string
 		delivery *Delivery
-		mode     WireMode
+		method   WireMethod
+		actor    WireActor
 		want     RecipeShape
 	}{
-		{"nil-delivery+mcp", nil, WireModeMcp, ShapeWireOnly},
-		{"nil-delivery+run", nil, WireModeRun, ShapeWireOnly},   // no delivery wins
-		{"nil-delivery+self", nil, WireModeSelf, ShapeWireOnly}, // no delivery wins
-		{"delivery+mcp", &Delivery{Source: SourceGithubRelease}, WireModeMcp, ShapeFetchWire},
-		{"delivery+run", &Delivery{Source: SourceScript}, WireModeRun, ShapeFetchRun},
-		{"delivery+self", &Delivery{Source: SourceDocker}, WireModeSelf, ShapeFetchRun},
-		{"delivery+no-wire", &Delivery{Source: SourceNpm}, "", ShapeInstall}, // install-only
-		{"nil-delivery+no-wire", nil, "", ShapeWireOnly},                     // no delivery wins (degenerate)
+		{"nil-delivery+merge", nil, WireMerge, ActorPatronus, ShapeWireOnly},
+		{"nil-delivery+exec-patronus", nil, WireExec, ActorPatronus, ShapeWireOnly}, // no delivery wins
+		{"nil-delivery+exec-external", nil, WireExec, ActorExternal, ShapeWireOnly}, // no delivery wins
+		{"delivery+merge", &Delivery{Source: SourceGithubRelease}, WireMerge, ActorPatronus, ShapeFetchWire},
+		{"delivery+exec-patronus", &Delivery{Source: SourceScript}, WireExec, ActorPatronus, ShapeFetchRun},
+		{"delivery+exec-external", &Delivery{Source: SourceDocker}, WireExec, ActorExternal, ShapeFetchRun},
+		{"delivery+no-wire", &Delivery{Source: SourceNpm}, WireNone, "", ShapeInstall}, // install-only
+		{"nil-delivery+no-wire", nil, WireNone, "", ShapeWireOnly},                     // no delivery wins (degenerate)
 	}
 	for _, tc := range cases {
-		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Mode: tc.mode}}
+		r := &Recipe{Delivery: tc.delivery, Wire: Wire{Method: tc.method, Actor: tc.actor}}
 		if got := r.Shape(); got != tc.want {
 			t.Errorf("%s: Shape() = %q, want %q", tc.name, got, tc.want)
 		}
@@ -94,7 +95,7 @@ func TestValidateRecipeRules(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
 			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "r"},
-			Wire: Wire{Mode: WireModeMcp, Mcp: &WireMcp{Transport: "http", URL: "https://x"}},
+			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://x"}},
 		}
 	}
 	cases := []struct {
@@ -107,8 +108,8 @@ func TestValidateRecipeRules(t *testing.T) {
 		{"wrong-family", func(r *Recipe) { r.Family = FamilyArtifact }, true},
 		{"missing-role", func(r *Recipe) { r.Role = "" }, true},
 		{"missing-name", func(r *Recipe) { r.Name = "" }, true},
-		{"bad-wire-mode", func(r *Recipe) { r.Wire.Mode = "teleport" }, true},
-		{"empty-wire-mode", func(r *Recipe) { r.Wire.Mode = "" }, true},
+		{"bad-wire-method", func(r *Recipe) { r.Wire.Method = "teleport" }, true},
+		{"empty-wire-method-no-deliver", func(r *Recipe) { r.Wire = Wire{} }, true},
 		{"valid-delivery-source", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceGithubRelease} }, false},
 		{"bad-delivery-source", func(r *Recipe) { r.Delivery = &Delivery{Source: "ftp"} }, true},
 		{"every-valid-source-docker", func(r *Recipe) { r.Delivery = &Delivery{Source: SourceDocker} }, false},
@@ -146,7 +147,8 @@ role: tools
 deliver:
   source: script
 wire:
-  mode: run
+  method: exec
+  actor: patronus
   run:
     - "curl -sSf https://example/install.sh | sh"
   tools: [claude]
@@ -161,7 +163,7 @@ wire:
 	if r.Shape() != ShapeFetchRun {
 		t.Errorf("Shape() = %q, want fetch+run", r.Shape())
 	}
-	if r.Wire.Mode != WireModeRun || len(r.Wire.Run) != 1 {
+	if r.Wire.Method != WireExec || len(r.Wire.Run) != 1 {
 		t.Errorf("wire = %+v", r.Wire)
 	}
 	if r.Header().Family != FamilyRecipe {
@@ -219,15 +221,15 @@ func TestDecodeArtifactAndRecipe(t *testing.T) {
 		t.Error("DecodeArtifact accepted bogus type")
 	}
 
-	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  mode: mcp\n  mcp:\n    transport: http\n    url: https://x\n"))
+	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n"))
 	if err != nil {
 		t.Fatalf("DecodeRecipe: %v", err)
 	}
 	if r.Shape() != ShapeWireOnly {
 		t.Errorf("Shape() = %q, want wire-only", r.Shape())
 	}
-	if _, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  mode: mcp\n")); err == nil {
-		t.Error("DecodeRecipe accepted mcp mode with no mcp block")
+	if _, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n")); err == nil {
+		t.Error("DecodeRecipe accepted merge method with no mcp block")
 	}
 }
 

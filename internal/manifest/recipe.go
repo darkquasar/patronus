@@ -160,29 +160,37 @@ type RecipeScope struct {
 	Global string `yaml:"global,omitempty" json:"global,omitempty"`
 }
 
-// WireMode is the SINGLE source of wiring truth — replacing the old
-// SelfWiring bool + implicit (which-of-Mcp/PostInstall-is-set) signalling.
-type WireMode string
+// WireMethod is WHAT KIND of wiring operation a recipe performs (one axis).
+type WireMethod string
 
 const (
-	WireModeMcp  WireMode = "mcp"  // Patronus performs the MCP-config MERGE itself
-	WireModeRun  WireMode = "run"  // Patronus runs the commands we specify (EXEC)
-	WireModeSelf WireMode = "self" // the recipe's own installer wires it (EXEC, self-managing)
+	WireMerge WireMethod = "merge" // Patronus merges structured config (MCP block, settings, hook array)
+	WireExec  WireMethod = "exec"  // the wiring is one or more shell commands
+	WireNone  WireMethod = ""      // no wiring — delivering the package is the whole job
 )
 
-var wireModes = map[WireMode]bool{WireModeMcp: true, WireModeRun: true, WireModeSelf: true}
+// WireActor is WHO performs the wiring (the orthogonal axis).
+type WireActor string
 
-// Wire describes how the recipe is bound to each agent. Mode is the single
-// discriminator; the mode-specific field (Mcp for mcp, Run for run/self) carries
-// the payload.
+const (
+	ActorPatronus WireActor = "patronus" // Patronus runs it and owns the reversal (state-tracked)
+	ActorExternal WireActor = "external" // something outside Patronus does it; surfaced as advisory, remove reports manual-cleanup
+)
+
+var wireMethods = map[WireMethod]bool{WireMerge: true, WireExec: true, WireNone: true}
+var wireActors = map[WireActor]bool{ActorPatronus: true, ActorExternal: true}
+
+// Wire describes how the recipe is bound to each agent. Method and Actor are the
+// two orthogonal discriminators; the method-specific field carries the payload.
 type Wire struct {
-	Mode  WireMode `yaml:"mode" json:"mode"`
-	Tools []string `yaml:"tools,omitempty" json:"tools,omitempty"`
-	Mcp   *WireMcp `yaml:"mcp,omitempty" json:"mcp,omitempty"` // present iff mode == mcp
-	Run   []string `yaml:"run,omitempty" json:"run,omitempty"` // present iff mode == run or self (was: postInstall)
+	Method WireMethod `yaml:"method,omitempty" json:"method,omitempty"`
+	Actor  WireActor  `yaml:"actor,omitempty" json:"actor,omitempty"`
+	Tools  []string   `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Mcp    *WireMcp   `yaml:"mcp,omitempty" json:"mcp,omitempty"` // present iff method == merge
+	Run    []string   `yaml:"run,omitempty" json:"run,omitempty"` // present iff method == exec
 }
 
-// WireMcp is the MCP-config entry Patronus merges for a mode: mcp recipe.
+// WireMcp is the MCP-config entry Patronus merges for a method:merge recipe.
 type WireMcp struct {
 	Transport string   `yaml:"transport" json:"transport"` // http | stdio
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
@@ -201,16 +209,16 @@ const (
 	ShapeInstall   RecipeShape = "install-only" // deliver a package, no wiring (tdd-guard via npm)
 )
 
-// Shape derives the recipe's type from deliver × wire. It is a pure function with
-// no ambiguous case — honest only because Delivery is nil-or-present and
-// Wire.Mode is a single enum (possibly empty for an install-only recipe).
+// Shape derives the recipe's type from deliver × wire method. Actor does not
+// affect shape (a run and a self-wiring command are both fetch+run) — it only
+// affects whether the emitted EXEC is advisory (see internal/recipe).
 func (r *Recipe) Shape() RecipeShape {
 	switch {
 	case r.Delivery == nil:
 		return ShapeWireOnly
-	case r.Wire.Mode == "":
+	case r.Wire.Method == WireNone:
 		return ShapeInstall // deliver a package and stop; something else (a hook) wires it
-	case r.Wire.Mode == WireModeRun || r.Wire.Mode == WireModeSelf:
+	case r.Wire.Method == WireExec:
 		return ShapeFetchRun
 	default:
 		return ShapeFetchWire
@@ -254,26 +262,32 @@ func validateRecipe(r *Recipe) error {
 			return err
 		}
 	}
-	// An empty wire.mode is the install-only recipe (deliver a package, wire
+	// An empty wire.method is the install-only recipe (deliver a package, wire
 	// nothing — a hook or another item does the wiring). It is valid ONLY with a
 	// deliver block; a recipe that neither delivers nor wires does nothing.
-	if r.Wire.Mode == "" {
+	if r.Wire.Method == WireNone {
 		if r.Delivery == nil {
-			return fmt.Errorf("recipe does nothing: needs a wire.mode or a deliver block")
+			return fmt.Errorf("recipe does nothing: needs a wire.method or a deliver block")
 		}
 		return nil
 	}
-	if !wireModes[r.Wire.Mode] {
-		return fmt.Errorf("invalid wire.mode %q (want mcp|run|self, or omit for an install-only deliver recipe)", r.Wire.Mode)
+	if !wireMethods[r.Wire.Method] {
+		return fmt.Errorf("invalid wire.method %q (want merge|exec, or omit for an install-only deliver recipe)", r.Wire.Method)
 	}
-	switch r.Wire.Mode {
-	case WireModeMcp:
-		if r.Wire.Mcp == nil {
-			return fmt.Errorf("wire.mode mcp requires a wire.mcp block")
+	if !wireActors[r.Wire.Actor] {
+		return fmt.Errorf("wire.method %s requires wire.actor (patronus|external)", r.Wire.Method)
+	}
+	switch r.Wire.Method {
+	case WireMerge:
+		if r.Wire.Actor != ActorPatronus {
+			return fmt.Errorf("wire.method merge requires actor: patronus (Patronus performs the merge)")
 		}
-	case WireModeRun, WireModeSelf:
+		if r.Wire.Mcp == nil {
+			return fmt.Errorf("wire.method merge requires a wire.mcp block")
+		}
+	case WireExec:
 		if len(r.Wire.Run) == 0 {
-			return fmt.Errorf("wire.mode %s requires wire.run commands", r.Wire.Mode)
+			return fmt.Errorf("wire.method exec requires wire.run commands")
 		}
 	}
 	return nil
