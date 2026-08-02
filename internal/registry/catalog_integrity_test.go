@@ -92,8 +92,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
 		// L4 context: the graphify cluster — a PreToolUse nudge hook + an always-on
 		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
-		"graphify-hint":        {manifest.TypeHook, manifest.RoleContext},
-		"graphify-query-first": {manifest.TypeInstruction, manifest.RoleContext},
+		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
+		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
 		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
@@ -112,8 +112,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// The house writing style, split by how it is consulted: an invocable
 		// editorial review (core.capabilities) and an always-on pointer whose
 		// stanza inlines the two Tier-1 mechanics (core.instructions).
-		"writing-style":       {manifest.TypeSkill, manifest.RoleCapability},
-		"writing-style-first": {manifest.TypeInstruction, manifest.RoleInstruction},
+		"writing-style":         {manifest.TypeSkill, manifest.RoleCapability},
+		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// L2 notebook-authoring cluster, chained by requires: and wired by the
 		// visual profile. generate-notebooks owns the uv edge (it owns
 		// bootstrap_env.sh); marimo-visual-explanation owns the mermaid-cli edge;

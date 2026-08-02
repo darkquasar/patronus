@@ -10,7 +10,7 @@ pointer:
     "fail-closed" flag`, not `"fail-closed."`). For prose that reasons or teaches, load the
     writing-style skill.
 role: instruction
-name: writing-style-first
+name: writing-style-pointer
 description: "Always-on pointer to the house writing style. Inlines the two always-on mechanics (em-dashes, quote punctuation) so they reach every Slack message and commit body, and points at the writing-style skill for the meaning-led prose rules that govern anything carrying reasoning."
 version: 1.0.0
 entry: INSTRUCTIONS.md

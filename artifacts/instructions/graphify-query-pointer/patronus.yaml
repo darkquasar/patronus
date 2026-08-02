@@ -6,7 +6,7 @@ pointer:
   trigger: "when answering an architecture/where-is/how-do-these-connect question about this codebase, before grepping or reading files one by one"
   summary: "Prefer the graphify knowledge graph: `graphify query \"<question>\"` for a scoped subgraph, `graphify path A B`, `graphify explain X`; GRAPH_REPORT.md for broad review."
 role: context
-name: graphify-query-first
+name: graphify-query-pointer
 description: "Always-on guidance to consult the graphify knowledge graph (graph.json) for codebase questions, preferring scoped queries over reading the full report or grepping raw files. On opencode it also carries the graphify-hint nudge (which has no native hook surface there)."
 version: 1.0.0
 entry: INSTRUCTIONS.md

@@ -11,7 +11,7 @@ layers:
     - agents-spine                         # the AGENTS.md format spine
     - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
-    - writing-style-first                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-style skill
+    - writing-style-pointer                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-style skill
   capabilities:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)

@@ -154,7 +154,7 @@ func TestCoreNoLongerHasSerena(t *testing.T) {
 // (pulled transitively via the graphify artifacts' requires: [graphify]).
 func TestCodeIntelHasSerenaAndGraphify(t *testing.T) {
 	names := resolvedNames(t, "code-intel", "claude")
-	for _, want := range []string{"serena", "graphify", "graphify-hint", "graphify-query-first"} {
+	for _, want := range []string{"serena", "graphify", "graphify-hint", "graphify-query-pointer"} {
 		if !strings.Contains(names, want) {
 			t.Errorf("code-intel missing %q — resolved: %s", want, names)
 		}

@@ -8,7 +8,7 @@ license: Apache-2.0
 
 # uv installs the graphifyy CLI (which ships the graphify-mcp entrypoint). We wire
 # the MCP server, NOT graphify's own `graphify <platform> install` — Patronus
-# replicates the always-on nudges natively (graphify-hint hook + graphify-query-first
+# replicates the always-on nudges natively (graphify-hint hook + graphify-query-pointer
 # instruction) so they are drift-guarded and cleanly removable.
 #
 # The [mcp] EXTRA is REQUIRED: graphify-mcp imports mcp.server.stdio, and without
