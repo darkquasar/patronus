@@ -348,8 +348,8 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 
 // toolContexts maps a Patronus tool id to the upstream "context"/client label a
 // recipe's launch command wants when it differs from the bare tool name. It backs
-// the {toolContext} token (e.g. Serena's `--context claude-code` vs `--context
-// codex`). A tool absent from the map falls back to its own id, so the token is
+// the {toolContext} placeholder (e.g. Serena's `--context claude-code` vs `--context
+// codex`). A tool absent from the map falls back to its own id, so the placeholder is
 // safe to use even where the value happens to equal the tool name.
 var toolContexts = map[string]string{
 	"claude":   "claude-code",
@@ -365,10 +365,10 @@ func toolContext(tool string) string {
 	return tool
 }
 
-// substTokens resolves the recipe wiring placeholders in a single string:
+// substPlaceholders resolves the recipe wiring placeholders in a single string:
 // {installPath} (the fetched binary's path) and {toolContext} (the per-tool
 // client label, see toolContexts). Centralizing it keeps command and args in sync.
-func substTokens(s, installPath, tool string) string {
+func substPlaceholders(s, installPath, tool string) string {
 	s = strings.ReplaceAll(s, "{installPath}", installPath)
 	s = strings.ReplaceAll(s, "{toolContext}", toolContext(tool))
 	return s
@@ -385,13 +385,13 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath, tool string) ada
 			vals["url"] = wm.URL
 		}
 	case "stdio":
-		cmd := substTokens(wm.Command, installPath, tool)
+		cmd := substPlaceholders(wm.Command, installPath, tool)
 		if cmd != "" {
 			vals["command"] = cmd
 		}
 		args := make([]string, len(wm.Args))
 		for i, a := range wm.Args {
-			args[i] = substTokens(a, installPath, tool)
+			args[i] = substPlaceholders(a, installPath, tool)
 		}
 		if len(args) > 0 {
 			vals["args"] = toAnySlice(args)

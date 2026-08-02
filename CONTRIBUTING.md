@@ -56,16 +56,17 @@ A minor or major bump zeroes the lower components (`1.0.3` → `1.1.0`, not `1.1
 - Move where a skill writes its output, or add a new manifest file → **minor**.
 - Rename a manifest field consumers read, or remove a documented capability → **major**.
 
-## Skill body tokens
+## Skill body placeholders
 
 A skill that references a file in its own installed directory, or in a sibling
-skill's, must name that path with a token rather than one agent's literal layout.
+skill's, must name that path with a placeholder rather than one agent's literal
+layout.
 The path differs per agent (`.claude/skills/`, `.agents/skills/`,
 `.opencode/skills/`), so a hardcoded `.claude/…` is correct on Claude and broken
 on the other two.
 
-| Token | Resolves to |
-|-------|-------------|
+| Placeholder | Resolves to |
+|-------------|-------------|
 | `{skillDir}` | the directory this skill installs into |
 | `{skillsDir}` | its parent, holding all installed skills |
 
@@ -77,8 +78,8 @@ project-relative path at project scope and an absolute one at global scope.
 Any other `{…}` is left untouched, so JSON examples, Python f-strings, and shell
 expansions in a skill body are safe. The cost of that leniency is that a typo
 (`{skilDir}`) would ship as a literal and fail only when a user runs the skill,
-so `patronus check-tokens` fails the build on a `{ski…dir}`-shaped string that is
-not exactly one of the two tokens. It runs in CI on every push.
+so `patronus check-placeholders` fails the build on a `{ski…dir}`-shaped string
+that is not exactly one of the two placeholders. It runs in CI on every push.
 
 ## Profiles and the catalog
 

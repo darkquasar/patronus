@@ -8,9 +8,9 @@ import (
 	"github.com/darkquasar/patronus/internal/manifest"
 )
 
-// These cover the {toolContext} wiring token added for per-tool stdio MCP flavours
+// These cover the {toolContext} wiring placeholder added for per-tool stdio MCP flavours
 // (e.g. Serena's `--context claude-code` vs `codex` vs `ide`). Two levels:
-//   - the pure helpers (toolContext / substTokens) in isolation, and
+//   - the pure helpers (toolContext / substPlaceholders) in isolation, and
 //   - the real end-to-end path through Compute, asserting each tool's MERGEd MCP
 //     config carries ITS OWN resolved context (proving the flavour diverges).
 
@@ -30,20 +30,20 @@ func TestToolContextMapping(t *testing.T) {
 	}
 }
 
-func TestSubstTokens(t *testing.T) {
+func TestSubstPlaceholders(t *testing.T) {
 	for _, tc := range []struct {
 		name, in, installPath, tool, want string
 	}{
 		{"installPath only", "{installPath}", "/opt/bin/x", "claude", "/opt/bin/x"},
 		{"toolContext only", "--context={toolContext}", "", "claude", "--context=claude-code"},
-		{"both tokens", "{installPath} --context {toolContext}", "/b/x", "opencode", "/b/x --context ide"},
-		{"no tokens passthrough", "start-mcp-server", "/b/x", "codex", "start-mcp-server"},
-		{"repeated token", "{toolContext}-{toolContext}", "", "codex", "codex-codex"},
+		{"both placeholders", "{installPath} --context {toolContext}", "/b/x", "opencode", "/b/x --context ide"},
+		{"no placeholders passthrough", "start-mcp-server", "/b/x", "codex", "start-mcp-server"},
+		{"repeated placeholder", "{toolContext}-{toolContext}", "", "codex", "codex-codex"},
 		{"unmapped tool", "--context {toolContext}", "", "zed", "--context zed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := substTokens(tc.in, tc.installPath, tc.tool); got != tc.want {
-				t.Errorf("substTokens(%q, %q, %q) = %q, want %q", tc.in, tc.installPath, tc.tool, got, tc.want)
+			if got := substPlaceholders(tc.in, tc.installPath, tc.tool); got != tc.want {
+				t.Errorf("substPlaceholders(%q, %q, %q) = %q, want %q", tc.in, tc.installPath, tc.tool, got, tc.want)
 			}
 		})
 	}
@@ -195,6 +195,6 @@ func TestComputeUnmappedToolFallsBackToOwnID(t *testing.T) {
 		t.Errorf("unmapped tool should wire its own id as context:\n%s", merged)
 	}
 	if strings.Contains(merged, "{toolContext}") {
-		t.Errorf("unresolved token leaked into config:\n%s", merged)
+		t.Errorf("unresolved placeholder leaked into config:\n%s", merged)
 	}
 }

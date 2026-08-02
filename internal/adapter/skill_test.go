@@ -112,12 +112,12 @@ func TestTransformSkillProjectScope(t *testing.T) {
 	}
 }
 
-// tokenBody exercises both tokens plus an unknown one that must survive.
-const tokenBody = "run {skillDir}/scripts/verify.sh and {skillsDir}/sibling/serve.sh with {skilDir} and ${VAR}\n"
+// placeholderBody exercises both placeholders plus an unknown one that must survive.
+const placeholderBody = "run {skillDir}/scripts/verify.sh and {skillsDir}/sibling/serve.sh with {skilDir} and ${VAR}\n"
 
-// TestTransformSkillTokensPerAdapter: at project scope the tokens resolve to a
+// TestTransformSkillPlaceholdersPerAdapter: at project scope the placeholders resolve to a
 // path relative to the project, spelled in each adapter's own layout.
-func TestTransformSkillTokensPerAdapter(t *testing.T) {
+func TestTransformSkillPlaceholdersPerAdapter(t *testing.T) {
 	tests := []struct {
 		tool      string
 		skillsDir string
@@ -129,8 +129,8 @@ func TestTransformSkillTokensPerAdapter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.tool, func(t *testing.T) {
 			src := t.TempDir()
-			mustWrite(t, filepath.Join(src, "SKILL.md"), tokenBody)
-			mustWrite(t, filepath.Join(src, "scripts", "run.sh"), tokenBody)
+			mustWrite(t, filepath.Join(src, "SKILL.md"), placeholderBody)
+			mustWrite(t, filepath.Join(src, "scripts", "run.sh"), placeholderBody)
 
 			home, proj := t.TempDir(), t.TempDir()
 			eng := New(toolpath.New(testEnv(home), home, proj))
@@ -155,9 +155,9 @@ func TestTransformSkillTokensPerAdapter(t *testing.T) {
 	}
 }
 
-// TestTransformSkillTokensGlobalScopeAbsolute: at global scope there is no
+// TestTransformSkillPlaceholdersGlobalScopeAbsolute: at global scope there is no
 // meaningful relative form, so the absolute install path is used.
-func TestTransformSkillTokensGlobalScopeAbsolute(t *testing.T) {
+func TestTransformSkillPlaceholdersGlobalScopeAbsolute(t *testing.T) {
 	src := t.TempDir()
 	mustWrite(t, filepath.Join(src, "SKILL.md"), "at {skillDir}\n")
 
@@ -175,9 +175,9 @@ func TestTransformSkillTokensGlobalScopeAbsolute(t *testing.T) {
 	}
 }
 
-// TestTransformSkillNoTokensByteIdentical: a body carrying no token is
+// TestTransformSkillNoPlaceholdersByteIdentical: a body carrying no placeholder is
 // unchanged, so the substitution is inert for every existing skill.
-func TestTransformSkillNoTokensByteIdentical(t *testing.T) {
+func TestTransformSkillNoPlaceholdersByteIdentical(t *testing.T) {
 	const body = "plain body with {\"json\": 1} and f\"{value}\"\n"
 	src := t.TempDir()
 	mustWrite(t, filepath.Join(src, "SKILL.md"), body)
@@ -223,11 +223,11 @@ func TestTransformSkillNonUTF8FileUntouched(t *testing.T) {
 	}
 }
 
-// TestTransformSkillTokensIdempotent: transforming twice yields identical bytes,
+// TestTransformSkillPlaceholdersIdempotent: transforming twice yields identical bytes,
 // so a re-install is a no-op rather than a compounding rewrite.
-func TestTransformSkillTokensIdempotent(t *testing.T) {
+func TestTransformSkillPlaceholdersIdempotent(t *testing.T) {
 	src := t.TempDir()
-	mustWrite(t, filepath.Join(src, "SKILL.md"), tokenBody)
+	mustWrite(t, filepath.Join(src, "SKILL.md"), placeholderBody)
 
 	home, proj := t.TempDir(), t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, proj))

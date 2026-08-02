@@ -49,8 +49,8 @@ jobs:
       # {skilDir} would ship as a literal and fail only when a user runs the
       # skill. Unlike version-bump this needs no base ref, so it runs on every
       # push rather than only on PRs. (pat-twgb)
-      - name: check skill tokens
-        run: go run ./cmd/patronus check-tokens
+      - name: check skill placeholders
+        run: go run ./cmd/patronus check-placeholders
 
   # Enforces CONTRIBUTING.md's version-bump rule on every pull_request: an artifact
   # whose CONTENT changed must also bump its patronus.yaml version:. Runs only on PRs

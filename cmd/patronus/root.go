@@ -22,7 +22,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newLockCmd())
 	root.AddCommand(newBuildCmd())
 	root.AddCommand(newCheckVersionsCmd())
-	root.AddCommand(newCheckTokensCmd())
+	root.AddCommand(newCheckPlaceholdersCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newRemoveCmd("remove", []string{"revert"}))
 	addStubCommands(root)
