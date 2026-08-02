@@ -148,3 +148,89 @@ coupling bite.
 - **Never weaken a sha check to serve a test.** The check IS the trust anchor; a test-only bypass
   makes the tested and shipped paths diverge exactly there.
 - **Never vendor third-party bytes as test inputs** to satisfy a pin.
+
+---
+
+## L3 — A ticket's premise drifts too. Verify it against the artifacts before planning the fix.
+
+**2026-08-02 · from `06-nine-tickets-triage`**
+
+Two of nine tickets had a stale premise that would have sent the fix the wrong way:
+
+- **pat-qo3r** said "writing-plans has NO spec.md step." Opening the artifacts showed
+  team-research and writing-plans had ALREADY moved to per-stream spec/plan output
+  (ADR-0003). The real work was hand-off *rewiring* (a behavior-preserving move of
+  spec-synthesis prose), not the parity *build* the ticket described. Planning from the
+  ticket text would have re-built something that exists.
+- **pat-670z** assumed we should author a serena-first pointer mirroring
+  graphify-query-pointer. Investigating serena's UPSTREAM showed serena self-delivers its
+  whole "prefer me over grep" contract server-side (`--context claude-code` tool-exclusion
+  + `mcp__serena__initial_instructions`). Authoring our own would duplicate it and create a
+  second source of truth that drifts.
+
+**How to apply:**
+- A ticket's OBSERVED/PLAN text is a *claim written at capture time* — treat it like any
+  other claim (L1) and open the artifacts it references before designing. The graph moves
+  between ticket-write and ticket-do.
+- **Check the upstream before wiring anything a tool might already do itself**
+  (`no-duplicate-native-capability`). The value-add is the thin part the tool *cannot*
+  carry (here: the serena-vs-graphify boundary + firing the un-fired trigger), not a
+  re-statement of what it ships.
+- When a premise is stale, say so explicitly in the deliverable and re-scope — don't
+  silently implement the ticket's literal words.
+
+## L4 — Distinguish a deliberate design decision from an undocumented accident.
+
+**2026-08-02 · from `06-nine-tickets-triage`**
+
+pat-78oj asked "why aren't recipes artifacts?" Two axes were tangled in that one question,
+and they had OPPOSITE answers:
+- Recipes not being an `ArtifactType` is a **defended decision** (`manifest.go:40-43`:
+  shape is computed via `Recipe.Shape` so no `type:` can drift).
+- Recipes lacking a `version:` is an **accident** — the only statement was a status-quo
+  description in a plan doc with no rationale; it fell out of the version-guard's
+  directory-based design, not a principle.
+
+The fix followed the distinction: recipes GAIN versioning on the shared `Meta` header
+(like they already carry `Requires`/`Role`) WITHOUT becoming an ArtifactType.
+
+**How to apply:** when something looks like an omission, search for the rationale
+(ADR/CHANGELOG/code comment) before either defending OR "fixing" it. If no rationale
+exists, it is an accident you may correct — and you should WRITE the missing ADR as part of
+the fix (we added ADR-0004), so the next person inherits a decision, not another silent
+gap. A description of the status quo is not a justification for it.
+
+## L5 — Test Patronus's mechanism, not the catalog's contents. Enumerating item names in Go is an anti-pattern that scales into absurdity.
+
+**2026-08-02 · from `06-nine-tickets-triage`**
+
+We wrote (and the repo already had) tests of the form "profile X resolves to the names
+[a, b, c]" — e.g. `TestCodeIntelHasSerenaAndGraphify`, `coreSkills`. ADR-0002 point 6
+had blessed these as "product guarantees." They are the wrong instrument, and the
+package-manager analogy settles it: **npm does not unit-test that `left-pad` is in its
+registry.** A package manager tests its MECHANISM (resolve → verify → place) on invented
+fixtures, and validates registry CONTENTS with a publish-time schema/lint — never with a
+per-package assertion in the installer's suite. Enumerating a profile's items in Go is that
+anti-pattern in miniature: every catalog edit forces a matching test edit, so the test
+becomes a speed-bump everyone re-syncs by reflex — and a test you routinely edit to match
+the change it guards has lost the power to guard. At thousands of items it is obviously
+ridiculous; at 58 it is just small enough to tolerate, which is how the anti-pattern
+survives.
+
+**How to apply:**
+- Three buckets: (1) MECHANISM (does `Resolve` apply an `@tool` flavour? does a hook fold?
+  does remove round-trip?) → test on INVENTED fixtures, once. (2) VALIDITY as a GENERAL
+  PROPERTY (every profile resolves; no declared layer is hollow; the type/role ontology is
+  consistent) → one catalog-wide test, zero per-item upkeep
+  (`profile_structure_test.go`, `catalog_integrity_test.go`). (3) CONTENTS correctness
+  (should `core` ship `grilling`?) → NOT a test; it is decided in the profile YAML and
+  reviewed in the PR that changes it.
+- The regression the name lists feared — a profile silently losing the tooling it promises —
+  is bucket (2): assert "every declared layer resolves to ≥1 item for some tool," not the
+  specific names.
+- Deleting a name-mirroring test is correct even if it was committed earlier. Do NOT
+  "migrate" it by renaming to fixture names — that yields a green tautology (the other
+  failure mode ADR-0002 names). Delete it; recover the invariant structurally.
+- This overrode a standing ADR. When you reverse a documented decision, AMEND the ADR
+  in place with a dated supersedes-note (we amended ADR-0002 point 6), so the next reader
+  inherits the corrected decision, not two contradictory ones.
