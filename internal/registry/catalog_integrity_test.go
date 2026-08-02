@@ -94,6 +94,12 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
 		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
 		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
+		// pat-670z code-intel checkpoints: a serena onboarding pointer (all tools) +
+		// two claude/codex-only nudges (edit-time caller check, graph staleness).
+		// Wired by the opt-in code-intel profile.
+		"serena-pointer":          {manifest.TypeInstruction, manifest.RoleContext},
+		"serena-refs-hint":        {manifest.TypeHook, manifest.RoleContext},
+		"graphify-staleness-hint": {manifest.TypeHook, manifest.RoleContext},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
 		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},

@@ -6,6 +6,9 @@ summary: "Codebase-decomposition tooling (opt-in): semantic navigation (Serena, 
 layers:
   context:
     - serena                 # LSP semantic navigation (moved out of core)
+    - serena-pointer         # instruction — fires serena's initial_instructions at session start + serena-vs-graphify division of labour; carries the code-intel cue on opencode (all tools)
     - graphify-query-pointer   # instruction nudge — prefer `graphify query` over grep/read; ALSO the opencode delivery of the hint (pulls the graphify recipe via requires)
   capabilities:
     - graphify-hint          # PreToolUse nudge — wires on claude + codex (hooks); no-op on opencode (the instruction above carries it there)
+    - serena-refs-hint       # PreToolUse nudge (claude + codex) — check callers with find_referencing_symbols before a source edit; opencode carries the cue via serena-pointer
+    - graphify-staleness-hint  # PostToolUse nudge (claude + codex) — rebuild the graph when it lags HEAD; opencode carries the cue via the instructions

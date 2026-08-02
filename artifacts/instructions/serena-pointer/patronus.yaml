@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+mode: pointer
+pointer:
+  trigger: "at session start, before the first search or read on a code file"
+  summary: "For symbol-level work invoke `mcp__serena__initial_instructions` and follow that manual (serena self-delivers its own tool guidance). Division of labour: serena = live LSP symbols/callers/renames; graphify = snapshot architecture/where-is/how-connected; neither replaces reading a known file:line."
+role: context
+name: serena-pointer
+description: "Always-on pointer that fires serena's own onboarding (`initial_instructions`) at session start and states the serena-vs-graphify division of labour. Deliberately THIN: it does NOT restate serena's per-tool guidance — that is single-sourced in initial_instructions. Carries the code-intel cue on all tools, including opencode (where the two edit-time hooks have no surface)."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+requires: [serena]

@@ -43,6 +43,7 @@ clean one.
   import a foreign style?
 - **Right-sized tasks** — is each task an independently testable deliverable, or does "done" only
   exist at the end?
+- **Verify code-anchored claims** — when the plan cites a specific `file:line` or symbol name, VERIFY it against the codebase rather than trusting the anchor. Prefer **serena** (`mcp__serena__initial_instructions`, then `find_symbol` / `find_referencing_symbols`) for symbol-precise claims and **graphify** (`query_graph` / `get_neighbors`) for architecture, impact, and where-consumed claims, when those tools are available; fall back to Read/Grep otherwise. This is VERIFY-THE-CLAIM, not USE-THE-TOOL: if reading the file settles it the review is done, so do not manufacture tool ceremony. A stale or wrong anchor (renamed symbol, missed call site, different signature) is a Critical or Important finding, because a plan built on it will send the implementer to the wrong place.
 
 ### Engineering lens
 
