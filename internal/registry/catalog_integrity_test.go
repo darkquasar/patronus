@@ -92,8 +92,8 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
 		// L4 context: the graphify cluster — a PreToolUse nudge hook + an always-on
 		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
-		"graphify-hint":        {manifest.TypeHook, manifest.RoleContext},
-		"graphify-query-first": {manifest.TypeInstruction, manifest.RoleContext},
+		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
+		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
 		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
@@ -109,6 +109,18 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// Core eng-team: the two advisory lifecycle review gates (authored).
 		"spec-review": {manifest.TypeSkill, manifest.RoleEval},
 		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
+		// The house writing style, split by how it is consulted: an invocable
+		// editorial review (core.capabilities) and an always-on pointer whose
+		// stanza inlines the two Tier-1 mechanics (core.instructions).
+		"writing-style":         {manifest.TypeSkill, manifest.RoleCapability},
+		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
+		// L2 notebook-authoring cluster, chained by requires: and wired by the
+		// visual profile. generate-notebooks owns the uv edge (it owns
+		// bootstrap_env.sh); marimo-visual-explanation owns the mermaid-cli edge;
+		// marimo-teach-topic shells into both siblings and inherits their binaries.
+		"generate-notebooks":        {manifest.TypeSkill, manifest.RoleCapability},
+		"marimo-visual-explanation": {manifest.TypeSkill, manifest.RoleCapability},
+		"marimo-teach-topic":        {manifest.TypeSkill, manifest.RoleCapability},
 		// Tiered JIT re-grounding hooks (authored; Claude-only): per-turn skill
 		// heartbeat + resume/compaction work-state reground (Ticket + ai-memory).
 		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
@@ -222,6 +234,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// merge (fetch+wire shape). The opt-in code-intel profile pulls it via the
 		// graphify artifacts' requires: [graphify].
 		"graphify": {manifest.RoleContext, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
+		// L5 tools: the two install-only substrates the visual profile's notebook
+		// skills require — uv (the sole Python prerequisite; it provisions its own
+		// interpreter) and mermaid-cli (`mmdc`, for rendered diagrams).
+		"uv":          {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
+		"mermaid-cli": {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
 	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))

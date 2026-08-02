@@ -6,6 +6,6 @@ summary: "Codebase-decomposition tooling (opt-in): semantic navigation (Serena, 
 layers:
   context:
     - serena                 # LSP semantic navigation (moved out of core)
-    - graphify-query-first   # instruction nudge — prefer `graphify query` over grep/read; ALSO the opencode delivery of the hint (pulls the graphify recipe via requires)
+    - graphify-query-pointer   # instruction nudge — prefer `graphify query` over grep/read; ALSO the opencode delivery of the hint (pulls the graphify recipe via requires)
   capabilities:
     - graphify-hint          # PreToolUse nudge — wires on claude + codex (hooks); no-op on opencode (the instruction above carries it there)

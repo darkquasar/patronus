@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: generate-notebooks
+description: "Generate Colab (.ipynb) and marimo (.py) notebooks — environment bootstrap (uv + a gitignored .venv), the marimo reactive gotchas, the Colab self-contained/sharing patterns, and headless verification. Use to create, build, or scaffold a notebook, a Colab, a marimo app, or a data-visualisation dashboard."
+version: 1.0.0
+entry: SKILL.md
+files: [references/, scripts/, assets/]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+# Owns scripts/bootstrap_env.sh, which drives uv — so this skill owns the uv edge
+# and its two dependents inherit it transitively.
+requires: [uv]

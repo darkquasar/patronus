@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-style
+description: "The house writing style, and the editorial review that applies it. Use when COMPOSING prose a reader will see — notebook and .ipynb/marimo cells, docstrings and module headers, READMEs, design docs, ADRs, PR descriptions, commit bodies, long-form explanations — so the style is there from the first draft. Also use on demand to review a draft: 'critique my writing', 'check this against my style', 'clean up this text'. Governs how prose reads, not what it claims; not a code linter."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project

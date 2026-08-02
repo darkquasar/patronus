@@ -3,8 +3,8 @@ family: artifact
 type: hook
 role: context
 name: graphify-hint
-description: "PreToolUse nudge — before a grep/rg/find search command, nudges the agent to prefer `graphify query \"<question>\"` over grepping raw files, when a graphify graph exists and graphify is on PATH. Fails open (never blocks). Native on claude + codex (hooks); on opencode the graphify-query-first instruction carries the nudge."
-version: 1.0.0
+description: "PreToolUse nudge — before a grep/rg/find search command, nudges the agent to prefer `graphify query \"<question>\"` over grepping raw files, when a graphify graph exists and graphify is on PATH. Fails open (never blocks). Native on claude + codex (hooks); on opencode the graphify-query-pointer instruction carries the nudge."
+version: 1.0.1
 entry: ""
 targets: [claude, codex, opencode]
 defaults:
