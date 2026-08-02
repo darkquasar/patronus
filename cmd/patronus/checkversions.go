@@ -143,20 +143,34 @@ func gatherChanges(ctx context.Context, root, base string) []artifactChange {
 	changes := make([]artifactChange, 0, len(dirs))
 	for _, dir := range dirs {
 		c := artifactChange{Name: dir}
-		// Content changed if ANY touched file under this dir is not patronus.yaml.
-		for _, n := range names {
-			if artifactDirOf(n) == dir && filepath.Base(n) != _manifestFile {
-				c.ContentChanged = true
-				break
-			}
-		}
 		manifestPath := filepath.Join(dir, _manifestFile)
+		var baseManifest, headManifest []byte
 		if baseData, ok := gitShow(ctx, root, base, manifestPath); ok {
 			c.ExistedInBase = true
 			c.BaseVersion = versionLine(baseData)
+			baseManifest = baseData
 		}
 		if headData, err := os.ReadFile(filepath.Join(root, manifestPath)); err == nil {
 			c.HeadVersion = versionLine(headData)
+			headManifest = headData
+		}
+		// Content changed if ANY touched file under this dir is a sibling of
+		// patronus.yaml, OR patronus.yaml itself changed in a non-version field.
+		// The manifest is no longer excluded wholesale: a description/requires/
+		// targets/role edit is content and must move the version.
+		for _, n := range names {
+			if artifactDirOf(n) != dir {
+				continue
+			}
+			if filepath.Base(n) == _manifestFile {
+				if manifestContentChanged(baseManifest, headManifest) {
+					c.ContentChanged = true
+					break
+				}
+				continue
+			}
+			c.ContentChanged = true
+			break
 		}
 		changes = append(changes, c)
 	}
@@ -241,6 +255,33 @@ func versionLine(data []byte) string {
 		return v
 	}
 	return ""
+}
+
+// manifestContentChanged reports whether two patronus.yaml revisions differ in any
+// way OTHER than their version: line. It strips the version: line from both sides and
+// compares the remainder, so a version-only edit (the bump we are checking FOR) and a
+// canonical re-marshal that only moves the version: value are NOT content changes,
+// while a description/requires/targets/role edit IS. This tightens the guard: before
+// it, patronus.yaml was excluded wholesale and a metadata-only edit shipped with no
+// bump; now the manifest's non-version fields are content like any sibling file.
+func manifestContentChanged(base, head []byte) bool {
+	return stripVersionLine(base) != stripVersionLine(head)
+}
+
+// stripVersionLine returns data with its top-level version: line removed, so the
+// remainder can be compared for a content change independent of the version bump.
+func stripVersionLine(data []byte) string {
+	var b strings.Builder
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "version:") {
+			continue
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func runGit(ctx context.Context, root string, args ...string) (string, error) {

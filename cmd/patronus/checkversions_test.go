@@ -78,3 +78,62 @@ func TestCheckVersionsEmpty(t *testing.T) {
 		t.Errorf("checkVersions(nil) = %v, want nil", got)
 	}
 }
+
+func TestManifestContentChanged(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		head string
+		want bool
+	}{
+		{
+			name: "version-only edit is not content",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.1.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "identical is not a change",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "description edit is content",
+			base: "name: demo\nversion: 1.0.0\ndescription: old\n",
+			head: "name: demo\nversion: 1.0.0\ndescription: new\n",
+			want: true,
+		},
+		{
+			name: "requires edit is content",
+			base: "name: demo\nversion: 1.0.0\nrequires: []\n",
+			head: "name: demo\nversion: 1.0.0\nrequires: [serena]\n",
+			want: true,
+		},
+		{
+			name: "role edit is content",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: capability\n",
+			want: true,
+		},
+		{
+			name: "version line missing on one side, rest equal, is not content",
+			base: "name: demo\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "content edit alongside a version bump is still content",
+			base: "name: demo\nversion: 1.0.0\ndescription: old\n",
+			head: "name: demo\nversion: 1.1.0\ndescription: new\n",
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := manifestContentChanged([]byte(tt.base), []byte(tt.head)); got != tt.want {
+				t.Errorf("manifestContentChanged() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
