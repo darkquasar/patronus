@@ -100,6 +100,7 @@ func fixtureCatalog(t *testing.T) string {
 	write("recipes/fix-bin.yaml", `apiVersion: patronus/v2
 family: recipe
 name: fix-bin
+version: 1.0.0
 role: orchestration
 summary: "Fixture raw-delivery binary. Pin = sha256 of bytes this test invented."
 deliver:
@@ -132,6 +133,7 @@ deliver:
 	write("recipes/fix-archive-bin.yaml", `apiVersion: patronus/v2
 family: recipe
 name: fix-archive-bin
+version: 1.0.0
 role: guardrail
 summary: "Fixture archive-delivery binary. Pin = sha256 of a tarball this test built."
 deliver:
@@ -166,6 +168,7 @@ deliver:
 	write("recipes/fix-mcp-bin.yaml", `apiVersion: patronus/v2
 family: recipe
 name: fix-mcp-bin
+version: 1.0.0
 role: memory
 summary: "Fixture fetch+wire recipe: an archive-delivered binary that is ALSO merged into each tool's MCP config."
 deliver:
@@ -377,6 +380,7 @@ defaults:
 family: profile
 role: lifecycle
 name: fix-all
+version: 1.0.0
 summary: "Fixture profile filling every layer slot."
 layers:
   instructions:
@@ -396,6 +400,7 @@ layers:
 family: profile
 role: lifecycle
 name: fix-extends
+version: 1.0.0
 summary: "Fixture profile proving extends: composes."
 extends: fix-all
 layers:
@@ -407,6 +412,7 @@ layers:
 family: profile
 role: lifecycle
 name: fix-flavoured
+version: 1.0.0
 summary: "Fixture profile proving @tool flavours diverge per --tool."
 layers:
   capabilities:

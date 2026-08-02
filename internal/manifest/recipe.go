@@ -9,6 +9,11 @@ import (
 // Recipe is an external binary/tool that Patronus delivers (optional fetch+verify)
 // and/or wires into each agent (§4). It carries NO file type — its shape is a
 // pure function of deliver × wire (see Shape).
+//
+// A recipe IS versioned like every manifest (the required Meta.Version, ADR-0004),
+// but its shape stays COMPUTED — versioning is an identity concern (which revision),
+// shape a structural one (what it writes). Adding the first does not make a recipe
+// declare a `type:`; there is no ArtifactType on recipes (see Shape/RecipeShape).
 type Recipe struct {
 	Meta     `yaml:",inline" json:",inline"`
 	Summary  string       `yaml:"summary,omitempty" json:"summary,omitempty"`

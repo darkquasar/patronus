@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: memory-engram
+version: 1.0.0
 role: memory                               # L3 — fallback recipe for memory (binary-only, no Docker)
 summary: "Engram memory layer (binary-only, no Docker) — for locked-down/airgapped/Windows cases."
 # NOTE: DESIGN.md §1/§5c names the upstream `edg-l/engram`, but that repo does not

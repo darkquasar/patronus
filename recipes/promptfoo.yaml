@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: promptfoo
+version: 1.0.0
 role: eval                                 # L8 — evaluation / CI gate for prompts + agent outputs
 summary: "Installs promptfoo (npm) — an agent-agnostic eval/CI gate: define test cases + assertions for prompts/outputs and run them locally or in CI. Install-only: run `promptfoo eval` against your config; nothing is wired into the agent."
 upstream: github.com/promptfoo/promptfoo

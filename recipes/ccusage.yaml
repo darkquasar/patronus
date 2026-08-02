@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: ccusage
+version: 1.0.0
 role: observability                        # L7 — token-usage/cost visibility from each agent's local logs
 summary: "Installs the ccusage CLI (npm) — an on-demand token-usage + cost reporter that reads each agent's local logs. Install-only: run `ccusage` (or `ccusage claude`) when you want a report; the Claude statusline is wired separately by the ccusage-statusline setting."
 upstream: github.com/ryoppippi/ccusage

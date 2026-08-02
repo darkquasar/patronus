@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: tk
+version: 1.0.0
 role: orchestration                        # L10 — the git-native work-graph binary behind the `ticket` instruction
 summary: "Installs the tk CLI (Ticket — a git-native work-graph / issue tracker whose DAG lives in plain markdown under .tickets/, committed like any other file; url source, pinned commit + sha256). The binary the `ticket` instruction tells the agent to drive (tk create/ready/dep/close). Install-only: deliver the script, no wiring of its own — the `ticket` instruction artifact does the wiring (an AGENTS.md APPEND)."
 upstream: github.com/wedow/ticket

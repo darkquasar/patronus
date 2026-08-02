@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: gitleaks
+version: 1.0.0
 role: guardrail                            # L9 — the binary behind the commit-time secret guard
 summary: "Installs the gitleaks CLI (github-release, pinned per-OS/arch + sha256) — the secret scanner the gitleaks-guard commit hook pipes the staged diff through. fetch+wire? no: install-only; the gitleaks-guard hook does the wiring."
 upstream: github.com/gitleaks/gitleaks

@@ -103,7 +103,7 @@ func TestShape(t *testing.T) {
 func TestValidateRecipeWireMethod(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
-			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "x"},
+			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "x", Version: "1.0.0"},
 			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://example"}},
 		}
 	}

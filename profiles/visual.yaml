@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: visual
+version: 1.0.0
 summary: "Visual-explanation and docs environment: build interactive marimo/Colab notebooks that explain a decision, a concept, or a whole topic, instead of answering in prose. Carries the three notebook skills plus the design-discipline context they lean on. An overlay — compose it onto `core` for the rest of the environment."
 # An L1/L2 overlay: it adds the notebook-authoring capability and the design
 # vocabulary those explanations draw on. It composes ONTO a base profile (core)

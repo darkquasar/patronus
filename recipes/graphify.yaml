@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: graphify
+version: 1.0.0
 role: context                      # L4 — Context / Knowledge (whole-corpus code graph)
 summary: "Graphify — turns a codebase (code + docs + PDFs + SQL schemas) into a queryable knowledge graph via tree-sitter AST. Installed with uv (heavy deps → build cost lands at install, not mid-task); wired as a stdio MCP server exposing explain/path/query. No vector store; every edge tagged EXTRACTED vs INFERRED."
 upstream: github.com/Graphify-Labs/graphify

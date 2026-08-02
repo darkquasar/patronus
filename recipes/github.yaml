@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: github
+version: 1.0.0
 role: tools                        # L5 Tools / Integrations
 summary: "GitHub MCP server (hosted) — issues, PRs, code search."
 upstream: github.com/github/github-mcp-server

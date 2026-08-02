@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: playwright
+version: 1.0.0
 role: tools                        # L5 — Tools / Integrations (browser automation — genuinely not native)
 summary: "Playwright MCP — drive a real browser (navigate, click, fill, snapshot) via accessibility tree. Launched on demand via npx. Opt-in (web-dev profile)."
 upstream: github.com/microsoft/playwright-mcp

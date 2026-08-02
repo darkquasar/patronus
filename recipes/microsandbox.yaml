@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: microsandbox
+version: 1.0.0
 role: sandbox                      # L6 — execution safety (the strongest tier: microVM isolation)
 summary: "microsandbox MCP — run code/commands inside hardware-isolated microVMs (not just OS sandboxing) the agent drives via MCP. The hard-isolation tier, above the native/srt OS sandboxes. Launched on demand via npx. Opt-in (hard-isolation overlay)."
 upstream: github.com/superradcompany/microsandbox

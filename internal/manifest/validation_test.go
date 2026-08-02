@@ -37,7 +37,7 @@ func TestShapeMatrix(t *testing.T) {
 func TestValidateArtifact(t *testing.T) {
 	base := func() *Artifact {
 		return &Artifact{
-			Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Role: RoleCapability, Name: "x", Description: "d"},
+			Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Role: RoleCapability, Name: "x", Description: "d", Version: "1.0.0"},
 			Type: TypeSkill,
 		}
 	}
@@ -54,6 +54,7 @@ func TestValidateArtifact(t *testing.T) {
 		{"bad-type", func(a *Artifact) { a.Type = "widget" }, true},
 		{"empty-type", func(a *Artifact) { a.Type = "" }, true},
 		{"missing-name", func(a *Artifact) { a.Name = "" }, true},
+		{"missing-version", func(a *Artifact) { a.Version = "" }, true}, // version is required schema-wide (ADR-0004)
 		{"missing-description", func(a *Artifact) { a.Description = "" }, true},
 		{"every-valid-type-skill", func(a *Artifact) { a.Type = TypeSkill }, false},
 		{"every-valid-type-agent", func(a *Artifact) { a.Type = TypeAgent }, false},
@@ -102,7 +103,7 @@ func TestValidateArtifact(t *testing.T) {
 func TestValidateRecipeRules(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
-			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "r"},
+			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "r", Version: "1.0.0"},
 			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://x"}},
 		}
 	}
@@ -116,6 +117,7 @@ func TestValidateRecipeRules(t *testing.T) {
 		{"wrong-family", func(r *Recipe) { r.Family = FamilyArtifact }, true},
 		{"missing-role", func(r *Recipe) { r.Role = "" }, true},
 		{"missing-name", func(r *Recipe) { r.Name = "" }, true},
+		{"missing-version", func(r *Recipe) { r.Version = "" }, true}, // version is required schema-wide (ADR-0004)
 		{"bad-wire-method", func(r *Recipe) { r.Wire.Method = "teleport" }, true},
 		{"empty-wire-method-no-deliver", func(r *Recipe) { r.Wire = Wire{} }, true},
 		{"valid-delivery-via-fetch", func(r *Recipe) { r.Delivery = &Delivery{Via: ViaFetch} }, false},
@@ -153,6 +155,7 @@ func TestLoadRecipeFromDisk(t *testing.T) {
 family: recipe
 name: scripted
 role: tools
+version: 1.0.0
 deliver:
   via: script
 wire:
@@ -189,6 +192,7 @@ func TestLoadProfileFromDisk(t *testing.T) {
 family: profile
 role: lifecycle
 name: demo
+version: 1.0.0
 layers:
   capabilities: [team-research]
 `
@@ -214,12 +218,22 @@ layers:
 	if _, err := LoadProfile(bad); err == nil {
 		t.Error("LoadProfile accepted family: artifact")
 	}
+
+	// A profile with no version: must be rejected — version is required schema-wide
+	// (ADR-0004), enforced in the shared validateMeta for every family.
+	noVer := filepath.Join(dir, "noversion.yaml")
+	if err := os.WriteFile(noVer, []byte("apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: nv\nlayers:\n  capabilities: [x]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadProfile(noVer); err == nil {
+		t.Error("LoadProfile accepted a profile with no version")
+	}
 }
 
 // TestDecodeArtifactAndRecipe covers the Decode* byte-seam (used for https:
 // sourced manifests) including a rejection.
 func TestDecodeArtifactAndRecipe(t *testing.T) {
-	a, err := DecodeArtifact([]byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nname: s\ndescription: d\n"))
+	a, err := DecodeArtifact([]byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nname: s\ndescription: d\nversion: 1.0.0\n"))
 	if err != nil {
 		t.Fatalf("DecodeArtifact: %v", err)
 	}
@@ -230,7 +244,7 @@ func TestDecodeArtifactAndRecipe(t *testing.T) {
 		t.Error("DecodeArtifact accepted bogus type")
 	}
 
-	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n"))
+	r, err := DecodeRecipe([]byte("apiVersion: patronus/v2\nfamily: recipe\nname: r\nrole: tools\nversion: 1.0.0\nwire:\n  method: merge\n  actor: patronus\n  mcp:\n    transport: http\n    url: https://x\n"))
 	if err != nil {
 		t.Fatalf("DecodeRecipe: %v", err)
 	}

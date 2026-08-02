@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: code-intel
+version: 1.0.0
 summary: "Codebase-decomposition tooling (opt-in): semantic navigation (Serena, LSP — precise, live, edit-capable) + whole-corpus knowledge graph (Graphify, tree-sitter AST over code + docs + SQL — build-then-query, file artifacts). Both read your repo, so they live here rather than in core. Serena moved out of core into this profile; Graphify is pulled in via the graphify artifacts' requires: [graphify], along with a PreToolUse nudge (native on claude+codex) and an always-on instruction (all tools) that prefer a graphify query over grepping raw files."
 layers:
   context:

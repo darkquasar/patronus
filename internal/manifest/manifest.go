@@ -112,11 +112,14 @@ type Meta struct {
 	Role        Role   `yaml:"role,omitempty" json:"role,omitempty"`
 	Name        string `yaml:"name" json:"name"`
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
-	// Version is SemVer. Bump it on ANY content change to the artifact: the
+	// Version is SemVer, REQUIRED on every family (artifact, recipe, profile,
+	// plugin) — see ADR-0004. Bump it on ANY content change to the item: the
 	// catalog re-installs only when the published version exceeds the installed
 	// one, so an un-bumped change never reaches users. patch = no behavior
 	// change; minor = backward-compatible new/changed behavior; major = breaking
-	// contract change. Not validated here — see CONTRIBUTING.md.
+	// contract change. Non-emptiness is enforced in validateMeta; the semantics
+	// of a bump live in CONTRIBUTING.md. It stays omitempty on the wire so an
+	// item that (invalidly) omits it round-trips rather than marshalling "".
 	Version  string   `yaml:"version,omitempty" json:"version,omitempty"`
 	Requires []string `yaml:"requires,omitempty" json:"requires,omitempty"`
 }
@@ -143,6 +146,12 @@ func validateMeta(m Meta, want Family) error {
 	}
 	if m.Name == "" {
 		return fmt.Errorf("missing name")
+	}
+	// version is REQUIRED on every family (ADR-0004): an unversioned item is
+	// un-updatable, un-guardable, and un-diffable. Enforced here, in the shared
+	// header check, so the rule has a single source of truth across all families.
+	if m.Version == "" {
+		return fmt.Errorf("missing version")
 	}
 	return nil
 }
