@@ -157,6 +157,88 @@ func TestTransformGateHookOpenCode(t *testing.T) {
 	}
 }
 
+// A gate whose matcher is a pipe-alternation of Claude tool names maps to ONE
+// OpenCode permission key per distinct tool: OpenCode keys are single lowercase
+// tool names, never alternations, and its `edit` permission covers write/edit/
+// patch — so Write|Edit|MultiEdit collapses to a single permission.edit = "deny".
+func TestTransformGateOpenCodeMapsAndCollapsesMatcher(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("block-secrets", "PreToolUse", "Write|Edit|MultiEdit", "block")
+	art.Hook.Intent = manifest.HookGate
+
+	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("opencode gate: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("Write|Edit|MultiEdit should collapse to one permission.edit diff, got %d: %+v", len(diffs), diffs)
+	}
+	if got := diffs[0].Setting.Dotted; got != "permission.edit" {
+		t.Errorf("dotted = %q, want permission.edit", got)
+	}
+	if diffs[0].Setting.ScalarValue != "deny" {
+		t.Errorf("value = %v, want deny", diffs[0].Setting.ScalarValue)
+	}
+}
+
+// Distinct tools in the matcher yield one deny diff each (Bash → permission.bash
+// is separate from an edit gate).
+func TestTransformGateOpenCodeMultipleKeys(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("wide-gate", "PreToolUse", "Edit|Bash", "block")
+	art.Hook.Intent = manifest.HookGate
+
+	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("opencode gate: %v", err)
+	}
+	if len(diffs) != 2 {
+		t.Fatalf("Edit|Bash should yield 2 permission diffs, got %d", len(diffs))
+	}
+	got := map[string]bool{diffs[0].Setting.Dotted: true, diffs[1].Setting.Dotted: true}
+	if !got["permission.edit"] || !got["permission.bash"] {
+		t.Errorf("want permission.edit and permission.bash, got %v", got)
+	}
+}
+
+// A matcher with a mappable AND an unmappable token (Claude-only TodoWrite) still
+// wires the mappable part and carries a warning naming the dropped token — never a
+// silent skip.
+func TestTransformGateOpenCodePartialWireWarns(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("tdd-guard-hook", "PreToolUse", "Write|Edit|MultiEdit|TodoWrite", "tdd-guard")
+	art.Hook.Intent = manifest.HookGate
+
+	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err != nil {
+		t.Fatalf("opencode gate: %v", err)
+	}
+	if len(diffs) != 1 || diffs[0].Setting.Dotted != "permission.edit" {
+		t.Fatalf("want one permission.edit diff, got %+v", diffs)
+	}
+	if !strings.Contains(diffs[0].Warning, "TodoWrite") {
+		t.Errorf("partial wire should warn about the dropped TodoWrite token, got %q", diffs[0].Warning)
+	}
+}
+
+// A gate whose EVERY token is unmappable to OpenCode is an error — there is no
+// honest permission key to deny, so silently wiring nothing would recreate the
+// pat-8jow no-op.
+func TestTransformGateOpenCodeAllUnmappableErrors(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("todo-only", "PreToolUse", "TodoWrite", "block")
+	art.Hook.Intent = manifest.HookGate
+
+	_, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	if err == nil {
+		t.Fatal("a fully-unmappable gate matcher should error, not silently wire nothing")
+	}
+}
+
 // A script-bearing hook places its helper script (CREATE, executable) into the
 // tool's hook-script dir AND registers a hook whose command invokes the placed
 // path (the {script} token resolves to it).

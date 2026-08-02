@@ -391,6 +391,42 @@ func TestComposeTwoHooksOneSettingsFile(t *testing.T) {
 	}
 }
 
+// An opencode gate whose matcher maps to two permission keys (Edit|Bash →
+// permission.edit + permission.bash) composes into ONE opencode.json with BOTH
+// denies, and the second key is recorded as a SettingContrib under the same
+// artifact so remove strips both (not just the first). Without the contrib the
+// permission.bash deny would leak on remove.
+func TestComposeMultiKeyOpenCodeGate(t *testing.T) {
+	home, proj := t.TempDir(), t.TempDir()
+	g := hookEntry(t, "wide-gate", "PreToolUse", "Edit|Bash", "block", []string{"opencode"})
+	g.Manifest.Hook.Intent = manifest.HookGate
+	req := baseReq(t, home, proj, g)
+	req.Names = []string{"wide-gate"}
+	req.Tool = "opencode"
+	req.Scope = "global"
+
+	cs, err := Compute(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs.Diffs) != 1 {
+		t.Fatalf("want 1 composed opencode.json diff, got %d: %v", len(cs.Diffs), paths(cs.Diffs))
+	}
+	d := cs.Diffs[0]
+	// The owning diff carries the first key; the second rides a SettingContrib.
+	if d.Setting == nil || d.Setting.Dotted != "permission.edit" {
+		t.Errorf("owning edit = %+v, want permission.edit", d.Setting)
+	}
+	if len(d.SettingContrib) != 1 || d.SettingContrib[0].Edit.Dotted != "permission.bash" {
+		t.Fatalf("want a permission.bash setting-contrib, got %+v", d.SettingContrib)
+	}
+	for _, want := range []string{"\"edit\"", "\"bash\"", "deny"} {
+		if !bytes.Contains(d.After, []byte(want)) {
+			t.Errorf("composed opencode.json missing %q:\n%s", want, d.After)
+		}
+	}
+}
+
 func TestUnknownArtifactErrors(t *testing.T) {
 	home, proj := t.TempDir(), t.TempDir()
 	req := baseReq(t, home, proj)

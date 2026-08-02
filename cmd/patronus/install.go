@@ -201,6 +201,13 @@ func newInstallCmd() *cobra.Command {
 			// DryRun drives the footer wording; only a real --deploy writes.
 			cs.DryRun = !deploy
 
+			// Surface any advisory a transform attached to a diff (e.g. an opencode
+			// gate matcher token with no permission key was dropped). Dedupe so a
+			// warning shared across a composed file's folded diffs prints once.
+			for _, w := range planWarnings(cs) {
+				warnf("%s", w)
+			}
+
 			if jsonOutput {
 				return render.JSON(cmd.OutOrStdout(), cs)
 			}
@@ -332,6 +339,23 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		return nil, err
 	}
 	return cs, nil
+}
+
+// planWarnings collects the distinct, non-empty advisories transforms attached to
+// the change set's diffs, preserving first-seen order. A single warning is shared
+// across a composed file's folded diffs, so dedup keeps it from printing twice.
+func planWarnings(cs *diff.ChangeSet) []string {
+	seen := map[string]bool{}
+	var out []string
+	for i := range cs.Diffs {
+		w := cs.Diffs[i].Warning
+		if w == "" || seen[w] {
+			continue
+		}
+		seen[w] = true
+		out = append(out, w)
+	}
+	return out
 }
 
 // mergeSourcedNames resolves each name as a sourced reference. Bare (registry)

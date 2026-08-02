@@ -106,44 +106,119 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 	}), nil
 }
 
+// _claudeToOpenCode maps a Claude PreToolUse matcher token to the OpenCode
+// permission key that gates the same capability. OpenCode keys are single
+// lowercase tool names (not pipe-alternations), and its `edit` permission covers
+// write/edit/patch — so Write, Edit, and MultiEdit all deny under `edit`. Tokens
+// with no OpenCode tool (TodoWrite is Claude-only) are absent: they cannot be
+// honestly gated on OpenCode and are dropped with a warning. Keys are matched
+// case-insensitively so both "Bash" and "bash" resolve.
+var _claudeToOpenCode = map[string]string{
+	"write":     "edit",
+	"edit":      "edit",
+	"multiedit": "edit",
+	"bash":      "bash",
+	"read":      "read",
+	"grep":      "grep",
+	"glob":      "glob",
+	"webfetch":  "webfetch",
+	"websearch": "websearch",
+	"task":      "task",
+}
+
 // transformGateOpenCode maps a gate hook to OpenCode's declarative permission
-// config: permission.<matcher> = "deny". OpenCode has no hooks block, so a gate is
-// expressed as a deny rule rather than a PreToolUse handler. A gate always denies —
-// ask/allow are not a gate's job — so no Decision field is needed.
+// config: one permission.<tool> = "deny" per distinct OpenCode tool the matcher
+// names. OpenCode has no hooks block, so a gate is a deny rule, not a PreToolUse
+// handler; and its keys are single lowercase tool names, so a Claude alternation
+// like Write|Edit|MultiEdit must be split and mapped (here, collapsing to the one
+// `edit` key). A gate always denies — ask/allow are not a gate's job.
+//
+// A token with no OpenCode equivalent (Claude-only, e.g. TodoWrite) is dropped
+// with a warning rather than wired as a bogus key that OpenCode would silently
+// ignore — the pat-8jow no-op. When EVERY token is unmappable there is no honest
+// deny to emit, so that is an error, not a silent empty plan.
 func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
 	target := ad.Layout.Hook.ForScope(scope)
 	if !target.OK() {
 		return nil, nil
 	}
-	key := spec.Matcher
-	if key == "" {
+	if spec.Matcher == "" {
 		return nil, fmt.Errorf("adapter: opencode gate hook %q needs a matcher (the permission key to deny)", art.Name)
 	}
-	dotted := target.Path + "." + key // permission.<key>
+
+	keys, dropped := openCodePermissionKeys(spec.Matcher)
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("adapter: opencode gate hook %q has no matcher token that maps to an opencode permission key (matcher %q); it cannot be gated on opencode", art.Name, spec.Matcher)
+	}
+
 	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
 	existing, _, err := readExisting(path)
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read settings for gate %q: %w", art.Name, err)
 	}
-	after, err := MergeSettings(existing, target, dotted, "deny")
-	if err != nil {
-		return nil, fmt.Errorf("adapter: wire gate %q: %w", art.Name, err)
+
+	var warning string
+	if len(dropped) > 0 {
+		// Partial wire: name the dropped tokens so the blind spot is visible, never
+		// a silent skip. The mappable keys below still deny.
+		warning = fmt.Sprintf("gate %q: matcher token(s) %s have no opencode permission key — denied only %s", art.Name, strings.Join(dropped, ", "), strings.Join(keys, ", "))
 	}
-	return []diff.FileDiff{{
-		Path:   path,
-		Action: diff.Merge,
-		Before: existing,
-		After:  after,
-		Tool:   ad.Tool,
-		Scope:  scope,
-		Role:   string(art.Role),
-		Note:   "gate " + spec.Matcher + ": " + art.Name,
-		Setting: &diff.SettingEdit{
-			Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
-			Dotted:      dotted,
-			ScalarValue: "deny",
-		},
-	}}, nil
+
+	// Each key is an independent scalar deny, threaded through MergeSettings so the
+	// composed file carries every deny, and each gets its own SettingEdit so remove
+	// and drift key on the exact permission entry.
+	diffs := make([]diff.FileDiff, 0, len(keys))
+	cur := existing
+	for _, key := range keys {
+		dotted := target.Path + "." + key // permission.<key>
+		after, err := MergeSettings(cur, target, dotted, "deny")
+		if err != nil {
+			return nil, fmt.Errorf("adapter: wire gate %q: %w", art.Name, err)
+		}
+		diffs = append(diffs, diff.FileDiff{
+			Path:    path,
+			Action:  diff.Merge,
+			Before:  cur,
+			After:   after,
+			Tool:    ad.Tool,
+			Scope:   scope,
+			Role:    string(art.Role),
+			Note:    "gate " + key + ": " + art.Name,
+			Warning: warning,
+			Setting: &diff.SettingEdit{
+				Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
+				Dotted:      dotted,
+				ScalarValue: "deny",
+			},
+		})
+		cur = after
+		warning = "" // attach the advisory once, to the first diff only
+	}
+	return diffs, nil
+}
+
+// openCodePermissionKeys splits a Claude matcher on "|", maps each token to its
+// OpenCode permission key, and returns the DISTINCT keys (input order preserved)
+// plus the tokens that had no mapping. A token is looked up case-insensitively.
+func openCodePermissionKeys(matcher string) (keys, dropped []string) {
+	seen := map[string]bool{}
+	for tok := range strings.SplitSeq(matcher, "|") {
+		tok = strings.TrimSpace(tok)
+		if tok == "" {
+			continue
+		}
+		key, ok := _claudeToOpenCode[strings.ToLower(tok)]
+		if !ok {
+			dropped = append(dropped, tok)
+			continue
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		keys = append(keys, key)
+	}
+	return keys, dropped
 }
 
 // placeHookScript emits the CREATE diff that writes the hook's bundled helper

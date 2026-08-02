@@ -23,6 +23,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newBuildCmd())
 	root.AddCommand(newCheckVersionsCmd())
 	root.AddCommand(newCheckPlaceholdersCmd())
+	root.AddCommand(newCheckGateIntentCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newRemoveCmd("remove", []string{"revert"}))
 	addStubCommands(root)
