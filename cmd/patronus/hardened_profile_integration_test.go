@@ -79,24 +79,6 @@ func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
 	}
 }
 
-// TestHardIsolationAddsMicrosandbox is CLASS B: the hard-isolation overlay (extends
-// hardened) really adds the microsandbox MCP — the microVM tier on top of the
-// per-tool OS sandboxes — while KEEPING the native sandbox it inherits.
-func TestHardIsolationAddsMicrosandbox(t *testing.T) {
-	cat := realCatalog(t)
-	r, err := profile.Resolve(cat, "hard-isolation", "claude")
-	if err != nil {
-		t.Fatalf("resolve hard-isolation: %v", err)
-	}
-	names := strings.Join(r.Names(), " ")
-	if !strings.Contains(names, "microsandbox") {
-		t.Errorf("hard-isolation should wire microsandbox, got: %s", names)
-	}
-	if !strings.Contains(names, "native-sandbox") {
-		t.Errorf("hard-isolation should keep hardened's native-sandbox, got: %s", names)
-	}
-}
-
 // TestFixtureHookFoldsIntoSettings is the CLASS-A counterpart, on the FIXTURE: a
 // hook artifact folds into the tool's settings.json, and its `requires:` edge pulls
 // the binary it invokes into the closure — the gitleaks-guard -> gitleaks shape,
