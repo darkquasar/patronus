@@ -108,13 +108,14 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	}
 }
 
-// TestUpdateRefreshesUnversionedRecipe proves an installed RECIPE (which carries no
-// version) is refreshed by `update <name> --deploy` rather than silently skipped.
-// Recipes have no version to compare, so update must refresh them unconditionally;
-// the earlier bug left them "unversioned — leaving as-is" and never re-applied a
-// changed recipe. Uses the fixture's fetch+wire recipe (fix-mcp-bin) — a mechanism
-// test on a fixture item, not a real catalog name.
-func TestUpdateRefreshesUnversionedRecipe(t *testing.T) {
+// TestUpdateFollowsNewerRecipeVersion proves a RECIPE updates by the SAME uniform
+// version compare as an artifact (ADR-0004): install at the baseline (state records
+// its version), advertise a newer recipe version in the served index, and
+// `update <recipe> --deploy` reports base -> newer and re-records the version. No
+// isRecipe special-case, no "unversioned — refreshing" message. Uses the fixture's
+// fetch+wire recipe (fix-mcp-bin) — a mechanism test on a fixture item, not a real
+// catalog name.
+func TestUpdateFollowsNewerRecipeVersion(t *testing.T) {
 	root := fixtureCatalog(t)
 	outDir := t.TempDir()
 	t.Chdir(root)
@@ -123,23 +124,67 @@ func TestUpdateRefreshesUnversionedRecipe(t *testing.T) {
 	}
 	f := serveTree(t, outDir)
 	f.bodies[fixMcpURL] = fixMcpTarGz(t)
-	withRemoteEnv(t, f)
+	home := withRemoteEnv(t, f)
+
+	// Baseline = whatever the fixture recipe advertises (read, not hardcoded).
+	const newerVer = "99.0.0"
+	baseVer := catalogRecipeVersion(t, outDir, "fix-mcp-bin")
+	if baseVer == "" || baseVer == newerVer {
+		t.Fatalf("unexpected baseline recipe version %q", baseVer)
+	}
 
 	// Install the fetch+wire recipe on claude/global (records recipe state rows).
 	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	s, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Find("fix-mcp-bin", "claude", "global"); len(got) != 1 || got[0].ItemVersion != baseVer {
+		t.Fatalf("expected recorded recipe version %s, got %+v", baseVer, got)
+	}
 
-	// update <recipe> --deploy must REFRESH it, not leave it as-is.
+	// Mutate the served index to advertise fix-mcp-bin@<newerVer>. A recipe rides
+	// inline in the index (no tarball), so editing its Manifest is the whole change.
+	// The newer version also changes the wiring (an extra MCP arg) so the reinstall
+	// produces a real (non-idempotent) MERGE — a pure metadata bump with byte-identical
+	// wiring would SKIP, exactly as it does for an artifact whose content is unchanged.
+	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
+	ix, err := registry.LoadIndex(idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range ix.Recipes {
+		if ix.Recipes[i].Manifest.Name == "fix-mcp-bin" {
+			ix.Recipes[i].Manifest.Version = newerVer
+			ix.Recipes[i].Manifest.Wire.Mcp.Args = []string{"mcp", "--v2"}
+		}
+	}
+	mutated, _ := ix.Marshal()
+	f.bodies[testRegistryBase+"/catalog/index.json"] = mutated
+	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
+
+	// update <recipe> --deploy: the uniform version-compare arm reports base -> newer.
 	out, e, err := runUpdate(t, "fix-mcp-bin", "--deploy")
 	if err != nil {
 		t.Fatalf("update recipe: %v\n%s", err, e)
 	}
-	if strings.Contains(out, "leaving as-is") {
-		t.Errorf("recipe was left as-is instead of refreshed:\n%s", out)
+	if !strings.Contains(out, baseVer+" -> "+newerVer) {
+		t.Errorf("expected recipe update to report %s -> %s:\n%s", baseVer, newerVer, out)
 	}
-	if !strings.Contains(out, "recipe (unversioned) — refreshing") {
-		t.Errorf("expected the recipe-refresh message:\n%s", out)
+	if strings.Contains(out, "unversioned") {
+		t.Errorf("recipe took the removed unversioned path:\n%s", out)
+	}
+
+	// State now records the newer recipe version.
+	s2, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s2.Find("fix-mcp-bin", "claude", "global"); len(got) != 1 || got[0].ItemVersion != newerVer {
+		t.Fatalf("expected recorded recipe version %s after update, got %+v", newerVer, got)
 	}
 }
 

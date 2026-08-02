@@ -162,6 +162,23 @@ func catalogItemVersion(t *testing.T, outDir, name string) string {
 	return ""
 }
 
+// catalogRecipeVersion reads a recipe's advertised version from the built index —
+// the recipe twin of catalogItemVersion (recipes ride inline, with no tarball).
+func catalogRecipeVersion(t *testing.T, outDir, name string) string {
+	t.Helper()
+	ix, err := registry.LoadIndex(mustRead(t, filepath.Join(outDir, "catalog", "index.json")))
+	if err != nil {
+		t.Fatalf("load index: %v", err)
+	}
+	for i := range ix.Recipes {
+		if ix.Recipes[i].Manifest.Name == name {
+			return ix.Recipes[i].Manifest.Version
+		}
+	}
+	t.Fatalf("recipe %q not in built catalog index", name)
+	return ""
+}
+
 func runList(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 	cmd := newListCmd()

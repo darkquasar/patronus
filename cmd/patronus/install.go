@@ -310,6 +310,13 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 			if err != nil {
 				return nil, err
 			}
+			// Stamp each recipe diff with the recipe's own version so state records
+			// its ItemVersion — the same thing the adapter engine does for artifacts
+			// (internal/adapter/engine.go). Without this, an installed recipe has no
+			// recorded version to compare on update (ADR-0004).
+			for i := range diffs {
+				diffs[i].Version = rec.Manifest.Version
+			}
 			raw = append(raw, diffs...)
 			continue
 		}
