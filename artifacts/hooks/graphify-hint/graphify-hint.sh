@@ -7,12 +7,17 @@ set -euo pipefail
 
 input="$(cat)"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
+pat="$(printf '%s' "$input" | jq -r '.tool_input.pattern // empty' 2>/dev/null || true)"
 
-# Only nudge for search-style commands; stay silent otherwise.
+# A search is EITHER a Bash grep/rg/find command OR any native Grep/Glob tool call
+# (those carry the search term in .tool_input.pattern, so a non-empty pattern means
+# the call is a search regardless of content). Stay silent otherwise.
+hit=
 case "$cmd" in
-  *grep*|*"rg "*|*"find "*) ;;
-  *) exit 0 ;;
+  *grep*|*"rg "*|*"find "*) hit=1 ;;
 esac
+[ -n "$pat" ] && hit=1
+[ -n "$hit" ] || exit 0
 
 # Only nudge if a graph exists and graphify is available.
 if [ -f graphify-out/graph.json ] && command -v graphify >/dev/null 2>&1; then
