@@ -1,9 +1,9 @@
 ---
-name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+name: brainstorming-spec
+description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design, then authors the spec. Reads an existing research.md when present and scales its dialogue to it."
 ---
 
-# Brainstorming Ideas Into Designs
+# Brainstorming Ideas Into Specs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
@@ -21,7 +21,7 @@ Every project goes through this process. A todo list, a single-function utility,
 
 You MUST create a task for each of these items and complete them in order:
 
-1. **Explore project context** — check files, docs, recent commits
+1. **Explore project context** — check files, docs, recent commits. **If a `<slug>-research.md` exists for this effort** (a folder under `docs/specs/` that names it in `meta.yaml`), READ it first and let it seed the design — do not re-investigate what research already settled. When research already answers the design questions, collapse the one-at-a-time dialogue to "confirm the implied design, then write the spec" (see The Process below).
 2. **Offer the visual companion just-in-time** — NOT upfront. The first time a question would genuinely be clearer shown than described, offer it then (its own message); on approval its browser tab opens for you. If no visual question ever arises, never offer it. See the Visual Companion section below.
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
@@ -34,7 +34,7 @@ You MUST create a task for each of these items and complete them in order:
 ## Process Flow
 
 ```dot
-digraph brainstorming {
+digraph brainstorming_spec {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -65,6 +65,10 @@ digraph brainstorming {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
+- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `team-research`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
+  - **Research answers the design questions** → skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: … — does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
+  - **Research leaves design questions open** → ask only those, one at a time, in the normal flow below.
+  There is no separate "research-seeded" skill — same author, dialogue scaled to input richness.
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
@@ -264,4 +268,4 @@ A browser-based companion for showing mockups, diagrams, and visual options duri
 A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
 
 If they agree to the companion, read the detailed guide before proceeding:
-`skills/brainstorming/visual-companion.md`
+`skills/brainstorming-spec/visual-companion.md`
