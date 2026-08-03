@@ -304,10 +304,10 @@ func TestComposeSharedAgentsFile(t *testing.T) {
 // recorded in Contrib so state/remove can track each section independently.
 func TestComposeTwoArtifactsOneFile(t *testing.T) {
 	home, proj := t.TempDir(), t.TempDir()
-	a := instructionArtifact(t, "spine", []string{"claude"})
-	b := instructionArtifact(t, "rules", []string{"claude"})
+	a := instructionArtifact(t, "demo-instr", []string{"claude"})
+	b := instructionArtifact(t, "demo-rules", []string{"claude"})
 	req := baseReq(t, home, proj, a, b)
-	req.Names = []string{"spine", "rules"}
+	req.Names = []string{"demo-instr", "demo-rules"}
 	req.Tool = "claude"
 	req.Scope = "local"
 
@@ -320,23 +320,23 @@ func TestComposeTwoArtifactsOneFile(t *testing.T) {
 	}
 	d := cs.Diffs[0]
 	// First contributor stays on the diff; the second lives in Contrib.
-	if d.Artifact != "spine" {
-		t.Errorf("primary artifact = %q, want spine", d.Artifact)
+	if d.Artifact != "demo-instr" {
+		t.Errorf("primary artifact = %q, want demo-instr", d.Artifact)
 	}
-	if len(d.Contrib) != 1 || d.Contrib[0].Artifact != "rules" || d.Contrib[0].Section != "rules" {
-		t.Fatalf("want one contrib for rules, got %+v", d.Contrib)
+	if len(d.Contrib) != 1 || d.Contrib[0].Artifact != "demo-rules" || d.Contrib[0].Section != "demo-rules" {
+		t.Fatalf("want one contrib for demo-rules, got %+v", d.Contrib)
 	}
 	// Both fenced sections are present in the single composed file.
-	for _, want := range []string{"patronus:start spine", "patronus:start rules"} {
+	for _, want := range []string{"patronus:start demo-instr", "patronus:start demo-rules"} {
 		if !bytes.Contains(d.After, []byte(want)) {
 			t.Errorf("composed file missing %q:\n%s", want, d.After)
 		}
 	}
-	// Contrib.Prior is the file BEFORE rules folded in — it has spine but not rules,
-	// so remove can reverse exactly the rules section.
-	if !bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start spine")) ||
-		bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start rules")) {
-		t.Errorf("contrib prior should hold spine-only:\n%s", d.Contrib[0].Prior)
+	// Contrib.Prior is the file BEFORE demo-rules folded in — it has demo-instr but not demo-rules,
+	// so remove can reverse exactly the demo-rules section.
+	if !bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start demo-instr")) ||
+		bytes.Contains(d.Contrib[0].Prior, []byte("patronus:start demo-rules")) {
+		t.Errorf("contrib prior should hold demo-instr-only:\n%s", d.Contrib[0].Prior)
 	}
 }
 
@@ -362,10 +362,10 @@ func hookEntry(t *testing.T, name, event, matcher, command string, targets []str
 // so remove can strip exactly it.
 func TestComposeTwoHooksOneSettingsFile(t *testing.T) {
 	home, proj := t.TempDir(), t.TempDir()
-	a := hookEntry(t, "tdd-guard", "PreToolUse", "Edit", "tdd-guard", []string{"claude"})
-	b := hookEntry(t, "gitleaks", "PreToolUse", "Bash", "gitleaks-guard", []string{"claude"})
+	a := hookEntry(t, "demo-hook", "PreToolUse", "Edit", "demo-hook", []string{"claude"})
+	b := hookEntry(t, "demo-hook2", "PreToolUse", "Bash", "demo-cmd2", []string{"claude"})
 	req := baseReq(t, home, proj, a, b)
-	req.Names = []string{"tdd-guard", "gitleaks"}
+	req.Names = []string{"demo-hook", "demo-hook2"}
 	req.Tool = "claude"
 	req.Scope = "global"
 
@@ -377,14 +377,14 @@ func TestComposeTwoHooksOneSettingsFile(t *testing.T) {
 		t.Fatalf("want 1 composed settings diff, got %d: %v", len(cs.Diffs), paths(cs.Diffs))
 	}
 	d := cs.Diffs[0]
-	if d.Artifact != "tdd-guard" {
-		t.Errorf("primary = %q, want tdd-guard", d.Artifact)
+	if d.Artifact != "demo-hook" {
+		t.Errorf("primary = %q, want demo-hook", d.Artifact)
 	}
-	if len(d.SettingContrib) != 1 || d.SettingContrib[0].Artifact != "gitleaks" {
-		t.Fatalf("want one setting-contrib for gitleaks, got %+v", d.SettingContrib)
+	if len(d.SettingContrib) != 1 || d.SettingContrib[0].Artifact != "demo-hook2" {
+		t.Fatalf("want one setting-contrib for demo-hook2, got %+v", d.SettingContrib)
 	}
 	// Both commands survive in the single composed settings file.
-	for _, want := range []string{"tdd-guard", "gitleaks-guard"} {
+	for _, want := range []string{"demo-hook", "demo-cmd2"} {
 		if !bytes.Contains(d.After, []byte(want)) {
 			t.Errorf("composed settings missing %q:\n%s", want, d.After)
 		}

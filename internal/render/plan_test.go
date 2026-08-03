@@ -15,16 +15,16 @@ import (
 func TestPlanRendersPluginExecRows(t *testing.T) {
 	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{
 		{Action: diff.Exec, Type: "plugin", Tool: "claude", Scope: "user",
-			Artifact: "superpowers", Path: "claude plugin install superpowers@claude-plugins-official --scope user",
-			Exec: &diff.ExecSpec{Display: "claude plugin install superpowers@claude-plugins-official --scope user", Advisory: false}},
+			Artifact: "demo-plugin", Path: "claude plugin install demo-plugin@some-marketplace --scope user",
+			Exec: &diff.ExecSpec{Display: "claude plugin install demo-plugin@some-marketplace --scope user", Advisory: false}},
 		{Action: diff.Exec, Type: "plugin", Tool: "opencode", Scope: "user",
-			Artifact: "superpowers", Path: "skipped: opencode has no plugin system",
+			Artifact: "demo-plugin", Path: "skipped: opencode has no plugin system",
 			Exec: &diff.ExecSpec{Display: "skipped: opencode has no plugin system", Advisory: true}},
 	}}
 	var b bytes.Buffer
 	PrintPlan(&b, cs, testResolver(), false)
 	out := b.String()
-	if !strings.Contains(out, "superpowers") || !strings.Contains(out, "plugin") {
+	if !strings.Contains(out, "demo-plugin") || !strings.Contains(out, "plugin") {
 		t.Errorf("expected plugin rows in plan, got:\n%s", out)
 	}
 }
@@ -44,14 +44,14 @@ func sampleChangeSet() *diff.ChangeSet {
 		DryRun: true,
 		Diffs: []diff.FileDiff{
 			{
-				Path: "/home/u/.claude/skills/team-research/SKILL.md", Action: diff.Create,
-				After: []byte("body"), Artifact: "team-research", Type: "skill",
+				Path: "/home/u/.claude/skills/demo-skill/SKILL.md", Action: diff.Create,
+				After: []byte("body"), Artifact: "demo-skill", Type: "skill",
 				Tool: "claude", Scope: "global", Role: "capability",
 			},
 			{
 				Path: "/home/u/.claude/CLAUDE.md", Action: diff.Append,
 				Before: []byte("old\n"), After: []byte("old\n\n<!-- patronus:start ap -->\nx\n<!-- patronus:end ap -->\n"),
-				Artifact: "agent-principles", Type: "instruction",
+				Artifact: "demo-instr", Type: "instruction",
 				Tool: "claude", Scope: "global", Role: "instruction", Note: "patronus section: ap",
 			},
 		},
@@ -65,8 +65,8 @@ func TestSummaryTableContents(t *testing.T) {
 
 	for _, want := range []string{
 		"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope",
-		"team-research", "~/.claude/skills/team-research/SKILL.md", "CREATE", "skill", "capability",
-		"agent-principles", "~/.claude/CLAUDE.md", "APPEND", "instruction",
+		"demo-skill", "~/.claude/skills/demo-skill/SKILL.md", "CREATE", "skill", "capability",
+		"demo-instr", "~/.claude/CLAUDE.md", "APPEND", "instruction",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("summary missing %q\n%s", want, out)
@@ -139,7 +139,7 @@ func TestVerbosePlanShowsUnifiedDiff(t *testing.T) {
 		t.Errorf("verbose plan missing tree:\n%s", out)
 	}
 	// Per-artifact headers.
-	if !strings.Contains(out, "── team-research ──") || !strings.Contains(out, "── agent-principles ──") {
+	if !strings.Contains(out, "── demo-skill ──") || !strings.Contains(out, "── demo-instr ──") {
 		t.Errorf("missing artifact section headers:\n%s", out)
 	}
 	// Unified diff markers for the APPEND (content changed).
@@ -297,9 +297,9 @@ func TestUnifiedMethod(t *testing.T) {
 //
 // The plan is the screen a user reads before approving --deploy. Installing the
 // `hardened` profile folds 8 artifacts into ~/.claude/settings.json — 7 hooks, a
-// statusline, and native-sandbox, which turns ON Claude's sandbox and AUTO-APPROVES
-// bash commands inside it. The user saw ONE row naming ONE artifact, and got all
-// eight. They consented to a security-posture change they were never shown.
+// statusline, and a sandbox setting, which turns ON Claude's sandbox and
+// AUTO-APPROVES bash commands inside it. The user saw ONE row naming ONE artifact,
+// and got all eight. They consented to a security-posture change never shown.
 //
 // The data was always right: internal/plan records every folded artifact in
 // FileDiff.SettingContrib, and internal/state reads it (which is why `remove` has
@@ -310,14 +310,14 @@ func TestPlanRendersEverySettingsContributor(t *testing.T) {
 	settings := "/home/u/.claude/settings.json"
 	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{{
 		// One composed MERGE, owned by whichever artifact's diff landed first...
-		Action: diff.Merge, Path: settings, Artifact: "skills-dispatch-activate",
+		Action: diff.Merge, Path: settings, Artifact: "demo-hook0",
 		Type: "hook", Role: "capability", Tool: "claude", Scope: "global",
 		Setting: &diff.SettingEdit{},
 		// ...with every other contributor folded in behind it.
 		SettingContrib: []diff.SettingContrib{
-			{Artifact: "block-secrets", Edit: &diff.SettingEdit{}, Type: "hook", Role: "guardrail"},
-			{Artifact: "native-sandbox", Edit: &diff.SettingEdit{}, Type: "setting", Role: "sandbox"},
-			{Artifact: "ccusage-statusline", Edit: &diff.SettingEdit{}, Type: "setting", Role: "observability"},
+			{Artifact: "demo-hook", Edit: &diff.SettingEdit{}, Type: "hook", Role: "guardrail"},
+			{Artifact: "demo-setting", Edit: &diff.SettingEdit{}, Type: "setting", Role: "sandbox"},
+			{Artifact: "demo-observ", Edit: &diff.SettingEdit{}, Type: "setting", Role: "observability"},
 		},
 	}}}
 
@@ -326,10 +326,10 @@ func TestPlanRendersEverySettingsContributor(t *testing.T) {
 	out := b.String()
 
 	for _, want := range []string{
-		"skills-dispatch-activate", // the owner
-		"block-secrets",            // folded in
-		"native-sandbox",           // folded in — the security switch
-		"ccusage-statusline",       // folded in
+		"demo-hook0",   // the owner
+		"demo-hook",    // folded in
+		"demo-setting", // folded in — the security switch
+		"demo-observ",  // folded in
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the plan does not name %q, yet --deploy would apply its edit to settings.json.\n"+
@@ -338,12 +338,12 @@ func TestPlanRendersEverySettingsContributor(t *testing.T) {
 	}
 
 	// And each contributor's row carries its OWN type/role, not the owning diff's —
-	// so native-sandbox reads as a `setting` at the `sandbox` layer (a security
+	// so demo-setting reads as a `setting` at the `sandbox` layer (a security
 	// switch), not as another hook.
 	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "native-sandbox") {
+		if strings.Contains(line, "demo-setting") {
 			if !strings.Contains(line, "setting") || !strings.Contains(line, "sandbox") {
-				t.Errorf("native-sandbox's row must show its own type/role (setting/sandbox), got:\n%s", line)
+				t.Errorf("demo-setting's row must show its own type/role (setting/sandbox), got:\n%s", line)
 			}
 		}
 	}

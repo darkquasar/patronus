@@ -30,12 +30,12 @@ func fakeCatalog(artifacts, recipes []string, profiles ...*manifest.Profile) *re
 
 func TestResolveDispatchesArtifactsAndRecipes(t *testing.T) {
 	cat := fakeCatalog(
-		[]string{"team-research", "pattern-cloudflare"},
-		[]string{"memory-ai-memory"},
+		[]string{"demo-cap", "demo-ctx2"},
+		[]string{"demo-mem"},
 		&manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}, Layers: manifest.ProfileLayers{
-			Capabilities: manifest.StringList{"team-research"},
-			Context:      manifest.StringList{"pattern-cloudflare"},
-			Memory:       "memory-ai-memory",
+			Capabilities: manifest.StringList{"demo-cap"},
+			Context:      manifest.StringList{"demo-ctx2"},
+			Memory:       "demo-mem",
 		}},
 	)
 	r, err := Resolve(cat, "p", "all")
@@ -43,9 +43,9 @@ func TestResolveDispatchesArtifactsAndRecipes(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]manifest.Family{
-		"team-research":      manifest.FamilyArtifact,
-		"pattern-cloudflare": manifest.FamilyArtifact,
-		"memory-ai-memory":   manifest.FamilyRecipe,
+		"demo-cap":  manifest.FamilyArtifact,
+		"demo-ctx2": manifest.FamilyArtifact,
+		"demo-mem":  manifest.FamilyRecipe,
 	}
 	if len(r.Items) != len(want) {
 		t.Fatalf("got %d items, want %d: %+v", len(r.Items), len(want), r.Items)
@@ -121,17 +121,17 @@ func TestResolveDedup(t *testing.T) {
 
 func TestResolveExtendsAppendListsReplaceScalars(t *testing.T) {
 	parent := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "base"}, Layers: manifest.ProfileLayers{
-		Capabilities: manifest.StringList{"team-research", "team-implement"},
-		Context:      manifest.StringList{"pattern-go"},
-		Memory:       "memory-ai-memory",
+		Capabilities: manifest.StringList{"demo-cap", "demo-cap2"},
+		Context:      manifest.StringList{"demo-ctx"},
+		Memory:       "demo-mem",
 	}}
 	child := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "derived"}, Extends: "base", Layers: manifest.ProfileLayers{
-		Context: manifest.StringList{"pattern-cloudflare"}, // appends to parent's context
-		Memory:  "memory-engram",                           // replaces parent's scalar
+		Context: manifest.StringList{"demo-ctx2"}, // appends to parent's context
+		Memory:  "demo-mem2",                      // replaces parent's scalar
 	}}
 	cat := fakeCatalog(
-		[]string{"team-research", "team-implement", "pattern-go", "pattern-cloudflare"},
-		[]string{"memory-ai-memory", "memory-engram"},
+		[]string{"demo-cap", "demo-cap2", "demo-ctx", "demo-ctx2"},
+		[]string{"demo-mem", "demo-mem2"},
 		parent, child,
 	)
 	r, err := Resolve(cat, "derived", "all")
@@ -140,7 +140,7 @@ func TestResolveExtendsAppendListsReplaceScalars(t *testing.T) {
 	}
 	got := r.Names()
 	// capabilities inherited; context = parent then child (append); memory replaced.
-	want := []string{"team-research", "team-implement", "pattern-go", "pattern-cloudflare", "memory-engram"}
+	want := []string{"demo-cap", "demo-cap2", "demo-ctx", "demo-ctx2", "demo-mem2"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("extends result = %v, want %v", got, want)
 	}
@@ -148,14 +148,14 @@ func TestResolveExtendsAppendListsReplaceScalars(t *testing.T) {
 
 func TestResolveExtendsDedupsAcrossInheritance(t *testing.T) {
 	parent := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "base"}, Layers: manifest.ProfileLayers{
-		Capabilities: manifest.StringList{"team-research"},
+		Capabilities: manifest.StringList{"demo-cap"},
 	}}
 	child := &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "derived"}, Extends: "base", Layers: manifest.ProfileLayers{
-		Capabilities: manifest.StringList{"team-research", "team-implement"}, // restates inherited
+		Capabilities: manifest.StringList{"demo-cap", "demo-cap2"}, // restates inherited
 	}}
-	cat := fakeCatalog([]string{"team-research", "team-implement"}, nil, parent, child)
+	cat := fakeCatalog([]string{"demo-cap", "demo-cap2"}, nil, parent, child)
 	r, _ := Resolve(cat, "derived", "all")
-	want := []string{"team-research", "team-implement"}
+	want := []string{"demo-cap", "demo-cap2"}
 	if strings.Join(r.Names(), ",") != strings.Join(want, ",") {
 		t.Fatalf("got %v, want %v", r.Names(), want)
 	}
@@ -265,16 +265,16 @@ func TestResolvePullsRequiresClosure(t *testing.T) {
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
 			Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ticket", Requires: []string{"tk"}},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo-instr", Requires: []string{"demo-bin"}},
 				Type: manifest.TypeInstruction,
 			},
 		}},
 		Recipes: []registry.RecipeEntry{{
-			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "tk", Role: "orchestration"}},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-bin", Role: "orchestration"}},
 		}},
 		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
 			Meta:   manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
-			Layers: manifest.ProfileLayers{Orchestration: manifest.StringList{"ticket"}},
+			Layers: manifest.ProfileLayers{Orchestration: manifest.StringList{"demo-instr"}},
 		}}},
 	}
 	r, err := Resolve(cat, "p", "all")
@@ -282,17 +282,17 @@ func TestResolvePullsRequiresClosure(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := r.Names()
-	if len(names) != 2 || names[0] != "tk" || names[1] != "ticket" {
-		t.Fatalf("resolved %v, want [tk ticket] (dep before dependent)", names)
+	if len(names) != 2 || names[0] != "demo-bin" || names[1] != "demo-instr" {
+		t.Fatalf("resolved %v, want [demo-bin demo-instr] (dep before dependent)", names)
 	}
-	// tk inherits the dependent's slot for provenance and is classified as a recipe.
+	// demo-bin inherits the dependent's slot for provenance and is classified as a recipe.
 	for _, it := range r.Items {
-		if it.Name == "tk" {
+		if it.Name == "demo-bin" {
 			if it.Family != manifest.FamilyRecipe {
-				t.Errorf("tk family = %v, want recipe", it.Family)
+				t.Errorf("demo-bin family = %v, want recipe", it.Family)
 			}
 			if it.Slot != "orchestration" {
-				t.Errorf("tk slot = %q, want orchestration (inherited from dependent)", it.Slot)
+				t.Errorf("demo-bin slot = %q, want orchestration (inherited from dependent)", it.Slot)
 			}
 		}
 	}
@@ -304,17 +304,17 @@ func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
 			Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "ticket", Requires: []string{"tk"}},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo-instr", Requires: []string{"demo-bin"}},
 				Type: manifest.TypeInstruction,
 			},
 		}},
 		Recipes: []registry.RecipeEntry{{
-			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "tk", Role: "orchestration"}},
+			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-bin", Role: "orchestration"}},
 		}},
 		Profiles: []registry.ProfileEntry{{Manifest: &manifest.Profile{
 			Meta:    manifest.Meta{Family: manifest.FamilyProfile, Name: "p"},
-			Without: manifest.StringList{"tk"},
-			Layers:  manifest.ProfileLayers{Orchestration: manifest.StringList{"ticket"}},
+			Without: manifest.StringList{"demo-bin"},
+			Layers:  manifest.ProfileLayers{Orchestration: manifest.StringList{"demo-instr"}},
 		}}},
 	}
 	r, err := Resolve(cat, "p", "all")
@@ -322,8 +322,8 @@ func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, it := range r.Items {
-		if it.Name == "tk" {
-			t.Fatalf("tk resolved despite `without: [tk]`: %v", r.Names())
+		if it.Name == "demo-bin" {
+			t.Fatalf("demo-bin resolved despite `without: [demo-bin]`: %v", r.Names())
 		}
 	}
 }

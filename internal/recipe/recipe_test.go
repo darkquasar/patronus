@@ -66,7 +66,7 @@ func engramRecipe() *manifest.Recipe {
 		Meta: manifest.Meta{
 			APIVersion: manifest.APIVersion,
 			Family:     manifest.FamilyRecipe,
-			Name:       "memory-engram",
+			Name:       "demo-memory",
 			Role:       manifest.RoleMemory,
 		},
 		Delivery: &manifest.Delivery{
@@ -148,7 +148,7 @@ func TestComputeFetchAndWire_Engram(t *testing.T) {
 	if err := json.Unmarshal(oc.After, &ocCfg); err != nil {
 		t.Fatalf("opencode config not json: %v", err)
 	}
-	mcp := ocCfg["mcp"].(map[string]any)["memory-engram"].(map[string]any)
+	mcp := ocCfg["mcp"].(map[string]any)["demo-memory"].(map[string]any)
 	if _, ok := mcp["command"].([]any); !ok {
 		t.Errorf("opencode command should be a JSON array, got %T (%v)", mcp["command"], mcp["command"])
 	}
@@ -192,7 +192,7 @@ func tkRecipe(sha string) *manifest.Recipe {
 	return &manifest.Recipe{
 		Meta: manifest.Meta{
 			APIVersion: manifest.APIVersion, Family: manifest.FamilyRecipe,
-			Role: manifest.RoleOrchestration, Name: "tk", Version: "0.3.2",
+			Role: manifest.RoleOrchestration, Name: "demo-bin", Version: "0.3.2",
 		},
 		Delivery: &manifest.Delivery{
 			Via:       manifest.ViaFetch,
@@ -228,14 +228,14 @@ func TestFetchDiffURLSource(t *testing.T) {
 		if d.Fetch.Archive != "" {
 			t.Errorf("Archive = %q, want empty (a url artifact is a raw binary)", d.Fetch.Archive)
 		}
-		if filepath.Base(dest) != "tk" {
-			t.Errorf("dest = %q, want it to end in tk", dest)
+		if filepath.Base(dest) != "demo-bin" {
+			t.Errorf("dest = %q, want it to end in demo-bin", dest)
 		}
 	})
 
 	t.Run("matching dest skips", func(t *testing.T) {
 		res, home, _ := testEnv(t)
-		dest := filepath.Join(home, ".patronus", "bin", "tk")
+		dest := filepath.Join(home, ".patronus", "bin", "demo-bin")
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -258,7 +258,7 @@ func TestFetchDiffURLSource(t *testing.T) {
 	// extracted from it, so presence alone has to be enough.)
 	t.Run("tampered dest refetches", func(t *testing.T) {
 		res, home, _ := testEnv(t)
-		dest := filepath.Join(home, ".patronus", "bin", "tk")
+		dest := filepath.Join(home, ".patronus", "bin", "demo-bin")
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -434,8 +434,8 @@ func TestComputeExternalActor_EmitsAdvisoryExec(t *testing.T) {
 func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
-		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "tdd-guard", Role: manifest.RoleEval},
-		Delivery: &manifest.Delivery{Via: manifest.ViaPackageManager, Install: []manifest.InstallCandidate{{Manager: manifest.PMNpm, Ref: "tdd-guard"}}, Binary: "tdd-guard"},
+		Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-cli", Role: manifest.RoleEval},
+		Delivery: &manifest.Delivery{Via: manifest.ViaPackageManager, Install: []manifest.InstallCandidate{{Manager: manifest.PMNpm, Ref: "demo-cli"}}, Binary: "demo-cli"},
 		// no Wire — install-only
 	}
 	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "all", Scope: "global"})
@@ -452,7 +452,7 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	if d.Type != string(manifest.ShapeInstall) {
 		t.Errorf("type = %s, want install-only", d.Type)
 	}
-	if d.Exec == nil || d.Exec.Display != "npm install -g tdd-guard" {
+	if d.Exec == nil || d.Exec.Display != "npm install -g demo-cli" {
 		t.Errorf("advisory command wrong: %+v", d.Exec)
 	}
 	if d.Exec == nil || !d.Exec.SelfManaged {
@@ -464,27 +464,27 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	// The advisory carries its ordered candidate list so the consent layer can
 	// detect the manager on PATH and run the command.
 	if d.Exec == nil || len(d.Exec.Candidates) != 1 || d.Exec.Candidates[0].Manager != "npm" ||
-		d.Exec.Candidates[0].Command != "npm install -g tdd-guard" {
+		d.Exec.Candidates[0].Command != "npm install -g demo-cli" {
 		t.Errorf("advisory candidates wrong: %+v", d.Exec)
 	}
 }
 
-// A via:package-manager recipe that ALSO wires an MCP server (the graphify shape)
+// A via:package-manager recipe that ALSO wires an MCP server (the fetch+wire shape)
 // emits BOTH the package-install advisory AND the MERGE. The install is delivery-
 // driven, orthogonal to wiring — without it the recipe would wire an MCP server
 // whose binary was never installed.
 func TestComputePackageManagerPlusWire_EmitsInstallAndMerge(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
-		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "graphify", Role: manifest.RoleContext},
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-recipe", Role: manifest.RoleContext},
 		Delivery: &manifest.Delivery{
 			Via:     manifest.ViaPackageManager,
-			Install: []manifest.InstallCandidate{{Manager: manifest.PMUv, Ref: "graphifyy==0.9.31"}},
-			Binary:  "graphify",
+			Install: []manifest.InstallCandidate{{Manager: manifest.PMUv, Ref: "mypkg==0.9.31"}},
+			Binary:  "demo-recipe",
 		},
 		Wire: manifest.Wire{
 			Method: manifest.WireMerge, Actor: manifest.ActorPatronus,
-			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "graphify-mcp"},
+			Mcp:   &manifest.WireMcp{Transport: "stdio", Command: "demo-mcp-server"},
 			Tools: []string{"claude"},
 		},
 	}
@@ -504,7 +504,7 @@ func TestComputePackageManagerPlusWire_EmitsInstallAndMerge(t *testing.T) {
 	if advisory == nil {
 		t.Fatal("want a package-install advisory EXEC")
 	}
-	if advisory.Exec == nil || advisory.Exec.Display != "uv tool install graphifyy==0.9.31" {
+	if advisory.Exec == nil || advisory.Exec.Display != "uv tool install mypkg==0.9.31" {
 		t.Errorf("advisory command wrong: %+v", advisory.Exec)
 	}
 	if merge == nil {

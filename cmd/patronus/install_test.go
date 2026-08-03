@@ -413,7 +413,7 @@ func TestPathReadinessFlagsOffPathDest(t *testing.T) {
 }
 
 func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	rows := readinessReport(cs, func(string) (string, error) { return "", errors.New("nope") })
 	if len(rows) != 1 || rows[0].Satisfiable {
 		t.Fatalf("want 1 unsatisfiable row, got %+v", rows)
@@ -424,7 +424,7 @@ func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {
 }
 
 func TestPreflightAllOrNothingErrorsWhenMissing(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	if err := preflightAllOrNothing(cs, func(string) (string, error) { return "", errors.New("no") }); err == nil {
 		t.Fatal("want preflight error when no manager present")
 	}
@@ -434,7 +434,7 @@ func TestPreflightAllOrNothingErrorsWhenMissing(t *testing.T) {
 }
 
 func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "/x", nil }, out: io.Discard}
 	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
@@ -447,9 +447,9 @@ func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
 
 func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
 	// uv (preferred) is absent; brew (fallback) is present → install via brew.
-	cs := pkgInstallCS("graphify",
-		diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"},
-		diff.InstallCandidateSpec{Manager: "brew", Command: "brew install graphify"},
+	cs := pkgInstallCS("demo-recipe",
+		diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"},
+		diff.InstallCandidateSpec{Manager: "brew", Command: "brew install mypkg"},
 	)
 	runner := &fakeRunner{}
 	var out bytes.Buffer
@@ -471,7 +471,7 @@ func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
 }
 
 func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "", errors.New("no") }, out: &out}
@@ -492,7 +492,7 @@ func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
 }
 
 func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{
@@ -509,7 +509,7 @@ func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
 }
 
 func TestConsentInteractiveAcceptRuns(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{
@@ -556,7 +556,7 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 
 	cat := &registry.Catalog{
 		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
-			Meta:    manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Meta:    manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "demo-plugin"},
 			Sources: map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
 		}}},
 	}
@@ -565,7 +565,7 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 		cat:         cat,
 		adapters:    adapterMap(adapters),
 		res:         res,
-		names:       []string{"superpowers"},
+		names:       []string{"demo-plugin"},
 		tool:        "claude",
 		scope:       "global",
 		pluginProbe: fakeProbe{present: map[string]bool{"claude": true}},
@@ -611,7 +611,7 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 
 	cat := &registry.Catalog{
 		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
-			Meta:     manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Meta:     manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "demo-plugin"},
 			Sources:  map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
 			Targets:  []string{"claude", "codex"},
 			Defaults: manifest.PluginDefaults{Scope: "global"},
@@ -622,7 +622,7 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 		cat:         cat,
 		adapters:    adapterMap(adapters),
 		res:         res,
-		names:       []string{"superpowers"},
+		names:       []string{"demo-plugin"},
 		tool:        "all", // the default; must expand to Targets
 		scope:       "",    // no flag; must fall back to defaults.scope=global
 		pluginProbe: fakeProbe{present: map[string]bool{}},
@@ -657,11 +657,11 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 // failing with "resolved to nothing".
 func TestMergeSourcedNamesPlugin(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := filepath.Join(dir, "superpowers.yaml")
+	manifestPath := filepath.Join(dir, "demo-plugin.yaml")
 	body := "apiVersion: patronus/v2\n" +
 		"family: plugin\n" +
 		"role: lifecycle\n" +
-		"name: superpowers\n" +
+		"name: demo-plugin\n" +
 		"version: 2.1.0\n" +
 		"sources:\n" +
 		"  claude-code:\n" +
@@ -677,10 +677,10 @@ func TestMergeSourcedNamesPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mergeSourcedNames: %v", err)
 	}
-	if len(names) != 1 || names[0] != "superpowers" {
-		t.Fatalf("names = %v, want [superpowers]", names)
+	if len(names) != 1 || names[0] != "demo-plugin" {
+		t.Fatalf("names = %v, want [demo-plugin]", names)
 	}
-	if len(cat.Plugins) != 1 || cat.Plugins[0].Manifest.Name != "superpowers" {
-		t.Fatalf("cat.Plugins = %+v, want one superpowers plugin", cat.Plugins)
+	if len(cat.Plugins) != 1 || cat.Plugins[0].Manifest.Name != "demo-plugin" {
+		t.Fatalf("cat.Plugins = %+v, want one demo-plugin plugin", cat.Plugins)
 	}
 }
