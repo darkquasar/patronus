@@ -326,6 +326,51 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 	}
 }
 
+// TestComputeExecSubstitutesInstallPath proves an exec-method recipe's run commands
+// resolve {installPath} (and {tool}) to the fetched binary's absolute dest — the same
+// substitution the MCP-merge path already does (serverSpec). A fetch+run recipe that
+// invokes its OWN delivered binary must reference it by absolute path, or a process
+// whose $PATH never saw the install dir cannot execute it (pat-as4h(c)).
+func TestComputeExecSubstitutesInstallPath(t *testing.T) {
+	res, home, _ := testEnv(t)
+	rec := &manifest.Recipe{
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-run", Role: manifest.RoleTools, Version: "1.0.0"},
+		Delivery: &manifest.Delivery{
+			Via: manifest.ViaFetch, InstallTo: "~/.patronus/bin/", Binary: "demo-run",
+			Assets: []manifest.Asset{{OS: "linux", Arch: "amd64", URL: "https://x/demo", SHA256: "abc"}},
+		},
+		Wire: manifest.Wire{
+			Method: manifest.WireExec,
+			Actor:  manifest.ActorPatronus,
+			Run:    []string{"{installPath} migrate --tool {tool}"},
+			Tools:  []string{"claude"},
+		},
+	}
+	diffs, err := Compute(Request{Recipe: rec, Adapters: loadAdapters(t), Resolver: res, Tool: "claude", Scope: "global", GOOS: "linux", GOARCH: "amd64"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPath := filepath.Join(home, ".patronus", "bin", "demo-run")
+	var exec *diff.FileDiff
+	for i := range diffs {
+		if diffs[i].Action == diff.Exec {
+			exec = &diffs[i]
+		}
+	}
+	if exec == nil {
+		t.Fatalf("no EXEC diff produced: %+v", diffs)
+	}
+	if exec.Exec.Command[0] != wantPath {
+		t.Errorf("exec argv[0] = %q, want the absolute installPath %q", exec.Exec.Command[0], wantPath)
+	}
+	if !strings.Contains(exec.Exec.Display, wantPath) {
+		t.Errorf("exec display %q does not reference installPath %q", exec.Exec.Display, wantPath)
+	}
+	if exec.Exec.Command[len(exec.Exec.Command)-1] != "claude" {
+		t.Errorf("{tool} not substituted in argv: %v", exec.Exec.Command)
+	}
+}
+
 func TestComputeExternalActor_EmitsAdvisoryExec(t *testing.T) {
 	res, _, _ := testEnv(t)
 	rec := &manifest.Recipe{
