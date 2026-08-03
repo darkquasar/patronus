@@ -246,6 +246,15 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"uv":          {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
 		"mermaid-cli": {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
 	}
+	// Per-recipe install-command invariants, as DATA (not an inline `if name ==`
+	// branch). Each entry says "this recipe's rendered install command must contain
+	// this substring." graphify's uv install MUST carry the [mcp] extra, or
+	// graphify-mcp dies with ModuleNotFoundError: No module named 'mcp'; guarding it
+	// here keeps a ref edit from silently dropping the extra. Add a row to extend the
+	// invariant to another recipe — never a new branch in the loop.
+	wantInstallSubstr := map[string]string{
+		"graphify": "graphifyy[mcp]",
+	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
 	}
@@ -268,12 +277,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		if m.Wire.Method != want.method {
 			t.Errorf("%s: wire.method = %q, want %q", m.Name, m.Wire.Method, want.method)
 		}
-		// graphify's uv install MUST carry the [mcp] extra, or graphify-mcp dies with
-		// ModuleNotFoundError: No module named 'mcp'. Guard it so a ref edit can't
-		// silently drop the extra and re-break the MCP server.
-		if m.Name == "graphify" {
-			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, "graphifyy[mcp]") {
-				t.Errorf("graphify install command %q must include the [mcp] extra", cmd)
+		if substr, ok := wantInstallSubstr[m.Name]; ok {
+			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, substr) {
+				t.Errorf("%s install command %q must contain %q", m.Name, cmd, substr)
 			}
 		}
 		if m.Wire.Actor != want.actor {
