@@ -1,7 +1,6 @@
 # Agent Principles
 
-House rules for how an AI coding agent should think and work on this project.
-These are ambient guiding principles — always in effect, not invoked on demand.
+House rules for how an AI coding agent should think and work on this project. These are ambient guiding principles — always in effect, not invoked on demand.
 
 ## Cognitive Framework & Mindset
 
@@ -24,13 +23,10 @@ These are ambient guiding principles — always in effect, not invoked on demand
 
 ## Communicating Solutions
 
-**Every time you propose a solution, return an ASCII diagram with it.** A picture in text makes the
-shape of a change obvious in a way prose cannot — it is not optional decoration, it is part of the
-answer. There are two kinds; use one, or both at once, depending on what you are explaining:
+**Every time you propose a solution, return an ASCII diagram with it.** A picture in text makes the shape of a change obvious in a way prose cannot — it is not optional decoration, it is part of the answer. There are two kinds; use one, or both at once, depending on what you are explaining:
 
 ### 1. Simple diagram (always cheap, almost always worth it)
-A small ASCII sketch of the *shape* of the solution — boxes and arrows, a flow, or a before/after.
-Use this whenever you describe how pieces relate, data moves, or control flows.
+A small ASCII sketch of the *shape* of the solution — boxes and arrows, a flow, or a before/after. Use this whenever you describe how pieces relate, data moves, or control flows.
 
 ```
 request ──▶ [validate] ──▶ [queue] ──▶ [worker] ──▶ result
@@ -39,9 +35,7 @@ request ──▶ [validate] ──▶ [queue] ──▶ [worker] ──▶ resu
 ```
 
 ### 2. Rich logical / tree diagram (for structural or hierarchical change)
-An ASCII **tree** (or a richer annotated layout) showing structure: file/module trees, component
-hierarchies, decision branches, or a change set with per-node annotations like `(new)` / `(modified)`
-/ `(deleted)`. Use this when the solution touches *where things live* or *how they nest*.
+An ASCII **tree** (or a richer annotated layout) showing structure: file/module trees, component hierarchies, decision branches, or a change set with per-node annotations like `(new)` / `(modified)` / `(deleted)`. Use this when the solution touches *where things live* or *how they nest*.
 
 ```
 service/
@@ -53,8 +47,7 @@ service/
 ```
 
 ### Rules
-- **Choose by complexity.** Trivial, linear answer → a simple diagram suffices. Structural or nested
-  change → add the tree. When in doubt, include both: the flow *and* the structure.
+- **Choose by complexity.** Trivial, linear answer → a simple diagram suffices. Structural or nested change → add the tree. When in doubt, include both: the flow *and* the structure.
 - **Diagram the proposal, not just the result.** Show what will change, not only the final state.
 - **Plain ASCII/box-drawing only** — it must render in any terminal. Keep it tight and labelled.
 - This complements plan-mode and verification; it does not replace them.
