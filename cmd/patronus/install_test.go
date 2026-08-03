@@ -238,6 +238,44 @@ func TestInstallRecipeFetchDryRun(t *testing.T) {
 	}
 }
 
+// TestInstallPathReadinessWarningFires is the pat-as4h acceptance check: installing a
+// recipe that FETCHes a binary into a dir absent from the inherited $PATH prints the
+// PATH-readiness warning, and installing with that dir ON $PATH does not. Uses the
+// fixture raw-delivery recipe (fix-bin → ~/.patronus/bin) with $PATH controlled per
+// run. Dry-run suffices — the warning is always-on.
+func TestInstallPathReadinessWarningFires(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	home := withRemoteEnv(t, f)
+	binDir := filepath.Join(home, ".patronus", "bin")
+
+	// (1) ~/.patronus/bin OFF PATH → the warning fires.
+	t.Setenv("PATH", "/usr/bin:/bin")
+	out, _, err := runInstall(t, "fix-bin", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("install (off PATH): %v", err)
+	}
+	if !strings.Contains(out, "PATH readiness:") || !strings.Contains(out, binDir) {
+		t.Errorf("expected a PATH-readiness warning naming %q:\n%s", binDir, out)
+	}
+
+	// (2) the SAME dir ON PATH → no warning.
+	t.Setenv("PATH", binDir+":/usr/bin")
+	out2, _, err := runInstall(t, "fix-bin", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("install (on PATH): %v", err)
+	}
+	if strings.Contains(out2, "PATH readiness:") {
+		t.Errorf("did not expect a PATH-readiness warning when the dir is on PATH:\n%s", out2)
+	}
+}
+
 // fakeRunner records the argvs it was asked to run and never spawns a process.
 type fakeRunner struct{ ran [][]string }
 
@@ -322,6 +360,56 @@ func pkgInstallCS(artifact string, cands ...diff.InstallCandidateSpec) *diff.Cha
 		Action: diff.Exec, Artifact: artifact,
 		Exec: &diff.ExecSpec{Advisory: true, Display: cands[0].Command, Candidates: cands},
 	}}}
+}
+
+// fetchCS builds a change set with one FETCH diff placing a binary at dest.
+func fetchCS(artifact, dest string) *diff.ChangeSet {
+	return &diff.ChangeSet{Diffs: []diff.FileDiff{{
+		Action: diff.Fetch, Artifact: artifact, Path: dest,
+		Fetch: &diff.FetchSpec{Dest: dest},
+	}}}
+}
+
+func TestPathReadinessFlagsOffPathDest(t *testing.T) {
+	tests := []struct {
+		name     string
+		dest     string
+		pathDirs []string
+		wantRow  bool
+	}{
+		{
+			name:     "dest dir off PATH warns",
+			dest:     "/home/u/.patronus/bin/tk",
+			pathDirs: []string{"/usr/bin", "/home/u/.local/bin"},
+			wantRow:  true,
+		},
+		{
+			name:     "dest dir on PATH is clean",
+			dest:     "/home/u/.local/bin/tk",
+			pathDirs: []string{"/usr/bin", "/home/u/.local/bin"},
+			wantRow:  false,
+		},
+		{
+			name:     "empty PATH warns (nothing is reachable)",
+			dest:     "/home/u/.patronus/bin/tk",
+			pathDirs: nil,
+			wantRow:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rows := pathReadiness(fetchCS(tt.name, tt.dest), tt.pathDirs)
+			if tt.wantRow && (len(rows) != 1 || rows[0].Artifact != tt.name) {
+				t.Fatalf("want 1 row for %q, got %+v", tt.name, rows)
+			}
+			if !tt.wantRow && len(rows) != 0 {
+				t.Fatalf("want no rows, got %+v", rows)
+			}
+			if tt.wantRow && rows[0].Dir != filepath.Dir(tt.dest) {
+				t.Errorf("row Dir = %q, want %q", rows[0].Dir, filepath.Dir(tt.dest))
+			}
+		})
+	}
 }
 
 func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {

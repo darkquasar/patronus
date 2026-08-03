@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/diff"
@@ -83,6 +84,67 @@ func printReadiness(out io.Writer, rows []readinessRow) {
 		}
 		fmt.Fprintf(out, "  %s  %s  (present: %v, missing: %v)\n", mark, r.Artifact, r.Present, r.Missing)
 	}
+}
+
+// pathReadinessRow reports one FETCH-delivered binary whose placement directory is
+// absent from the inherited $PATH, so a process that must execute it (a hook, an MCP
+// server, the human's shell) cannot resolve it by bare name.
+type pathReadinessRow struct {
+	Artifact string
+	Dir      string // the off-PATH placement directory
+}
+
+// pathReadiness inspects every FETCH diff in the change set and reports those whose
+// placement directory is not among pathDirs (the dirs on the inherited $PATH). This
+// is the always-on PATH-readiness value behind pat-as4h: a binary placed in
+// ~/.patronus/bin is invisible to a GUI-launched agent whose $PATH never saw that
+// dir. pathDirs is passed in (not read from the env here) so the check is pure and
+// table-testable. Returns nil when every FETCH dest is reachable.
+func pathReadiness(cs *diff.ChangeSet, pathDirs []string) []pathReadinessRow {
+	onPath := make(map[string]bool, len(pathDirs))
+	for _, d := range pathDirs {
+		onPath[filepath.Clean(d)] = true
+	}
+	var rows []pathReadinessRow
+	for _, d := range cs.Diffs {
+		if d.Action != diff.Fetch {
+			continue
+		}
+		dir := filepath.Dir(d.Path)
+		if onPath[filepath.Clean(dir)] {
+			continue
+		}
+		rows = append(rows, pathReadinessRow{Artifact: d.Artifact, Dir: dir})
+	}
+	return rows
+}
+
+// printPathReadiness renders the PATH-readiness warning, one line per off-PATH
+// binary, naming the gap and the exact remediation. Nothing prints when every FETCH
+// dest is reachable.
+func printPathReadiness(out io.Writer, rows []pathReadinessRow) {
+	if len(rows) == 0 {
+		return
+	}
+	fmt.Fprintln(out, "\nPATH readiness:")
+	for _, r := range rows {
+		fmt.Fprintf(out, "  ✗ %s installs to %s, which is not on your $PATH.\n", r.Artifact, r.Dir)
+		fmt.Fprintf(out, "    Add it (e.g. `export PATH=\"%s:$PATH\"` in your shell profile), or symlink the\n", r.Dir)
+		fmt.Fprintln(out, "    binary into a directory already on PATH. A GUI-launched agent must be RESTARTED")
+		fmt.Fprintln(out, "    to pick up a profile change — its $PATH is frozen at launch.")
+	}
+}
+
+// pathDirs splits an inherited $PATH value into its directory entries, dropping
+// empties. Injected as a string so the caller (and tests) control the source.
+func pathDirs(pathEnv string) []string {
+	var dirs []string
+	for _, d := range filepath.SplitList(pathEnv) {
+		if d != "" {
+			dirs = append(dirs, d)
+		}
+	}
+	return dirs
 }
 
 // preflightAllOrNothing (only under --allow-package-installs) errors if ANY
