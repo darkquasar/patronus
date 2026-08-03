@@ -79,55 +79,69 @@ func TestCheckVersionsEmpty(t *testing.T) {
 	}
 }
 
-// TestReconcileRecipeChange covers the pure reconciler that maps a recipe's
-// before/after bytes into an artifactChange. A recipe is a FLAT single file where
-// the manifest IS the whole content, so content-changed is manifestContentChanged
-// over the two revisions — there is no sibling-vs-manifest split. checkVersions then
-// judges it by the same rule as an artifact directory.
-func TestReconcileRecipeChange(t *testing.T) {
-	const path = "recipes/demo.yaml"
+// TestReconcileFlatManifestChange covers the pure reconciler that maps a FLAT
+// single-file manifest's before/after bytes into an artifactChange. recipes/ and
+// profiles/ share this shape: the manifest IS the whole content, so content-changed
+// is manifestContentChanged over the two revisions — there is no sibling-vs-manifest
+// split. checkVersions then judges it by the same rule as an artifact directory. The
+// table runs the same cases against a recipe path and a profile path to prove the
+// reconciler is directory-agnostic (ADR-0004: version: is required schema-wide).
+func TestReconcileFlatManifestChange(t *testing.T) {
 	tests := []struct {
 		name          string
+		path          string
 		base          string
 		head          string
 		existedInBase bool
 		wantViolation bool
 	}{
 		{
-			name:          "content change without a bump violates",
+			name:          "recipe content change without a bump violates",
+			path:          "recipes/demo.yaml",
 			base:          "name: demo\nversion: 1.0.0\nrole: tools\n",
 			head:          "name: demo\nversion: 1.0.0\nrole: memory\n",
 			existedInBase: true,
 			wantViolation: true,
 		},
 		{
-			name:          "content change with a bump passes",
-			base:          "name: demo\nversion: 1.0.0\nrole: tools\n",
-			head:          "name: demo\nversion: 1.1.0\nrole: memory\n",
+			name:          "profile content change without a bump violates",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.0.0\nrole: context\n",
+			existedInBase: true,
+			wantViolation: true,
+		},
+		{
+			name:          "profile content change with a bump passes",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.1.0\nrole: context\n",
 			existedInBase: true,
 			wantViolation: false,
 		},
 		{
-			name:          "version-only edit passes",
-			base:          "name: demo\nversion: 1.0.0\nrole: tools\n",
-			head:          "name: demo\nversion: 1.1.0\nrole: tools\n",
+			name:          "profile version-only edit passes",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.1.0\nrole: lifecycle\n",
 			existedInBase: true,
 			wantViolation: false,
 		},
 		{
-			name:          "new recipe has no base to compare",
+			name:          "new profile has no base to compare",
+			path:          "profiles/demo.yaml",
 			base:          "",
-			head:          "name: demo\nversion: 1.0.0\nrole: tools\n",
+			head:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
 			existedInBase: false,
 			wantViolation: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := reconcileRecipeChange(path, []byte(tt.base), tt.existedInBase, []byte(tt.head))
+			c := reconcileFlatManifestChange(tt.path, []byte(tt.base), tt.existedInBase, []byte(tt.head))
 			got := checkVersions([]artifactChange{c})
-			if tt.wantViolation && (len(got) != 1 || got[0].Name != path) {
-				t.Fatalf("want a violation on %q, got %v", path, got)
+			if tt.wantViolation && (len(got) != 1 || got[0].Name != tt.path) {
+				t.Fatalf("want a violation on %q, got %v", tt.path, got)
 			}
 			if !tt.wantViolation && len(got) != 0 {
 				t.Fatalf("want no violation, got %v", got)

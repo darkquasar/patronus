@@ -21,11 +21,15 @@ import (
 // a false positive.
 const _artifactsDir = "artifacts"
 
-// recipesDir is the FLAT recipe tree (recipes/<name>.yaml). Unlike an artifact
-// directory — where sibling files are content and patronus.yaml is the version
-// carrier — a recipe file IS both the content and the version carrier, so it needs
-// its own single-file gathering path (ADR-0004). profiles/ is a fast-follow.
-const _recipesDir = "recipes"
+// recipesDir and profilesDir are the FLAT manifest trees (recipes/<name>.yaml,
+// profiles/<name>.yaml). Unlike an artifact directory — where sibling files are
+// content and patronus.yaml is the version carrier — a flat manifest file IS both
+// the content and the version carrier, so both share the single-file gathering path
+// (ADR-0004: version: is required schema-wide, for recipes and profiles alike).
+const (
+	_recipesDir  = "recipes"
+	_profilesDir = "profiles"
+)
 
 // manifestFile is the per-artifact manifest. It is the one file that is NOT content:
 // the version: it carries is the bump we are checking FOR, and a canonical re-marshal
@@ -117,7 +121,8 @@ func newCheckVersionsCmd() *cobra.Command {
 				return err
 			}
 			changes := gatherChanges(cmd.Context(), root, base)
-			changes = append(changes, gatherRecipeChanges(cmd.Context(), root, base)...)
+			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _recipesDir)...)
+			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _profilesDir)...)
 			violations := checkVersions(changes)
 			if len(violations) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "version-bump check: ok")
@@ -187,13 +192,14 @@ func gatherChanges(ctx context.Context, root, base string) []artifactChange {
 	return changes
 }
 
-// reconcileRecipeChange maps one recipe file's before/after bytes into an
-// artifactChange — the recipe twin of the per-directory reconciliation in
-// gatherChanges. A recipe is a single flat file, so the whole manifest is content:
-// ContentChanged is manifestContentChanged over the two revisions (a version-only
-// edit does not count), and the version: is read from each side. checkVersions then
-// judges it by the same rule as an artifact. Kept pure (no git) so it is table-testable.
-func reconcileRecipeChange(name string, base []byte, existedInBase bool, head []byte) artifactChange {
+// reconcileFlatManifestChange maps one flat manifest file's before/after bytes into
+// an artifactChange — the flat-tree twin of the per-directory reconciliation in
+// gatherChanges, shared by recipes/ and profiles/. A flat manifest is a single file,
+// so the whole manifest is content: ContentChanged is manifestContentChanged over the
+// two revisions (a version-only edit does not count), and the version: is read from
+// each side. checkVersions then judges it by the same rule as an artifact. Kept pure
+// (no git) so it is table-testable.
+func reconcileFlatManifestChange(name string, base []byte, existedInBase bool, head []byte) artifactChange {
 	return artifactChange{
 		Name:           name,
 		ContentChanged: existedInBase && manifestContentChanged(base, head),
@@ -203,19 +209,20 @@ func reconcileRecipeChange(name string, base []byte, existedInBase bool, head []
 	}
 }
 
-// gatherRecipeChanges is the recipe-side twin of gatherChanges: it diffs recipes/
-// between the merge-base and the working tree and reconciles each changed file into
-// an artifactChange via reconcileRecipeChange. Separate from gatherChanges because
-// the path shape differs — a recipe file is the whole item, with no sibling content.
-func gatherRecipeChanges(ctx context.Context, root, base string) []artifactChange {
-	names, err := gitDiffNamesIn(ctx, root, base, _recipesDir)
+// gatherFlatManifestChanges is the flat-tree twin of gatherChanges: it diffs a flat
+// manifest dir (recipes/ or profiles/) between the merge-base and the working tree and
+// reconciles each changed top-level file into an artifactChange. Separate from
+// gatherChanges because the path shape differs — a flat manifest file is the whole
+// item, with no sibling content.
+func gatherFlatManifestChanges(ctx context.Context, root, base, dir string) []artifactChange {
+	names, err := gitDiffNamesIn(ctx, root, base, dir)
 	if err != nil {
 		return nil
 	}
 	var changes []artifactChange
 	for _, n := range names {
-		// Only top-level recipes/<name>.yaml files, never a stray nested path.
-		if parts := strings.Split(filepath.ToSlash(n), "/"); len(parts) != 2 || parts[0] != _recipesDir {
+		// Only top-level <dir>/<name>.yaml files, never a stray nested path.
+		if parts := strings.Split(filepath.ToSlash(n), "/"); len(parts) != 2 || parts[0] != dir {
 			continue
 		}
 		var baseData []byte
@@ -224,7 +231,7 @@ func gatherRecipeChanges(ctx context.Context, root, base string) []artifactChang
 			baseData, existed = b, true
 		}
 		head, _ := os.ReadFile(filepath.Join(root, n))
-		changes = append(changes, reconcileRecipeChange(n, baseData, existed, head))
+		changes = append(changes, reconcileFlatManifestChange(n, baseData, existed, head))
 	}
 	return changes
 }
