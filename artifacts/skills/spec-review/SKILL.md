@@ -16,8 +16,8 @@ You decide what to act on.
 ## When to Use
 
 **Use it when:**
-- A spec or design doc has been written — by `brainstorming`, by `team-research`, or by hand — and
-  the next step is `writing-plans`.
+- A spec or design doc has been written — by `brainstorming-spec` (optionally seeded by
+  `team-research`) or by hand — and the next step is `writing-plans`.
 - You are about to plan from someone else's spec and want an independent read first.
 
 **Skip it when:**
@@ -76,7 +76,7 @@ committed to something.
 
 ## Where This Sits
 
-`brainstorming` (or `team-research`) → **spec-review** → `writing-plans` → `plan-review` → build.
+`team-research` → `brainstorming-spec` → **spec-review** → `writing-plans` → `plan-review` → build.
 
 Its sibling gate, `plan-review`, closes the planning phase the same way.
 
