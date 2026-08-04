@@ -215,3 +215,77 @@ func TestUpdateNoArgsRefreshesCache(t *testing.T) {
 		t.Error("no cache index written")
 	}
 }
+
+// TestUpdateProfileRefreshesMembers proves `update <profile>` (model A: profile-as-
+// expansion) re-resolves the profile against the fresh catalog to its member names
+// and updates each installed member — the profile leaves NO state row of its own, so
+// this is the only way it can be updated. Install the fixture profile (records member
+// rows, among them fix-skill on claude/global), then advertise a newer fix-skill in
+// the served index and `update fix-all --deploy`: the member moves base -> newer.
+func TestUpdateProfileRefreshesMembers(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	f.bodies[fixArchiveURL] = fixArchiveTarGz(t)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	home := withRemoteEnv(t, f)
+
+	// Baseline = whatever the fixture advertises for the member we will bump.
+	const newerVer = "99.0.0"
+	baseVer := catalogItemVersion(t, outDir, "fix-skill")
+	if baseVer == newerVer {
+		t.Fatalf("baseline version unexpectedly equals the synthetic %q", newerVer)
+	}
+
+	// Install the PROFILE on claude/global: state records its members (fix-skill among
+	// them), not the profile itself.
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install profile: %v\n%s", err, e)
+	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	s, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Find("fix-skill", "claude", "global"); len(got) != 1 || got[0].ItemVersion != baseVer {
+		t.Fatalf("expected recorded member version %s, got %+v", baseVer, got)
+	}
+
+	// Advertise fix-skill@<newerVer> with a new tarball at its own immutable key, and
+	// change its body so the reinstall is a real (non-idempotent) write.
+	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
+	ix, err := registry.LoadIndex(idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newTgz := mustTarGz(t, map[string][]byte{
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: fix-skill\ndescription: d\nversion: " + newerVer + "\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"SKILL.md":      []byte("# fix-skill v" + newerVer + " body"),
+	})
+	newURL := testRegistryBase + "/catalog/fix-skill/" + newerVer + "/fix-skill-" + newerVer + ".tar.gz"
+	for i := range ix.Artifacts {
+		if ix.Artifacts[i].Manifest.Name == "fix-skill" {
+			ix.Artifacts[i].Manifest.Version = newerVer
+			ix.Artifacts[i].Tarball = registry.Tarball{URL: newURL, SHA256: shaOf(newTgz)}
+		}
+	}
+	mutated, _ := ix.Marshal()
+	f.bodies[testRegistryBase+"/catalog/index.json"] = mutated
+	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
+	f.bodies[newURL] = newTgz
+
+	// update <profile> --deploy: expands fix-all to its members and refreshes each; the
+	// bumped member reports base -> newer.
+	out, e, err := runUpdate(t, "fix-all", "--deploy")
+	if err != nil {
+		t.Fatalf("update profile: %v\n%s", err, e)
+	}
+	if !strings.Contains(out, baseVer+" -> "+newerVer) {
+		t.Errorf("expected a member refresh line %s -> %s, got:\n%s", baseVer, newerVer, out)
+	}
+}

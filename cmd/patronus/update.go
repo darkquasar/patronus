@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/state"
@@ -83,6 +84,23 @@ func newUpdateCmd() *cobra.Command {
 			want := map[string]bool{}
 			for _, n := range args {
 				want[n] = true
+			}
+
+			// A profile leaves no state row: it installs its members. So an
+			// update <profile> re-resolves the profile to its current member NAMES
+			// (the "all" baseline — per-member targets come from state) and updates
+			// each. The profile's own version is not compared (model A).
+			for _, n := range args {
+				if catalogHasProfile(cat, n) {
+					res, err := profile.Resolve(cat, n, "all")
+					if err != nil {
+						return fmt.Errorf("resolve profile %q: %w", n, err)
+					}
+					delete(want, n)
+					for _, m := range res.Names() {
+						want[m] = true
+					}
+				}
 			}
 			type candidate struct {
 				name, tool, scope, installed, latest string
@@ -253,6 +271,18 @@ func latestVersion(cat *registry.Catalog, name string) string {
 func catalogHasRecipe(cat *registry.Catalog, name string) bool {
 	for i := range cat.Recipes {
 		if cat.Recipes[i].Manifest != nil && cat.Recipes[i].Manifest.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// catalogHasProfile reports whether name is a profile in the catalog. update uses
+// it to route a profile arg through member expansion (a profile leaves no state
+// row of its own — it installs its members).
+func catalogHasProfile(cat *registry.Catalog, name string) bool {
+	for i := range cat.Profiles {
+		if cat.Profiles[i].Manifest != nil && cat.Profiles[i].Manifest.Name == name {
 			return true
 		}
 	}
