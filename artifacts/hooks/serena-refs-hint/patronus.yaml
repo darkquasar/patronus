@@ -1,0 +1,24 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: context
+name: serena-refs-hint
+description: "PreToolUse nudge — before editing a source file (Write/Edit/MultiEdit), nudges the agent to check callers with serena's `find_referencing_symbols` first, so an edit to a shared symbol accounts for its call sites. Fails open (never blocks). Claude + codex ONLY: opencode has no PreToolUse surface, so it is NOT a target there (the serena-first instruction carries the cue on opencode)."
+version: 1.0.0
+entry: ""
+targets: [claude, codex]
+defaults:
+  scope: project
+requires: [serena]
+hook:
+  event: PreToolUse
+  matcher: Write|Edit|MultiEdit
+  intent: nudge
+  command: >-
+    sh -c 'c=$(cat);
+    f=$(printf "%s" "$c" | jq -r ".tool_input.file_path // empty" 2>/dev/null);
+    case "$f" in
+    *.go|*.py|*.ts|*.tsx|*.js|*.jsx|*.rs|*.java|*.rb|*.c|*.cc|*.cpp|*.h|*.hpp)
+    echo "hint: before editing a shared symbol, check its callers with serena find_referencing_symbols." >&2 ;;
+    esac;
+    exit 0'

@@ -110,6 +110,12 @@ type FileDiff struct {
 	// set: install.Applier skips them, and the cmd layer (runDeploy) runs them
 	// via os/exec on --deploy. Excluded from JSON; Note carries the display.
 	Exec *ExecSpec `json:"-"`
+
+	// Warning, when non-empty, is an advisory the transform attached to this diff:
+	// the change is still valid and applies, but the author should know something
+	// was adapted or dropped (e.g. a gate matcher token with no OpenCode permission
+	// key). The cmd layer surfaces it; it is never persisted to state.
+	Warning string `json:"-"`
 }
 
 // FetchSpec is the input to a FETCH apply: download URL, expected sha256, the

@@ -151,6 +151,7 @@ func TestResolveFileRecipe(t *testing.T) {
 	recipeYAML := `apiVersion: patronus/v2
 family: recipe
 name: foo-mcp
+version: 1.0.0
 role: tools
 summary: Local recipe.
 wire:

@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: postgres
+version: 1.0.0
 role: tools                        # L5 — Tools / Integrations (Postgres introspection, query, index advisor)
 summary: "Postgres MCP Pro — schema introspection, safe SQL execution, index tuning + health checks. Launched on demand via uvx. Requires DATABASE_URI in your MCP client env. Opt-in (data profile)."
 upstream: github.com/crystaldba/postgres-mcp

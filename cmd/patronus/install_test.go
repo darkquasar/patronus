@@ -36,7 +36,7 @@ func TestInstallSkillDryRun(t *testing.T) {
 	// Isolate HOME so --global resolves to an empty sandbox (not the developer's
 	// real ~/.claude, where team-research may already be installed → SKIP not CREATE).
 	t.Setenv("HOME", t.TempDir())
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestInstallSkillDryRun(t *testing.T) {
 }
 
 func TestInstallVerboseShowsDiff(t *testing.T) {
-	out, _, err := runInstall(t, "agent-principles", "--tool", "claude", "--local", "--verbose", "--dry-run")
+	out, _, err := runInstall(t, "agent-principles", "--target", "claude", "--local", "--verbose", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestInstallMutuallyExclusiveScope(t *testing.T) {
 }
 
 func TestInstallProfileCloudflareDryRun(t *testing.T) {
-	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run")
+	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("profile install failed: %v\n%s", err, errOut)
 	}
@@ -112,7 +112,7 @@ func TestInstallUnknownArtifact(t *testing.T) {
 
 func TestInstallDefaultIsDryRun(t *testing.T) {
 	// No --deploy, no --dry-run: must be a safe dry run, no error, plan shown.
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global")
 	if err != nil {
 		t.Fatalf("default install should succeed as dry run: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestInstallJSON(t *testing.T) {
 	// since we run the subcommand in isolation here.
 	jsonOutput = true
 	defer func() { jsonOutput = false }()
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestInstallJSON(t *testing.T) {
 
 func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 	// github is a remote http MCP recipe: pure MERGE, no fetch.
-	out, _, err := runInstall(t, "github", "--tool", "claude", "--local", "--dry-run")
+	out, _, err := runInstall(t, "github", "--target", "claude", "--local", "--dry-run")
 	if err != nil {
 		t.Fatalf("install github failed: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 
 func TestInstallRecipeFetchDryRun(t *testing.T) {
 	// engram is a github-release recipe: FETCH the binary + MERGE per tool.
-	out, _, err := runInstall(t, "memory-engram", "--tool", "all", "--global", "--dry-run")
+	out, _, err := runInstall(t, "memory-engram", "--target", "all", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install memory-engram failed: %v", err)
 	}
@@ -235,6 +235,44 @@ func TestInstallRecipeFetchDryRun(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}
+	}
+}
+
+// TestInstallPathReadinessWarningFires is the pat-as4h acceptance check: installing a
+// recipe that FETCHes a binary into a dir absent from the inherited $PATH prints the
+// PATH-readiness warning, and installing with that dir ON $PATH does not. Uses the
+// fixture raw-delivery recipe (fix-bin → ~/.patronus/bin) with $PATH controlled per
+// run. Dry-run suffices — the warning is always-on.
+func TestInstallPathReadinessWarningFires(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	home := withRemoteEnv(t, f)
+	binDir := filepath.Join(home, ".patronus", "bin")
+
+	// (1) ~/.patronus/bin OFF PATH → the warning fires.
+	t.Setenv("PATH", "/usr/bin:/bin")
+	out, _, err := runInstall(t, "fix-bin", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("install (off PATH): %v", err)
+	}
+	if !strings.Contains(out, "PATH readiness:") || !strings.Contains(out, binDir) {
+		t.Errorf("expected a PATH-readiness warning naming %q:\n%s", binDir, out)
+	}
+
+	// (2) the SAME dir ON PATH → no warning.
+	t.Setenv("PATH", binDir+":/usr/bin")
+	out2, _, err := runInstall(t, "fix-bin", "--global", "--dry-run")
+	if err != nil {
+		t.Fatalf("install (on PATH): %v", err)
+	}
+	if strings.Contains(out2, "PATH readiness:") {
+		t.Errorf("did not expect a PATH-readiness warning when the dir is on PATH:\n%s", out2)
 	}
 }
 
@@ -324,8 +362,58 @@ func pkgInstallCS(artifact string, cands ...diff.InstallCandidateSpec) *diff.Cha
 	}}}
 }
 
+// fetchCS builds a change set with one FETCH diff placing a binary at dest.
+func fetchCS(artifact, dest string) *diff.ChangeSet {
+	return &diff.ChangeSet{Diffs: []diff.FileDiff{{
+		Action: diff.Fetch, Artifact: artifact, Path: dest,
+		Fetch: &diff.FetchSpec{Dest: dest},
+	}}}
+}
+
+func TestPathReadinessFlagsOffPathDest(t *testing.T) {
+	tests := []struct {
+		name     string
+		dest     string
+		pathDirs []string
+		wantRow  bool
+	}{
+		{
+			name:     "dest dir off PATH warns",
+			dest:     "/home/u/.patronus/bin/tk",
+			pathDirs: []string{"/usr/bin", "/home/u/.local/bin"},
+			wantRow:  true,
+		},
+		{
+			name:     "dest dir on PATH is clean",
+			dest:     "/home/u/.local/bin/tk",
+			pathDirs: []string{"/usr/bin", "/home/u/.local/bin"},
+			wantRow:  false,
+		},
+		{
+			name:     "empty PATH warns (nothing is reachable)",
+			dest:     "/home/u/.patronus/bin/tk",
+			pathDirs: nil,
+			wantRow:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rows := pathReadiness(fetchCS(tt.name, tt.dest), tt.pathDirs)
+			if tt.wantRow && (len(rows) != 1 || rows[0].Artifact != tt.name) {
+				t.Fatalf("want 1 row for %q, got %+v", tt.name, rows)
+			}
+			if !tt.wantRow && len(rows) != 0 {
+				t.Fatalf("want no rows, got %+v", rows)
+			}
+			if tt.wantRow && rows[0].Dir != filepath.Dir(tt.dest) {
+				t.Errorf("row Dir = %q, want %q", rows[0].Dir, filepath.Dir(tt.dest))
+			}
+		})
+	}
+}
+
 func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	rows := readinessReport(cs, func(string) (string, error) { return "", errors.New("nope") })
 	if len(rows) != 1 || rows[0].Satisfiable {
 		t.Fatalf("want 1 unsatisfiable row, got %+v", rows)
@@ -336,7 +424,7 @@ func TestReadinessReportFlagsUnsatisfiable(t *testing.T) {
 }
 
 func TestPreflightAllOrNothingErrorsWhenMissing(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	if err := preflightAllOrNothing(cs, func(string) (string, error) { return "", errors.New("no") }); err == nil {
 		t.Fatal("want preflight error when no manager present")
 	}
@@ -346,7 +434,7 @@ func TestPreflightAllOrNothingErrorsWhenMissing(t *testing.T) {
 }
 
 func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "/x", nil }, out: io.Discard}
 	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
@@ -359,9 +447,9 @@ func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
 
 func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
 	// uv (preferred) is absent; brew (fallback) is present → install via brew.
-	cs := pkgInstallCS("graphify",
-		diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"},
-		diff.InstallCandidateSpec{Manager: "brew", Command: "brew install graphify"},
+	cs := pkgInstallCS("demo-recipe",
+		diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"},
+		diff.InstallCandidateSpec{Manager: "brew", Command: "brew install mypkg"},
 	)
 	runner := &fakeRunner{}
 	var out bytes.Buffer
@@ -383,7 +471,7 @@ func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
 }
 
 func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "", errors.New("no") }, out: &out}
@@ -404,7 +492,7 @@ func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
 }
 
 func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{
@@ -421,7 +509,7 @@ func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
 }
 
 func TestConsentInteractiveAcceptRuns(t *testing.T) {
-	cs := pkgInstallCS("graphify", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install graphifyy"})
+	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{
@@ -468,7 +556,7 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 
 	cat := &registry.Catalog{
 		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
-			Meta:    manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Meta:    manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "demo-plugin"},
 			Sources: map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
 		}}},
 	}
@@ -477,7 +565,7 @@ func TestComputePlanDispatchesPlugin(t *testing.T) {
 		cat:         cat,
 		adapters:    adapterMap(adapters),
 		res:         res,
-		names:       []string{"superpowers"},
+		names:       []string{"demo-plugin"},
 		tool:        "claude",
 		scope:       "global",
 		pluginProbe: fakeProbe{present: map[string]bool{"claude": true}},
@@ -523,7 +611,7 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 
 	cat := &registry.Catalog{
 		Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{
-			Meta:     manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "superpowers"},
+			Meta:     manifest.Meta{APIVersion: manifest.APIVersion, Family: manifest.FamilyPlugin, Name: "demo-plugin"},
 			Sources:  map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Ref: "v2.1.0"}},
 			Targets:  []string{"claude", "codex"},
 			Defaults: manifest.PluginDefaults{Scope: "global"},
@@ -534,7 +622,7 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 		cat:         cat,
 		adapters:    adapterMap(adapters),
 		res:         res,
-		names:       []string{"superpowers"},
+		names:       []string{"demo-plugin"},
 		tool:        "all", // the default; must expand to Targets
 		scope:       "",    // no flag; must fall back to defaults.scope=global
 		pluginProbe: fakeProbe{present: map[string]bool{}},
@@ -569,11 +657,11 @@ func TestComputePlanPluginAllExpandsTargets(t *testing.T) {
 // failing with "resolved to nothing".
 func TestMergeSourcedNamesPlugin(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := filepath.Join(dir, "superpowers.yaml")
+	manifestPath := filepath.Join(dir, "demo-plugin.yaml")
 	body := "apiVersion: patronus/v2\n" +
 		"family: plugin\n" +
 		"role: lifecycle\n" +
-		"name: superpowers\n" +
+		"name: demo-plugin\n" +
 		"version: 2.1.0\n" +
 		"sources:\n" +
 		"  claude-code:\n" +
@@ -589,10 +677,51 @@ func TestMergeSourcedNamesPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mergeSourcedNames: %v", err)
 	}
-	if len(names) != 1 || names[0] != "superpowers" {
-		t.Fatalf("names = %v, want [superpowers]", names)
+	if len(names) != 1 || names[0] != "demo-plugin" {
+		t.Fatalf("names = %v, want [demo-plugin]", names)
 	}
-	if len(cat.Plugins) != 1 || cat.Plugins[0].Manifest.Name != "superpowers" {
-		t.Fatalf("cat.Plugins = %+v, want one superpowers plugin", cat.Plugins)
+	if len(cat.Plugins) != 1 || cat.Plugins[0].Manifest.Name != "demo-plugin" {
+		t.Fatalf("cat.Plugins = %+v, want one demo-plugin plugin", cat.Plugins)
+	}
+}
+
+// TestInstallWiredRecipeRequiresTarget: a recipe that wires an MCP entry into a
+// runtime (fix-mcp-bin: fetch + MERGE) needs an explicit --target; installing it
+// bare must error rather than silently fanning out to every backend.
+func TestInstallWiredRecipeRequiresTarget(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	withRemoteEnv(t, f)
+
+	_, _, err := runInstall(t, "fix-mcp-bin", "--global", "--dry-run") // wires an MCP entry
+	if err == nil {
+		t.Fatal("expected error: a wired recipe needs an explicit --target")
+	}
+	if !strings.Contains(err.Error(), "--target is required") {
+		t.Errorf("error should come from the required-target gate, got: %v", err)
+	}
+}
+
+// TestInstallAgnosticRecipeNeedsNoTarget: a binary-only recipe (fix-bin: raw fetch,
+// no wiring row) belongs to no runtime by nature, so it installs with no --target.
+func TestInstallAgnosticRecipeNeedsNoTarget(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	withRemoteEnv(t, f)
+
+	if _, _, err := runInstall(t, "fix-bin", "--global", "--dry-run"); err != nil {
+		t.Errorf("agnostic binary recipe should install with no --target: %v", err)
 	}
 }

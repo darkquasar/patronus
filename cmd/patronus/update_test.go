@@ -43,7 +43,7 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	}
 
 	// Install the baseline at the global scope.
-	if _, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v", err)
 	}
 	statePath := filepath.Join(home, ".patronus", "state.json")
@@ -108,13 +108,14 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	}
 }
 
-// TestUpdateRefreshesUnversionedRecipe proves an installed RECIPE (which carries no
-// version) is refreshed by `update <name> --deploy` rather than silently skipped.
-// Recipes have no version to compare, so update must refresh them unconditionally;
-// the earlier bug left them "unversioned — leaving as-is" and never re-applied a
-// changed recipe. Uses the fixture's fetch+wire recipe (fix-mcp-bin) — a mechanism
-// test on a fixture item, not a real catalog name.
-func TestUpdateRefreshesUnversionedRecipe(t *testing.T) {
+// TestUpdateFollowsNewerRecipeVersion proves a RECIPE updates by the SAME uniform
+// version compare as an artifact (ADR-0004): install at the baseline (state records
+// its version), advertise a newer recipe version in the served index, and
+// `update <recipe> --deploy` reports base -> newer and re-records the version. No
+// isRecipe special-case, no "unversioned — refreshing" message. Uses the fixture's
+// fetch+wire recipe (fix-mcp-bin) — a mechanism test on a fixture item, not a real
+// catalog name.
+func TestUpdateFollowsNewerRecipeVersion(t *testing.T) {
 	root := fixtureCatalog(t)
 	outDir := t.TempDir()
 	t.Chdir(root)
@@ -123,23 +124,67 @@ func TestUpdateRefreshesUnversionedRecipe(t *testing.T) {
 	}
 	f := serveTree(t, outDir)
 	f.bodies[fixMcpURL] = fixMcpTarGz(t)
-	withRemoteEnv(t, f)
+	home := withRemoteEnv(t, f)
 
-	// Install the fetch+wire recipe on claude/global (records recipe state rows).
-	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install: %v\n%s", err, e)
+	// Baseline = whatever the fixture recipe advertises (read, not hardcoded).
+	const newerVer = "99.0.0"
+	baseVer := catalogRecipeVersion(t, outDir, "fix-mcp-bin")
+	if baseVer == "" || baseVer == newerVer {
+		t.Fatalf("unexpected baseline recipe version %q", baseVer)
 	}
 
-	// update <recipe> --deploy must REFRESH it, not leave it as-is.
+	// Install the fetch+wire recipe on claude/global (records recipe state rows).
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, e)
+	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	s, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Find("fix-mcp-bin", "claude", "global"); len(got) != 1 || got[0].ItemVersion != baseVer {
+		t.Fatalf("expected recorded recipe version %s, got %+v", baseVer, got)
+	}
+
+	// Mutate the served index to advertise fix-mcp-bin@<newerVer>. A recipe rides
+	// inline in the index (no tarball), so editing its Manifest is the whole change.
+	// The newer version also changes the wiring (an extra MCP arg) so the reinstall
+	// produces a real (non-idempotent) MERGE — a pure metadata bump with byte-identical
+	// wiring would SKIP, exactly as it does for an artifact whose content is unchanged.
+	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
+	ix, err := registry.LoadIndex(idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range ix.Recipes {
+		if ix.Recipes[i].Manifest.Name == "fix-mcp-bin" {
+			ix.Recipes[i].Manifest.Version = newerVer
+			ix.Recipes[i].Manifest.Wire.Mcp.Args = []string{"mcp", "--v2"}
+		}
+	}
+	mutated, _ := ix.Marshal()
+	f.bodies[testRegistryBase+"/catalog/index.json"] = mutated
+	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
+
+	// update <recipe> --deploy: the uniform version-compare arm reports base -> newer.
 	out, e, err := runUpdate(t, "fix-mcp-bin", "--deploy")
 	if err != nil {
 		t.Fatalf("update recipe: %v\n%s", err, e)
 	}
-	if strings.Contains(out, "leaving as-is") {
-		t.Errorf("recipe was left as-is instead of refreshed:\n%s", out)
+	if !strings.Contains(out, baseVer+" -> "+newerVer) {
+		t.Errorf("expected recipe update to report %s -> %s:\n%s", baseVer, newerVer, out)
 	}
-	if !strings.Contains(out, "recipe (unversioned) — refreshing") {
-		t.Errorf("expected the recipe-refresh message:\n%s", out)
+	if strings.Contains(out, "unversioned") {
+		t.Errorf("recipe took the removed unversioned path:\n%s", out)
+	}
+
+	// State now records the newer recipe version.
+	s2, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s2.Find("fix-mcp-bin", "claude", "global"); len(got) != 1 || got[0].ItemVersion != newerVer {
+		t.Fatalf("expected recorded recipe version %s after update, got %+v", newerVer, got)
 	}
 }
 
@@ -168,5 +213,79 @@ func TestUpdateNoArgsRefreshesCache(t *testing.T) {
 	matches, _ := filepath.Glob(filepath.Join(home, ".patronus", "cache", "index-*.json"))
 	if len(matches) == 0 {
 		t.Error("no cache index written")
+	}
+}
+
+// TestUpdateProfileRefreshesMembers proves `update <profile>` (model A: profile-as-
+// expansion) re-resolves the profile against the fresh catalog to its member names
+// and updates each installed member — the profile leaves NO state row of its own, so
+// this is the only way it can be updated. Install the fixture profile (records member
+// rows, among them fix-skill on claude/global), then advertise a newer fix-skill in
+// the served index and `update fix-all --deploy`: the member moves base -> newer.
+func TestUpdateProfileRefreshesMembers(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	f.bodies[fixArchiveURL] = fixArchiveTarGz(t)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	home := withRemoteEnv(t, f)
+
+	// Baseline = whatever the fixture advertises for the member we will bump.
+	const newerVer = "99.0.0"
+	baseVer := catalogItemVersion(t, outDir, "fix-skill")
+	if baseVer == newerVer {
+		t.Fatalf("baseline version unexpectedly equals the synthetic %q", newerVer)
+	}
+
+	// Install the PROFILE on claude/global: state records its members (fix-skill among
+	// them), not the profile itself.
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install profile: %v\n%s", err, e)
+	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	s, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Find("fix-skill", "claude", "global"); len(got) != 1 || got[0].ItemVersion != baseVer {
+		t.Fatalf("expected recorded member version %s, got %+v", baseVer, got)
+	}
+
+	// Advertise fix-skill@<newerVer> with a new tarball at its own immutable key, and
+	// change its body so the reinstall is a real (non-idempotent) write.
+	idx := mustRead(t, filepath.Join(outDir, "catalog", "index.json"))
+	ix, err := registry.LoadIndex(idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newTgz := mustTarGz(t, map[string][]byte{
+		"patronus.yaml": []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: fix-skill\ndescription: d\nversion: " + newerVer + "\nentry: SKILL.md\ntargets: [claude]\ndefaults:\n  scope: project\n"),
+		"SKILL.md":      []byte("# fix-skill v" + newerVer + " body"),
+	})
+	newURL := testRegistryBase + "/catalog/fix-skill/" + newerVer + "/fix-skill-" + newerVer + ".tar.gz"
+	for i := range ix.Artifacts {
+		if ix.Artifacts[i].Manifest.Name == "fix-skill" {
+			ix.Artifacts[i].Manifest.Version = newerVer
+			ix.Artifacts[i].Tarball = registry.Tarball{URL: newURL, SHA256: shaOf(newTgz)}
+		}
+	}
+	mutated, _ := ix.Marshal()
+	f.bodies[testRegistryBase+"/catalog/index.json"] = mutated
+	f.bodies[testRegistryBase+"/catalog/index.json.sha256"] = []byte(shaOf(mutated) + "\n")
+	f.bodies[newURL] = newTgz
+
+	// update <profile> --deploy: expands fix-all to its members and refreshes each; the
+	// bumped member reports base -> newer.
+	out, e, err := runUpdate(t, "fix-all", "--deploy")
+	if err != nil {
+		t.Fatalf("update profile: %v\n%s", err, e)
+	}
+	if !strings.Contains(out, baseVer+" -> "+newerVer) {
+		t.Errorf("expected a member refresh line %s -> %s, got:\n%s", baseVer, newerVer, out)
 	}
 }

@@ -4,7 +4,7 @@ type: hook
 role: eval
 name: tdd-guard-hook
 description: "Test-first ENFORCEMENT — a PreToolUse hook that blocks implementation writes (Write/Edit/MultiEdit) unless a failing test justifies them. This is what makes `core` strict by design. Pairs with the `tdd-guard` recipe, which installs the binary the hook invokes."
-version: 1.0.1
+version: 1.0.2
 targets: [claude, codex, opencode]
 defaults:
   scope: project
@@ -12,6 +12,7 @@ requires: [tdd-guard]                      # the binary this hook invokes — pu
 hook:
   event: PreToolUse
   matcher: Write|Edit|MultiEdit|TodoWrite
+  intent: gate
   command: tdd-guard
 attribution:
   upstream: github.com/nizos/tdd-guard

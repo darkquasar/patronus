@@ -63,7 +63,7 @@ func TestFetchWireRecipeDeploysAcrossTools(t *testing.T) {
 			f := fixtureRegistry(t)
 			home := withRemoteEnv(t, f)
 
-			if _, errOut, err := runInstall(t, "fix-mcp-bin", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
+			if _, errOut, err := runInstall(t, "fix-mcp-bin", "--target", tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("deploy fix-mcp-bin on %s: %v\n%s", tool, err, errOut)
 			}
 
@@ -83,7 +83,7 @@ func TestFetchWireRecipeDeploysAcrossTools(t *testing.T) {
 			}
 
 			// Idempotent re-run.
-			out, _, err := runInstall(t, "fix-mcp-bin", "--tool", tool, "--global", "--dry-run")
+			out, _, err := runInstall(t, "fix-mcp-bin", "--target", tool, "--global", "--dry-run")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -102,7 +102,7 @@ func TestFetchWireRecipeRemoveRestoresConfig(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 	if !findUnder(t, home, "fix-mcp-bin") {

@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: hardened
+version: 1.0.0
 summary: "core, plus execution sandboxing flavoured per agent: native sandbox on Claude/Codex (their own switch) and Anthropic's sandbox-runtime (srt) on OpenCode (which has no native sandbox). The full strict spine with a sandbox under every tool."
 # hardened = core, extended with the L6 sandbox layer. The sandbox slot is a LIST
 # (P7.4) carrying one flavour per tool; the resolver picks the one matching --tool:

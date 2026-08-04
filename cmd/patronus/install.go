@@ -170,6 +170,20 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 
+			// --target is required for anything that wires into a runtime. A
+			// purely-agnostic item (binary/package-only recipe) may omit it.
+			if tool == "" {
+				var needing []string
+				for _, n := range names {
+					if itemNeedsTarget(cat, n) {
+						needing = append(needing, n)
+					}
+				}
+				if len(needing) > 0 {
+					return fmt.Errorf("--target is required (one of claude|codex|opencode|all) for: %s", strings.Join(needing, ", "))
+				}
+			}
+
 			// For a remote registry, fetch+unpack the selected artifacts' source so
 			// the local adapter path can transform them (no-op for local/recipes).
 			if err := materializeSelected(cmd.Context(), reg, cat, names); err != nil {
@@ -201,6 +215,13 @@ func newInstallCmd() *cobra.Command {
 			// DryRun drives the footer wording; only a real --deploy writes.
 			cs.DryRun = !deploy
 
+			// Surface any advisory a transform attached to a diff (e.g. an opencode
+			// gate matcher token with no permission key was dropped). Dedupe so a
+			// warning shared across a composed file's folded diffs prints once.
+			for _, w := range planWarnings(cs) {
+				warnf("%s", w)
+			}
+
 			if jsonOutput {
 				return render.JSON(cmd.OutOrStdout(), cs)
 			}
@@ -211,6 +232,13 @@ func newInstallCmd() *cobra.Command {
 			// on dry-run too, so the user sees what they'd need before deploying.
 			printReadiness(cmd.OutOrStdout(), readinessReport(cs, exec.LookPath))
 
+			// Always-on PATH readiness (pat-as4h): warn when a FETCH-delivered binary
+			// lands in a dir absent from the inherited $PATH, so a hook / MCP server /
+			// shell that must execute it by bare name cannot resolve it. Shown on
+			// dry-run too. A GUI-launched agent's $PATH is frozen at launch, so this is
+			// exactly the gap that silently breaks a wired binary.
+			printPathReadiness(cmd.OutOrStdout(), pathReadiness(cs, pathDirs(os.Getenv("PATH"))))
+
 			// Without --deploy this is a safe dry run: plan shown, nothing written.
 			if !deploy {
 				return nil
@@ -219,7 +247,7 @@ func newInstallCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "tool", "all", "target tool: claude|codex|opencode|all")
+	cmd.Flags().StringVar(&tool, "target", "", "target runtime: claude|codex|opencode|all (required for anything that wires to a runtime)")
 	cmd.Flags().BoolVar(&global, "global", false, "install at global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "install at project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually write changes to disk (default: dry run only)")
@@ -303,6 +331,13 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 			if err != nil {
 				return nil, err
 			}
+			// Stamp each recipe diff with the recipe's own version so state records
+			// its ItemVersion — the same thing the adapter engine does for artifacts
+			// (internal/adapter/engine.go). Without this, an installed recipe has no
+			// recorded version to compare on update (ADR-0004).
+			for i := range diffs {
+				diffs[i].Version = rec.Manifest.Version
+			}
 			raw = append(raw, diffs...)
 			continue
 		}
@@ -332,6 +367,23 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		return nil, err
 	}
 	return cs, nil
+}
+
+// planWarnings collects the distinct, non-empty advisories transforms attached to
+// the change set's diffs, preserving first-seen order. A single warning is shared
+// across a composed file's folded diffs, so dedup keeps it from printing twice.
+func planWarnings(cs *diff.ChangeSet) []string {
+	seen := map[string]bool{}
+	var out []string
+	for i := range cs.Diffs {
+		w := cs.Diffs[i].Warning
+		if w == "" || seen[w] {
+			continue
+		}
+		seen[w] = true
+		out = append(out, w)
+	}
+	return out
 }
 
 // mergeSourcedNames resolves each name as a sourced reference. Bare (registry)
@@ -473,15 +525,34 @@ func resolvePluginScope(flag string, p *manifest.Plugin) string {
 	return s
 }
 
-// resolvePluginTools picks which tools to register a plugin on. A specific --tool
-// is used as-is (Compute resolves an unsupported target to an honest no-op). A
-// bare "all"/"" fans out to the plugin's declared Targets, so a plain install
-// registers on every target instead of the zero diffs a single "all" call yields.
+// resolvePluginTools picks which tools to register a plugin on. A specific --target
+// is used as-is (Compute resolves an unsupported target to an honest no-op). Only an
+// explicit "all" fans out to the plugin's declared Targets. An empty flag can now
+// reach here only on an agnostic path (the required-target gate errors first for a
+// plugin), so it registers on nothing.
 func resolvePluginTools(flag string, p *manifest.Plugin) []string {
 	if flag != "" && flag != "all" {
 		return []string{flag}
 	}
-	return p.Targets
+	if flag == "all" {
+		return p.Targets
+	}
+	return nil // no target: nothing to register (gate above already errored for a plugin)
+}
+
+// itemNeedsTarget reports whether installing name produces at least one targeted
+// row — a recipe that wires an MCP/config entry into a runtime (Wire.Method ==
+// merge), or a plugin, or an artifact. Such an item requires an explicit --target.
+// A purely-agnostic recipe (WireExec/WireNone: a binary/package with no per-runtime
+// wiring) does not. An unknown/sourced name is treated as needing a target (fail safe).
+func itemNeedsTarget(cat *registry.Catalog, name string) bool {
+	if rec := findRecipe(cat, name); rec != nil {
+		return rec.Manifest.Wire.Method == manifest.WireMerge
+	}
+	if findPlugin(cat, name) != nil {
+		return true
+	}
+	return true // artifacts + sourced/unknown: require a target
 }
 
 // findRecipe returns the catalog recipe entry with the given name, or nil.

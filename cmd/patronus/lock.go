@@ -90,7 +90,7 @@ func newLockCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&profileSel, "profile", "", "profile to lock (required)")
-	cmd.Flags().StringVar(&tool, "tool", "all", "pin per-tool flavours: claude|codex|opencode|all")
+	cmd.Flags().StringVar(&tool, "target", "all", "pin per-target flavours: claude|codex|opencode|all")
 	addRegistryFlags(cmd, &regSel)
 	return cmd
 }

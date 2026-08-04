@@ -21,6 +21,16 @@ import (
 // a false positive.
 const _artifactsDir = "artifacts"
 
+// recipesDir and profilesDir are the FLAT manifest trees (recipes/<name>.yaml,
+// profiles/<name>.yaml). Unlike an artifact directory — where sibling files are
+// content and patronus.yaml is the version carrier — a flat manifest file IS both
+// the content and the version carrier, so both share the single-file gathering path
+// (ADR-0004: version: is required schema-wide, for recipes and profiles alike).
+const (
+	_recipesDir  = "recipes"
+	_profilesDir = "profiles"
+)
+
 // manifestFile is the per-artifact manifest. It is the one file that is NOT content:
 // the version: it carries is the bump we are checking FOR, and a canonical re-marshal
 // of it must not, by itself, demand a bump.
@@ -92,12 +102,14 @@ func newCheckVersionsCmd() *cobra.Command {
 	var base string
 	cmd := &cobra.Command{
 		Use:   "check-versions",
-		Short: "Fail when an artifact's content changed without a version: bump (PR/CI guard)",
+		Short: "Fail when an artifact or recipe changed content without a version: bump (PR/CI guard)",
 		Long: "Compares the working tree against --base (a merge-base ref, e.g. origin/main) and\n" +
-			"fails when any artifacts/<...>/ item has a changed content file but an unchanged\n" +
-			"version: in its patronus.yaml. Enforces CONTRIBUTING.md's version-bump rule at PR\n" +
-			"review, before the catalog deploy hits R2's write-once keys. Needs full history\n" +
-			"(fetch-depth: 0) so the base ref is present.",
+			"fails when any artifacts/<...>/ item has a changed content file, or any\n" +
+			"recipes/<name>.yaml changed in a non-version field, but its version: is unchanged.\n" +
+			"Enforces CONTRIBUTING.md's version-bump rule at PR review, before the catalog\n" +
+			"deploy hits R2's write-once keys. Recipes carry a required version: too (ADR-0004);\n" +
+			"profiles/ coverage is a fast-follow. Needs full history (fetch-depth: 0) so the base\n" +
+			"ref is present.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			wd, err := os.Getwd()
@@ -108,7 +120,10 @@ func newCheckVersionsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			violations := checkVersions(gatherChanges(cmd.Context(), root, base))
+			changes := gatherChanges(cmd.Context(), root, base)
+			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _recipesDir)...)
+			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _profilesDir)...)
+			violations := checkVersions(changes)
 			if len(violations) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "version-bump check: ok")
 				return nil
@@ -143,22 +158,80 @@ func gatherChanges(ctx context.Context, root, base string) []artifactChange {
 	changes := make([]artifactChange, 0, len(dirs))
 	for _, dir := range dirs {
 		c := artifactChange{Name: dir}
-		// Content changed if ANY touched file under this dir is not patronus.yaml.
-		for _, n := range names {
-			if artifactDirOf(n) == dir && filepath.Base(n) != _manifestFile {
-				c.ContentChanged = true
-				break
-			}
-		}
 		manifestPath := filepath.Join(dir, _manifestFile)
+		var baseManifest, headManifest []byte
 		if baseData, ok := gitShow(ctx, root, base, manifestPath); ok {
 			c.ExistedInBase = true
 			c.BaseVersion = versionLine(baseData)
+			baseManifest = baseData
 		}
 		if headData, err := os.ReadFile(filepath.Join(root, manifestPath)); err == nil {
 			c.HeadVersion = versionLine(headData)
+			headManifest = headData
+		}
+		// Content changed if ANY touched file under this dir is a sibling of
+		// patronus.yaml, OR patronus.yaml itself changed in a non-version field.
+		// The manifest is no longer excluded wholesale: a description/requires/
+		// targets/role edit is content and must move the version.
+		for _, n := range names {
+			if artifactDirOf(n) != dir {
+				continue
+			}
+			if filepath.Base(n) == _manifestFile {
+				if manifestContentChanged(baseManifest, headManifest) {
+					c.ContentChanged = true
+					break
+				}
+				continue
+			}
+			c.ContentChanged = true
+			break
 		}
 		changes = append(changes, c)
+	}
+	return changes
+}
+
+// reconcileFlatManifestChange maps one flat manifest file's before/after bytes into
+// an artifactChange — the flat-tree twin of the per-directory reconciliation in
+// gatherChanges, shared by recipes/ and profiles/. A flat manifest is a single file,
+// so the whole manifest is content: ContentChanged is manifestContentChanged over the
+// two revisions (a version-only edit does not count), and the version: is read from
+// each side. checkVersions then judges it by the same rule as an artifact. Kept pure
+// (no git) so it is table-testable.
+func reconcileFlatManifestChange(name string, base []byte, existedInBase bool, head []byte) artifactChange {
+	return artifactChange{
+		Name:           name,
+		ContentChanged: existedInBase && manifestContentChanged(base, head),
+		ExistedInBase:  existedInBase,
+		BaseVersion:    versionLine(base),
+		HeadVersion:    versionLine(head),
+	}
+}
+
+// gatherFlatManifestChanges is the flat-tree twin of gatherChanges: it diffs a flat
+// manifest dir (recipes/ or profiles/) between the merge-base and the working tree and
+// reconciles each changed top-level file into an artifactChange. Separate from
+// gatherChanges because the path shape differs — a flat manifest file is the whole
+// item, with no sibling content.
+func gatherFlatManifestChanges(ctx context.Context, root, base, dir string) []artifactChange {
+	names, err := gitDiffNamesIn(ctx, root, base, dir)
+	if err != nil {
+		return nil
+	}
+	var changes []artifactChange
+	for _, n := range names {
+		// Only top-level <dir>/<name>.yaml files, never a stray nested path.
+		if parts := strings.Split(filepath.ToSlash(n), "/"); len(parts) != 2 || parts[0] != dir {
+			continue
+		}
+		var baseData []byte
+		existed := false
+		if b, ok := gitShow(ctx, root, base, n); ok {
+			baseData, existed = b, true
+		}
+		head, _ := os.ReadFile(filepath.Join(root, n))
+		changes = append(changes, reconcileFlatManifestChange(n, baseData, existed, head))
 	}
 	return changes
 }
@@ -166,6 +239,13 @@ func gatherChanges(ctx context.Context, root, base string) []artifactChange {
 // gitDiffNames returns the repo-relative paths under artifacts/ that differ between
 // the merge-base of base..HEAD and the working tree.
 func gitDiffNames(ctx context.Context, root, base string) ([]string, error) {
+	return gitDiffNamesIn(ctx, root, base, _artifactsDir)
+}
+
+// gitDiffNamesIn returns the repo-relative paths under dir that differ between the
+// merge-base of base..HEAD and the working tree. It is the shared plumbing behind
+// both the artifacts/ and recipes/ gatherers — only the dir scope differs.
+func gitDiffNamesIn(ctx context.Context, root, base, dir string) ([]string, error) {
 	// We resolve the merge-base explicitly and `git diff <mergeBase>` against the
 	// working tree: a two-dot range would drop uncommitted edits, and three-dot diff
 	// syntax does not include the working tree.
@@ -173,7 +253,7 @@ func gitDiffNames(ctx context.Context, root, base string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := runGit(ctx, root, "diff", "--name-only", strings.TrimSpace(mb), "--", _artifactsDir)
+	out, err := runGit(ctx, root, "diff", "--name-only", strings.TrimSpace(mb), "--", dir)
 	if err != nil {
 		return nil, err
 	}
@@ -241,6 +321,33 @@ func versionLine(data []byte) string {
 		return v
 	}
 	return ""
+}
+
+// manifestContentChanged reports whether two patronus.yaml revisions differ in any
+// way OTHER than their version: line. It strips the version: line from both sides and
+// compares the remainder, so a version-only edit (the bump we are checking FOR) and a
+// canonical re-marshal that only moves the version: value are NOT content changes,
+// while a description/requires/targets/role edit IS. This tightens the guard: before
+// it, patronus.yaml was excluded wholesale and a metadata-only edit shipped with no
+// bump; now the manifest's non-version fields are content like any sibling file.
+func manifestContentChanged(base, head []byte) bool {
+	return stripVersionLine(base) != stripVersionLine(head)
+}
+
+// stripVersionLine returns data with its top-level version: line removed, so the
+// remainder can be compared for a content change independent of the version bump.
+func stripVersionLine(data []byte) string {
+	var b strings.Builder
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "version:") {
+			continue
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func runGit(ctx context.Context, root string, args ...string) (string, error) {

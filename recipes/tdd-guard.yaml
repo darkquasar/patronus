@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: tdd-guard
+version: 1.0.0
 role: eval                                 # L8 — the binary behind the test-first enforcement gate
 summary: "Installs the tdd-guard CLI (npm) — the binary the tdd-guard-hook PreToolUse hook invokes to block implementation writes without a failing test. Install-only: Patronus surfaces the install command; the hook does the wiring."
 upstream: github.com/nizos/tdd-guard

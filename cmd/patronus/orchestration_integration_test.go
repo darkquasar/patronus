@@ -33,7 +33,7 @@ func TestRequiresClosureDirectInstall(t *testing.T) {
 
 	// Dry-run first: the plan for a bare `install fix-instruction` (no profile) must
 	// include the fix-bin recipe, pulled in by the requires closure, and announce it.
-	out, errOut, err := runInstall(t, "fix-instruction", "--tool", "claude", "--global", "--dry-run")
+	out, errOut, err := runInstall(t, "fix-instruction", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("dry-run install fix-instruction: %v\n%s", err, errOut)
 	}
@@ -50,7 +50,7 @@ func TestRequiresClosureDirectInstall(t *testing.T) {
 	}
 
 	// Now deploy for real: download -> verify against the invented pin -> place.
-	if _, e, err := runInstall(t, "fix-instruction", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-instruction", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install fix-instruction: %v\n%s", err, e)
 	}
 	cb := string(mustRead(t, filepath.Join(home, ".claude", "CLAUDE.md")))
@@ -75,7 +75,7 @@ func TestRequiresClosureDirectInstall(t *testing.T) {
 	}
 
 	// Idempotent re-run: the placed binary re-hashes to the pin, so it SKIPs.
-	out, _, err = runInstall(t, "fix-instruction", "--tool", "claude", "--global", "--dry-run")
+	out, _, err = runInstall(t, "fix-instruction", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestOrchestrationSkillsInstall(t *testing.T) {
 
 	if _, errOut, err := runInstall(t,
 		"subagent-driven-development", "dispatching-parallel-agents",
-		"--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		"--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install orchestration skills: %v\n%s", err, errOut)
 	}
 
@@ -130,7 +130,7 @@ func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
 
-	if _, _, err := runLock(t, "--profile", "core", "--tool", "claude"); err != nil {
+	if _, _, err := runLock(t, "--profile", "core", "--target", "claude"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
@@ -155,7 +155,7 @@ func TestInstructionRemoveRoundTrips(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "fix-instruction", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-instruction", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")

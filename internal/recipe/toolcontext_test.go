@@ -49,14 +49,14 @@ func TestSubstPlaceholders(t *testing.T) {
 	}
 }
 
-// serenaLikeRecipe is a uvx-launched stdio MCP whose args carry {toolContext} —
+// mcpLikeRecipe is a uvx-launched stdio MCP whose args carry {toolContext} —
 // the canonical per-tool-flavoured recipe (no delivery; uvx fetches on demand).
-func serenaLikeRecipe() *manifest.Recipe {
+func mcpLikeRecipe() *manifest.Recipe {
 	return &manifest.Recipe{
 		Meta: manifest.Meta{
 			APIVersion: manifest.APIVersion,
 			Family:     manifest.FamilyRecipe,
-			Name:       "serena",
+			Name:       "demo-mcp",
 			Role:       manifest.RoleContext,
 		},
 		Wire: manifest.Wire{
@@ -66,8 +66,8 @@ func serenaLikeRecipe() *manifest.Recipe {
 				Transport: "stdio",
 				Command:   "uvx",
 				Args: []string{
-					"--from", "git+https://github.com/oraios/serena",
-					"serena", "start-mcp-server",
+					"--from", "git+https://example.test/demo-mcp",
+					"demo-mcp", "start-mcp-server",
 					"--context", "{toolContext}", "--project-from-cwd",
 				},
 			},
@@ -85,10 +85,10 @@ func TestServerSpecStdioSubstitutesToolContext(t *testing.T) {
 		Command:   "{installPath}",
 		Args:      []string{"--context", "{toolContext}", "--project-from-cwd"},
 	}
-	spec := serverSpec("serena", wm, "/opt/serena", "claude")
+	spec := serverSpec("demo-mcp", wm, "/opt/demo-mcp", "claude")
 
-	if got := spec.Values["command"]; got != "/opt/serena" {
-		t.Errorf("command = %v, want /opt/serena", got)
+	if got := spec.Values["command"]; got != "/opt/demo-mcp" {
+		t.Errorf("command = %v, want /opt/demo-mcp", got)
 	}
 	args, ok := spec.Values["args"].([]any)
 	if !ok {
@@ -115,7 +115,7 @@ func TestServerSpecStdioSubstitutesToolContext(t *testing.T) {
 func TestComputeFlavoursToolContextPerTool(t *testing.T) {
 	res, _, _ := testEnv(t)
 	diffs, err := Compute(Request{
-		Recipe:   serenaLikeRecipe(),
+		Recipe:   mcpLikeRecipe(),
 		Adapters: loadAdapters(t),
 		Resolver: res,
 		Tool:     "all",
@@ -177,7 +177,7 @@ func TestComputeUnmappedToolFallsBackToOwnID(t *testing.T) {
 	// Alias the claude adapter under a tool id absent from toolContexts.
 	ads["zed"] = ads["claude"]
 
-	rec := serenaLikeRecipe()
+	rec := mcpLikeRecipe()
 	rec.Wire.Tools = []string{"zed"}
 	diffs, err := Compute(Request{
 		Recipe: rec, Adapters: ads, Resolver: res, Tool: "zed", Scope: "global",

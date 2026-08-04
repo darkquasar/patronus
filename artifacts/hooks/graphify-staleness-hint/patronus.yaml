@@ -1,0 +1,26 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: context
+name: graphify-staleness-hint
+description: "PostToolUse nudge — when the graphify graph (graphify-out/graph.json) is older than the HEAD commit, nudges the agent to rebuild it with `graphify .` so queries reflect current code. A single stat vs `git log -1 --format=%ct`, no tree walk; guarded on the graph existing; fails open (never blocks). Claude + codex ONLY: opencode has no PostToolUse surface, so it is NOT a target there (the serena-first / graphify-query-pointer instructions carry the cue on opencode)."
+version: 1.0.0
+entry: ""
+targets: [claude, codex]
+defaults:
+  scope: project
+requires: [graphify]
+hook:
+  event: PostToolUse
+  intent: nudge
+  command: >-
+    sh -c 'g=graphify-out/graph.json;
+    [ -f "$g" ] || exit 0;
+    command -v git >/dev/null 2>&1 || exit 0;
+    head=$(git log -1 --format=%ct 2>/dev/null) || exit 0;
+    [ -n "$head" ] || exit 0;
+    gmt=$(stat -f %m "$g" 2>/dev/null || stat -c %Y "$g" 2>/dev/null) || exit 0;
+    if [ "$gmt" -lt "$head" ]; then
+    echo "hint: graphify-out/graph.json is older than HEAD — rebuild with graphify . so queries reflect current code." >&2;
+    fi;
+    exit 0'

@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: golang
+version: 1.0.0
 summary: "Go project environment: the full core spine PLUS idiomatic Go conventions (Uber Go Style Guide, distilled). core + Go guidelines."
 # golang = core, extended. `extends: core` pulls in every core layer (L1 spine +
 # diagram-explain, L2 skills, L4 design-vocab + Context7/Serena, L5 github, ai-memory);

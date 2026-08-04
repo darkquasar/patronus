@@ -119,7 +119,7 @@ func TestHookArtifactMergesIntoClaudeSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, errOut, err := runInstall(t, "smoke-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "smoke-hook", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 
@@ -149,7 +149,7 @@ func TestHookArtifactMergesIntoClaudeSettings(t *testing.T) {
 	}
 
 	// Idempotent re-run → SKIP.
-	out, _, err := runInstall(t, "smoke-hook", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "smoke-hook", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestHookArtifactMergesIntoClaudeSettings(t *testing.T) {
 func TestNudgeHookPerToolNativeVsFallback(t *testing.T) {
 	t.Run("codex wires natively", func(t *testing.T) {
 		home := serveHookFixture(t)
-		out, errOut, err := runInstall(t, "smoke-hook", "--tool", "codex", "--global", "--deploy", "--yes")
+		out, errOut, err := runInstall(t, "smoke-hook", "--target", "codex", "--global", "--deploy", "--yes")
 		if err != nil {
 			t.Fatalf("install: %v\n%s", err, errOut)
 		}
@@ -193,7 +193,7 @@ func TestNudgeHookPerToolNativeVsFallback(t *testing.T) {
 	})
 	t.Run("opencode is a no-op", func(t *testing.T) {
 		home := serveHookFixture(t)
-		out, errOut, err := runInstall(t, "smoke-hook", "--tool", "opencode", "--global", "--deploy", "--yes")
+		out, errOut, err := runInstall(t, "smoke-hook", "--target", "opencode", "--global", "--deploy", "--yes")
 		if err != nil {
 			t.Fatalf("install: %v\n%s", err, errOut)
 		}

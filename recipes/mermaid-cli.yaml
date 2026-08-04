@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: mermaid-cli
+version: 1.0.0
 role: tools                                # L5 — diagram rendering for the visual profile
 summary: "Installs mermaid-cli (`mmdc`), which renders Mermaid diagrams to SVG/PNG for the visual-explanation notebooks. Install-only. It pulls a Chromium via Puppeteer, which is a real download — accepted as the cost of rendering diagrams offline."
 upstream: github.com/mermaid-js/mermaid-cli

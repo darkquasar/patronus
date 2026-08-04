@@ -16,6 +16,11 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+// TargetAgnostic marks a deliverable that belongs to NO agent runtime by nature —
+// a fetched binary in ~/.patronus/bin or a global package. It is distinct from an
+// unspecified target (an error at the CLI) and from "all" (every runtime).
+const TargetAgnostic = "agnostic"
+
 // Request is the input to Compute. It mirrors plan.Request's shape for recipes.
 type Request struct {
 	Recipe   *manifest.Recipe
@@ -94,7 +99,7 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 	tools := resolveTools(req.Tool, rec)
 	switch rec.Wire.Method {
 	case manifest.WireExec:
-		diffs = append(diffs, execDiffs(rec, tools, scope)...)
+		diffs = append(diffs, execDiffs(rec, tools, scope, installPath)...)
 	case manifest.WireMerge:
 		merges, err := wireDiffs(req, tools, scope, installPath)
 		if err != nil {
@@ -133,7 +138,7 @@ func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
-		Tool:     "-", // a package install is tool-agnostic
+		Tool:     TargetAgnostic, // a package install is tool-agnostic
 		Scope:    scope,
 		Note:     "install: " + cmd,
 		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true, Candidates: specs},
@@ -207,7 +212,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
-		Tool:     "-", // a binary placement is tool-agnostic
+		Tool:     TargetAgnostic, // a binary placement is tool-agnostic
 		Scope:    "global",
 		Note:     "fetch " + spec.Label,
 		Fetch:    spec,
@@ -417,12 +422,16 @@ func serverSpec(name string, wm *manifest.WireMcp, installPath, tool string) ada
 //     Patronus DISPLAYS the wiring command but never executes it. SelfManaged is
 //     the provenance state records; Advisory is what keeps a missing binary from
 //     failing the install. Both bits are derived from actor == external.
-func execDiffs(rec *manifest.Recipe, tools []string, scope string) []diff.FileDiff {
+func execDiffs(rec *manifest.Recipe, tools []string, scope, installPath string) []diff.FileDiff {
 	external := rec.Wire.Actor == manifest.ActorExternal
 	var out []diff.FileDiff
 	for _, tool := range tools {
 		for _, raw := range rec.Wire.Run {
-			line := strings.ReplaceAll(raw, "{tool}", tool)
+			// Resolve {installPath}/{toolContext} (the fetched binary's absolute path
+			// and the per-tool client label) the same way the MCP-merge path does, so a
+			// fetch+run recipe invokes its own binary by absolute path — reachable even
+			// when the install dir is off $PATH (pat-as4h). {tool} is the raw tool name.
+			line := substPlaceholders(strings.ReplaceAll(raw, "{tool}", tool), installPath, tool)
 			argv := strings.Fields(line)
 			if len(argv) == 0 {
 				continue

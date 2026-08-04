@@ -94,13 +94,19 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
 		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
 		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
+		// pat-670z code-intel checkpoints: a serena onboarding pointer (all tools) +
+		// two claude/codex-only nudges (edit-time caller check, graph staleness).
+		// Wired by the opt-in code-intel profile.
+		"serena-pointer":          {manifest.TypeInstruction, manifest.RoleContext},
+		"serena-refs-hint":        {manifest.TypeHook, manifest.RoleContext},
+		"graphify-staleness-hint": {manifest.TypeHook, manifest.RoleContext},
 		// L10 orchestration: end-of-session push discipline. Wholly authored (no
 		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
 		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
-		"brainstorming":                  {manifest.TypeSkill, manifest.RoleCapability},
+		"brainstorming-spec":             {manifest.TypeSkill, manifest.RoleCapability},
 		"using-git-worktrees":            {manifest.TypeSkill, manifest.RoleCapability},
 		"finishing-a-development-branch": {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
@@ -175,7 +181,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// L10 orchestration: ticket (authored-but-attributed instruction) + 2 vendored superpowers skills.
 		"ticket", "subagent-driven-development", "dispatching-parallel-agents",
 		// The remaining vendored superpowers workflow skills.
-		"brainstorming", "using-git-worktrees", "finishing-a-development-branch",
+		"brainstorming-spec", "using-git-worktrees", "finishing-a-development-branch",
 		"writing-skills", "requesting-code-review", "receiving-code-review",
 		// Vendored ai-memory lifecycle hooks.
 		"ai-memory-session-start", "ai-memory-user-prompt", "ai-memory-pre-tool-use",
@@ -240,6 +246,15 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"uv":          {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
 		"mermaid-cli": {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
 	}
+	// Per-recipe install-command invariants, as DATA (not an inline `if name ==`
+	// branch). Each entry says "this recipe's rendered install command must contain
+	// this substring." graphify's uv install MUST carry the [mcp] extra, or
+	// graphify-mcp dies with ModuleNotFoundError: No module named 'mcp'; guarding it
+	// here keeps a ref edit from silently dropping the extra. Add a row to extend the
+	// invariant to another recipe — never a new branch in the loop.
+	wantInstallSubstr := map[string]string{
+		"graphify": "graphifyy[mcp]",
+	}
 	if len(cat.Recipes) != len(wantRecipes) {
 		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
 	}
@@ -262,12 +277,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		if m.Wire.Method != want.method {
 			t.Errorf("%s: wire.method = %q, want %q", m.Name, m.Wire.Method, want.method)
 		}
-		// graphify's uv install MUST carry the [mcp] extra, or graphify-mcp dies with
-		// ModuleNotFoundError: No module named 'mcp'. Guard it so a ref edit can't
-		// silently drop the extra and re-break the MCP server.
-		if m.Name == "graphify" {
-			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, "graphifyy[mcp]") {
-				t.Errorf("graphify install command %q must include the [mcp] extra", cmd)
+		if substr, ok := wantInstallSubstr[m.Name]; ok {
+			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, substr) {
+				t.Errorf("%s install command %q must contain %q", m.Name, cmd, substr)
 			}
 		}
 		if m.Wire.Actor != want.actor {

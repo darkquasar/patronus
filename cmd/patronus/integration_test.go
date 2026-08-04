@@ -162,6 +162,23 @@ func catalogItemVersion(t *testing.T, outDir, name string) string {
 	return ""
 }
 
+// catalogRecipeVersion reads a recipe's advertised version from the built index —
+// the recipe twin of catalogItemVersion (recipes ride inline, with no tarball).
+func catalogRecipeVersion(t *testing.T, outDir, name string) string {
+	t.Helper()
+	ix, err := registry.LoadIndex(mustRead(t, filepath.Join(outDir, "catalog", "index.json")))
+	if err != nil {
+		t.Fatalf("load index: %v", err)
+	}
+	for i := range ix.Recipes {
+		if ix.Recipes[i].Manifest.Name == name {
+			return ix.Recipes[i].Manifest.Version
+		}
+	}
+	t.Fatalf("recipe %q not in built catalog index", name)
+	return ""
+}
+
 func runList(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 	cmd := newListCmd()
@@ -213,7 +230,7 @@ func TestRemoteInstallMaterializesAndTransforms(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	out, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("remote install: %v", err)
 	}
@@ -240,7 +257,7 @@ func TestRemoteInstallDeployWritesFiles(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	_, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes")
+	_, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes")
 	if err != nil {
 		t.Fatalf("remote deploy: %v", err)
 	}
@@ -249,7 +266,7 @@ func TestRemoteInstallDeployWritesFiles(t *testing.T) {
 		t.Fatalf("expected installed skill at %s: %v", skill, err)
 	}
 	// Re-running is idempotent (SKIP), proving the same change model end-to-end.
-	out, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -374,7 +391,7 @@ func TestProfileInstallFollowsPerItemLock(t *testing.T) {
 	}
 
 	// Install the profile against the committed lock → must materialize the baseline.
-	if _, errOut, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--dry-run"); err != nil {
+	if _, errOut, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--dry-run"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".patronus", "cache", "items", "fix-skill-"+baseVer, "patronus.yaml")); err != nil {
@@ -407,7 +424,7 @@ func TestGitSourceInstallEndToEnd(t *testing.T) {
 	f := &servingFetcher{bodies: map[string][]byte{gitURL: tgz}}
 	withRemoteEnv(t, f)
 
-	out, errOut, err := runInstall(t, "git:github.com/me/kit@v2#my-pattern", "--tool", "claude", "--global", "--dry-run")
+	out, errOut, err := runInstall(t, "git:github.com/me/kit@v2#my-pattern", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("git install: %v\n%s", err, errOut)
 	}

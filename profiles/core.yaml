@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
+version: 1.0.1
 summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `ai-memory` (ambient memory), `quiet` (no diagrams)."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
@@ -23,7 +24,7 @@ layers:
     - grilling                             # interrogate a plan before building
     - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
     - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
-    - brainstorming                        # explore intent + requirements + design BEFORE any creative work
+    - brainstorming-spec                   # explore intent + requirements + design, then author the spec, BEFORE any creative work
     - using-git-worktrees                  # start feature work in an isolated workspace
     - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
     - writing-skills                       # author/edit/verify skills (the meta-skill)

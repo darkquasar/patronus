@@ -141,10 +141,14 @@ mechanically checkable.
   `streams[].epic` — an id you can resolve, not a bit you can only trust. The old `tasks:` flag meant
   *"a `tasks.md` exists"*, and `tasks.md` no longer does.
 
-- **Four skills now read and write this schema**: `brainstorming` (creates the folder and its first
-  stream), `team-research` (writes the research doc and N streams), `writing-plans` (fills in its
-  stream's `plan:`), and `team-implement` (fills in `epic:` when it seeds the graph). Each owns exactly
-  the field it produces — no skill sets a flag for work it did not do.
+- **Skills read and write this schema, each owning exactly the field it produces**: `team-research`
+  (creates the folder, writes the research doc, and lays down the `streams:` skeleton with `spec:
+  null`/`plan: null`), `brainstorming-spec` (authors a stream's spec and fills its `spec:` — it can
+  also create the folder and first stream when starting without prior research), `writing-plans`
+  (fills in its stream's `plan:`), and `team-implement` (fills in `epic:` when it seeds the graph).
+  No skill sets a flag for work it did not do. (The stage set and the `brainstorming` →
+  `brainstorming-spec` rename were settled later, in the nine-tickets triage; the schema this ADR
+  records is unchanged — only which skill owns `spec:` moved, from the renamed skill.)
 
 - **"One feature per folder" is abandoned, deliberately.** `01-lifecycle-and-test-surface` is a
   conjunction, and nobody would call it one feature. Forcing folders to be features would have split

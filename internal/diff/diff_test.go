@@ -88,27 +88,27 @@ func TestCounts(t *testing.T) {
 //
 // A composed file folds many artifacts into ONE FileDiff: six instructions APPEND
 // into one CLAUDE.md, and eight artifacts MERGE into one settings.json (7 hooks + a
-// statusline + native-sandbox, which turns Claude's sandbox on). The plan TABLE
+// statusline + a settings hook). The plan TABLE
 // renders a row per contributor — so a footer that counted diffs said "1 APPEND,
 // 2 MERGE" directly beneath eight visible MERGE rows, contradicting itself and
 // under-reporting the change the user is being asked to approve.
 func TestCountsCountsEveryContributor(t *testing.T) {
 	cs := &ChangeSet{Diffs: []FileDiff{
 		{
-			Action: Append, Path: "/h/CLAUDE.md", Artifact: "agents-spine",
+			Action: Append, Path: "/h/CLAUDE.md", Artifact: "demo-instr",
 			Contrib: []SectionContrib{
-				{Artifact: "agent-rules"},
-				{Artifact: "go-style-uber"},
+				{Artifact: "demo-instr2"},
+				{Artifact: "demo-instr3"},
 			},
 		},
 		{
-			Action: Merge, Path: "/h/.claude/settings.json", Artifact: "skills-dispatch-activate",
+			Action: Merge, Path: "/h/.claude/settings.json", Artifact: "demo-hook",
 			SettingContrib: []SettingContrib{
-				{Artifact: "block-secrets"},
-				{Artifact: "native-sandbox"},
+				{Artifact: "demo-hook2"},
+				{Artifact: "demo-hook3"},
 			},
 		},
-		{Action: Create, Path: "/h/.claude/skills/tdd/SKILL.md", Artifact: "tdd"},
+		{Action: Create, Path: "/h/.claude/skills/demo-skill/SKILL.md", Artifact: "demo-skill"},
 	}}
 
 	c := cs.Counts()

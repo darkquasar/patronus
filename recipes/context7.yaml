@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: context7
+version: 1.0.0
 role: context                      # L4 — Context / Knowledge (live, up-to-date library docs)
 summary: "Context7 MCP (hosted) — up-to-date, version-specific docs + code examples for libraries, fetched on demand. Keyless by default; set CONTEXT7_API_KEY in your MCP client for higher rate limits."
 upstream: github.com/upstash/context7

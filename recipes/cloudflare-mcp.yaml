@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: cloudflare-mcp
+version: 1.0.0
 role: tools                        # L5 — Tools / Integrations (Cloudflare docs/platform)
 summary: "Cloudflare Docs MCP (hosted) — search the live Cloudflare developer docs from the agent. Keyless. Opt-in (cloudflare profile)."
 upstream: github.com/cloudflare/mcp-server-cloudflare

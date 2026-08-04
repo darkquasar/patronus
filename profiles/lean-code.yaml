@@ -2,6 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: lean-code
+version: 1.0.0
 summary: "STUB — minimal-code overlay. Wires the ponytail minimal-code style on top of the L1 baseline; the style overlay is sourced later."
 status: stub                               # installer warns: ponytail not yet sourced
 layers:

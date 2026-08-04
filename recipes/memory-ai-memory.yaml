@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: memory-ai-memory
+version: 1.0.0
 role: memory                               # L3 — default recipe for the memory layer
 summary: "Multi-agent memory layer — MCP + CLI, SQLite+FTS5+optional vectors, git-markdown source of truth."
 upstream: github.com/akitaonrails/ai-memory

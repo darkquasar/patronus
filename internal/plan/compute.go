@@ -234,7 +234,15 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 			} else {
 				prev.After = folded
 			}
-			if d.Artifact != "" && d.Artifact != prev.Artifact {
+			// Record a per-edit contributor for every folded setting so state/remove
+			// can strip each element. This covers two shapes: distinct artifacts
+			// merging into one settings.json (the composed-hook case), AND a single
+			// artifact emitting several edits to one file — an opencode gate whose
+			// matcher maps to more than one permission key (Edit|Bash → permission.edit
+			// + permission.bash). Only the FIRST diff for the path is the owning
+			// prev (its edit rides fileState); every subsequent fold needs a contrib
+			// or its deny would leak on remove.
+			if d.Artifact != "" {
 				prev.SettingContrib = append(prev.SettingContrib, diff.SettingContrib{
 					Artifact: d.Artifact,
 					Version:  d.Version,

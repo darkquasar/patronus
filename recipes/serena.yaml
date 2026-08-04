@@ -1,6 +1,7 @@
 apiVersion: patronus/v2
 family: recipe
 name: serena
+version: 1.0.0
 role: context                      # L4 — Context / Knowledge (semantic code navigation of the local repo)
 summary: "Serena MCP — semantic, symbol-level code navigation + editing via Language Servers (LSP). Local, no vector DB / no indexing. Launched on demand via uvx; flavours its --context per agent."
 upstream: github.com/oraios/serena

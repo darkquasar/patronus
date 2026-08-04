@@ -317,7 +317,7 @@ patronus list [--artifacts] [--recipes] [--profiles] [--layers] [--json]   # bro
 patronus scan [--json]                                                      # detect installed tools
 
 # install — dry run by default; --deploy writes
-patronus install <name>... [--tool claude|codex|opencode|all] [--global|--local] [--deploy]
+patronus install <name>... [--target claude|codex|opencode|all] [--global|--local] [--deploy]
 patronus install --profile <name> [--deploy]                               # a cross-layer bundle
 
 # lifecycle
@@ -346,7 +346,7 @@ go run ./cmd/patronus scan
 or **MERGE** (a structural config edit that preserves sibling keys). The plan shows it all first:
 
 ```console
-$ patronus install agent-principles --tool claude --local
+$ patronus install agent-principles --target claude --local
 ┌──────────────────┬──────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
 │ Artifact         │ Impacted path(s) │ Operation │ Type        │ Role        │ Tool   │ Scope │
 ├──────────────────┼──────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
@@ -381,7 +381,7 @@ environment. The plan groups every resulting change by source item, then shows t
 so you see precisely what will be created, appended, and run *before* anything happens:
 
 ```console
-$ patronus install --profile cloudflare --tool claude --local
+$ patronus install --profile cloudflare --target claude --local
 warning: profile "cloudflare" is a stub: layers marked TODO are not yet populated
 ┌────────────────────┬───────────────────────────────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
 │ Artifact           │ Impacted path(s)                          │ Operation │ Type        │ Role        │ Tool   │ Scope │

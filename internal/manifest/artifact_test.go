@@ -145,7 +145,7 @@ func TestInstructionLayoutPointerDirForScope(t *testing.T) {
 // REQUIRES a version bump (the R2 immutability guard enforces it).
 func TestHookIntentDefaultsToNudge(t *testing.T) {
 	a := &Artifact{
-		Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Name: "h", Description: "d"},
+		Meta: Meta{APIVersion: APIVersion, Family: FamilyArtifact, Name: "h", Description: "d", Version: "1.0.0"},
 		Type: TypeHook,
 		Hook: &HookSpec{Event: "PreToolUse", Command: "x"},
 	}

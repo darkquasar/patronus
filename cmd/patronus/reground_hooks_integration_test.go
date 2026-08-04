@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/darkquasar/patronus/internal/profile"
 )
 
 // runPlacedHook executes a hook script that install placed under
@@ -43,39 +41,6 @@ func runPlacedHook(t *testing.T, home, script string) (string, error) {
 //     a placed hook script actually RUNS and enumerates the installed skills. Those
 //     are asserted on the FIXTURE, with our own items, deployed for real.
 
-// TestCoreWiresTheRegroundHooks is CLASS B: the real core profile really carries
-// both re-grounding hooks, flavoured for claude only.
-func TestCoreWiresTheRegroundHooks(t *testing.T) {
-	cat := realCatalog(t)
-
-	r, err := profile.Resolve(cat, "core", "claude")
-	if err != nil {
-		t.Fatalf("resolve core/claude: %v", err)
-	}
-	names := strings.Join(r.Names(), " ")
-	for _, want := range []string{"skills-heartbeat", "work-state-reground"} {
-		if !strings.Contains(names, want) {
-			t.Errorf("core should wire the re-grounding hook %q, got: %s", want, names)
-		}
-	}
-
-	// …and the @claude flavour keeps them OFF codex/opencode, which have no hook
-	// surface. This is the contents-level half; the mechanism is proven on the
-	// fixture in TestClaudeOnlyHookSkipsOtherTools.
-	for _, tool := range []string{"codex", "opencode"} {
-		r, err := profile.Resolve(cat, "core", tool)
-		if err != nil {
-			t.Fatalf("resolve core/%s: %v", tool, err)
-		}
-		got := strings.Join(r.Names(), " ")
-		for _, unwanted := range []string{"skills-heartbeat", "work-state-reground"} {
-			if strings.Contains(got, unwanted) {
-				t.Errorf("core/%s should NOT carry the claude-only hook %q, got: %s", tool, unwanted, got)
-			}
-		}
-	}
-}
-
 // TestClaudeOnlyHookSkipsOtherTools is CLASS A on the FIXTURE: a @claude-flavoured
 // hook registers in Claude's settings.json with its script placed and executable,
 // and is silently skipped on codex/opencode — no error, no hook, no script.
@@ -84,7 +49,7 @@ func TestClaudeOnlyHookSkipsOtherTools(t *testing.T) {
 		f := fixtureRegistry(t)
 		home := withRemoteEnv(t, f)
 
-		if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 			t.Fatalf("install: %v\n%s", err, e)
 		}
 
@@ -119,7 +84,7 @@ func TestClaudeOnlyHookSkipsOtherTools(t *testing.T) {
 			f := fixtureRegistry(t)
 			home := withRemoteEnv(t, f)
 
-			if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
+			if _, e, err := runInstall(t, "--profile", "fix-all", "--target", tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install on %s: %v\n%s", tool, err, e)
 			}
 			// The claude-only hook's script must NOT be placed: the flavour skipped it.
@@ -143,7 +108,7 @@ func TestPlacedHookScriptRunsAndListsSkills(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 

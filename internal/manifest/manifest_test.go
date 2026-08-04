@@ -103,7 +103,7 @@ func TestShape(t *testing.T) {
 func TestValidateRecipeWireMethod(t *testing.T) {
 	base := func() *Recipe {
 		return &Recipe{
-			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "x"},
+			Meta: Meta{APIVersion: APIVersion, Family: FamilyRecipe, Role: RoleTools, Name: "x", Version: "1.0.0"},
 			Wire: Wire{Method: WireMerge, Actor: ActorPatronus, Mcp: &WireMcp{Transport: "http", URL: "https://example"}},
 		}
 	}
@@ -177,13 +177,13 @@ func TestInstallCommand(t *testing.T) {
 		recipe    string
 		want      string
 	}{
-		{"npm with ref", InstallCandidate{Manager: PMNpm, Ref: "tdd-guard"}, "tdd-guard", "npm install -g tdd-guard"},
-		{"npm defaults ref", InstallCandidate{Manager: PMNpm}, "ccusage", "npm install -g ccusage"},
-		{"cargo", InstallCandidate{Manager: PMCargo, Ref: "ripgrep"}, "rg", "cargo install ripgrep"},
-		{"uv", InstallCandidate{Manager: PMUv, Ref: "graphifyy"}, "graphify", "uv tool install graphifyy"},
-		// A PEP 508 requirement string carries an extra + pin in one ref — this is how
-		// graphify pulls its [mcp] extra (without it the MCP entrypoint can't import mcp).
-		{"uv with extra and pin", InstallCandidate{Manager: PMUv, Ref: "graphifyy[mcp]==0.9.31"}, "graphify", "uv tool install graphifyy[mcp]==0.9.31"},
+		{"npm with ref", InstallCandidate{Manager: PMNpm, Ref: "some-cli"}, "some-cli", "npm install -g some-cli"},
+		{"npm defaults ref", InstallCandidate{Manager: PMNpm}, "some-cli", "npm install -g some-cli"},
+		{"cargo", InstallCandidate{Manager: PMCargo, Ref: "mypkg"}, "some-bin", "cargo install mypkg"},
+		{"uv", InstallCandidate{Manager: PMUv, Ref: "mypkg"}, "some-recipe", "uv tool install mypkg"},
+		// A PEP 508 requirement string carries an extra + pin in one ref — the
+		// mechanism renders the extra and pin straight through from the ref.
+		{"uv with extra and pin", InstallCandidate{Manager: PMUv, Ref: "mypkg[extra]==1.0.0"}, "some-recipe", "uv tool install mypkg[extra]==1.0.0"},
 		{"manager without a template has no command", InstallCandidate{Manager: PMAur, Ref: "x"}, "x", ""},
 	}
 	for _, tt := range tests {

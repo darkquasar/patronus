@@ -52,6 +52,14 @@ jobs:
       - name: check skill placeholders
         run: go run ./cmd/patronus check-placeholders
 
+      # A hook that BLOCKS the agent (a bundled script that exits 2, or a command
+      # running an allowlisted blocking binary) must declare intent: gate, or it is
+      # a silent no-op on tools that key wiring on intent (opencode → permission
+      # deny). Like check-placeholders this is a whole-tree check needing no base
+      # ref, so it runs on every push. (pat-8jow)
+      - name: check gate intent
+        run: go run ./cmd/patronus check-gate-intent
+
   # Enforces CONTRIBUTING.md's version-bump rule on every pull_request: an artifact
   # whose CONTENT changed must also bump its patronus.yaml version:. Runs only on PRs
   # (a push to main has no base to diff against and is already merged). fetch-depth: 0

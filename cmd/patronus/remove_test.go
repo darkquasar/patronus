@@ -26,7 +26,7 @@ func TestRemoveRevertsV1OrphanPluginMerge(t *testing.T) {
 	current := []byte("{\"plugins\":{}}")
 	sum := sha256.Sum256(current)
 	items := []state.Item{{
-		Artifact: "superpowers", Tool: "claude", Scope: "global",
+		Artifact: "demo-plugin", Tool: "claude", Scope: "global",
 		Files: []state.FileState{{
 			Path: "/tmp/does-not-matter/settings.json", Action: "MERGE",
 			Checksum: "sha256:" + hex.EncodeToString(sum[:]), Prior: prior,
@@ -216,11 +216,11 @@ func TestRemoveMutuallyExclusiveScope(t *testing.T) {
 }
 
 func TestRemoveSurfacesUninstallAdvisory(t *testing.T) {
-	it := state.Item{Artifact: "graphify", SelfWired: true, PostInstall: []string{"uv tool install graphifyy"}}
+	it := state.Item{Artifact: "demo-recipe", SelfWired: true, PostInstall: []string{"uv tool install mypkg"}}
 	var buf bytes.Buffer
 	surfaceUninstallAdvisory(&buf, it)
 	got := buf.String()
-	if !strings.Contains(got, "graphify") || !strings.Contains(got, "uv tool install graphifyy") {
-		t.Fatalf("want an uninstall advisory naming graphify and its install command, got %q", got)
+	if !strings.Contains(got, "demo-recipe") || !strings.Contains(got, "uv tool install mypkg") {
+		t.Fatalf("want an uninstall advisory naming demo-recipe and its install command, got %q", got)
 	}
 }

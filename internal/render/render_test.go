@@ -14,21 +14,21 @@ func sampleCatalog() *registry.Catalog {
 	return &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{
 			{Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Role: manifest.RoleCapability, Description: "research skill"},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo-skill", Role: manifest.RoleCapability, Description: "research skill"},
 				Type: manifest.TypeSkill, Targets: []string{"claude", "codex"},
 			}},
 			{Manifest: &manifest.Artifact{
-				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "pattern-cloudflare", Role: manifest.RoleContext, Description: "cf patterns"},
+				Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "demo-context", Role: manifest.RoleContext, Description: "cf patterns"},
 				Type: manifest.TypeSkill, Targets: []string{"claude"},
 			}},
 		},
 		Recipes: []registry.RecipeEntry{
 			{Manifest: &manifest.Recipe{
-				Meta:    manifest.Meta{Family: manifest.FamilyRecipe, Name: "github", Role: manifest.RoleTools},
+				Meta:    manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-wire", Role: manifest.RoleTools},
 				Summary: "hosted MCP", Wire: manifest.Wire{Method: manifest.WireMerge, Actor: manifest.ActorPatronus, Mcp: &manifest.WireMcp{Transport: "http", URL: "https://x"}},
 			}},
 			{Manifest: &manifest.Recipe{
-				Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-engram", Role: manifest.RoleMemory},
+				Meta:     manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-memory", Role: manifest.RoleMemory},
 				Summary:  "engram",
 				Delivery: &manifest.Delivery{Via: manifest.ViaFetch},
 				Wire:     manifest.Wire{Method: manifest.WireMerge, Actor: manifest.ActorPatronus, Mcp: &manifest.WireMcp{Transport: "stdio", Command: "x"}},
@@ -36,12 +36,12 @@ func sampleCatalog() *registry.Catalog {
 		},
 		Profiles: []registry.ProfileEntry{
 			{Manifest: &manifest.Profile{
-				Meta:    manifest.Meta{Family: manifest.FamilyProfile, Name: "cloudflare", Role: manifest.RoleLifecycle},
+				Meta:    manifest.Meta{Family: manifest.FamilyProfile, Name: "demo-profile", Role: manifest.RoleLifecycle},
 				Summary: "cf env", Status: "stub",
 				Layers: manifest.ProfileLayers{
-					Capabilities: manifest.StringList{"team-research"},
-					Context:      manifest.StringList{"pattern-cloudflare"},
-					Memory:       "memory-engram",
+					Capabilities: manifest.StringList{"demo-skill"},
+					Context:      manifest.StringList{"demo-context"},
+					Memory:       "demo-memory",
 				},
 			}},
 		},
@@ -56,7 +56,7 @@ func TestPrintArtifactsV2Columns(t *testing.T) {
 	PrintCatalog(&buf, sampleCatalog(), CatalogView{Artifacts: true})
 	out := buf.String()
 
-	for _, want := range []string{"TYPE", "ROLE", "team-research", "skill", "capability", "pattern-cloudflare", "context"} {
+	for _, want := range []string{"TYPE", "ROLE", "demo-skill", "skill", "capability", "demo-context", "context"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("artifact list missing %q\n%s", want, out)
 		}
@@ -77,7 +77,7 @@ func TestPrintArtifactsDescriptionBlocks(t *testing.T) {
 	PrintCatalog(&buf, sampleCatalog(), CatalogView{Artifacts: true, Description: true})
 	out := buf.String()
 
-	for _, want := range []string{"---", "team-research", "research skill", "pattern-cloudflare", "cf patterns", "description:", "targets:"} {
+	for _, want := range []string{"---", "demo-skill", "research skill", "demo-context", "cf patterns", "description:", "targets:"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("description block view missing %q\n%s", want, out)
 		}
@@ -92,12 +92,12 @@ func TestPrintArtifactsDescriptionBlocks(t *testing.T) {
 // an unknown name reports clearly.
 func TestPrintSingleArtifact(t *testing.T) {
 	var found bytes.Buffer
-	PrintCatalog(&found, sampleCatalog(), CatalogView{Artifacts: true, Artifact: "pattern-cloudflare"})
+	PrintCatalog(&found, sampleCatalog(), CatalogView{Artifacts: true, Artifact: "demo-context"})
 	fo := found.String()
-	if !strings.Contains(fo, "pattern-cloudflare") || !strings.Contains(fo, "cf patterns") {
+	if !strings.Contains(fo, "demo-context") || !strings.Contains(fo, "cf patterns") {
 		t.Errorf("single-artifact view missing the item:\n%s", fo)
 	}
-	if strings.Contains(fo, "team-research") {
+	if strings.Contains(fo, "demo-skill") {
 		t.Errorf("single-artifact view should not list other items:\n%s", fo)
 	}
 
@@ -115,7 +115,7 @@ func TestPrintRecipesShowsShapeAndRole(t *testing.T) {
 	PrintCatalog(&buf, sampleCatalog(), CatalogView{Recipes: true})
 	out := buf.String()
 
-	for _, want := range []string{"TYPE", "ROLE", "github", "wire-only", "tools", "memory-engram", "fetch+wire", "memory"} {
+	for _, want := range []string{"TYPE", "ROLE", "demo-wire", "wire-only", "tools", "demo-memory", "fetch+wire", "memory"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("recipe list missing %q\n%s", want, out)
 		}
@@ -129,7 +129,7 @@ func TestPrintProfilesAndLayers(t *testing.T) {
 	// Compact view: NAME/STATUS/SUMMARY.
 	var compact bytes.Buffer
 	PrintCatalog(&compact, sampleCatalog(), CatalogView{Profiles: true})
-	if !strings.Contains(compact.String(), "cloudflare") || !strings.Contains(compact.String(), "stub") {
+	if !strings.Contains(compact.String(), "demo-profile") || !strings.Contains(compact.String(), "stub") {
 		t.Errorf("profile compact view:\n%s", compact.String())
 	}
 
@@ -137,7 +137,7 @@ func TestPrintProfilesAndLayers(t *testing.T) {
 	var layers bytes.Buffer
 	PrintCatalog(&layers, sampleCatalog(), CatalogView{Profiles: true, Layers: true})
 	out := layers.String()
-	for _, want := range []string{"cloudflare", "capabilities", "team-research", "context", "pattern-cloudflare", "memory", "memory-engram"} {
+	for _, want := range []string{"demo-profile", "capabilities", "demo-skill", "context", "demo-context", "memory", "demo-memory"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("profile layers view missing %q\n%s", want, out)
 		}
@@ -146,11 +146,11 @@ func TestPrintProfilesAndLayers(t *testing.T) {
 
 func TestPrintCatalogShowsPlugins(t *testing.T) {
 	cat := &registry.Catalog{Plugins: []registry.PluginEntry{
-		{Manifest: &manifest.Plugin{Meta: manifest.Meta{Family: manifest.FamilyPlugin, Name: "superpowers", Description: "skill marketplace"}}},
+		{Manifest: &manifest.Plugin{Meta: manifest.Meta{Family: manifest.FamilyPlugin, Name: "demo-plugin", Description: "skill marketplace"}}},
 	}}
 	var buf bytes.Buffer
 	PrintCatalog(&buf, cat, CatalogView{Plugins: true})
-	if !strings.Contains(buf.String(), "superpowers") {
+	if !strings.Contains(buf.String(), "demo-plugin") {
 		t.Errorf("output missing plugin name:\n%s", buf.String())
 	}
 }

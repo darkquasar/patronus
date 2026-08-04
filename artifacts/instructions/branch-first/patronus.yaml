@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: branch-first
 description: "Default disposition: new work happens on a feature branch unless the user explicitly asks to work on the current/main branch. Appended into CLAUDE.md/AGENTS.md."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

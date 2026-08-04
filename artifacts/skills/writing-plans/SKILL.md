@@ -13,7 +13,34 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement — one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml` — name the file (`plan: <stream>-plan.md`), never assert `plan: true` — and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the brainstorming skill's "Spec folder & meta.yaml" for the shape). `docs/specs/` is gitignored — do not commit the plan. (User preferences for plan location override this default.)
+## Spec Gate (run this FIRST)
+
+writing-plans is **plan-only**. It does not author specs. Before planning anything, confirm a spec
+exists for this stream — a plan is a promise to build a spec, and there is nothing to promise
+without one.
+
+Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`streams[].spec:`)
+**and resolves on disk.** This is a check for the SPEC specifically — a folder can have a
+`meta.yaml` and a `research.md` but no spec, and that still redirects. Do not read the "create
+`meta.yaml` if absent" step below as license to proceed without a spec.
+
+- **No spec named, or the named file is absent** → **STOP.** Suggest `brainstorming-spec` for this
+  stream: "This stream has no spec. Author it with `brainstorming-spec` first — it reads the
+  research (if any) and specifies what to build; I'll plan from that." Do NOT synthesize a spec, do
+  NOT infer one from `research.md`, and do NOT proceed to planning.
+- **A `<stream>-plan.md` already exists for this stream** (an older `team-research` or a prior run
+  may have written one) → do NOT silently overwrite reviewed or edited work. Report it and ask:
+  revise in place, or supersede? And note the two spec cases:
+  - **plan exists + its spec exists** → ask revise-vs-supersede as above.
+  - **plan exists but NO spec** (an orphan plan) → treat the missing spec as the signal: redirect to
+    `brainstorming-spec` to author the spec first. A plan with no upstream spec cannot be
+    spec-reviewed for coverage; do not reverse-engineer a spec from the plan.
+- **Spec present (no plan yet)** → plan normally (the rest of this skill).
+
+Spec ownership stays with `brainstorming-spec`. writing-plans sets `streams[].plan:` only, never
+`streams[].spec:`.
+
+**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement — one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml` — name the file (`plan: <stream>-plan.md`), never assert `plan: true` — and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `brainstorming-spec` skill's "Spec folder & meta.yaml" for the shape). `docs/specs/` is gitignored — do not commit the plan. (User preferences for plan location override this default.)
 - (User preferences for plan location override this default)
 
 ## Scope Check

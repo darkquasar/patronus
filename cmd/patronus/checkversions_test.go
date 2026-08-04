@@ -78,3 +78,133 @@ func TestCheckVersionsEmpty(t *testing.T) {
 		t.Errorf("checkVersions(nil) = %v, want nil", got)
 	}
 }
+
+// TestReconcileFlatManifestChange covers the pure reconciler that maps a FLAT
+// single-file manifest's before/after bytes into an artifactChange. recipes/ and
+// profiles/ share this shape: the manifest IS the whole content, so content-changed
+// is manifestContentChanged over the two revisions — there is no sibling-vs-manifest
+// split. checkVersions then judges it by the same rule as an artifact directory. The
+// table runs the same cases against a recipe path and a profile path to prove the
+// reconciler is directory-agnostic (ADR-0004: version: is required schema-wide).
+func TestReconcileFlatManifestChange(t *testing.T) {
+	tests := []struct {
+		name          string
+		path          string
+		base          string
+		head          string
+		existedInBase bool
+		wantViolation bool
+	}{
+		{
+			name:          "recipe content change without a bump violates",
+			path:          "recipes/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: tools\n",
+			head:          "name: demo\nversion: 1.0.0\nrole: memory\n",
+			existedInBase: true,
+			wantViolation: true,
+		},
+		{
+			name:          "profile content change without a bump violates",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.0.0\nrole: context\n",
+			existedInBase: true,
+			wantViolation: true,
+		},
+		{
+			name:          "profile content change with a bump passes",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.1.0\nrole: context\n",
+			existedInBase: true,
+			wantViolation: false,
+		},
+		{
+			name:          "profile version-only edit passes",
+			path:          "profiles/demo.yaml",
+			base:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			head:          "name: demo\nversion: 1.1.0\nrole: lifecycle\n",
+			existedInBase: true,
+			wantViolation: false,
+		},
+		{
+			name:          "new profile has no base to compare",
+			path:          "profiles/demo.yaml",
+			base:          "",
+			head:          "name: demo\nversion: 1.0.0\nrole: lifecycle\n",
+			existedInBase: false,
+			wantViolation: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := reconcileFlatManifestChange(tt.path, []byte(tt.base), tt.existedInBase, []byte(tt.head))
+			got := checkVersions([]artifactChange{c})
+			if tt.wantViolation && (len(got) != 1 || got[0].Name != tt.path) {
+				t.Fatalf("want a violation on %q, got %v", tt.path, got)
+			}
+			if !tt.wantViolation && len(got) != 0 {
+				t.Fatalf("want no violation, got %v", got)
+			}
+		})
+	}
+}
+
+func TestManifestContentChanged(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		head string
+		want bool
+	}{
+		{
+			name: "version-only edit is not content",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.1.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "identical is not a change",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "description edit is content",
+			base: "name: demo\nversion: 1.0.0\ndescription: old\n",
+			head: "name: demo\nversion: 1.0.0\ndescription: new\n",
+			want: true,
+		},
+		{
+			name: "requires edit is content",
+			base: "name: demo\nversion: 1.0.0\nrequires: []\n",
+			head: "name: demo\nversion: 1.0.0\nrequires: [serena]\n",
+			want: true,
+		},
+		{
+			name: "role edit is content",
+			base: "name: demo\nversion: 1.0.0\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: capability\n",
+			want: true,
+		},
+		{
+			name: "version line missing on one side, rest equal, is not content",
+			base: "name: demo\nrole: context\n",
+			head: "name: demo\nversion: 1.0.0\nrole: context\n",
+			want: false,
+		},
+		{
+			name: "content edit alongside a version bump is still content",
+			base: "name: demo\nversion: 1.0.0\ndescription: old\n",
+			head: "name: demo\nversion: 1.1.0\ndescription: new\n",
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := manifestContentChanged([]byte(tt.base), []byte(tt.head)); got != tt.want {
+				t.Errorf("manifestContentChanged() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

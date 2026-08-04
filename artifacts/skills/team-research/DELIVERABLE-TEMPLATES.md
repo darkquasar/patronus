@@ -1,10 +1,13 @@
 # Deliverable Templates
 
-The Team Lead synthesizes three deliverables from the raw `*-findings.md` files produced by researchers.
+The Team Lead synthesizes one deliverable — the consolidated `<slug>-research.md` — from the raw
+`*-findings.md` files produced by researchers, and writes the folder's `meta.yaml` streams skeleton.
+The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `brainstorming-spec` and
+`writing-plans`; team-research does not write them.
 
 ---
 
-## Deliverable 1: `research.md`
+## Deliverable: `<slug>-research.md`
 
 The consolidated research document.
 
@@ -57,122 +60,23 @@ The consolidated research document.
 
 ---
 
-## Deliverable 2: `spec.md`
+## Manifest: `meta.yaml` streams skeleton
 
-The technical specification derived from the research.
+Write one `research:` entry and one stream per independent work stream the research identified,
+leaving `spec:` and `plan:` **null** — the downstream skills fill the field they own.
 
-```markdown
-# <Domain Name> — Specification
+```yaml
+slug: NN-slug
+intent: "One line: what this investigation was."
+created: <today, YYYY-MM-DD>     # from context; do not invent
+updated: <today, YYYY-MM-DD>
 
-**Date**: <date>
-**Status**: Draft
-**Source**: research.md (this directory)
+research: <slug>-research.md     # ONE per folder; naming it is what marks research done
 
-## Overview
-
-<1-2 paragraph description of what will be built and why>
-
-## Goals
-
-1. <goal 1>
-2. <goal 2>
-...
-
-## Non-Goals
-
-- <what this does NOT do>
-
-## Architecture
-
-<how the solution fits into the existing system — diagrams, data flow, component relationships>
-
-## Detailed Design
-
-### <Component/Module 1>
-
-<interface contracts, data schemas, behavior specifications>
-
-### <Component/Module 2>
-
-...
-
-## Dependencies
-
-- <what this depends on — existing code, external services, CF features>
-
-## Constraints
-
-- <hard limits from research that shape the design>
-
-## Testing Strategy
-
-- <how correctness will be verified>
-
-## Migration / Rollout
-
-- <if applicable, how to transition from current state to new state>
-
-## Future Considerations
-
-- <things deferred but worth noting for later phases>
-```
-
----
-
-## Deliverable 3: `plan.md`
-
-The implementation plan derived from the spec.
-
-```markdown
-# <Domain Name> — Implementation Plan
-
-**Date**: <date>
-**Status**: Draft
-**Source**: spec.md (this directory)
-
-## Prerequisites
-
-- <what must be true before implementation starts>
-
-## Phase Breakdown
-
-### Phase 1: <name>
-
-**Goal**: <what this phase achieves>
-**Estimated scope**: <small / medium / large>
-
-- <high-level work item 1>
-- <high-level work item 2>
-...
-
-**Verification**: <how to confirm this phase is complete>
-
-### Phase 2: <name>
-
-...
-
-## Concern Boundaries
-
-<how the work naturally splits into parallel streams for /team-implement>
-
-| Boundary | Owns | Produces | Consumes |
-|----------|------|----------|----------|
-| <name>   | <files/modules> | <outputs> | <inputs from others> |
-| ...      | ...  | ...      | ...      |
-
-## Risk & Mitigation
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| ...  | ...    | ...        |
-
-## Deploy Order
-
-<if relevant, the order in which changes should be deployed>
-
-## Definition of Done
-
-- [ ] <criterion 1>
-- [ ] <criterion 2>
-...
+streams:
+  - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
+    intent: "One line: what this stream is."
+    spec: null                  # brainstorming-spec fills this in
+    plan: null                  # writing-plans fills this in
+    epic: null                  # team-implement fills this in with the tk epic id
 ```

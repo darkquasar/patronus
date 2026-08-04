@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: agents-spine
 description: "The AGENTS.md format spine — the predictable sections (dev environment, testing, conventions, PR) a coding agent should expect in a project's instructions file. Appended into CLAUDE.md/AGENTS.md."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

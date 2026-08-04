@@ -80,10 +80,26 @@ Full rubric: [plan-reviewer.md](plan-reviewer.md)
 
 ## Where This Sits
 
-`brainstorming` → `spec-review` → `writing-plans` → **plan-review** → `executing-plans`.
+`brainstorming-spec` → `spec-review` → `writing-plans` → **plan-review** → the build fork.
 
 Its sibling gate, `spec-review`, closes the spec phase the same way.
 
+## The Fork: how to build it
+
+plan-review is where the pipeline forks into execution. Once the plan is accepted, choose the
+build path — this routing is plan-review's, and only plan-review's:
+
+- **`executing-plans` (solo)** — one agent works the plan task-by-task with review between tasks.
+  Choose it for a **small or single-concern** stream: the tasks share files or must land in order,
+  so parallelism buys nothing and coordination only adds risk.
+- **`team-implement` (parallel team)** — a Team Lead spawns teammates in worktree isolation, each
+  owning a disjoint concern, then merges. Choose it for a **multi-concern, parallelizable** stream:
+  the plan's tasks split cleanly into 2–5 boundaries that touch non-overlapping files.
+
+The criterion is the plan's own shape: if you can draw disjoint file-owning boundaries, it is a
+team-implement candidate; if you cannot, it is a solo executing-plans job. Offer the choice; do not
+gate on it.
+
 **Next:** once the findings are addressed, **mirror the plan into the `tk` work-graph** (one epic to
-group it, one ticket per plan task, `tk dep` for the order — see the `ticket` instruction), then run
-**`executing-plans`**.
+group it, one ticket per plan task, `tk dep` for the order — see the `ticket` instruction), then take
+the fork above — **`executing-plans`** for a solo build, **`team-implement`** for a parallel one.
