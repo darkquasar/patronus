@@ -20,6 +20,7 @@ import (
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/plugin"
+	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/scan"
@@ -284,6 +285,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	var sectionRows []recordedSection
 	appendPath := map[string]bool{} // paths reconciled per-section, not whole-file
 	installedArtifacts := map[string]bool{}
+	installedRecipes := map[string]bool{} // recipe items whose MERGE rows need a computed source
 	for _, dir := range []string{inv.Home, inv.ProjectDir} {
 		if dir == "" {
 			continue
@@ -295,6 +297,9 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		for _, it := range s.Items {
 			if isArtifact[it.Artifact] {
 				installedArtifacts[it.Artifact] = true
+			}
+			if catalogHasRecipe(cat, it.Artifact) {
+				installedRecipes[it.Artifact] = true
 			}
 			for _, f := range it.Files {
 				// A FETCH row is a binary Patronus downloaded, not an artifact it
@@ -337,6 +342,21 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	// bytes the catalog source would write there. Pass 1 reads this to tell STALE
 	// from OK. Non-installed artifacts are pass 2's job (and need no source).
 	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, names, warnf)
+
+	// Recipe MERGE rows (MCP entries) are ownable bytes Patronus computes, but
+	// wouldDeploy is artifact-only — so add them here or Pass 1 misreads every
+	// installed MCP recipe as ORPHANED-STATE (pat-4s3f).
+	recNames := make([]string, 0, len(installedRecipes))
+	for name := range installedRecipes {
+		recNames = append(recNames, name)
+	}
+	sort.Strings(recNames)
+	if len(recNames) > 0 {
+		res := toolpath.New(os.LookupEnv, toolpath.HomeDir(os.LookupEnv), wd)
+		for path, w := range recipeMergeSources(cat, adapterMap(adapters), res, recNames, warnf) {
+			would[path] = w
+		}
+	}
 
 	var findings []drift.Finding
 	recorded := map[string]bool{}
@@ -648,6 +668,41 @@ func wouldDeploy(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifes
 		}
 	}
 	return out, sections
+}
+
+// recipeMergeSources computes the would-deploy bytes for each installed recipe's
+// MERGE rows (an MCP entry folded into a tool's own config, e.g. .claude.json).
+// scan's artifact-only wouldDeploy never sees these, so without them a recipe's
+// MERGE row reaches drift.Classify with hasSource=false and is misread as
+// ORPHANED-STATE (pat-4s3f). FETCH/EXEC rows are skipped: a fetched binary has no
+// diffable source (classifyFetch verifies it against its pin) and an EXEC is an
+// advisory Patronus never ran.
+func recipeMergeSources(cat *registry.Catalog, adapters map[string]*manifest.Adapter, res toolpath.Resolver, names []string, warnf func(string, ...any)) map[string]wouldWrite {
+	out := map[string]wouldWrite{}
+	for _, name := range names {
+		rec := findRecipe(cat, name)
+		if rec == nil {
+			continue
+		}
+		diffs, err := recipe.Compute(recipe.Request{
+			Recipe:   rec.Manifest,
+			Adapters: adapters,
+			Resolver: res,
+			Tool:     "all", // every wired tool; per-path dest keys keep tools distinct
+			Scope:    "global",
+			Warnf:    warnf,
+		})
+		if err != nil {
+			warnf("drift: cannot compute recipe %q source: %v", name, err)
+			continue
+		}
+		for _, d := range diffs {
+			if d.Action == diff.Merge {
+				out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
+			}
+		}
+	}
+	return out
 }
 
 // readIfExists returns a file's bytes and whether it is there. An unreadable file

@@ -232,6 +232,32 @@ func serveFixtureFrom(t *testing.T, root string) *servingFetcher {
 // catalog." That is tracked in pat-4s3f and is out of scope here; this test asserts
 // only the byte-consistency property (c) depends on, tolerating the known
 // ORPHANED-STATE row until pat-4s3f lands.
+func TestScanNoDriftOnInstallPathWiredRecipe(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	withRemoteEnv(t, f)
+
+	// Install a fetch+merge recipe: places a binary AND merges an MCP entry into
+	// .claude.json. A clean install must scan with NO drift finding for that entry.
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, e)
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if hasVerdict(out, "ORPHANED-STATE") {
+		t.Errorf("clean install of a wired recipe reported ORPHANED-STATE drift:\n%s", out)
+	}
+}
+
 func TestScanInstallPathWiredRecipeNotUserEdited(t *testing.T) {
 	root := fixtureCatalog(t)
 	outDir := t.TempDir()
@@ -253,8 +279,11 @@ func TestScanInstallPathWiredRecipeNotUserEdited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
-	// The absolute-path bytes are self-consistent: no USER-EDITED / STALE verdict.
-	// (ORPHANED-STATE is the separate pat-4s3f bug and is tolerated here.)
+	// A clean install of a wired recipe is fully in sync — no drift of any kind,
+	// including the ORPHANED-STATE false positive that pat-4s3f fixed.
+	if hasVerdict(out, "ORPHANED-STATE") {
+		t.Errorf("wired recipe reported ORPHANED-STATE (pat-4s3f regression):\n%s", out)
+	}
 	for _, r := range parseDriftRows(out) {
 		if r.verdict == "USER-EDITED" || r.verdict == "STALE" {
 			t.Errorf("install-path-wired config read as a machine-specific false positive: %s at %s\n%s", r.verdict, r.path, out)
