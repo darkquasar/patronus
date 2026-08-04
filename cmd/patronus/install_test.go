@@ -684,3 +684,44 @@ func TestMergeSourcedNamesPlugin(t *testing.T) {
 		t.Fatalf("cat.Plugins = %+v, want one demo-plugin plugin", cat.Plugins)
 	}
 }
+
+// TestInstallWiredRecipeRequiresTarget: a recipe that wires an MCP entry into a
+// runtime (fix-mcp-bin: fetch + MERGE) needs an explicit --target; installing it
+// bare must error rather than silently fanning out to every backend.
+func TestInstallWiredRecipeRequiresTarget(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixMcpURL] = fixMcpTarGz(t)
+	withRemoteEnv(t, f)
+
+	_, _, err := runInstall(t, "fix-mcp-bin", "--global", "--dry-run") // wires an MCP entry
+	if err == nil {
+		t.Fatal("expected error: a wired recipe needs an explicit --target")
+	}
+	if !strings.Contains(err.Error(), "--target is required") {
+		t.Errorf("error should come from the required-target gate, got: %v", err)
+	}
+}
+
+// TestInstallAgnosticRecipeNeedsNoTarget: a binary-only recipe (fix-bin: raw fetch,
+// no wiring row) belongs to no runtime by nature, so it installs with no --target.
+func TestInstallAgnosticRecipeNeedsNoTarget(t *testing.T) {
+	root := fixtureCatalog(t)
+	outDir := t.TempDir()
+	t.Chdir(root)
+	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+	f := serveTree(t, outDir)
+	f.bodies[fixRawURL] = fixRawBinary
+	withRemoteEnv(t, f)
+
+	if _, _, err := runInstall(t, "fix-bin", "--global", "--dry-run"); err != nil {
+		t.Errorf("agnostic binary recipe should install with no --target: %v", err)
+	}
+}

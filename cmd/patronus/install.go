@@ -170,6 +170,20 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 
+			// --target is required for anything that wires into a runtime. A
+			// purely-agnostic item (binary/package-only recipe) may omit it.
+			if tool == "" {
+				var needing []string
+				for _, n := range names {
+					if itemNeedsTarget(cat, n) {
+						needing = append(needing, n)
+					}
+				}
+				if len(needing) > 0 {
+					return fmt.Errorf("--target is required (one of claude|codex|opencode|all) for: %s", strings.Join(needing, ", "))
+				}
+			}
+
 			// For a remote registry, fetch+unpack the selected artifacts' source so
 			// the local adapter path can transform them (no-op for local/recipes).
 			if err := materializeSelected(cmd.Context(), reg, cat, names); err != nil {
@@ -233,7 +247,7 @@ func newInstallCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "target", "all", "target runtime: claude|codex|opencode|all")
+	cmd.Flags().StringVar(&tool, "target", "", "target runtime: claude|codex|opencode|all (required for anything that wires to a runtime)")
 	cmd.Flags().BoolVar(&global, "global", false, "install at global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "install at project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually write changes to disk (default: dry run only)")
@@ -511,15 +525,34 @@ func resolvePluginScope(flag string, p *manifest.Plugin) string {
 	return s
 }
 
-// resolvePluginTools picks which tools to register a plugin on. A specific --tool
-// is used as-is (Compute resolves an unsupported target to an honest no-op). A
-// bare "all"/"" fans out to the plugin's declared Targets, so a plain install
-// registers on every target instead of the zero diffs a single "all" call yields.
+// resolvePluginTools picks which tools to register a plugin on. A specific --target
+// is used as-is (Compute resolves an unsupported target to an honest no-op). Only an
+// explicit "all" fans out to the plugin's declared Targets. An empty flag can now
+// reach here only on an agnostic path (the required-target gate errors first for a
+// plugin), so it registers on nothing.
 func resolvePluginTools(flag string, p *manifest.Plugin) []string {
 	if flag != "" && flag != "all" {
 		return []string{flag}
 	}
-	return p.Targets
+	if flag == "all" {
+		return p.Targets
+	}
+	return nil // no target: nothing to register (gate above already errored for a plugin)
+}
+
+// itemNeedsTarget reports whether installing name produces at least one targeted
+// row — a recipe that wires an MCP/config entry into a runtime (Wire.Method ==
+// merge), or a plugin, or an artifact. Such an item requires an explicit --target.
+// A purely-agnostic recipe (WireExec/WireNone: a binary/package with no per-runtime
+// wiring) does not. An unknown/sourced name is treated as needing a target (fail safe).
+func itemNeedsTarget(cat *registry.Catalog, name string) bool {
+	if rec := findRecipe(cat, name); rec != nil {
+		return rec.Manifest.Wire.Method == manifest.WireMerge
+	}
+	if findPlugin(cat, name) != nil {
+		return true
+	}
+	return true // artifacts + sourced/unknown: require a target
 }
 
 // findRecipe returns the catalog recipe entry with the given name, or nil.

@@ -154,7 +154,7 @@ func newUpdateCmd() *cobra.Command {
 				}
 				sort.Strings(realTools) // deterministic order across runs (map iteration is not)
 				if len(realTools) == 0 {
-					candidates = append(candidates, candidate{name: k.name, scope: k.scope, installed: e.installed, latest: latest})
+					candidates = append(candidates, candidate{name: k.name, tool: recipe.TargetAgnostic, scope: k.scope, installed: e.installed, latest: latest})
 					continue
 				}
 				for _, tl := range realTools {
@@ -265,10 +265,11 @@ func catalogHasRecipe(cat *registry.Catalog, name string) bool {
 // without it, install renders a dry-run plan.
 func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error {
 	args := []string{name}
-	// An empty tool means "all the recipe's wire.tools" (used for an install-only
-	// recipe with no per-tool wiring); the caller has already dropped the
-	// agnostic install row, so a real tool name selects exactly that tool.
-	if tool != "" {
+	// A real tool name selects exactly that runtime. The agnostic install row
+	// (a binary/package-only recipe) has no runtime to wire, so it omits --target
+	// entirely — the required-target gate returns false for it, so the bare install
+	// is allowed. An empty tool likewise means "no runtime wiring".
+	if tool != "" && tool != recipe.TargetAgnostic {
 		args = append(args, "--target", tool)
 	}
 	switch scope {
