@@ -16,6 +16,11 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+// TargetAgnostic marks a deliverable that belongs to NO agent runtime by nature —
+// a fetched binary in ~/.patronus/bin or a global package. It is distinct from an
+// unspecified target (an error at the CLI) and from "all" (every runtime).
+const TargetAgnostic = "agnostic"
+
 // Request is the input to Compute. It mirrors plan.Request's shape for recipes.
 type Request struct {
 	Recipe   *manifest.Recipe
@@ -133,7 +138,7 @@ func installAdvisory(rec *manifest.Recipe, scope string) *diff.FileDiff {
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
-		Tool:     "-", // a package install is tool-agnostic
+		Tool:     TargetAgnostic, // a package install is tool-agnostic
 		Scope:    scope,
 		Note:     "install: " + cmd,
 		Exec:     &diff.ExecSpec{Command: strings.Fields(cmd), Display: cmd, SelfManaged: true, Advisory: true, Candidates: specs},
@@ -207,7 +212,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
-		Tool:     "-", // a binary placement is tool-agnostic
+		Tool:     TargetAgnostic, // a binary placement is tool-agnostic
 		Scope:    "global",
 		Note:     "fetch " + spec.Label,
 		Fetch:    spec,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/state"
 )
@@ -90,7 +91,7 @@ func newUpdateCmd() *cobra.Command {
 			anyInstalled := false
 
 			// A recipe records several state rows (one MERGE per wired tool + a
-			// tool-agnostic "-" install row), so it needs collecting across rows before
+			// tool-agnostic install row), so it needs collecting across rows before
 			// we know which tools to refresh. recipeAgg accumulates the REAL tools a
 			// recipe was installed on plus its recorded version, keyed by identity, so an
 			// update refreshes exactly those tools — honoring "originally installed to",
@@ -123,7 +124,7 @@ func newUpdateCmd() *cobra.Command {
 							recipeAgg[k] = e
 							recipeOrder = append(recipeOrder, k)
 						}
-						e.tools[it.Tool] = true // includes "-" (the tool-agnostic install row)
+						e.tools[it.Tool] = true // includes the agnostic install row
 						if e.installed == "" {
 							e.installed = it.ItemVersion
 						}
@@ -136,10 +137,10 @@ func newUpdateCmd() *cobra.Command {
 				}
 			}
 
-			// Emit one recipe candidate per recorded REAL tool, dropping the "-"
-			// pseudo-tool (its package install rides along with any real tool's
+			// Emit one recipe candidate per recorded REAL tool, dropping the agnostic
+			// install row (its package install rides along with any real tool's
 			// reinstall). A recipe wired on claude+codex refreshes claude and codex, not
-			// opencode. When "-" is the only row (an install-only recipe with no wiring),
+			// opencode. When the agnostic row is the only one (an install-only recipe with no wiring),
 			// keep a single no-tool refresh so the install still runs. Each carries the
 			// recorded + latest version so the normal compare arm drives it.
 			for _, k := range recipeOrder {
@@ -147,7 +148,7 @@ func newUpdateCmd() *cobra.Command {
 				latest := latestVersion(cat, k.name)
 				realTools := make([]string, 0, len(e.tools))
 				for tl := range e.tools {
-					if tl != "-" {
+					if tl != recipe.TargetAgnostic {
 						realTools = append(realTools, tl)
 					}
 				}
@@ -265,8 +266,8 @@ func catalogHasRecipe(cat *registry.Catalog, name string) bool {
 func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error {
 	args := []string{name}
 	// An empty tool means "all the recipe's wire.tools" (used for an install-only
-	// recipe with no per-tool wiring); the caller has already dropped the "-"
-	// tool-agnostic pseudo-tool, so a real tool name selects exactly that tool.
+	// recipe with no per-tool wiring); the caller has already dropped the
+	// agnostic install row, so a real tool name selects exactly that tool.
 	if tool != "" {
 		args = append(args, "--target", tool)
 	}

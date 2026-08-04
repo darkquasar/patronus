@@ -458,8 +458,8 @@ func TestComputeInstallOnly_EmitsAdvisory(t *testing.T) {
 	if d.Exec == nil || !d.Exec.SelfManaged {
 		t.Error("install advisory must be self-managed (Patronus does not auto-run global installs)")
 	}
-	if d.Tool != "-" {
-		t.Errorf("tool = %q, want '-' (a global install is tool-agnostic)", d.Tool)
+	if d.Tool != "agnostic" {
+		t.Errorf("tool = %q, want 'agnostic' (a global install is tool-agnostic)", d.Tool)
 	}
 	// The advisory carries its ordered candidate list so the consent layer can
 	// detect the manager on PATH and run the command.
