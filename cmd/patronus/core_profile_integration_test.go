@@ -23,10 +23,10 @@ func TestScalarSettingRemoveRoundTrips(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install profile: %v\n%s", err, e)
 	}
-	if _, e, err := runInstall(t, "fix-setting", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-setting", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install fix-setting: %v\n%s", err, e)
 	}
 	settings := filepath.Join(home, ".claude", "settings.json")

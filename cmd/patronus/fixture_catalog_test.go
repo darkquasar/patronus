@@ -569,7 +569,7 @@ func TestTamperedArchiveBinaryIsRefetched(t *testing.T) {
 	home := withRemoteEnv(t, f)
 
 	// First install: absent -> FETCH -> verify -> extract -> place. Sound.
-	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-hook", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 	dest := filepath.Join(home, ".patronus", "bin", "fix-archive-bin")
@@ -584,7 +584,7 @@ func TestTamperedArchiveBinaryIsRefetched(t *testing.T) {
 	// Re-install with the binary UNTOUCHED: it is the one we placed -> SKIP, and no
 	// new fetch happens.
 	before := f.hits
-	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-hook", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("re-install: %v\n%s", err, errOut)
 	}
 	if f.hits != before {
@@ -596,7 +596,7 @@ func TestTamperedArchiveBinaryIsRefetched(t *testing.T) {
 	if err := os.WriteFile(dest, []byte("TOTALLY NOT THE REAL BINARY"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, errOut, err := runInstall(t, "fix-hook", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-hook", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install over a tampered binary: %v\n%s", err, errOut)
 	}
 

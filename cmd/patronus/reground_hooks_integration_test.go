@@ -49,7 +49,7 @@ func TestClaudeOnlyHookSkipsOtherTools(t *testing.T) {
 		f := fixtureRegistry(t)
 		home := withRemoteEnv(t, f)
 
-		if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+		if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 			t.Fatalf("install: %v\n%s", err, e)
 		}
 
@@ -84,7 +84,7 @@ func TestClaudeOnlyHookSkipsOtherTools(t *testing.T) {
 			f := fixtureRegistry(t)
 			home := withRemoteEnv(t, f)
 
-			if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", tool, "--global", "--deploy", "--yes"); err != nil {
+			if _, e, err := runInstall(t, "--profile", "fix-all", "--target", tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install on %s: %v\n%s", tool, err, e)
 			}
 			// The claude-only hook's script must NOT be placed: the flavour skipped it.
@@ -108,7 +108,7 @@ func TestPlacedHookScriptRunsAndListsSkills(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 

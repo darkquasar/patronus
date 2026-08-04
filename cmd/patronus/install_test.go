@@ -36,7 +36,7 @@ func TestInstallSkillDryRun(t *testing.T) {
 	// Isolate HOME so --global resolves to an empty sandbox (not the developer's
 	// real ~/.claude, where team-research may already be installed → SKIP not CREATE).
 	t.Setenv("HOME", t.TempDir())
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestInstallSkillDryRun(t *testing.T) {
 }
 
 func TestInstallVerboseShowsDiff(t *testing.T) {
-	out, _, err := runInstall(t, "agent-principles", "--tool", "claude", "--local", "--verbose", "--dry-run")
+	out, _, err := runInstall(t, "agent-principles", "--target", "claude", "--local", "--verbose", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestInstallMutuallyExclusiveScope(t *testing.T) {
 }
 
 func TestInstallProfileCloudflareDryRun(t *testing.T) {
-	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--tool", "claude", "--global", "--dry-run")
+	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("profile install failed: %v\n%s", err, errOut)
 	}
@@ -112,7 +112,7 @@ func TestInstallUnknownArtifact(t *testing.T) {
 
 func TestInstallDefaultIsDryRun(t *testing.T) {
 	// No --deploy, no --dry-run: must be a safe dry run, no error, plan shown.
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global")
 	if err != nil {
 		t.Fatalf("default install should succeed as dry run: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestInstallJSON(t *testing.T) {
 	// since we run the subcommand in isolation here.
 	jsonOutput = true
 	defer func() { jsonOutput = false }()
-	out, _, err := runInstall(t, "team-research", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestInstallJSON(t *testing.T) {
 
 func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 	// github is a remote http MCP recipe: pure MERGE, no fetch.
-	out, _, err := runInstall(t, "github", "--tool", "claude", "--local", "--dry-run")
+	out, _, err := runInstall(t, "github", "--target", "claude", "--local", "--dry-run")
 	if err != nil {
 		t.Fatalf("install github failed: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 
 func TestInstallRecipeFetchDryRun(t *testing.T) {
 	// engram is a github-release recipe: FETCH the binary + MERGE per tool.
-	out, _, err := runInstall(t, "memory-engram", "--tool", "all", "--global", "--dry-run")
+	out, _, err := runInstall(t, "memory-engram", "--target", "all", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install memory-engram failed: %v", err)
 	}

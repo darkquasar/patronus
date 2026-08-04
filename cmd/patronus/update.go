@@ -268,7 +268,7 @@ func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error 
 	// recipe with no per-tool wiring); the caller has already dropped the "-"
 	// tool-agnostic pseudo-tool, so a real tool name selects exactly that tool.
 	if tool != "" {
-		args = append(args, "--tool", tool)
+		args = append(args, "--target", tool)
 	}
 	switch scope {
 	case "global":

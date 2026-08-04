@@ -39,7 +39,7 @@ func TestVisualProfileClaude(t *testing.T) {
 	f := builtRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, errOut, err := runInstall(t, "--profile", "visual", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "--profile", "visual", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 
@@ -82,7 +82,7 @@ func TestVisualProfileClaude(t *testing.T) {
 	}
 
 	// Idempotent re-run.
-	out, _, err := runInstall(t, "--profile", "visual", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "--profile", "visual", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestVisualProfileOutputStyleDivergesForCodexOpencode(t *testing.T) {
 			f := builtRegistry(t)
 			home := withRemoteEnv(t, f)
 
-			if _, errOut, err := runInstall(t, "--profile", "visual", "--tool", tc.tool, "--global", "--deploy", "--yes"); err != nil {
+			if _, errOut, err := runInstall(t, "--profile", "visual", "--target", tc.tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install: %v\n%s", err, errOut)
 			}
 			// No Claude output-styles file for these tools.

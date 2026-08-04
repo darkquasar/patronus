@@ -20,7 +20,7 @@ func TestHooksFoldIntoOneArrayAndRemoveSelectively(t *testing.T) {
 	f := fixtureRegistry(t)
 	home := withRemoteEnv(t, f)
 
-	if _, e, err := runInstall(t, "--profile", "fix-all", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 

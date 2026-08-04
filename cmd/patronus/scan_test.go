@@ -245,7 +245,7 @@ func TestScanNoDriftOnInstallPathWiredRecipe(t *testing.T) {
 
 	// Install a fetch+merge recipe: places a binary AND merges an MCP entry into
 	// .claude.json. A clean install must scan with NO drift finding for that entry.
-	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 
@@ -271,7 +271,7 @@ func TestScanInstallPathWiredRecipeNotUserEdited(t *testing.T) {
 
 	// Install the {installPath}-wired recipe: places the binary AND merges an MCP
 	// entry whose command is the binary's absolute path.
-	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 
@@ -296,7 +296,7 @@ func TestScanReportsDrift(t *testing.T) {
 	home := withRemoteEnv(t, f)
 
 	// Install an artifact so there is a real state row to reconcile against.
-	if _, errOut, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 
@@ -345,7 +345,7 @@ func TestScanReportsCrossScopeShadow(t *testing.T) {
 	home := withRemoteEnv(t, f)
 
 	// Install fix-skill at PROJECT (local) scope only.
-	if _, errOut, err := runInstall(t, "fix-skill", "--tool", "claude", "--local", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-skill", "--target", "claude", "--local", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 
@@ -390,7 +390,7 @@ func TestScanReportsStale(t *testing.T) {
 	f := serveFixtureFrom(t, root)
 	home := withRemoteEnv(t, f)
 
-	if _, errOut, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 	skill := filepath.Join(home, ".claude", "skills", "fix-skill", "SKILL.md")
@@ -473,7 +473,7 @@ func TestScanReportsComposedSectionDrift(t *testing.T) {
 	home := withRemoteEnv(t, f)
 
 	// Both instructions fold into ONE global CLAUDE.md as distinct fenced sections.
-	if _, errOut, err := runInstall(t, "fix-instruction", "fix-instruction-2", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "fix-instruction", "fix-instruction-2", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")

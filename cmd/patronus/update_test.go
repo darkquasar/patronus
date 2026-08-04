@@ -43,7 +43,7 @@ func TestUpdateInstalledItemFollowsNewerVersion(t *testing.T) {
 	}
 
 	// Install the baseline at the global scope.
-	if _, _, err := runInstall(t, "fix-skill", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v", err)
 	}
 	statePath := filepath.Join(home, ".patronus", "state.json")
@@ -134,7 +134,7 @@ func TestUpdateFollowsNewerRecipeVersion(t *testing.T) {
 	}
 
 	// Install the fetch+wire recipe on claude/global (records recipe state rows).
-	if _, e, err := runInstall(t, "fix-mcp-bin", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, e, err := runInstall(t, "fix-mcp-bin", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, e)
 	}
 	statePath := filepath.Join(home, ".patronus", "state.json")

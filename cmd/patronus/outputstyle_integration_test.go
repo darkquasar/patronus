@@ -101,7 +101,7 @@ func TestOutputStyleFlavourInstallClaude(t *testing.T) {
 	}
 
 	// Install the flavoured profile for claude.
-	if _, errOut, err := runInstall(t, "--profile", "smoke", "--tool", "claude", "--global", "--deploy", "--yes"); err != nil {
+	if _, errOut, err := runInstall(t, "--profile", "smoke", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 	stylePath := filepath.Join(home, ".claude", "output-styles", "smoke-style.md")
@@ -127,7 +127,7 @@ func TestOutputStyleFlavourInstallClaude(t *testing.T) {
 	}
 
 	// Idempotent re-run → SKIP.
-	out, _, err := runInstall(t, "--profile", "smoke", "--tool", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "--profile", "smoke", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestOutputStyleFlavourInstallClaude(t *testing.T) {
 	}
 
 	// lock pins the claude-flavoured resolution.
-	if _, _, err := runLock(t, "--profile", "smoke", "--tool", "claude"); err != nil {
+	if _, _, err := runLock(t, "--profile", "smoke", "--target", "claude"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
@@ -168,7 +168,7 @@ func TestOutputStyleFlavourAppendsForCodexAndOpencode(t *testing.T) {
 		t.Run(tc.tool, func(t *testing.T) {
 			_, home := serveSmokeFixture(t)
 
-			if _, errOut, err := runInstall(t, "--profile", "smoke", "--tool", tc.tool, "--global", "--deploy", "--yes"); err != nil {
+			if _, errOut, err := runInstall(t, "--profile", "smoke", "--target", tc.tool, "--global", "--deploy", "--yes"); err != nil {
 				t.Fatalf("install: %v\n%s", err, errOut)
 			}
 
@@ -190,7 +190,7 @@ func TestOutputStyleFlavourAppendsForCodexAndOpencode(t *testing.T) {
 			}
 
 			// Idempotent re-run → SKIP.
-			out, _, err := runInstall(t, "--profile", "smoke", "--tool", tc.tool, "--global", "--dry-run")
+			out, _, err := runInstall(t, "--profile", "smoke", "--target", tc.tool, "--global", "--dry-run")
 			if err != nil {
 				t.Fatal(err)
 			}

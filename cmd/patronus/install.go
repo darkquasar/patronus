@@ -233,7 +233,7 @@ func newInstallCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "tool", "all", "target tool: claude|codex|opencode|all")
+	cmd.Flags().StringVar(&tool, "target", "all", "target runtime: claude|codex|opencode|all")
 	cmd.Flags().BoolVar(&global, "global", false, "install at global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "install at project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually write changes to disk (default: dry run only)")

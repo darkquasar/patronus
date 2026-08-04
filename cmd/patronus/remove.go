@@ -161,7 +161,7 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "tool", "", "limit to a target tool: claude|codex|opencode (default: all)")
+	cmd.Flags().StringVar(&tool, "target", "", "limit to a target runtime: claude|codex|opencode (default: all)")
 	cmd.Flags().BoolVar(&global, "global", false, "limit to global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "limit to project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually undo the changes on disk (default: dry run only)")
