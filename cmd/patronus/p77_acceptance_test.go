@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/darkquasar/patronus/internal/state"
 )
 
 // P7.7 — the consolidated §6b acceptance gate. The per-sub-phase suites already
@@ -114,5 +116,52 @@ func TestFetchWireRecipeRemoveRestoresConfig(t *testing.T) {
 	}
 	if findUnder(t, home, "fix-mcp-bin") {
 		t.Errorf("the MCP entry should be gone after remove (config under %s)", home)
+	}
+}
+
+// TestGlobalDeployWritesStateAndRemoveRoundTrips is the regression guard for issue
+// #17: a real --global --deploy once populated the tool's config but wrote NO
+// ~/.patronus/state.json (a HOME-resolution mismatch between where files landed and
+// where state was written), so every global install was un-removable. The bug is
+// fixed — recordState runs on the deploy path under the same resolved HOME — but no
+// test pinned the guarantee; the sibling round-trip above asserts the config reverts,
+// never that the state file exists. This asserts BOTH: state.json is written under the
+// SAME HOME the artifact landed in, records the item, and then remove round-trips.
+func TestGlobalDeployWritesStateAndRemoveRoundTrips(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	if _, e, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, e)
+	}
+
+	// The artifact landed under this HOME.
+	skillPath := filepath.Join(home, ".claude", "skills", "fix-skill", "SKILL.md")
+	if _, err := os.Stat(skillPath); err != nil {
+		t.Fatalf("precondition: skill not written under %s: %v", home, err)
+	}
+
+	// The state file exists under the SAME HOME (issue #17's core assertion) and
+	// records the installed item — without it, remove has nothing to revert.
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	s, err := state.Load(statePath)
+	if err != nil {
+		t.Fatalf("global --deploy wrote no state at %s (issue #17): %v", statePath, err)
+	}
+	if len(s.Find("fix-skill", "claude", "global")) == 0 {
+		t.Errorf("state.json does not record fix-skill@claude/global:\n%+v", s.Items)
+	}
+
+	// remove --global round-trips: the recorded state lets it find and delete the item.
+	if _, e, err := execRemove(t, "fix-skill", "--global", "--deploy"); err != nil {
+		t.Fatalf("remove --global failed (state not usable): %v\n%s", err, e)
+	}
+	if _, err := os.Stat(skillPath); !os.IsNotExist(err) {
+		t.Errorf("skill should be deleted after remove, stat err = %v", err)
+	}
+	if s2, err := state.Load(statePath); err == nil {
+		if len(s2.Find("fix-skill", "claude", "global")) != 0 {
+			t.Errorf("state should no longer record fix-skill after remove:\n%+v", s2.Items)
+		}
 	}
 }
