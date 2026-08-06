@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: run-patronus
+description: "Build, run, and smoke-test the Patronus CLI itself — install/scan/remove/profile against a sandboxed HOME, plus the CI guards. Ships driver.sh, which redirects HOME so a real --deploy never touches the caller's config. A skill: loads on relevance (running or testing this repo's binary) via description dispatch."
+version: 1.0.0
+entry: SKILL.md
+files: [driver.sh]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project

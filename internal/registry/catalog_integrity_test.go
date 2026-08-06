@@ -141,6 +141,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"ai-memory-post-tool-use": {manifest.TypeHook, manifest.RoleMemory},
 		"ai-memory-pre-compact":   {manifest.TypeHook, manifest.RoleMemory},
 		"ai-memory-stop":          {manifest.TypeHook, manifest.RoleMemory},
+		// Self-hosted dev skill: builds and smoke-drives this repo's own CLI
+		// against a sandboxed HOME. Ships driver.sh under files:; no requires
+		// edge (it needs only the Go toolchain the checkout already assumes).
+		"run-patronus": {manifest.TypeSkill, manifest.RoleCapability},
 	}
 	if len(cat.Artifacts) != len(wantArtifacts) {
 		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
