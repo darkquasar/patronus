@@ -4,7 +4,7 @@ type: hook
 role: guardrail
 name: gitleaks-guard
 description: "Scans the STAGED diff for secrets at commit time and blocks the commit on a finding — a PreToolUse Bash hook that runs gitleaks only when the command is a `git commit` (its design altitude). Requires the gitleaks binary (installed by the `gitleaks` recipe). Covers committing-a-secret; it does not stop reading-and-leaking one."
-version: 1.0.2
+version: 1.0.3
 entry: ""
 files: [gitleaks-guard.sh]
 targets: [claude, codex, opencode]
