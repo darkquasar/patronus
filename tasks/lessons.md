@@ -234,3 +234,56 @@ survives.
 - This overrode a standing ADR. When you reverse a documented decision, AMEND the ADR
   in place with a dated supersedes-note (we amended ADR-0002 point 6), so the next reader
   inherits the corrected decision, not two contradictory ones.
+
+---
+
+## L6 — "Contradiction" in the repo can be two claims TRUE-AT-DIFFERENT-TIMES. Date the ground truth.
+
+**2026-08-08 · from `07-codex-parity`**
+
+The whole hook stream hinged on an apparent contradiction: `adapters/codex.yaml` said
+"Codex ships Claude-style lifecycle hooks (on by default)"; the hook *artifacts* said
+"Codex/OpenCode have no wired hook surface." One looked wrong.
+
+**Neither was wrong.** Codex shipped a first-class hook mechanism ~2026-08-06/07
+(`rust-v0.147.0`) — *days* before the research. The artifact's "no hook surface" was
+**true when written**; the adapter comment became true more recently. The repo held two
+honest snapshots of a moving external dependency.
+
+This is a distinct failure mode from [[L1]] (a claim diverged from the artifact it
+describes). Here both claims matched reality **at their write time**; the divergence is
+between the repo and the *world*, and it is a function of **time**, not of a stale
+mirror. Live web verification (the user chose "verify live") is what surfaced it — a
+repo-only stream would have picked one claim and been 50/50.
+
+**How to apply:** when two in-repo statements about an *external tool's capabilities*
+conflict, don't just pick one — **date them and check the world.** A capability claim
+about a fast-moving dep (codex here, days-old + churning) has a shelf life; treat it as
+"true as of <commit date>", pin the external version, and re-verify at wiring time.
+Record the version you verified against in the findings, so the next reader knows the
+"as-of."
+
+---
+
+## L7 — For pure-research fan-out, PULL-by-reading is the reliable channel — and it worked here.
+
+**2026-08-08 · from `07-codex-parity`, refines [[L2b]]**
+
+Four read-only `Explore` researchers, each told to (a) return findings as its final
+message AND (b) write a `*-findings.md` file. Outcome, in contrast to L2b's n=7 all-fail:
+three pushed a substantive summary message; the fourth (`researcher-degrade`) sent only
+an idle notification — no summary. The lead did NOT treat idle as done: it checked
+`TaskList` (saw #17 `completed`), then **read the findings file directly** (per [[L1]]),
+and the full 236-line document was there.
+
+**What worked:** the two-channel design (message + file) meant the one silent agent's work
+was still recoverable by PULL. Every findings file existed and was complete;
+`ls`+`wc -l` before synthesis confirmed all four (919 lines total) before trusting any.
+
+**How to apply:** keep [[L2b]]'s rule — **give every member a lead-fetchable artifact and
+go read it; never wait to be pushed.** An idle notification is not a deliverable; verify
+the file. But note the positive: with the artifact channel in place, read-only fan-out
+here was net-positive (4 independent streams, no cross-contamination, all delivered) —
+L2b's "inline is often better" corollary is about *coordination/retrieval cost*, which
+stayed low here because streams were cleanly separable and the lead pulled rather than
+polled.
