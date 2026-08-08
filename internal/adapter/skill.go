@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -126,10 +127,19 @@ func (e *Engine) copyTree(srcRoot, dstRoot, tool, scope, role string, ph skillPl
 		if err != nil {
 			return err
 		}
+		// Carry the source's executable bit so a sidecar the skill drives (a
+		// driver.sh an agent is told to run) installs runnable. The repo is the
+		// single source of truth for the mode; a non-executable file keeps Mode 0
+		// and lands at apply's 0644 default (pat-cmiz).
+		var mode fs.FileMode
+		if info, err := d.Info(); err == nil && info.Mode()&0o111 != 0 {
+			mode = 0o755
+		}
 		diffs = append(diffs, diff.FileDiff{
 			Path:   filepath.Join(dstRoot, rel),
 			Action: diff.Create,
 			After:  ph.apply(content),
+			Mode:   mode,
 			Tool:   tool,
 			Scope:  scope,
 			Role:   role,
