@@ -223,6 +223,53 @@ func TestTransformSkillNonUTF8FileUntouched(t *testing.T) {
 	}
 }
 
+// TestTransformSkillPreservesExecBit: a sidecar under files: that is executable at
+// source installs 0755, and a non-executable sibling stays at the default (Mode 0).
+// The mode is carried from the source file so the repo is the single source of truth
+// for it — a driver.sh an agent is told to run must be runnable directly (pat-cmiz).
+func TestTransformSkillPreservesExecBit(t *testing.T) {
+	src := t.TempDir()
+	mustWrite(t, filepath.Join(src, "SKILL.md"), "x")
+	if err := os.MkdirAll(filepath.Join(src, "scripts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// An executable driver and a non-executable data file, side by side.
+	if err := os.WriteFile(filepath.Join(src, "scripts", "driver.sh"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "scripts", "data.txt"), []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "s"}, Type: manifest.TypeSkill, Entry: "SKILL.md", Files: []string{"scripts/"}}
+
+	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawDriver, sawData bool
+	for _, d := range diffs {
+		switch filepath.Base(d.Path) {
+		case "driver.sh":
+			sawDriver = true
+			if d.Mode != 0o755 {
+				t.Errorf("driver.sh mode = %o, want 0755 (executable sidecar)", d.Mode)
+			}
+		case "data.txt":
+			sawData = true
+			if d.Mode != 0 {
+				t.Errorf("data.txt mode = %o, want 0 (non-exec keeps the default)", d.Mode)
+			}
+		}
+	}
+	if !sawDriver || !sawData {
+		t.Fatalf("expected both sidecar diffs (driver.sh=%v data.txt=%v)", sawDriver, sawData)
+	}
+}
+
 // TestTransformSkillPlaceholdersIdempotent: transforming twice yields identical bytes,
 // so a re-install is a no-op rather than a compounding rewrite.
 func TestTransformSkillPlaceholdersIdempotent(t *testing.T) {
