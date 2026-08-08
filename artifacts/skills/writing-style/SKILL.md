@@ -11,11 +11,13 @@ description: >
   WHENEVER the user asks to "review this draft", "critique my writing", "check this against my
   style", "does this follow my rules", "edit this prose", "clean up this text", "make this sound
   like me", or pastes a paragraph/doc/email/message and asks how to improve the writing. The rules are split into
-  two tiers by scope: ALWAYS-ON mechanics (em-dashes, quote punctuation; on nearly
-  everything) and MEANING-LED PROSE (deciding meaning before sound, grounding abstractions, keeping
-  the actor and consequence visible, scaling claims to evidence, using contrast only to close a real
-  interpretive branch, connective tissue that names a real relationship, explaining in the positive,
-  and cutting AI-slop puffery and filler; on anything that carries reasoning or teaches). Do NOT use it to change code logic, to lint code style, or as a
+  three tiers by scope: UNGATED anti-AI-slop phrasings (puffery, vogue words, trailing participle
+  summaries, filler transitions; on all prose regardless of length), ALWAYS-ON mechanics (em-dashes,
+  quote punctuation; on nearly everything) and MEANING-LED PROSE (deciding meaning before sound,
+  grounding abstractions, keeping the actor and consequence visible, scaling claims to evidence,
+  using contrast only to close a real interpretive branch, connective tissue that names a real
+  relationship, explaining in the positive; live whenever a reader will judge the prose or act on its
+  claims, length notwithstanding). Do NOT use it to change code logic, to lint code style, or as a
   general writing-from-scratch generator; it governs how prose reads, not what it says.
 ---
 
@@ -26,9 +28,11 @@ invoke on a draft, and **any task that produces prose**, which consults it so th
 there from the first draft. CLAUDE.md points here as a soft enforcer, so the always-on rules below
 should reach everything, even when this skill is not explicitly invoked.
 
-The rules come in two tiers, and the tier decides *when* a rule applies: Tier 1 mechanics on nearly
-everything, Tier 2 meaning-led prose on anything that carries reasoning or teaches. Getting the tier
-right is the whole point: a rule fired in the wrong context is as bad as a rule missed.
+The rules come in three tiers, and the tier decides *when* a rule applies: Tier 0 anti-slop
+phrasings on all prose, ungated; Tier 1 mechanics on nearly everything; Tier 2 meaning-led prose
+whenever a reader will judge the writing or act on its claims. Getting the tier right is the whole
+point: a rule fired in the wrong context is as bad as a rule missed. Tiers 0 and 1 need no judgment
+about scope, which is why they hold the rules that must never be skipped.
 
 These rules are diagnostic tools, not a machine for producing prose. They tell you where to look and
 what to weigh. The last rule of Tier 2 is that any of them may be broken when breaking it serves the
@@ -37,19 +41,68 @@ exactly the lifeless writing it is meant to prevent.
 
 ## When each tier applies
 
+**Tier 0, anti-slop phrasings.** Ungated. Every piece of prose with a reader, at any length, in any
+tier. There is no writing that is improved by reading as though a machine produced it.
+
 **Tier 1, always-on mechanics.** These govern the mechanics of a sentence. They apply to nearly
 everything with a reader: lessons, docs, emails, Slack messages, PR descriptions, commit bodies,
 this file itself. The only writing they skip is where the mechanics genuinely do not matter, such
 as throwaway scratch notes or machine-read output. When in doubt, apply them.
 
-**Tier 2, meaning-led prose.** These govern how prose carries reasoning. They apply to any
-substantial writing that makes a case, explains something, or teaches: design docs, architecture
-writeups, PR descriptions, emails, proposals, longer messages, and every lesson or topic
-explanation. They do not apply to a one-line reply, a status ping, or a code comment, where there is
-no argument to articulate. This tier also holds the anti-AI-slop layer (the phrasings that make
-writing read as machine-generated) and the teaching-specific guidance (how to explain a concept from
-its own frame). Read the user's intent: if they lean toward wanting understanding or a written
-artifact, Tier 2 is live.
+**Tier 2, meaning-led prose.** These govern how prose carries reasoning. **Tier 2 is live whenever
+the prose has a reader who will judge it, or carries a claim that reader will act on. Length is not
+the test.** A 60-word job application answer, a PR description, a Slack message arguing for a
+decision, a two-sentence answer to "why did you pick this approach": all Tier 2. So are the obvious
+cases, the design docs, architecture writeups, proposals, emails, and every lesson or topic
+explanation.
+
+The tier is off only where there is no argument to articulate: a status ping, a one-line factual
+answer, a code comment, a commit subject line. That is the whole exception list. **When in doubt,
+Tier 2 is live**, because short and high-stakes is exactly where these rules earn the most, and it
+is the case a length test gets wrong.
+
+This tier also holds the teaching-specific guidance (how to explain a concept from its own frame).
+The anti-slop catalogue is Tier 0, and applies whether or not this tier is live.
+
+---
+
+## Tier 0: phrasings that read as machine-generated
+
+Ungated. This catalogue applies to every piece of prose with a reader, whatever the tier, whatever
+the length. Not writing like a machine is closer to mechanics than to reasoning, and there is no
+context where a reader benefits from `delve` or a trailing `..., underscoring the shift`. Where the
+rest of the guide asks for judgment about scope, this asks for none.
+
+Treat each entry as a prompt to stop and look at the sentence, not as a banned-word list; any of
+these can be right in the rare case where it performs thought rather than importance. Each points at
+the Tier 2 rule that explains why it fails, and those rules are worth reading when the tier is live.
+
+- **Significance puffery:** `stands as`, `is a testament to`, `a pivotal moment`, `marks a shift`,
+  `leaves an indelible mark`, `plays a vital role`, `rich tapestry`, `vibrant`. Inflates importance
+  with no evidence under it (see rule 15).
+- **Elaborate copulas dodging "is":** `serves as`, `boasts`, `features`, `represents` where `is`
+  would say it straight. `The gallery serves as the exhibition space` is just `The gallery is the
+  exhibition space`.
+- **Trailing participle summaries:** a vague impact clause bolted to the end of a sentence, such as
+  `..., highlighting its importance`, `..., underscoring the shift`, `..., reflecting broader
+  trends`, `..., ensuring success`. It performs analysis without adding a fact (see rule 7).
+- **Editorializing throat-clearing:** `it is important to note`, `it is worth noting`, `it should be
+  remembered`, `notably`. Usually deletable with no loss.
+- **Ceremonial transitions:** `Moreover`, `Furthermore`, `Additionally` stacked as filler, or `In
+  today's ever-evolving landscape`. Keep only when they name a real relationship (see rule 11).
+- **Vague attribution and weasel wording:** `Industry reports suggest`, `Observers have noted`,
+  `Experts argue`, `it is widely regarded as`. Name the source or drop the claim.
+- **Summary restatement:** `In summary`, `Overall`, `In conclusion` followed by the opening sentence
+  in grander words. A close should add a consequence, not re-announce the topic.
+- **Vogue words:** `delve`, `tapestry`, `landscape`, `realm`, `underscore`, `showcase`, `navigate the
+  complexities`, `unlock`, `leverage`. Reach for the plain verb instead.
+- **Rule-of-three padding:** triads assembled for cadence, such as `identity, authenticity, and
+  belonging`, where one exact term would carry the meaning.
+- **Negative parallelism:** `not only X, but also Y`, `not a mirror but a portal`. Covered by rule 8.
+- **Manufactured rhythm pivots:** a three-or-four-word sentence dropped in to fake a turn in the
+  argument, such as `That changes the work.`, `That is the point.`, `And it works.` A short sentence
+  should land a conclusion the preceding sentences actually earned (rule 18); these announce a pivot
+  the paragraph never makes.
 
 ---
 
@@ -533,35 +586,6 @@ technical language, long sentences, and familiar expressions deliberately rather
 either direction. The rules earn their keep as questions to ask, and they stop earning it the moment
 they become a checklist you obey without reading the sentence.
 
-### Phrasings that read as machine-generated
-
-A scannable catalogue of the tells the rules above are meant to catch. Treat each as a prompt to
-stop and look at the sentence, not as a banned-word list; any of these can be right in the rare case
-where it performs thought rather than importance.
-
-- **Significance puffery:** `stands as`, `is a testament to`, `a pivotal moment`, `marks a shift`,
-  `leaves an indelible mark`, `plays a vital role`, `rich tapestry`, `vibrant`. Inflates importance
-  with no evidence under it (see rule 15).
-- **Elaborate copulas dodging "is":** `serves as`, `boasts`, `features`, `represents` where `is`
-  would say it straight. `The gallery serves as the exhibition space` is just `The gallery is the
-  exhibition space`.
-- **Trailing participle summaries:** a vague impact clause bolted to the end of a sentence, such as
-  `..., highlighting its importance`, `..., underscoring the shift`, `..., reflecting broader
-  trends`, `..., ensuring success`. It performs analysis without adding a fact (see rule 7).
-- **Editorializing throat-clearing:** `it is important to note`, `it is worth noting`, `it should be
-  remembered`, `notably`. Usually deletable with no loss.
-- **Ceremonial transitions:** `Moreover`, `Furthermore`, `Additionally` stacked as filler, or `In
-  today's ever-evolving landscape`. Keep only when they name a real relationship (see rule 11).
-- **Vague attribution and weasel wording:** `Industry reports suggest`, `Observers have noted`,
-  `Experts argue`, `it is widely regarded as`. Name the source or drop the claim.
-- **Summary restatement:** `In summary`, `Overall`, `In conclusion` followed by the opening sentence
-  in grander words. A close should add a consequence, not re-announce the topic.
-- **Vogue words:** `delve`, `tapestry`, `landscape`, `realm`, `underscore`, `showcase`, `navigate the
-  complexities`, `unlock`, `leverage`. Reach for the plain verb instead.
-- **Rule-of-three padding:** triads assembled for cadence, such as `identity, authenticity, and
-  belonging`, where one exact term would carry the meaning.
-- **Negative parallelism:** `not only X, but also Y`, `not a mirror but a portal`. Covered by rule 8.
-
 ### The five-function test
 
 To protect real connective tissue while cutting filler, do not ask only whether a phrase adds a
@@ -605,9 +629,9 @@ the inflated version only pretended to be.
 When invoked to review a draft (not to write from scratch), work through it against the applicable
 tiers and return targeted edits, not a rewrite of the whole thing:
 
-1. **Decide the tiers in scope.** Tier 1 always applies. If the draft carries reasoning or teaches
-   (a doc, an email, a proposal, a lesson, a longer message), Tier 2 applies too. A one-line reply or
-   status update is Tier 1 only.
+1. **Decide the tiers in scope.** Tiers 0 and 1 always apply. Tier 2 applies unless the draft is a
+   status ping, a one-line factual answer, or a code comment. Length does not decide it: a 60-word
+   job application answer is Tier 2, because a reader will judge it. When in doubt, Tier 2 is live.
 2. **Scan for each rule in order.** For every hit, quote the offending span, name the rule, and give
    the fix inline. Concrete beats abstract: show the rewritten sentence, and where a rule offers two
    honest repairs (rule 15), show which one fits and why.
@@ -630,9 +654,14 @@ the reasoning behind it, and worked examples (a Don't/Do pair, or a short before
 commentary that says what each example demonstrates.** The reasoning and the commentary matter most:
 a rule with its why gets applied intelligently in cases the examples never covered, while a bare
 imperative gets misfired or ignored. The examples are not decoration; they are how the model learns
-the judgment the rule is pointing at. Assign the rule by scope: Tier 1 if it governs sentence
-mechanics that hold everywhere, Tier 2 if it governs how prose carries reasoning or teaches. A rule
-that fits neither cleanly earns a new tier of its own.
+the judgment the rule is pointing at. Assign the rule by scope: Tier 0 if it names a phrasing that
+is wrong at any length in any context, Tier 1 if it governs sentence mechanics that hold everywhere,
+Tier 2 if it governs how prose carries reasoning or teaches. A rule that fits none cleanly earns a
+new tier of its own.
+
+Tier 0 entries are the shortest to add and the cheapest to apply, so prefer them when a rule really
+is unconditional. A correction of the form "this specific phrasing reads as AI" belongs there, not
+buried in a Tier 2 rule where a scope judgment can skip it.
 
 ---
 
