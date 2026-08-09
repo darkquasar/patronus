@@ -226,7 +226,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L4 context recipes (live docs + local semantic search) — wire-only MCP.
 		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"serena":   {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		// Codex as an MCP server: a second model reachable as a tool. Standalone
+		// by design, bound to no profile, because it presumes a working codex CLI
+		// with credentials Patronus cannot supply.
+		"codex-mcp": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"serena":    {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L5 tool recipes (opt-in) — all wire-only MCP (npx/uvx on demand, or hosted).
 		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},

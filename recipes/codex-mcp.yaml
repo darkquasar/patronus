@@ -1,0 +1,31 @@
+apiVersion: patronus/v2
+family: recipe
+name: codex-mcp
+version: 1.0.0
+role: context                      # L4 — Context / Knowledge (a second model, reachable as a tool)
+summary: "Codex as an MCP server (stdio) — exposes the `codex` and `codex-reply` tools, so an agent can hand work to a model from another family and continue the same thread. Requires the Codex CLI already installed and logged in."
+upstream: github.com/openai/codex
+license: Apache-2.0
+
+# The Codex CLI ships the server (`codex mcp-server`), so there is NOTHING to
+# download and NO deliver block: install is a single stdio-MCP config MERGE.
+# Shape (computed) = wire-only.
+#
+# Deliberately NOT bound to a profile. It is a cross-model escape hatch that
+# only pays off where a second opinion is wanted (writing-like-me's voice pass
+# is one caller, not the only one), and it presumes a working `codex` on PATH
+# with credentials this recipe cannot supply. Install it by name:
+#
+#     patronus install codex-mcp --target claude --deploy
+#
+# `tools:` omits codex itself: pointing the Codex CLI at its own MCP server
+# would have it call itself.
+wire:
+  method: merge
+  actor: patronus
+  mcp:
+    transport: stdio
+    command: codex
+    args:
+      - "mcp-server"
+  tools: [claude, opencode]
