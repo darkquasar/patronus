@@ -120,8 +120,12 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// stanza inlines the two tier-1 mechanics (core.instructions). The
 		// pointer keeps its own name: renaming it would rewrite the user's
 		// global CLAUDE.md wiring, a wider blast radius than the skill rename.
+		// writing-like-me composes those tiers with a private voice corpus; it
+		// is opt-in via the `writing` profile, never core, because it ships
+		// empty exemplar files and does nothing until a corpus exists.
 		"writing-editorial":     {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
+		"writing-like-me":       {manifest.TypeSkill, manifest.RoleCapability},
 		// L2 notebook-authoring cluster, chained by requires: and wired by the
 		// visual profile. generate-notebooks owns the uv edge (it owns
 		// bootstrap_env.sh); marimo-visual-explanation owns the mermaid-cli edge;

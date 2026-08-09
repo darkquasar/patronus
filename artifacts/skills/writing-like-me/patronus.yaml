@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-like-me
+description: "Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft (or over a faceless base draft it composes), then a voice pass in which a Claude subagent and a second model from a different family each apply your exemplar corpus independently, then merges the two and shows you where they disagreed. Use when the user asks to 'make this sound like me', 'write this in my voice', or 'draft this the way I would'. Ships with EMPTY exemplar files: it is useless until you supply a corpus at ~/.claude/patronus/voice/."
+version: 1.0.0
+entry: SKILL.md
+files: [short-form.md, long-form.md, weights.md]
+targets: [claude]   # Claude-flavoured: orchestrates subagents and shells out to `codex exec`. Codex/opencode parity is a separate stream, following the team-research precedent.
+defaults:
+  scope: project
+requires: [writing-editorial]
