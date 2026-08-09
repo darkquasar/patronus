@@ -8,8 +8,6 @@ matter, such as throwaway scratch notes or machine-read output. When in doubt, a
 
 ## tier-1.1 Avoid em-dashes; use them very sparingly
 
-*(rule 1 in the single-file guide)*
-
 The em-dash (`—`) is a crutch that papers over a sentence that has not decided what it is. Almost
 every em-dash is better as a comma, a pair of parentheses, a colon, or a full stop. Reach for those
 first. Keep an em-dash only on the rare occasion where nothing else carries the same break, and even
@@ -30,8 +28,6 @@ such structure to hide.
 
 ## tier-1.2 Keep punctuation outside closing quotation marks
 
-*(rule 2 in the single-file guide)*
-
 Put commas and full stops *after* the closing quote, not inside it, so the quoted text stays exactly
 what was said and the punctuation belongs to your sentence.
 
@@ -43,7 +39,8 @@ what was said and the punctuation belongs to your sentence.
 
 ## tier-1.3 Rewrite the mirrored swap in the positive
 
-*(the split-sentence, joined, and countdown forms of what tier-3.8 treats at length)*
+This catches the joined, adjacent, and countdown shapes everywhere. tier-3.8 treats the same
+judgment at length, for contrast generally, and the two share one test.
 
 A negation paired with its mirrored replacement is the single most commonly identified machine
 writing tell. It sits in tier-1 because it needs catching everywhere, including the short punchy
@@ -187,3 +184,6 @@ Every one of these is a staged reveal. Each is rewritten in the positive.
 
 The positive version names the mechanism the mirror only gestured at, which is what the rewrite is
 for. Where a live correction survives steps 2 and 3, keep it and state it as plainly as possible.
+
+Worked cases for every branch of this algorithm, including the pair that resolves oppositely on the
+same candidate sentence, are in `{skillDir}/tier-1-fixtures.md`.
