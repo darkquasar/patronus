@@ -1,7 +1,10 @@
 # tier-0: phrasings that read as machine-generated
 
 **Gate:** ungated. Every piece of prose with a reader, at any length, in any register.
-**Operation:** subtract only. This pass removes; it never restructures and never adds.
+**Operation:** local. Work span by span, cutting the offending phrasing or replacing it with a plain
+one. Rewording a flagged span is in scope, including when the plain version needs words the original
+did not have. Restructuring the piece is not: no reordered paragraphs, no added argument, no
+material the author never had.
 **Emits:** edits only. No PRESERVE list.
 
 There is no writing that is improved by reading as though a machine produced it. Where the rest of

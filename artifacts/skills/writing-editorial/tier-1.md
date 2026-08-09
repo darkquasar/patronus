@@ -3,7 +3,11 @@
 **Gate:** nearly everything with a reader. Lessons, docs, emails, Slack messages, PR descriptions,
 commit bodies, this file itself. The only writing they skip is where the mechanics genuinely do not
 matter, such as throwaway scratch notes or machine-read output. When in doubt, apply them.
-**Operation:** subtract only. This pass removes and repairs; it never restructures and never adds.
+**Operation:** local. Repair the offending span in place. A repair may need words the original did
+not have: rewriting a mirrored swap in the positive names the mechanism the mirror only gestured at,
+which is the whole point of the fix. What stays out of scope is the piece itself: no reordered
+paragraphs, no added argument, no claim the author did not make. Aim for the smallest edit that
+clears the violation and leaves the meaning intact.
 **Emits:** edits only. No PRESERVE list.
 
 ## tier-1.1 Avoid em-dashes; use them very sparingly

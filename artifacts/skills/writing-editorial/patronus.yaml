@@ -10,3 +10,8 @@ files: [tier-0.md, tier-1.md, tier-1-fixtures.md, tier-2.md, tier-3.md]
 targets: [claude, codex, opencode]
 defaults:
   scope: project
+attribution:
+  upstream: github.com/conorbronsdon/avoid-ai-writing
+  license: MIT
+  copyright: "Copyright (c) 2026 Conor Bronsdon"
+  note: "tier-2 extracts rules and patterns, not prose: the 1A/1B word-tier split and its band structure, the load-bearing hyphen and construction carve-outs, the never-inject list and its provenance rule, and the burstiness framing. Word tables are re-authored and trimmed against tier-0. tier-2.1's trope catalogue is built from ossa-ma's 'AI Writing Tropes to Avoid' (tropes.fyi), whose Avoid: specimens are quoted as observed examples. Authored and assembled for Patronus by Diego Perez (@darkquasar). No source prose is reproduced wholesale."
