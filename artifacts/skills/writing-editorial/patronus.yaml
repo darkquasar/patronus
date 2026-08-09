@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-editorial
+description: "The house writing style, and the editorial review that applies it, as four tier files applied in sequence. Use when COMPOSING any prose a reader will see (notebook and .ipynb/marimo cells, docstrings and module headers, READMEs, design docs, ADRs, PR descriptions, commit bodies, application answers, long-form explanations) so the style is there from the first draft. Short prose counts: the tiers are gated by stakes, not by length. Also use on demand to review a draft: 'critique my writing', 'check this against my style', 'clean up this text'. Tier 0 strips machine phrasings, tier 1 fixes mechanics, tier 2 removes machine tells and protects the author's voice, tier 3 works on meaning and movement. Governs how prose reads, not what it claims; not a code linter."
+version: 2.0.0
+entry: SKILL.md
+files: [tier-0.md, tier-1.md, tier-2.md, tier-3.md]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project

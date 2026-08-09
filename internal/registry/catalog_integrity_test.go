@@ -117,8 +117,10 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
 		// The house writing style, split by how it is consulted: an invocable
 		// editorial review (core.capabilities) and an always-on pointer whose
-		// stanza inlines the two Tier-1 mechanics (core.instructions).
-		"writing-style":         {manifest.TypeSkill, manifest.RoleCapability},
+		// stanza inlines the two tier-1 mechanics (core.instructions). The
+		// pointer keeps its own name: renaming it would rewrite the user's
+		// global CLAUDE.md wiring, a wider blast radius than the skill rename.
+		"writing-editorial":     {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// L2 notebook-authoring cluster, chained by requires: and wired by the
 		// visual profile. generate-notebooks owns the uv edge (it owns

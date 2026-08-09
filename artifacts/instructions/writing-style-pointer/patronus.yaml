@@ -8,13 +8,13 @@ pointer:
     House style, always on: avoid em-dashes (prefer a comma, parentheses, a colon, or a full stop;
     headings are exempt), and keep commas and full stops OUTSIDE closing quotation marks (`the
     "fail-closed" flag`, not `"fail-closed."`). For prose that reasons or teaches, load the
-    writing-style skill.
+    writing-editorial skill.
 role: instruction
 name: writing-style-pointer
-description: "Always-on pointer to the house writing style. Inlines the two always-on mechanics (em-dashes, quote punctuation) so they reach every Slack message and commit body, and points at the writing-style skill for the meaning-led prose rules that govern anything carrying reasoning."
-version: 1.0.0
+description: "Always-on pointer to the house writing style. Inlines the two always-on mechanics (em-dashes, quote punctuation) so they reach every Slack message and commit body, and points at the writing-editorial skill for the meaning-led prose rules that govern anything carrying reasoning."
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:
   scope: project
-requires: [writing-style]
+requires: [writing-editorial]
