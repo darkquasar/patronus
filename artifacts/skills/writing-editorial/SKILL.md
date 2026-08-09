@@ -182,19 +182,19 @@ tier of its own.
 For the human maintaining this guide, not for the model applying it. These are the sources the rules
 were distilled from, kept here so the provenance is not lost.
 
-- **Wikipedia, "Signs of AI writing"** — the catalogue of machine-generated tells behind the
+- Wikipedia, "Signs of AI writing": the catalogue of machine-generated tells behind the
   puffery, participle-summary, weasel-attribution, and vogue-word entries in tier-0.
   <https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing>
-- **George Orwell, "Politics and the English Language"** — the source of the meaning-and-precision,
+- George Orwell, "Politics and the English Language": the source of the meaning-and-precision,
   connective-tissue, and image-rhythm-voice principles in tier-3, including the rule to break any
   rule when it serves the meaning.
   <https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/>
-- **The Gods of good narrative** — the working name for the third source, on positive-first
+- The Gods of good narrative: the working name for the third source, on positive-first
   exposition and using contrast only to close a live interpretive branch.
-- **ossa-ma, "AI Writing Tropes to Avoid"** (tropes.fyi) — 33 tropes across word choice, sentence
+- ossa-ma, "AI Writing Tropes to Avoid" (tropes.fyi): 33 tropes across word choice, sentence
   structure, paragraph structure, tone, formatting, and composition. Source of the mirrored-swap
   characterization and the cluster-density principle in tier-2.
-- **conorbronsdon, "Avoid AI Writing"**, MIT licensed — source of the 1A/1B word-tier split, the
+- conorbronsdon, "Avoid AI Writing", MIT licensed: source of the 1A/1B word-tier split, the
   split-sentence negation shape, the never-inject list and its provenance rule, and the burstiness
   framing.
 

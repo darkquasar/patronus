@@ -56,8 +56,8 @@ person upgrading: it leads with what will behave differently on their machine.
   The corpus lives outside every artifact payload (override the location with
   `$PATRONUS_VOICE_DIR`), so no upgrade can prompt about it, skip it, or overwrite it.
   With no corpus the pipeline runs the editorial tiers only and says so. `codex` is
-  optional: if it is missing, fails, or hangs past 180 seconds, the run continues on the
-  Claude draft and names what happened.
+  optional and is reached over MCP (`codex mcp-server`): if it is not registered, errors,
+  or times out, the run continues on the Claude draft and names what happened.
 
 ### Security
 

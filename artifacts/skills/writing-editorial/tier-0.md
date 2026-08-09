@@ -17,9 +17,9 @@ the tier-3 rule that explains why it fails, and those rules are worth reading wh
 - Significance puffery: `stands as`, `is a testament to`, `a pivotal moment`, `marks a shift`,
   `leaves an indelible mark`, `plays a vital role`, `rich tapestry`, `vibrant`. Inflates importance
   with no evidence under it (tier-3.15).
-- Elaborate copulas dodging "is": `serves as`, `boasts`, `features`, `represents` where `is`
-  would say it straight. `The gallery serves as the exhibition space` is just `The gallery is the
-  exhibition space`.
+- Elaborate copulas dodging "is": `represents` where `is` would say it straight. `The initiative
+  represents a shift` is just `The initiative is a shift`. The rest of this family (`serves as`,
+  `boasts`, `features`) is wordiness rather than a machine tell, so tier-2's clarity band owns it.
 - Trailing participle summaries: a vague impact clause bolted to the end of a sentence, such as
   `..., highlighting its importance`, `..., underscoring the shift`, `..., reflecting broader
   trends`, `..., ensuring success`. It performs analysis without adding a fact (tier-3.7).
@@ -31,8 +31,9 @@ the tier-3 rule that explains why it fails, and those rules are worth reading wh
   `Experts argue`, `it is widely regarded as`. Name the source or drop the claim.
 - Summary restatement: `In summary`, `Overall`, `In conclusion` followed by the opening sentence
   in grander words. A close should add a consequence, not re-announce the topic.
-- Vogue words: `delve`, `tapestry`, `landscape`, `realm`, `underscore`, `showcase`, `navigate the
-  complexities`, `unlock`, `leverage`. Reach for the plain verb instead.
+- Vogue words: `delve`, `tapestry`, `landscape`, `realm`, `underscore`, `showcase`, `unlock`,
+  `leverage`. Reach for the plain verb instead. The bare verb `navigate` and the noun `complexities`
+  are tier-2 entries, gated by clustering; only fixed phrasings belong here.
 - Rule-of-three padding: triads assembled for cadence, such as `identity, authenticity, and
   belonging`, where one exact term would carry the meaning.
 - Negative parallelism: `not only X, but also Y`, `not a mirror but a portal`. Detected and

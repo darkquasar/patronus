@@ -86,13 +86,15 @@ syntax.
                no mirrored replacement -> out of scope, stop.
                inside a quotation      -> out of scope, stop.
 
-  2. FUNCTION  is the misreading LIVE? All three must hold:
-                 (a) a reader here would plausibly hold the
-                     negated belief;
+  2. FUNCTION  is the misreading LIVE? All three must hold.
+               Every one is judged against the prose BEFORE the
+               candidate, never against the candidate itself:
+                 (a) arriving at this point, a reader would
+                     plausibly hold the negated belief;
                  (b) holding it would change what they do or
                      understand next;
-                 (c) the positive claim does not already
-                     exclude it.
+                 (c) the preceding prose has not already
+                     excluded that belief.
 
                any fails -> STAGED REVEAL. Rewrite positive.
                             Always. No budget applies; there is
@@ -107,6 +109,14 @@ syntax.
 ```
 
 Step 1 is mechanical. Step 2 is this rule's single judgment, in its only form. Step 3 is a count.
+
+**(a) and (c) ask different questions, and the difference is where the belief comes from.** (a) asks
+whether the reader arrives already holding it, from the topic, the genre, or ordinary expectation,
+with nothing in this piece having raised it. (c) asks whether this piece has already dealt with it
+in so many words. A belief the piece never mentioned can fail (a) because nobody would hold it, and
+a belief the piece stated plainly two sentences ago fails (c) even though a reader would once have
+held it. When both fail, say so: a candidate may fail more than one condition, and one failure is
+enough to make it a staged reveal.
 
 **The budget governs live corrections only, and it is one retained live correction per piece.** A
 staged reveal is never spent from the budget; it is always rewritten. Counting a staged reveal

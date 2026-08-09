@@ -196,8 +196,8 @@ Four bands. The band decides what a hit means, which is what makes the list usab
 | unpack / unpacking | explain, break down, walk through |
 | bustling | busy, active |
 | intricate / intricacies | complex, detailed (or name the complexity) |
-| ever-evolving | changing, growing (or describe how) |
 | enduring | lasting, long-running (or cite how long) |
+| ever-evolving | changing, growing (or describe how) |
 | daunting | hard, difficult, challenging |
 | holistic / holistically | complete, full, whole |
 | actionable | practical, useful, concrete |

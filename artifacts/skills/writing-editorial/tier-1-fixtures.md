@@ -21,7 +21,7 @@ All nine resolve at step 2. None consumes the budget.
     **It's not bold. It's backwards.**
     STEP 2 -> staged reveal. Fails (a): no reader was holding
     "bold" as a belief to correct; it was introduced to be knocked
-    down. Rewrite: "The redesign reverts three years of layout work."
+    down. Rewrite: "The redesign reverts three years of layout work".
 
 2.  The tube runs directly into the stomach.
     **Feeding isn't nutrition. It's dialysis.**
@@ -71,14 +71,14 @@ lead-in differs, and the verdicts differ because of it.
     **The service is not synchronous. It is asynchronous.**
     STEP 3 -> LIVE CORRECTION. (a) the lead-in invited exactly the
     synchronous reading; (b) it changes how they write the calling
-    code; (c) the positive claim does not already exclude it.
+    code; (c) nothing before the candidate had excluded it.
     Kept, if it is the first live correction in the piece.
 
 11. Every call returns a promise.
     **The service is not synchronous. It is asynchronous.**
     STEP 2 -> staged reveal. Fails (c) ALONE: "returns a promise"
     already excludes the synchronous reading, so the negation
-    corrects nobody. Rewrite: "The service is asynchronous."
+    corrects nobody. Rewrite: "The service is asynchronous".
 ```
 
 ## Each condition failing alone
@@ -87,13 +87,16 @@ So a bug in any single condition is caught rather than masked by another.
 
 ```
 12. FAILS (a) ONLY.
-    The parser has always been recursive-descent, as the module
-    header says and every call site shows.
-    **The parser is not table-driven. It is recursive-descent.**
-    (b) holds: knowing which it is changes how you extend it.
-    (c) holds: nothing prior excluded "table-driven" in so many words.
-    (a) fails: no reader here plausibly held that belief.
-    -> staged reveal. Rewrite: "The parser is recursive-descent."
+    The build now runs on the vendored toolchain.
+    **The parser is not hand-rolled. It is generated.**
+    (b) holds: knowing which it is changes whether you edit the
+    grammar or the source.
+    (c) holds: the toolchain sentence says nothing either way
+    about how the parser was produced.
+    (a) fails: nothing has raised the question, and a reader
+    arriving here holds no belief about it to correct. The
+    negated half was introduced so it could be knocked down.
+    -> staged reveal. Rewrite: "The parser is generated".
 
 13. FAILS (b) ONLY.
     The logo sat in the top-left corner for years.
@@ -101,16 +104,20 @@ So a bug in any single condition is caught rather than masked by another.
     (a) holds: a reader could easily have believed navy.
     (c) holds: nothing already excluded navy.
     (b) fails: nothing the reader does or understands next changes.
-    -> staged reveal. Rewrite: "The mark is midnight blue."
+    -> staged reveal. Rewrite: "The mark is midnight blue".
 
 14. FAILS (c) ONLY.
-    Every write goes through the append-only log, and nothing in the
-    system ever overwrites a record in place.
+    Every write appends a new version to the log, and the previous
+    version stays readable at its own offset.
     **Updates are not destructive. They append a new version.**
-    (a) holds: destructive update is the common assumption.
+    (a) holds: destructive update is what a reader brings to any
+    store, from every database they have used before.
     (b) holds: it changes how you reason about recovery.
-    (c) fails: "nothing ever overwrites in place" already closed it.
-    -> staged reveal. Rewrite: "Each update appends a new version."
+    (c) fails: the lead-in already said, in so many words, that the
+    previous version survives. The belief was live on arrival and is
+    closed by the time the candidate speaks, so the negation
+    corrects nobody.
+    -> staged reveal. Rewrite: "Each update appends a new version".
 ```
 
 ## `not X but Y because Z`, resolving in opposite directions
@@ -135,7 +142,8 @@ So a bug in any single condition is caught rather than masked by another.
 
 ```
 17. TWO LIVE CORRECTIONS IN ONE PIECE.
-    The deploy script waits for the health check to go green.
+    The health check posts its result to the dashboard, where the
+    release manager reviews it before signing off.
     **The gate is not advisory. It blocks the rollout.**
     Downstream, the retry wrapper reads as belt-and-braces.
     **The retries are not redundant. They are the only thing
@@ -148,23 +156,26 @@ So a bug in any single condition is caught rather than masked by another.
     delete the wrapper, and nothing prior excluded it. It is
     rewritten positive anyway, because the budget is one RETAINED
     live correction per piece: "The retries are the only thing
-    covering the broker's at-most-once delivery."
+    covering the broker's at-most-once delivery".
     This is the case that shows the budget binds a passing
     candidate, not merely a failing one.
 
 18. ONE STAGED REVEAL PLUS ONE LIVE CORRECTION.
     The migration ran clean on staging last Thursday.
     **This isn't a schema change. It's a data change.**
-    Nothing in the runbook mentions the backfill.
+    Rolling back is a one-line command that repoints the alias at
+    the previous snapshot.
     **The rollback is not instant. It replays four hours of
     write-ahead log.**
     FIRST -> step 2, staged reveal. Fails (a): no reader was
     holding "schema change" as a belief; it was introduced to be
     knocked down. Rewritten positive: "The migration rewrites
-    every row in place." It never reaches step 3, so it does NOT
+    every row in place". It never reaches step 3, so it does NOT
     consume the budget.
-    SECOND -> step 3, LIVE CORRECTION, kept. The budget is still
-    unspent when it arrives.
+    SECOND -> step 3, LIVE CORRECTION, kept. (a) the one-line
+    command invited exactly the instant-rollback reading; (b) it
+    changes whether you plan a maintenance window; (c) nothing
+    prior closed it. The budget is still unspent when it arrives.
     This is the case that distinguishes a correct budget from one
     that counts both classes. A budget that counted the reveal
     would wrongly rewrite the correction.

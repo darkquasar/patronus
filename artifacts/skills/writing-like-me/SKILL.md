@@ -23,10 +23,10 @@ freely, so the voice pass works on prose whose surface problems are already gone
        v  clean, de-slopped draft + PRESERVE list
        |
   [2] +------------------------+        +--------------------------+
-      | Claude subagent        |        | codex exec               |
-      | fresh context          |        | --sandbox read-only      |
-      | genre exemplars        |        | --skip-git-repo-check    |
-      | + weights.md           |        | same context             |
+      | Claude subagent        |        | codex over MCP           |
+      | fresh context          |        | sandbox: read-only       |
+      | genre exemplars        |        | same context             |
+      | + weights.md           |        | codex-reply to refine    |
       | + PRESERVE + original  |        |                          |
       +------------------------+        +--------------------------+
        |                                 |
@@ -127,68 +127,44 @@ A fresh subagent, with the five context items above.
 
 ### The codex side
 
-**The draft is arbitrary user prose, so it never goes into a shell string.** Two rules, both
-load-bearing:
-
-- **Prompt and draft reach codex via files or stdin, never as an interpolated argument.** The
-  instruction names paths; the content is read from disk. This removes quoting, backtick, newline,
-  and command-length failure modes at once.
-- **The invocation is an argument array**, never a composed shell line.
+Reach codex over MCP, not by driving its CLI. Codex ships an MCP server on stdio:
 
 ```
-codex exec --sandbox read-only --skip-git-repo-check
-           <instruction naming the paths of: draft, exemplars,
-            weights, preserve list, original>
+codex mcp-server
 ```
 
-**Output envelope.** Codex returns its draft between two fixed delimiters, each alone on its own
-line:
+Register it once as an MCP server named `codex`, then call its tools. It exposes two:
 
-```
-<<<VOICED-DRAFT
-...the draft...
-VOICED-DRAFT>>>
-```
+| Tool | Use |
+|---|---|
+| `codex` | start a session. Required argument: `prompt`. Useful optional arguments: `sandbox`, `cwd`, `model`, `base-instructions` |
+| `codex-reply` | continue that session, with `threadId` and the next `prompt` |
 
-Anything outside the pair is commentary and is discarded. The parsing rules, so producer and consumer
-implement the same format:
+Call `codex` with `sandbox: "read-only"`, and with `prompt` naming the paths of the draft,
+exemplars, weights, PRESERVE list, and original. Codex reads them from disk itself.
 
-- the **first** opening delimiter and the **first** closing delimiter after it bound the draft. Any
-  later pair is commentary and is ignored;
-- delimiters count only when alone on a line, so the tokens may appear inside prose without breaking
-  the envelope;
-- **unparseable** means precisely: no opening delimiter, no closing delimiter after an opening one,
-  or nothing but whitespace between them.
+**The draft never goes into a shell string, and over MCP it never goes into an argv either.** The
+prompt is a JSON string field, so quoting, backticks, newlines, and command-length limits stop being
+failure modes: the transport carries arbitrary bytes without escaping. Passing paths rather than
+pasted content keeps the prompt small and lets codex read exactly what stage 2 wrote.
 
-**Timeout.** Bound the call at **180 seconds** by default, overridable via `PATRONUS_CODEX_TIMEOUT`.
-The default sits well above the time a typical voice pass takes; it exists to bound a hang rather
-than to cut off slow work.
+**The transport owns the timeout and the process.** The MCP client bounds the call, returns a typed
+error on expiry, and manages the server process, so this file specifies no signals, no reaping, and
+no fallback timer. Where the host lets you set a per-call timeout, allow around three minutes: a
+voice pass over a long draft is slower than a typical tool call.
 
-Impose the bound with the shell's own timer, so the guarantee does not depend on this agent noticing
-the expiry:
+**The result is the reply, not a delimited region of stdout.** An MCP tool call returns structured
+content, so there is no envelope to agree on and nothing to parse out of console chatter. Take the
+returned text as the voiced draft. Where codex returns commentary alongside it, ask for the draft
+alone via `codex-reply` rather than guessing which span is the draft.
 
-```bash
-timeout -k 5 "${PATRONUS_CODEX_TIMEOUT:-180}" codex exec --sandbox read-only --skip-git-repo-check ...
-```
+`codex-reply` is what makes this better than a one-shot call. If the first pass drifts from the
+corpus, over-corrects, or flattens a PRESERVE span, continue the same thread and say so, instead of
+restarting with a longer prompt.
 
-`timeout` sends `SIGTERM` at expiry and `SIGKILL` 5 seconds later, and the shell reaps the child.
-That is the contract delegated to a tool that actually holds it. Do not hand-roll the two signals: an
-agent driving a foreground command through a tool that manages its own process lifecycle cannot
-reliably send a delayed second signal or reap anything, so a prose instruction to do so would
-describe a guarantee nothing enforces. **Where `timeout` is unavailable** (it is GNU coreutils, so it
-is absent on a stock macOS without `coreutils` installed, where it is `gtimeout`), fall back to
-`gtimeout`, and where neither exists, run the call unbounded, say so in the output, and treat a hang
-as the degrade path below.
-
-The override is validated so it cannot defeat the bound it configures. Accept a value only when it
-parses as a **whole number of seconds within 10 to 900**. Anything else (empty, non-numeric, zero,
-negative, fractional, or out of range) is **rejected with a warning naming the offending value, and
-the 180s default applies**. There is no unbounded setting: the call is always bounded, and the only
-question is by what.
-
-**Degrade, never block.** If `codex` is absent from PATH, exits non-zero, times out, or returns an
-unparseable envelope, continue with the Claude draft alone and say which of those happened, naming
-the exit status or the timeout. The cross-model stage is an optional check, not a dependency.
+**Degrade, never block.** If the codex MCP server is not registered, the call errors, or it times
+out, continue with the Claude draft alone and say which of those happened, naming the error. The
+cross-model stage is an optional check, not a dependency.
 
 **Why a second model rather than a second Claude.** Same-family judges are biased toward
 low-perplexity text, and low perplexity is the signature of generic machine prose, so a same-family
@@ -199,11 +175,11 @@ nearly all the available benefit; a larger panel does not.
 
 **The main agent merges**, not a third subagent. Produce three things:
 
-1. **The merged draft.** One version, taking the stronger choice at each point of divergence.
-2. **The disagreements, verbatim.** Where the two drafts diverged materially, show both versions.
+1. The merged draft: one version, taking the stronger choice at each point of divergence.
+2. The disagreements, verbatim. Where the two drafts diverged materially, show both versions.
    Disagreement goes to the human rather than to a vote: with two voters there is no majority, and
    the disagreements are the most informative output of the stage.
-3. **Two to four threadable variations.** Concrete alternatives the user can splice in, each named
+3. Two to four threadable variations, concrete alternatives the user can splice in, each named
    for what it changes: open on the concrete case rather than the claim; keep or drop a hedge; add or
    remove a coined term; hand off at the ending rather than summarizing.
 
@@ -211,11 +187,11 @@ Report any PRESERVE entry that either model overrode, with the reason it gave.
 
 ## Known limits, stated rather than hidden
 
-- **Register mismatch.** Informal-register imitation verifies far less reliably than formal
+- Register mismatch. Informal-register imitation verifies far less reliably than formal
   registers. This skill will serve a design doc or a PR description better than the short-form
   register a personal corpus is most likely made of.
-- **Style strength and content preservation trade off** against each other. They are competing
+- Style strength and content preservation trade off against each other. They are competing
   objectives, not a tuning failure. This pipeline picks a point on that curve by putting
   content-shaping first and voice second.
-- **Scrubbing a widely circulated word list is itself becoming detectable**, which is a reason the
+- Scrubbing a widely circulated word list is itself becoming detectable, which is a reason the
   editorial tiers lean on structural rules rather than on lexical substitution alone.
