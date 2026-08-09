@@ -16,3 +16,4 @@ summary: "Prose environment: the house editorial style as four sequenced tier fi
 layers:
   capabilities:
     - writing-editorial                    # the four sequenced tier files + the editorial review that applies them
+    - writing-like-me@claude               # the voice pipeline (requires: writing-editorial); Claude-only, so @claude → no-op on codex/opencode
