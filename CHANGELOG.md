@@ -5,6 +5,60 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ## Unreleased
 
+### Breaking
+
+- **`writing-style` is now `writing-editorial` (v2.0.0), and the old skill is left on
+  your machine.** The guide is split from one 38KB file into a short router plus four
+  tier files applied in sequence: `tier-0.md` (machine phrasings, ungated), `tier-1.md`
+  (mechanics, plus a new rule catching the mirrored-swap negation everywhere),
+  `tier-2.md` (machine tells, word tiers, and the PRESERVE list that protects your
+  voice), and `tier-3.md` (meaning and movement, the only pass allowed to restructure).
+
+  **You need to remove the old skill by hand.** A rename changes the artifact's
+  identity, so Patronus treats the new name as an install and never learns that the old
+  one is now an orphan: `install` acts only on the names you ask for, and state rows are
+  keyed by artifact name, so the `writing-style/` directory and its state row both
+  survive. Leaving it there means two loadable writing skills, and the stale one carries
+  the weaker rule set.
+
+  ```sh
+  patronus scan                            # shows writing-style as ORPHANED-STATE
+  patronus remove writing-style            # dry run, inspect what it will undo
+  patronus remove writing-style --deploy   # actually remove it
+  ```
+
+  Omit `--target` to cover every tool you installed it for; both scope state files are
+  consulted by default. If you edited the installed skill, the drift check skips it and
+  you need `--force`.
+
+  The instruction pointer **keeps its name**, `writing-style-pointer`, so your global
+  CLAUDE.md wiring at `~/.claude/patronus/instructions/` is untouched. Only its
+  description and its dependency edge changed.
+
+### Added
+
+- **`writing-like-me`, a voice pipeline, in the new opt-in `writing` profile.** It runs
+  the `writing-editorial` tiers over a draft, then has a Claude subagent and `codex`
+  each apply your own writing corpus independently, then merges the two and shows you
+  verbatim where they disagreed.
+
+  It ships with **empty** exemplar files on purpose, so your corpus never enters the
+  public catalogue, and it does nothing useful until you supply one:
+
+  ```sh
+  mkdir -p ~/.claude/patronus/voice
+  # paste whole pieces, not excerpts
+  $EDITOR ~/.claude/patronus/voice/short-form.md
+  $EDITOR ~/.claude/patronus/voice/long-form.md
+  patronus install --profile writing --target claude --deploy
+  ```
+
+  The corpus lives outside every artifact payload (override the location with
+  `$PATRONUS_VOICE_DIR`), so no upgrade can prompt about it, skip it, or overwrite it.
+  With no corpus the pipeline runs the editorial tiers only and says so. `codex` is
+  optional: if it is missing, fails, or hangs past 180 seconds, the run continues on the
+  Claude draft and names what happened.
+
 ### Security
 
 - **Archive-delivered binaries are now verified on every run, not just the first.**
