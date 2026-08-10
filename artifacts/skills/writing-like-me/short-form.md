@@ -12,3 +12,8 @@ these paths, first hit wins:
 Neither is created for you, and neither is ever written by the installer, so a reinstall cannot touch
 what you put there. Paste whole pieces rather than excerpts: the pass draws on rhythm and paragraph
 movement, which an excerpt loses.
+
+The length band names what these pieces ARE, not what they can be applied to. This pool supplies a
+voice, and a voice projects onto any length: rhythm, diction, and how a paragraph turns are the same
+whether the finished piece runs 200 words or 4000. The pipeline reads those from here and takes
+length, scope, and structure from the draft it was given.

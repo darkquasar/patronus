@@ -25,7 +25,7 @@ freely, so the voice pass works on prose whose surface problems are already gone
   [2] +------------------------+        +--------------------------+
       | Claude subagent        |        | codex over MCP           |
       | fresh context          |        | sandbox: read-only       |
-      | genre exemplars        |        | same context             |
+      | exemplars: voice only  |        | same context             |
       | + weights.md           |        | codex-reply to refine    |
       | + PRESERVE + ledger    |        |                          |
       | + original             |        |                          |
@@ -87,7 +87,7 @@ and 3 anyway. Do not go hunting for the skill across agent layouts.
 Both models receive exactly the same six context items:
 
 1. the cleaned draft from stage 1;
-2. the genre-matched exemplar pool (below);
+2. the exemplar pool, and what to read from it versus take from the draft (below);
 3. `{skillDir}/weights.md`;
 4. the **PRESERVE list**;
 5. the **contrast ledger**;
@@ -113,9 +113,43 @@ most tempting, because mirrored shapes read as punchy and voice work rewards pun
 `remaining: 0`, voice the draft in the positive. Displacing the retained correction is allowed with
 a stated reason; adding a second is not.
 
+### What the corpus is for
+
+**The corpus supplies a voice, never a format.** This is the distinction the whole stage turns on,
+and getting it backwards produces the most common failure: a long draft chopped into the shape of
+the exemplars, so a design doc comes back reading like a thread of posts.
+
+Two things live in any exemplar, and they travel differently:
+
+| Read from the corpus | Take from the draft |
+|---|---|
+| sentence rhythm and the length spread within a paragraph | how long the finished piece is |
+| diction, register, and the words this author reaches for | what the piece has to cover |
+| how a paragraph opens, turns, and lands | how many paragraphs there are |
+| punctuation habits, contractions, spelling conventions | the section structure and headings |
+| stance: hedged or blunt, first person or impersonal | the order of the argument |
+| the moves, such as a concrete case before the claim | the scope of each section |
+
+The left column is the voice and it projects onto any length. The right column belongs to the piece
+you were given, and the voice pass has no business changing it.
+
+**A corpus of short pieces still teaches long-form voice.** Rhythm is a property of consecutive
+sentences, not of a word count, so it is fully present in a 120-word post and it scales without
+distortion. What a short corpus cannot teach is long-form architecture: how this author sustains an
+argument over ten paragraphs, when they summarize, how they hand off between sections. Take that
+from the draft and from tier-3's work, which already settled it.
+
+Concretely, when the corpus is short-form and the target is long:
+
+- **project** the sentence-level habits across every paragraph of the long piece;
+- **do not** shorten paragraphs toward the exemplar length;
+- **do not** add the punchy one-line turns that suit a post and read as manufactured rhythm at
+  length, which is the tier-2.3 anti-rule;
+- **do not** cut material to reach a post-sized piece. The draft's coverage is fixed.
+
 ### Corpus resolution
 
-Pick the pool by target genre, then resolve it. First hit wins:
+Resolve the pool for the target form. First hit wins:
 
 1. `$PATRONUS_VOICE_DIR/<genre>.md`, when the environment variable is set;
 2. `~/.claude/patronus/voice/<genre>.md`, the default user-owned location;
@@ -127,13 +161,13 @@ user act, and upgrades stay incapable of touching it.
 
 | State | Behaviour |
 |---|---|
-| Target pool has exemplars | draw from it; name the file and how many pieces it drew |
-| Target pool empty, other pool populated | **ask before falling back**; if accepted, say explicitly that short-form exemplars are priming long-form output (or the reverse), which is known-lossy |
+| Matching pool has exemplars | draw from it; name the file and how many pieces it drew |
+| Only the other pool has exemplars | **use it**, and say which pool supplied the voice. Projecting short-form rhythm onto a long piece is a supported path, not a degraded one, so it needs no permission. Apply the projection rules above and say you did |
 | Both pools empty | skip the voice stage entirely, run the editorial tiers only, and say the pipeline ran in editorial-only mode |
 | A pool file is unreadable | report the path and the error, treat as empty, do not fail the run |
 
-Genre fallback is never silent. Imitation quality is strongly genre-dependent, so a silent
-substitution produces bad output with no visible cause.
+Say which pool was used either way. Where the pools differ in what they can teach, the reader should
+know which one shaped the output.
 
 ### The Claude side
 
@@ -269,9 +303,15 @@ exemplar count are knowable; the attribution is a claim.
 
 ## Known limits, stated rather than hidden
 
-- Register mismatch. Informal-register imitation verifies far less reliably than formal
-  registers. This skill will serve a design doc or a PR description better than the short-form
-  register a personal corpus is most likely made of.
+- Register mismatch. Informal-register imitation verifies far less reliably than formal registers,
+  so a corpus of casual posts gives weaker signal than one of worked prose. This is about how
+  reliably the voice transfers, not about which lengths are allowed: a short corpus projecting onto
+  a long piece is the supported path, and the constraint is that casual registers are harder to
+  imitate at all.
+- A short corpus cannot teach long-form architecture. Sentence rhythm and diction scale from a
+  120-word post to a 4000-word essay, but how this author sustains an argument across ten
+  paragraphs is not in the corpus to learn. That comes from the draft and from tier-3, and the
+  voice pass leaves it alone.
 - Style strength and content preservation trade off against each other. They are competing
   objectives, not a tuning failure. This pipeline picks a point on that curve by putting
   content-shaping first and voice second.
