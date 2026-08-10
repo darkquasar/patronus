@@ -139,6 +139,32 @@ distortion. What a short corpus cannot teach is long-form architecture: how this
 argument over ten paragraphs, when they summarize, how they hand off between sections. Take that
 from the draft and from tier-3's work, which already settled it.
 
+### Measure the corpus; do not imagine it
+
+**Short-form pieces are not made of short sentences, and assuming they are is the failure mode this
+section exists to stop.** A corpus of posts routinely averages 17 words a sentence with a fifth of
+them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
+reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
+front of it, and it will flatten an author who does not write that way.
+
+So before voicing anything, take the corpus's actual numbers:
+
+```
+- mean and median sentence length
+- the share of sentences past 26 words
+- the longest sentence in the pool
+- paragraph lengths: shortest, typical, longest
+```
+
+Those are the target. Match that distribution in the output, and check the result against it: if the
+draft you produce has a lower mean, fewer long sentences, or a smaller spread than the corpus, you
+have imposed brevity the author did not write. Say what you measured, so the reader can see which
+distribution you were aiming at.
+
+This matters more, not less, when projecting onto a long piece. Sustained argument needs the long
+sentences, and they are the first thing lost when a model treats "short-form corpus" as a licence to
+chop.
+
 Concretely, when the corpus is short-form and the target is long:
 
 - **project** the sentence-level habits across every paragraph of the long piece;
@@ -159,12 +185,19 @@ Create neither the directory nor the files. On a first run with no corpus, print
 you looked for and what to put there, then continue in degraded mode. Corpus setup stays an explicit
 user act, and upgrades stay incapable of touching it.
 
-| State | Behaviour |
-|---|---|
-| Matching pool has exemplars | draw from it; name the file and how many pieces it drew |
-| Only the other pool has exemplars | **use it**, and say which pool supplied the voice. Projecting short-form rhythm onto a long piece is a supported path, not a degraded one, so it needs no permission. Apply the projection rules above and say you did |
-| Both pools empty | skip the voice stage entirely, run the editorial tiers only, and say the pipeline ran in editorial-only mode |
-| A pool file is unreadable | report the path and the error, treat as empty, do not fail the run |
+**The pool matching the target form wins whenever it has exemplars.** Long target with a populated
+`long-form.md` uses `long-form.md`, and the short pool is not consulted, because a pool in the target
+form carries architecture as well as voice. The other pool is used only when the matching one is
+empty, and then it is projected rather than copied.
+
+| Target | long-form.md | short-form.md | Behaviour |
+|---|---|---|---|
+| long | populated | either | **use `long-form.md`.** Matching form, so voice and architecture both come from it |
+| long | empty | populated | **use `short-form.md`, projected.** A supported path, not a degraded one, so it needs no permission. Voice from the corpus, length and structure from the draft |
+| short | either | populated | **use `short-form.md`** |
+| short | populated | empty | **use `long-form.md`, projected.** Same rule in reverse: take rhythm and diction, not the long piece's architecture |
+| any | empty | empty | skip the voice stage, run the editorial tiers only, and say the pipeline ran in editorial-only mode |
+| any | unreadable | unreadable | report the path and the error, treat as empty, do not fail the run |
 
 Say which pool was used either way. Where the pools differ in what they can teach, the reader should
 know which one shaped the output.

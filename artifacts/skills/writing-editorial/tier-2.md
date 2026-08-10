@@ -293,7 +293,9 @@ unverified.
 ```
 TARGET: variance, not a length.
   - sentence lengths should range roughly 3 -> 30+ words
-  - a run where most sentences land 15-25 words reads robotic
+  - uniformity is the fault, not length: a run of same-length
+    sentences reads robotic at any length, and the repair is
+    to widen the spread, never to shorten the run
   - paragraphs: some one sentence, some six or more
   - read-aloud test: if a TTS engine could read it without
     sounding odd, it is too uniform
