@@ -271,9 +271,22 @@ that single reconciled ledger and any reallocation it records.
 
 ## The run trail
 
-Every run writes its own directory under `docs/writing/<slug>/`, where `<slug>` names the piece.
-Whether that path is committed or ignored is the user's call: add it to `.gitignore` for private
-drafting, leave it tracked where the prose is a team deliverable.
+Every run writes its own directory named for the piece. **Where that directory goes depends on
+whether the prose belongs to the project you are standing in**, because a trail is a work product
+about the piece, not about the repository that happened to be open.
+
+| The piece | Trail goes to |
+|---|---|
+| Belongs to this project: its README, an ADR, a design doc, a PR description | `docs/writing/<slug>/` in the repo |
+| Does not belong to it, or there is no repo: an email, a message, a post, a personal essay | a scratch directory outside the repo, and say where |
+
+When it is not obvious which, ask. Getting it wrong in the second direction is the one that stings,
+since it commits private drafting into a project's history, so treat an unclear case as personal and
+keep it out of the tree.
+
+Inside a repo, whether the path is committed or ignored is the user's call: add it to `.gitignore`
+for private drafting, leave it tracked where the prose is a team deliverable. Never edit
+`.gitignore` yourself.
 
 Ask once, at the start:
 
@@ -287,7 +300,7 @@ them a reader has only each stage's own account of what it did, and a stage that
 edit is indistinguishable from one that made none.
 
 ```
-docs/writing/<slug>/
+<trail-root>/<slug>/
   manifest.yaml         always
   EDITS.md              always, per stage
   PRESERVE.md           always

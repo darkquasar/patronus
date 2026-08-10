@@ -353,7 +353,7 @@ Invented specifics earn their own emphasis. A fabricated number, name, or date i
 vague phrasing it replaced, because specificity always reads better. Where a concrete detail is
 missing, flag the gap and leave it.
 
-## tier-2.6 Choose the simplest exact word, not merely the shortest
+## tier-2.6 Choose the exact word, at whatever length it comes
 
 A long or technical word earns its place when it carries a distinction the shorter alternative
 loses. The rule cuts both ways: prefer the plain word when the meaning is identical, and keep the
@@ -367,7 +367,7 @@ precise one when it is not.
 Plainness should never come at the cost of accuracy. The target is the exact word, and sometimes the
 exact word is the longer one.
 
-## tier-2.16 Use metaphor as an instrument of thought, not decoration
+## tier-2.16 Use metaphor as an instrument of thought
 
 Pairs with the dead-metaphor entry in tier-2.1.
 
