@@ -6,7 +6,27 @@ answer, a code comment, a commit subject line.
 **Operation:** compose. This is the only pass permitted to restructure. It may add a concession,
 repair a weak ending, or reorder a paragraph, because those are composition decisions no subtractive
 pass can make.
-**Reads:** the draft **and the PRESERVE list emitted by tier-2**.
+**Reads:** the draft, the **PRESERVE list** emitted by tier-2, and the **contrast ledger** emitted by
+tier-1.
+
+## Read the contrast ledger before composing
+
+This is the only pass that writes new sentences, which makes it the one most likely to spend an
+allowance it never saw. tier-1.3's ledger is scoped to the finished piece, not to that pass:
+
+```
+CONTRAST-LEDGER:
+  retained: "actualization is not resemblance but invention"
+  remaining: 0
+```
+
+With `remaining: 0`, compose in the positive. A staged reveal is rewritten whatever the ledger says,
+and a new live correction is available only by displacing the retained one, with a stated reason.
+Composing fresh prose is not a fresh allowance: the reader sees one finished piece, not the four
+passes that made it.
+
+This binds the comparative form too, so `X rather than merely Y` counts against the ledger exactly
+as `not X but Y` does. tier-3.8 below carries the taxonomy that says when it counts at all.
 
 ## Read the PRESERVE list first
 
@@ -196,11 +216,72 @@ Ornamental:
 > The dashboard is not a mirror but a portal.
 
 Explanatory:
-> The dashboard lets teams intervene in the system rather than merely observe it.
+> The dashboard lets teams change the system it reports on.
 
 The second keeps the actual distinction and drops the staged profundity. A metaphorical contrast
 survives only when both images clarify the concept and the difference between them does real
 explanatory work.
+
+Note what the repair does not do: it does not swap the antithesis for a tidier antithesis. `lets
+teams intervene rather than merely observe` would carry the same mirrored shape in comparative
+clothing, and `merely` is the tell that the second limb was put there to be dismissed. State the
+capability and stop.
+
+### `rather than` and `instead of` are not automatically contrast
+
+Both phrases appear throughout good prose doing work that has nothing to do with antithesis, so
+neither is a banned form. The question is what the second limb is for.
+
+These are prototypes to think with, **not exclusive bins**. A real sentence can sit in several at
+once (`use the transaction API rather than direct writes, because concurrent writers would otherwise
+lose updates` is choice, comparison, and causal explanation together), and the list does not name
+every case: preference, substitution, exception, sequencing, and manner all take the same form. So
+the classification never decides anything on its own. **The three-part live-branch test decides**,
+and these prototypes only tell you whether it is worth running.
+
+| Use | Shape | Verdict |
+|---|---|---|
+| Rhetorical dismissal | opposed predicates about one subject, the second limb put there to be knocked down | **run the live-branch test.** Usually rewrite |
+| Explanatory comparison | two real options weighed, both live for the reader | ordinary prose |
+| Causal attribution | assigns which cause did the work | ordinary prose |
+| Operational choice | tells the reader which action to take | ordinary prose |
+| Boundary setting | names a scope limit the reader would otherwise overstep | ordinary prose |
+
+```
+FIRES     "Desire produces rather than lacks."
+           One subject, two opposed predicates, and the second
+           exists to be knocked down.
+
+ORDINARY  "Most of the saving came from prevention rather than
+           faster recovery."
+           Causal attribution. Names which cause did the work.
+
+ORDINARY  "Email the owner instead of opening another ticket."
+           Operational choice. Tells the reader what to do.
+
+ORDINARY  "Use the plain word rather than the ornate one when
+           they mean the same thing."
+           Explanatory comparison between two live options.
+```
+
+**`merely`, `simply`, and `just` in the second limb are a strong cue, not a verdict.** They often
+mark a limb placed there to be dismissed, which is the staged reveal wearing comparative clothing:
+`generative rather than merely waiting to be realized` fires, and `generative` alone says it. But
+each word has honest senses that carry scope or timing, and those are ordinary prose:
+
+```
+FIRES     "The fix is structural rather than merely cosmetic."
+           `merely` belittles a limb nobody proposed.
+
+ORDINARY  "Notify all maintainers rather than just the admins."
+           `just` marks scope. The narrower set is a real option.
+
+ORDINARY  "Run the check continuously rather than just before a
+           release."
+           `just` marks timing, and both schedules are live.
+```
+
+Treat the cue as a reason to run the test, never as the result of running it.
 
 **Editorial test.** For every contrastive negation, ask what genuine misunderstanding the negated
 half prevents, then ask whether the positive half already prevents it. If no misunderstanding is
@@ -330,7 +411,7 @@ Each sentence inherits and advances: *reduced time* becomes *speed*; *speed* rev
 *inconsistency*; *inconsistency* sets the next priority. That is connective tissue with no padding,
 built from the ideas themselves rather than bolted on between them.
 
-## tier-3.13 Make paragraphs move rather than merely accumulate
+## tier-3.13 Make paragraphs move
 
 A paragraph that works usually has a shape: an anchor, some development, a turn or qualification, and
 a consequence.
@@ -378,9 +459,8 @@ Or, where the larger claim is genuinely warranted, earn it by describing the str
 > The feature changes the starting point of the work: users now begin with an editable draft rather
 > than an empty page.
 
-The second still communicates significance. It does so by showing the structural change rather than
-announcing that the change is significant, which is the difference between a claim a reader can weigh
-and one they are merely asked to accept.
+The second still communicates significance, by showing the structural change. That gives the reader
+a claim they can weigh, instead of one they are asked to accept.
 
 ## Breaking these rules
 

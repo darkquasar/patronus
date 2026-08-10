@@ -8,7 +8,7 @@ not have: rewriting a mirrored swap in the positive names the mechanism the mirr
 which is the whole point of the fix. What stays out of scope is the piece itself: no reordered
 paragraphs, no added argument, no claim the author did not make. Aim for the smallest edit that
 clears the violation and leaves the meaning intact.
-**Emits:** edits only. No PRESERVE list.
+**Emits:** edits, and the **contrast ledger** from tier-1.3. No PRESERVE list; tier-2 owns that.
 
 ## tier-1.1 Avoid em-dashes; use them very sparingly
 
@@ -43,8 +43,8 @@ what was said and the punctuation belongs to your sentence.
 
 ## tier-1.3 Rewrite the mirrored swap in the positive
 
-This catches the joined, adjacent, and countdown shapes everywhere. tier-3.8 treats the same
-judgment at length, for contrast generally, and the two share one test.
+This catches the joined, adjacent, countdown, and comparative shapes everywhere. tier-3.8 treats the
+same judgment at length, for contrast generally, and the two share one test.
 
 A negation paired with its mirrored replacement is the single most commonly identified machine
 writing tell. It sits in tier-1 because it needs catching everywhere, including the short punchy
@@ -63,10 +63,23 @@ This decides **detection**, meaning where to look. It carries no judgment.
 | **Joined** | negation and replacement in one sentence, pivoting on a comma, dash, colon, or semicolon | "This isn't about X, it's about Y." |
 | **Adjacent** | negation and replacement in two consecutive sentences | "It's not bold. It's backwards." |
 | **Countdown** | two or more negations stacked before one reveal | "It's not the price. It's not the features. It's the trust." |
+| **Comparative** | `rather than` or `instead of` coordinating opposed predicates about one subject | "Desire produces rather than lacks." |
 
-Topology alone never decides the verdict. All three are ordinary English constructions. The
+Topology alone never decides the verdict. All four are ordinary English constructions. The
 **adjacent** form is the one most likely to escape a check written for the joined form, because each
 half reads as an innocent declarative.
+
+**The comparative form needs a qualifier, or this rule eats good prose.** `rather than` and
+`instead of` are usually not antithesis at all: they carry causal attribution (`the saving came from
+prevention rather than faster recovery`), operational choice (`email the owner instead of opening a
+ticket`), and ordinary comparison between two live options. The form is a candidate here **only when
+it coordinates opposed predicates about the same subject**, with the second limb functioning as a
+rejected mirror. tier-3.8 carries the prototypes that help you tell those apart. When in doubt, it is
+ordinary prose and this rule does not fire.
+
+`merely`, `simply`, and `just` in the second limb are a strong cue that it was placed there to be
+dismissed, and a reason to run step 2. They are not the verdict: each also carries honest senses of
+scope and timing (`notify all maintainers rather than just the admins`).
 
 ### Axis 2, function: what the negation is for
 
@@ -81,10 +94,14 @@ syntax.
 ### The algorithm
 
 ```
-  1. TOPOLOGY  find a negation with a mirrored replacement,
-               in joined, adjacent, or countdown form.
+  1. TOPOLOGY  find a negation with a mirrored replacement, in
+               joined, adjacent, countdown, or comparative form.
                no mirrored replacement -> out of scope, stop.
                inside a quotation      -> out of scope, stop.
+               comparative form that is attribution, choice,
+               boundary, or ordinary comparison rather than
+               opposed predicates about one subject
+                                       -> out of scope, stop.
 
   2. FUNCTION  is the misreading LIVE? All three must hold.
                Every one is judged against the prose BEFORE the
@@ -125,6 +142,41 @@ rule's purpose.
 
 Step 2 stops the rule firing on the case that earns it. Step 3 stops an earned case from becoming a
 habit.
+
+### The budget is scoped to the finished piece, and it travels
+
+The reader sees the final text, not the pipeline that produced it, so the budget is a property of
+that final text rather than of this pass. Emit it alongside the edits, in the shape below, and it
+becomes binding on every later stage exactly as tier-2's PRESERVE list does:
+
+```
+CONTRAST-LEDGER:
+  retained: "actualization is not resemblance but invention"
+  remaining: 0
+```
+
+The contract for every stage downstream, including a composing pass and any voice pass:
+
+- a staged reveal is **always** rewritten positive, whatever the ledger says. There is nothing to
+  spend on a manufactured foil;
+- one retained live correction survives into the finished piece;
+- rewording or moving the retained correction does not spend again;
+- removing the retained correction empties the slot, and **filling it again is a replacement**, to be
+  disclosed like any other. Deleting first and adding after is the same act as swapping, so it earns
+  the same disclosure rather than escaping it;
+- a later stage may put a **different** live correction in the slot when it judges that one more
+  valuable, and must then say which it displaced and why. Replace only when the retained correction
+  has stopped being live or accurate, or when the new one is materially more consequential. A better
+  cadence is not a reason, or every stage will churn the slot in turn;
+- a stage that composes new sentences is bound by this ledger. Writing fresh prose is not a fresh
+  allowance.
+
+That last point is the one this rule exists to state. Without it, each pass that may compose
+believes it starts from zero, and the finished piece accumulates one antithesis per stage.
+
+Disclosed reallocation is deliberate, and it matches how PRESERVE already works. A hard cap would
+force a stage to keep the first eligible correction even when a later one carries more weight, which
+would make the prose worse in the name of the rule.
 
 ### Trailing explanation is evidence, not the test
 

@@ -32,15 +32,19 @@ one tier without paying for the other three.
      |
      v
  tier-1   mechanics + mirrored swap    nearly everything        LOCAL
-     |
-     v
- tier-2   machine tells + craft        gated on stakes          LOCAL + PROTECT
-     |                                 emits PRESERVE ----------+
-     v                                                          |
- tier-3   meaning + connective tissue  gated on stakes          COMPOSE
-     |    reads PRESERVE, must not flatten those spans <--------+
+     |    emits CONTRAST-LEDGER  ------------------------------+
+     v                                                         |
+ tier-2   machine tells + craft        gated on stakes         | LOCAL + PROTECT
+     |    emits PRESERVE  --------------------------------+    |
+     v                                                    |    |
+ tier-3   meaning + connective tissue  gated on stakes    |    | COMPOSE
+     |    reads PRESERVE, and must not flatten it  <------+    |
+     |    reads the LEDGER, and composes within it  <----------+
      v
  edited draft + change report
+
+Both carry past tier-3 into any voice pass downstream. A stage that writes new
+sentences is bound by the ledger it did not open.
 ```
 
 **An editor works span by span; a composer may restructure.** That is why the local passes run first
@@ -57,7 +61,7 @@ never had. tier-3 is the one pass allowed to reorder, add a concession, or repai
 | Tier | File | Owns | Gate | Operation |
 |---|---|---|---|---|
 | 0 | `{skillDir}/tier-0.md` | machine phrasings, 11 catalogue entries | ungated | local |
-| 1 | `{skillDir}/tier-1.md` | em-dashes, quote punctuation, the mirrored swap | nearly everything | local |
+| 1 | `{skillDir}/tier-1.md` | em-dashes, quote punctuation, the mirrored swap | nearly everything | local, emits ledger |
 | 2 | `{skillDir}/tier-2.md` | tropes, word tiers, variance, what to protect | stakes | local + protect |
 | 3 | `{skillDir}/tier-3.md` | reasoning, movement, bridges | stakes | compose |
 
@@ -107,9 +111,11 @@ re-reads the draft.
 Recommend per-tier when the prose has real stakes (a published post, a PR description, a design doc),
 and single-agent for quick passes. The skill recommends; the user decides.
 
-When run per-tier, each subagent receives the draft as it stands, its own tier file, and, for tier-3,
-the PRESERVE list. It does **not** receive the other tier files, which is what keeps the perspectives
-from poisoning each other.
+When run per-tier, each subagent receives the draft as it stands, its own tier file, and the state
+earlier tiers emitted: the **contrast ledger** from tier-1 and, for tier-3, the **PRESERVE list**
+from tier-2. It does **not** receive the other tier files, which is what keeps the perspectives from
+poisoning each other. Carrying the state is not the same as carrying the tier file, and a pass that
+composes without the ledger will spend an allowance it never saw.
 
 **Where subagent dispatch is unavailable**, skip the question, apply the four tiers in sequence
 within the single context, and say that fresh-context isolation was unavailable. The tiers still
@@ -137,8 +143,9 @@ rewrite of the whole thing:
 Report format:
 
 ```
-EDITS:    rule id -> quoted span -> suggested fix
-PRESERVE: (from tier-2; carried forward, or "(none)")
+EDITS:           rule id -> quoted span -> suggested fix
+PRESERVE:        (from tier-2; carried forward, or "(none)")
+CONTRAST-LEDGER: (from tier-1; what is retained, what remains)
 ```
 
 Lead with the edits that matter most, and skip preamble.

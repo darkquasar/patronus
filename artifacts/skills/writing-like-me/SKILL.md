@@ -27,7 +27,8 @@ freely, so the voice pass works on prose whose surface problems are already gone
       | fresh context          |        | sandbox: read-only       |
       | genre exemplars        |        | same context             |
       | + weights.md           |        | codex-reply to refine    |
-      | + PRESERVE + original  |        |                          |
+      | + PRESERVE + ledger    |        |                          |
+      | + original             |        |                          |
       +------------------------+        +--------------------------+
        |                                 |
        v  voiced draft A                 v  voiced draft B
@@ -51,6 +52,11 @@ user supplies:
 | **Compose** | a request, no draft | write a meaning-first base draft **with no corpus in context**, then the editorial tiers, then voice |
 | **Voice-only** | a draft the user says is already edited | skip the tiers, go straight to the voice stage, and say so |
 
+Voice-only and a missing sibling skill both skip tier-1, so no ledger is emitted. Do not treat that
+as an empty slot: an unexamined draft may already carry a live correction, and assuming `remaining:
+1` would license a second. Apply tier-1.3's detection to the incoming draft first, open the ledger
+from what you find, and say that its state was inferred rather than carried.
+
 Compose mode's faceless first draft is the point. A draft written before any voice is in context
 reaches for different material than one written to sound like someone, and that difference is worth
 more than the head start.
@@ -58,7 +64,8 @@ more than the head start.
 ## Stage 1: the editorial tiers
 
 Run all four tiers of the sibling `writing-editorial` skill, honoring its dispatch question. Carry
-its **PRESERVE list** forward: everything downstream needs it.
+two things forward, because everything downstream is bound by both: its **PRESERVE list** (from
+tier-2) and its **contrast ledger** (from tier-1.3).
 
 **The sibling resolves by path, not by name.** The tier files are at
 `{skillsDir}/writing-editorial/tier-0.md` through `tier-3.md`, with the router at
@@ -77,13 +84,14 @@ and 3 anyway. Do not go hunting for the skill across agent layouts.
 
 ## Stage 2: the voice pass
 
-Both models receive exactly the same context:
+Both models receive exactly the same six context items:
 
 1. the cleaned draft from stage 1;
 2. the genre-matched exemplar pool (below);
 3. `{skillDir}/weights.md`;
 4. the **PRESERVE list**;
-5. the **pre-editorial original**.
+5. the **contrast ledger**;
+6. the **pre-editorial original**.
 
 Neither receives the editorial tier files. The voice pass is not there to re-litigate decisions the
 editorial pass already made.
@@ -98,6 +106,12 @@ you were given", which is weaker, and the output says so.
 the stage where a protected span is most at risk. A voice pass that flattens a coined term
 immediately after tier-2 protected it defeats the whole mechanism. Override an entry only with a
 stated reason, naming which entry and why.
+
+**The contrast ledger binds this stage as well**, and for the same reason it binds tier-3: a pass
+that writes new sentences is not given a fresh allowance. Applying a voice is where an antithesis is
+most tempting, because mirrored shapes read as punchy and voice work rewards punch. With
+`remaining: 0`, voice the draft in the positive. Displacing the retained correction is allowed with
+a stated reason; adding a second is not.
 
 ### Corpus resolution
 
@@ -123,7 +137,7 @@ substitution produces bad output with no visible cause.
 
 ### The Claude side
 
-A fresh subagent, with the five context items above.
+A fresh subagent, with the six context items above.
 
 ### The codex side
 
@@ -140,8 +154,9 @@ Register it once as an MCP server named `codex`, then call its tools. It exposes
 | `codex` | start a session. Required argument: `prompt`. Useful optional arguments: `sandbox`, `cwd`, `model`, `base-instructions` |
 | `codex-reply` | continue that session, with `threadId` and the next `prompt` |
 
-Call `codex` with `sandbox: "read-only"`, and with `prompt` naming the paths of the draft,
-exemplars, weights, PRESERVE list, and original. Codex reads them from disk itself.
+Call `codex` with `sandbox: "read-only"`, and with `prompt` naming the paths of all six items: the
+draft, exemplars, weights, PRESERVE list, contrast ledger, and original. Codex reads them from disk
+itself.
 
 **The draft never goes into a shell string, and over MCP it never goes into an argv either.** The
 prompt is a JSON string field, so quoting, backticks, newlines, and command-length limits stop being
@@ -184,6 +199,73 @@ nearly all the available benefit; a larger panel does not.
    remove a coined term; hand off at the ending rather than summarizing.
 
 Report any PRESERVE entry that either model overrode, with the reason it gave.
+
+**Recompute the ledger from the merged draft.** The two voice passes run in parallel, so each may
+have displaced the retained correction independently. Taking the stronger half of each can therefore
+carry both replacements through and leave two live corrections where the ledger allows one. Never
+union the two branches' ledgers: read the merged text and count what is actually in it, then report
+that single reconciled ledger and any reallocation it records.
+
+## The run trail
+
+Every run writes its own directory under `docs/writing/<slug>/`, where `<slug>` names the piece.
+Whether that path is committed or ignored is the user's call: add it to `.gitignore` for private
+drafting, leave it tracked where the prose is a team deliverable.
+
+Ask once, at the start:
+
+```
+Keep full drafts for diffing? [Y/n]
+```
+
+Enter keeps them. Running unattended keeps them too, so the default is the same either way and a
+trail is never silently thinner than it looks. Drafts are what make the trail checkable: without
+them a reader has only each stage's own account of what it did, and a stage that fails to report an
+edit is indistinguishable from one that made none.
+
+```
+docs/writing/<slug>/
+  manifest.yaml         always
+  EDITS.md              always, per stage
+  PRESERVE.md           always
+  draft-00-original.md  when drafts are kept
+  draft-0N-<stage>.md   when drafts are kept
+```
+
+`manifest.yaml` records what each stage did and what it carried:
+
+```yaml
+run: deleuze-three-contributions
+mode: compose
+drafts_kept: true
+stages:
+  - stage: tier-1
+    rules_fired: [tier-1.3]
+    edits: 3
+    contrast_ledger:
+      retained: "actualization is not resemblance but invention"
+      remaining: 0
+  - stage: tier-3
+    rules_fired: [tier-3.7, tier-3.8, tier-3.11]
+    edits: 4
+    preserve_overrides: []
+    ledger_reallocations: []
+voice:
+  corpus: ~/.claude/patronus/voice/short-form.md
+  exemplars_supplied: 12
+  model_reported_influences:      # the model's own account, not verified provenance
+    - "consequence-first turn opening on a bare connective"
+```
+
+Two things about that shape are deliberate. **The drafts are what make it checkable**, not the
+manifest: a stage's account of its own edits is a claim, and the draft beside it is the evidence.
+Diff two stages and you see what actually changed, including what a stage failed to mention. The
+manifest carries no checksums, because a model writing a hash it did not compute records a number
+that proves nothing.
+
+And **`model_reported_influences` is labelled as self-reported**, because a model cannot reliably say
+afterwards which exemplar shaped a structure it synthesized across a dozen. The corpus path and the
+exemplar count are knowable; the attribution is a claim.
 
 ## Known limits, stated rather than hidden
 
