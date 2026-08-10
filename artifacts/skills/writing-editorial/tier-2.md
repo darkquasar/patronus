@@ -290,15 +290,25 @@ unverified.
 
 ## tier-2.3 The variance rule
 
+Uniform prose reads machine-made whatever its vocabulary, and there are two ways to be uniform.
+**Lengths** go uniform when every sentence lands near the same count. **Shapes** go uniform when
+sentences of varied length are all built the same way: each opening on its subject, each a main
+clause with one trailing qualification, each joined by the same connector. The second is the one a
+length check passes clean, so look for it explicitly.
+
 ```
-TARGET: variance, not a length.
-  - sentence lengths should range roughly 3 -> 30+ words
-  - uniformity is the fault, not length: a run of same-length
-    sentences reads robotic at any length, and the repair is
-    to widen the spread, never to shorten the run
-  - paragraphs: some one sentence, some six or more
+DETECT
+  - a run of sentences within a few words of each other
+  - three or more consecutive sentences opening the same way,
+    or built to the same clause pattern, or leaning on the
+    same connector (because / which is why / so)
+  - paragraphs all of a similar size
   - read-aloud test: if a TTS engine could read it without
     sounding odd, it is too uniform
+
+ANTI-RULE: uniformity is the fault, not length. A run of
+  same-length sentences reads robotic at ANY length, and the
+  repair is to widen the spread, never to shorten the run.
 
 ANTI-RULE: a short/long alternation is itself a pattern.
   Vary the variance.
@@ -307,6 +317,12 @@ ANTI-RULE: three or more same-shape fragments in a row is
   staccato drama, not variance. Keep the one fragment that
   earns its emphasis; fold the rest into ordinary sentences.
 ```
+
+**This pass detects and repairs locally; it does not restructure.** Rejoining a split qualification
+or fronting a subordinate clause inside one sentence is in scope. Reshaping a paragraph's whole
+sequence is not, and belongs to tier-3. Where the flattening runs deeper than a local repair reaches,
+report it in the EDITS list as an unresolved finding so the composing pass can act on it, rather than
+forcing a fix this tier is not licensed to make.
 
 Structural regularity is a stronger detection signal than vocabulary. A draft with every flagged word
 fixed and the rhythm untouched still reads as machine-made.

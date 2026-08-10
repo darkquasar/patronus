@@ -145,33 +145,15 @@ from the draft and from tier-3's work, which already settled it.
 section exists to stop.** A corpus of posts routinely averages 17 words a sentence with a fifth of
 them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
 reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
-front of it, and it will flatten an author who does not write that way.
+front of it.
 
-So before voicing anything, take the corpus's actual numbers:
+So measure the pool before voicing anything: its typical sentence length, its share of sentences past
+26 words, its longest, and its paragraph spread. Put those numbers in the prompt you hand each model,
+because a model cannot aim at a distribution it was never told.
 
-```
-- mean and median sentence length
-- the share of sentences past 26 words
-- the longest sentence in the pool
-- paragraph lengths: shortest, typical, longest
-```
-
-Those are the target. Match that distribution in the output, and check the result against it: if the
-draft you produce has a lower mean, fewer long sentences, or a smaller spread than the corpus, you
-have imposed brevity the author did not write. Say what you measured, so the reader can see which
-distribution you were aiming at.
-
-This matters more, not less, when projecting onto a long piece. Sustained argument needs the long
-sentences, and they are the first thing lost when a model treats "short-form corpus" as a licence to
-chop.
-
-Concretely, when the corpus is short-form and the target is long:
-
-- **project** the sentence-level habits across every paragraph of the long piece;
-- **do not** shorten paragraphs toward the exemplar length;
-- **do not** add the punchy one-line turns that suit a post and read as manufactured rhythm at
-  length, which is the tier-2.3 anti-rule;
-- **do not** cut material to reach a post-sized piece. The draft's coverage is fixed.
+`{skillDir}/weights.md` carries what to do with them, and both models receive it. It also carries the
+second half of the problem, which no length target catches: sentences of varied length built to an
+identical shape still read monotonously.
 
 ### Corpus resolution
 
@@ -186,13 +168,15 @@ you looked for and what to put there, then continue in degraded mode. Corpus set
 user act, and upgrades stay incapable of touching it.
 
 **The pool matching the target form wins whenever it has exemplars.** Long target with a populated
-`long-form.md` uses `long-form.md`, and the short pool is not consulted, because a pool in the target
-form carries architecture as well as voice. The other pool is used only when the matching one is
-empty, and then it is projected rather than copied.
+`long-form.md` uses `long-form.md`, and the short pool is not consulted. The reason is evidentiary,
+not architectural: a matching pool shows how this author's sentences behave in sustained reasoning,
+which is the part of the voice a short pool can only be projected for. Architecture still comes from
+the draft in every case, exactly as the table above says. The other pool is used only when the
+matching one is empty, and then it is projected rather than copied.
 
 | Target | long-form.md | short-form.md | Behaviour |
 |---|---|---|---|
-| long | populated | either | **use `long-form.md`.** Matching form, so voice and architecture both come from it |
+| long | populated | either | **use `long-form.md`.** Matching form, so it shows the voice at the target length |
 | long | empty | populated | **use `short-form.md`, projected.** A supported path, not a degraded one, so it needs no permission. Voice from the corpus, length and structure from the draft |
 | short | either | populated | **use `short-form.md`** |
 | short | populated | empty | **use `long-form.md`, projected.** Same rule in reverse: take rhythm and diction, not the long piece's architecture |
@@ -224,6 +208,11 @@ Register it once as an MCP server named `codex`, then call its tools. It exposes
 Call `codex` with `sandbox: "read-only"`, and with `prompt` naming the paths of all six items: the
 draft, exemplars, weights, PRESERVE list, contrast ledger, and original. Codex reads them from disk
 itself.
+
+**Put the corpus measurements in the prompt text, not only the paths.** Codex receives files, not
+this file, so anything stated here and nowhere else never reaches it. The numbers you measured are
+that kind of thing: state them in the prompt, or the model with the least context produces the
+flattest prose.
 
 **The draft never goes into a shell string, and over MCP it never goes into an argv either.** The
 prompt is a JSON string field, so quoting, backticks, newlines, and command-length limits stop being
@@ -266,6 +255,13 @@ nearly all the available benefit; a larger panel does not.
    remove a coined term; hand off at the ending rather than summarizing.
 
 Report any PRESERVE entry that either model overrode, with the reason it gave.
+
+**Audit the merged draft's rhythm.** The merge writes the version the reader sees, so it can undo
+both calibrated drafts by taking the shorter option at each divergence. Two checks, both cheap:
+compare the merged draft's longest sentence against stage 1's, and take stage 1's construction back
+where a voice pass split it; then scan consecutive sentences for a repeated shape, per
+`{skillDir}/weights.md`. Report the merged draft's typical length and longest sentence alongside the
+corpus's.
 
 **Recompute the ledger from the merged draft.** The two voice passes run in parallel, so each may
 have displaced the retained correction independently. Taking the stronger half of each can therefore
@@ -317,9 +313,16 @@ stages:
     edits: 4
     preserve_overrides: []
     ledger_reallocations: []
+    typical_sentence: 16      # median words
+    longest_sentence: 41
+    pct_past_26: 31
 voice:
   corpus: ~/.claude/patronus/voice/short-form.md
   exemplars_supplied: 12
+  corpus_typical_sentence: 15
+  corpus_pct_past_26: 19
+  merged_typical_sentence: 15
+  merged_longest_sentence: 38
   model_reported_influences:      # the model's own account, not verified provenance
     - "consequence-first turn opening on a bare connective"
 ```

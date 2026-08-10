@@ -52,7 +52,14 @@ performed fluency. None of them asks you to write less; they ask you to make eve
 place.
 
 The rules come in two groups: meaning and precision first, then the connective tissue that moves a
-reader through an argument. Image, rhythm, and voice are surface craft, and tier-2 owns them.
+reader through an argument. Image and voice are surface craft, and tier-2 owns them.
+
+**Rhythm is shared, and this is the pass that can fix it.** tier-2 detects flattening and repairs
+what a local edit reaches; anything deeper arrives here as an unresolved finding, because rejoining a
+claim to its qualification or reshaping a paragraph's sequence is restructuring, and this is the only
+pass licensed to do it. Widening the spread is a legitimate output of composing, so do not tidy it
+back: when supplying a missing inference produces a long subordinated sentence, that sentence is the
+reasoning made visible, and it is the first thing a later pass will flatten.
 
 ## Meaning and precision
 
