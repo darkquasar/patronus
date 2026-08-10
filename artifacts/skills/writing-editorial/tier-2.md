@@ -296,27 +296,18 @@ sentences of varied length are all built the same way: each opening on its subje
 clause with one trailing qualification, each joined by the same connector. The second is the one a
 length check passes clean, so look for it explicitly.
 
-```
-DETECT
-  - a run of sentences within a few words of each other
-  - three or more consecutive sentences opening the same way,
-    or built to the same clause pattern, or leaning on the
-    same connector (because / which is why / so)
-  - paragraphs all of a similar size
-  - read-aloud test: if a TTS engine could read it without
-    sounding odd, it is too uniform
+What to look for:
 
-ANTI-RULE: uniformity is the fault, not length. A run of
-  same-length sentences reads robotic at ANY length, and the
-  repair is to widen the spread, never to shorten the run.
+- a run of sentences within a few words of each other;
+- three or more consecutive sentences opening the same way, built to the same clause pattern, or leaning on the same connector (`because`, `which is why`, `so`);
+- paragraphs all of a similar size;
+- the read-aloud test: if a TTS engine could read it without sounding odd, it is too uniform.
 
-ANTI-RULE: a short/long alternation is itself a pattern.
-  Vary the variance.
+**Uniformity is the fault, not length.** A run of same-length sentences reads robotic at any length, and the repair is to widen the spread, never to shorten the run.
 
-ANTI-RULE: three or more same-shape fragments in a row is
-  staccato drama, not variance. Keep the one fragment that
-  earns its emphasis; fold the rest into ordinary sentences.
-```
+**A short/long alternation is itself a pattern.** Vary the variance.
+
+**Three or more same-shape fragments in a row is staccato drama, not variance.** Keep the one fragment that earns its emphasis, and fold the rest into ordinary sentences.
 
 **This pass detects and repairs locally; it does not restructure.** Rejoining a split qualification
 or fronting a subordinate clause inside one sentence is in scope. Reshaping a paragraph's whole
