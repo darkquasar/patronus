@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -723,5 +724,34 @@ func TestInstallAgnosticRecipeNeedsNoTarget(t *testing.T) {
 
 	if _, _, err := runInstall(t, "fix-bin", "--global", "--dry-run"); err != nil {
 		t.Errorf("agnostic binary recipe should install with no --target: %v", err)
+	}
+}
+
+// TestInstallProfileWiresBothMcpServers is the end-to-end gate for composed MCP
+// wiring: a profile naming TWO MCP recipes that target ONE config file must wire
+// BOTH. Before the compose fix exactly one survived planning.
+//
+// It binds to the FIXTURE catalog deliberately. Asserting that the real code-intel
+// profile contains particular servers would test the catalog, not the mechanism;
+// the real profile is confirmed by a manual check instead.
+func TestInstallProfileWiresBothMcpServers(t *testing.T) {
+	root := fixtureCatalog(t)
+	f := serveFixtureFrom(t, root)
+	home := withRemoteEnv(t, f)
+
+	if _, errOut, err := runInstall(t, "--profile", "fix-two-mcp", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	raw := mustRead(t, filepath.Join(home, ".claude.json"))
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("parse config: %v (%s)", err, raw)
+	}
+	servers, _ := m["mcpServers"].(map[string]any)
+	for _, want := range []string{"fix-mcp-bin", "fix-mcp-two"} {
+		if _, ok := servers[want]; !ok {
+			t.Errorf("mcpServers.%s missing; a same-path sibling overwrote it:\n%s", want, raw)
+		}
 	}
 }
