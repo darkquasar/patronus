@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -524,5 +525,90 @@ func TestScanReportsComposedSectionDrift(t *testing.T) {
 	}
 	if hasVerdict(out, "USER-EDITED") {
 		t.Errorf("an untouched composed file must NEVER be reported USER-EDITED:\n%s", out)
+	}
+}
+
+// TestScanComposedMcpConfigIsClean is the MERGE-side twin of
+// TestScanReportsComposedSectionDrift. Two MCP recipes fold into ONE .claude.json;
+// with both server blocks present exactly as installed, neither contributor may be
+// reported. A whole-file compare reports a permanent false STALE here, because the
+// composed file equals neither contributor's standalone bytes.
+func TestScanComposedMcpConfigIsClean(t *testing.T) {
+	root := fixtureCatalog(t)
+	f := serveFixtureFrom(t, root)
+	home := withRemoteEnv(t, f)
+
+	if _, errOut, err := runInstall(t, "fix-mcp-bin", "fix-mcp-two", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	cfg := filepath.Join(home, ".claude.json")
+	body := string(mustRead(t, cfg))
+	for _, want := range []string{"fix-mcp-bin", "fix-mcp-two"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("precondition: both servers must be wired; %q missing:\n%s", want, body)
+		}
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	// PASS 1: neither contributor is STALE against a config that matches them both.
+	for _, item := range []string{"fix-mcp-bin", "fix-mcp-two"} {
+		if hasDriftItem(out, "STALE", item, cfg) {
+			t.Errorf("composed MCP config wrongly reported STALE for %s; the whole-file "+
+				"compare is back:\n%s", item, out)
+		}
+	}
+	// PASS 2: the same file must not then be reported as an unmanaged shadow. This
+	// is the `recorded`-set half: excluding a path from `rows` without marking it
+	// recorded trades a false STALE for a false shadow.
+	for _, verdict := range []string{"UNMANAGED-SHADOW", "USER-EDITED", "MISSING"} {
+		if hasDrift(out, verdict, cfg) {
+			t.Errorf("composed MCP config wrongly reported %s:\n%s", verdict, out)
+		}
+	}
+}
+
+// TestScanComposedMcpReportsGenuineEdit guards against over-suppressing: silencing
+// the false STALE must not silence a real one. A user edit to ONE contributor's own
+// dotted path is still that contributor's drift.
+func TestScanComposedMcpReportsGenuineEdit(t *testing.T) {
+	root := fixtureCatalog(t)
+	f := serveFixtureFrom(t, root)
+	home := withRemoteEnv(t, f)
+
+	if _, errOut, err := runInstall(t, "fix-mcp-bin", "fix-mcp-two", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	cfg := filepath.Join(home, ".claude.json")
+
+	// The user rewrites fix-mcp-two's server block by hand.
+	var doc map[string]any
+	if err := json.Unmarshal(mustRead(t, cfg), &doc); err != nil {
+		t.Fatal(err)
+	}
+	doc["mcpServers"].(map[string]any)["fix-mcp-two"] = map[string]any{"type": "http", "url": "https://USER-EDITED/"}
+	edited, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg, edited, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	if !hasDriftItem(out, "STALE", "fix-mcp-two", cfg) {
+		t.Errorf("a hand-edited server block was not reported for its owner:\n%s", out)
+	}
+	// The untouched contributor stays silent: the verdict is per setting, not per file.
+	if hasDriftItem(out, "STALE", "fix-mcp-bin", cfg) {
+		t.Errorf("the UNTOUCHED contributor was wrongly reported; the verdict is not "+
+			"per-setting:\n%s", out)
 	}
 }
