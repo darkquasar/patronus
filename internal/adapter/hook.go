@@ -171,6 +171,12 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 	cur := existing
 	for _, key := range keys {
 		dotted := target.Path + "." + key // permission.<key>
+		// Read before merging: cur accumulates across keys, so the prior must be
+		// captured from the bytes as they stand before THIS key is set.
+		prior, priorPresent, err := ReadDotted(cur, target, dotted)
+		if err != nil {
+			return nil, fmt.Errorf("adapter: wire gate %q: read prior: %w", art.Name, err)
+		}
 		after, err := MergeSettings(cur, target, dotted, "deny")
 		if err != nil {
 			return nil, fmt.Errorf("adapter: wire gate %q: %w", art.Name, err)
@@ -186,9 +192,11 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 			Note:    "gate " + key + ": " + art.Name,
 			Warning: warning,
 			Setting: &diff.SettingEdit{
-				Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
-				Dotted:      dotted,
-				ScalarValue: "deny",
+				Target:       diff.FileTargetRef{File: target.File, Format: target.Format},
+				Dotted:       dotted,
+				ScalarValue:  "deny",
+				PriorValue:   prior,
+				PriorPresent: priorPresent,
 			},
 		})
 		cur = after

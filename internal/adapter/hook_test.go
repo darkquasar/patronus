@@ -239,6 +239,35 @@ func TestTransformGateOpenCodeAllUnmappableErrors(t *testing.T) {
 	}
 }
 
+// An OpenCode permission gate captures whatever the user already had at that
+// permission key, so remove restores their value instead of deleting the key.
+func TestGateDiffCapturesPrior(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := hookArtifact("no-edit", "PreToolUse", "Edit", "block")
+	art.Hook.Intent = manifest.HookGate
+
+	// The user already set permission.edit themselves.
+	existing := []byte(`{"permission":{"edit":"allow"}}`)
+	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", existingBytes(existing))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) == 0 {
+		t.Fatal("no gate diffs produced")
+	}
+	d := diffs[0]
+	if d.Setting == nil {
+		t.Fatal("Setting is nil")
+	}
+	if !d.Setting.PriorPresent {
+		t.Fatal("PriorPresent = false; the user's existing permission.edit was not captured")
+	}
+	if d.Setting.PriorValue != "allow" {
+		t.Fatalf("PriorValue = %#v, want \"allow\"", d.Setting.PriorValue)
+	}
+}
+
 // A script-bearing hook places its helper script (CREATE, executable) into the
 // tool's hook-script dir AND registers a hook whose command invokes the placed
 // path (the {script} token resolves to it).

@@ -38,6 +38,12 @@ func (e *Engine) transformSetting(art *manifest.Artifact, ad *manifest.Adapter, 
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read settings for %q: %w", art.Name, err)
 	}
+	// The user may have set this key themselves; capture it so remove restores
+	// their value rather than deleting the key outright.
+	prior, priorPresent, err := ReadDotted(existing, target, dotted)
+	if err != nil {
+		return nil, fmt.Errorf("adapter: setting %q: read prior: %w", art.Name, err)
+	}
 	after, err := MergeSettings(existing, target, dotted, value)
 	if err != nil {
 		return nil, fmt.Errorf("adapter: merge setting %q: %w", art.Name, err)
@@ -56,9 +62,11 @@ func (e *Engine) transformSetting(art *manifest.Artifact, ad *manifest.Adapter, 
 		// onto an accumulated settings file without clobbering hooks merged before
 		// it, and remove deletes exactly this key (see RemoveSettingScalar).
 		Setting: &diff.SettingEdit{
-			Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
-			Dotted:      dotted,
-			ScalarValue: value,
+			Target:       diff.FileTargetRef{File: target.File, Format: target.Format},
+			Dotted:       dotted,
+			ScalarValue:  value,
+			PriorValue:   prior,
+			PriorPresent: priorPresent,
 		},
 	}}, nil
 }
