@@ -2,11 +2,13 @@ package plan
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
@@ -433,6 +435,182 @@ func TestUnknownArtifactErrors(t *testing.T) {
 	req.Names = []string{"nope"}
 	if _, err := Compute(req); err == nil {
 		t.Error("expected error for unknown artifact")
+	}
+}
+
+// mcpMergeDiff builds the diff an MCP recipe produces: a MERGE on one shared
+// config path carrying a scalar SettingEdit. Every one is computed from the SAME
+// base bytes, which is exactly the condition that made last-wins lose merges.
+func mcpMergeDiff(t *testing.T, path string, base []byte, name, cmd string) diff.FileDiff {
+	t.Helper()
+	ft := manifest.FileTarget{File: ".claude.json", Format: "json"}
+	obj := map[string]any{"type": "stdio", "command": cmd}
+	after, err := adapter.MergeSettings(base, ft, "mcpServers."+name, obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return diff.FileDiff{
+		Path: path, Action: diff.Merge, Before: base, After: after,
+		Artifact: name, Type: "recipe", Role: "tools", Tool: "claude",
+		Setting: &diff.SettingEdit{
+			Target: diff.FileTargetRef{File: ft.File, Format: ft.Format},
+			Dotted: "mcpServers." + name, ScalarValue: obj,
+		},
+	}
+}
+
+// servers unmarshals a composed config and returns its mcpServers map.
+func servers(t *testing.T, b []byte) map[string]any {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("parse composed config: %v (%s)", err, b)
+	}
+	s, _ := m["mcpServers"].(map[string]any)
+	return s
+}
+
+// existingBytes serves fixed bytes as the current content of every path, which is
+// what Finalize needs to classify a diff without touching the real filesystem.
+func existingBytes(b []byte) adapter.ReadExisting {
+	return func(string) ([]byte, bool, error) { return b, true, nil }
+}
+
+func TestComposeAccumulatesSamePathMcpMerges(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".claude.json")
+	base := []byte(`{"mcpServers":{"context7":{"command":"c7"}}}`)
+	if err := os.WriteFile(path, base, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cs, err := Finalize([]diff.FileDiff{
+		mcpMergeDiff(t, path, base, "graphify", "gq"),
+		mcpMergeDiff(t, path, base, "serena", "uvx"),
+	}, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs.Diffs) != 1 {
+		t.Fatalf("want 1 composed diff, got %d", len(cs.Diffs))
+	}
+	d := cs.Diffs[0]
+
+	got := servers(t, d.After)
+	for _, want := range []string{"context7", "graphify", "serena"} {
+		if _, ok := got[want]; !ok {
+			t.Errorf("mcpServers.%s missing from the composed result:\n%s", want, d.After)
+		}
+	}
+
+	// graphify enters byPath first, so it owns the row; serena folds in as a
+	// contributor under its OWN identity. Without the contrib, remove strips the
+	// wrong block and the plan renders one row for two artifacts.
+	if d.Artifact != "graphify" {
+		t.Errorf("owner = %q, want graphify (first in)", d.Artifact)
+	}
+	if len(d.SettingContrib) != 1 || d.SettingContrib[0].Artifact != "serena" {
+		t.Fatalf("want one setting-contrib for serena, got %+v", d.SettingContrib)
+	}
+}
+
+// TestComposeThreeWayMcpMerges guards a fold that re-applies against the wrong
+// base. A fold that re-derived from `Before` instead of the accumulated `After`
+// would keep only the last two servers, which two merges cannot distinguish.
+func TestComposeThreeWayMcpMerges(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".claude.json")
+	base := []byte(`{"mcpServers":{"context7":{"command":"c7"}}}`)
+	if err := os.WriteFile(path, base, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cs, err := Finalize([]diff.FileDiff{
+		mcpMergeDiff(t, path, base, "alpha", "a"),
+		mcpMergeDiff(t, path, base, "beta", "b"),
+		mcpMergeDiff(t, path, base, "gamma", "g"),
+	}, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := servers(t, cs.Diffs[0].After)
+	if len(got) != 4 {
+		t.Fatalf("want 4 servers (context7 + 3 folded), got %d:\n%s", len(got), cs.Diffs[0].After)
+	}
+	if n := len(cs.Diffs[0].SettingContrib); n != 2 {
+		t.Errorf("want 2 contributors (alpha owns the row), got %d", n)
+	}
+}
+
+// TestComposeFoldIsIdempotent pins the invariant behind the double-Finalize path.
+// install.go finalizes the combined artifact+recipe set after plan.Compute already
+// finalized the artifact half, so an artifact and a recipe touching one path fold
+// twice. ApplySettingEdit is idempotent for a scalar set, and this keeps it so.
+func TestComposeFoldIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".claude.json")
+	base := []byte(`{"mcpServers":{"context7":{"command":"c7"}}}`)
+	if err := os.WriteFile(path, base, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	raw := []diff.FileDiff{
+		mcpMergeDiff(t, path, base, "graphify", "gq"),
+		mcpMergeDiff(t, path, base, "serena", "uvx"),
+	}
+
+	once, err := Finalize(raw, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	twice, err := Finalize(once.Diffs, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(once.Diffs[0].After, twice.Diffs[0].After) {
+		t.Errorf("re-folding changed the bytes:\n once  %s\n twice %s", once.Diffs[0].After, twice.Diffs[0].After)
+	}
+	if a, b := len(once.Diffs[0].SettingContrib), len(twice.Diffs[0].SettingContrib); a != b {
+		t.Errorf("re-folding duplicated contributors: %d -> %d", a, b)
+	}
+}
+
+// TestComposedMcpPlanRowsShowBothArtifacts is the acceptance gate for the
+// row-versus-bytes split: before the fix, one row was attributed to graphify
+// while the bytes written were serena's, so neither artifact was honestly
+// represented. Each contributor must carry its OWN Type and Role rather than
+// inheriting the owning diff's.
+func TestComposedMcpPlanRowsShowBothArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".claude.json")
+	base := []byte(`{}`)
+	if err := os.WriteFile(path, base, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	graphify := mcpMergeDiff(t, path, base, "graphify", "gq")
+	serena := mcpMergeDiff(t, path, base, "serena", "uvx")
+	serena.Role = "memory" // a DIFFERENT role, so inheritance is detectable
+
+	cs, err := Finalize([]diff.FileDiff{graphify, serena}, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := cs.Diffs[0]
+
+	if d.Artifact != "graphify" || d.Role != "tools" {
+		t.Errorf("owner row = %s/%s, want graphify/tools", d.Artifact, d.Role)
+	}
+	c := d.SettingContrib[0]
+	if c.Artifact != "serena" {
+		t.Fatalf("contributor = %q, want serena", c.Artifact)
+	}
+	if c.Role != "memory" {
+		t.Errorf("contributor Role = %q, want memory: the row inherited the owner's "+
+			"instead of carrying its own", c.Role)
+	}
+	if c.Type != "recipe" {
+		t.Errorf("contributor Type = %q, want recipe", c.Type)
 	}
 }
 
