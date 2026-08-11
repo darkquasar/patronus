@@ -289,3 +289,44 @@ func TestUpdateProfileRefreshesMembers(t *testing.T) {
 		t.Errorf("expected a member refresh line %s -> %s, got:\n%s", baseVer, newerVer, out)
 	}
 }
+
+// TestUpdateLocalRegistryDoesNotClaimACacheWrite covers BOTH local branches of
+// resolveRegistry. Neither has a cache to write, so neither may say it wrote one.
+func TestUpdateLocalRegistryDoesNotClaimACacheWrite(t *testing.T) {
+	assertLocalWording := func(t *testing.T, out, root string) {
+		t.Helper()
+		if strings.Contains(out, "updated registry cache") {
+			t.Errorf("claimed a cache write against a local registry:\n%s", out)
+		}
+		if !strings.Contains(out, "read local registry checkout") {
+			t.Errorf("did not report the local checkout it read:\n%s", out)
+		}
+		if !strings.Contains(out, root) {
+			t.Errorf("message does not name the checkout %s:\n%s", root, out)
+		}
+	}
+
+	t.Run("in-checkout fallthrough", func(t *testing.T) {
+		root := fixtureCatalog(t)
+		t.Chdir(root)
+		out, _, err := runUpdate(t)
+		if err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		assertLocalWording(t, out, root)
+	})
+
+	// --local-registry is a BOOL: it forces registry.DiscoverRoot(wd) rather than
+	// taking a path, so the flag can only select the checkout we are standing in.
+	// The subtest still exercises a distinct branch (registry.go:63 vs the :70
+	// fallthrough) — it just cannot be driven from outside a checkout.
+	t.Run("explicit --local-registry", func(t *testing.T) {
+		root := fixtureCatalog(t)
+		t.Chdir(root)
+		out, _, err := runUpdate(t, "--local-registry")
+		if err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		assertLocalWording(t, out, root)
+	})
+}
