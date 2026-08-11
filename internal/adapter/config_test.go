@@ -3,6 +3,7 @@ package adapter
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -188,7 +189,7 @@ func TestRemoveSettingScalar(t *testing.T) {
 	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
 	existing := []byte(`{"model":"opus","statusLine":{"type":"command","command":"x"},"hooks":{"PreToolUse":[{"a":1}]}}`)
 
-	out, found, err := RemoveSettingScalar(existing, ft, "statusLine")
+	out, found, err := RemoveSettingScalar(existing, ft, "statusLine", nil, false)
 	if err != nil || !found {
 		t.Fatalf("remove statusLine: found=%v err=%v", found, err)
 	}
@@ -204,7 +205,7 @@ func TestRemoveSettingScalar(t *testing.T) {
 	}
 
 	// Removing an absent key is a no-op returning the original bytes.
-	out2, found, err := RemoveSettingScalar(out, ft, "statusLine")
+	out2, found, err := RemoveSettingScalar(out, ft, "statusLine", nil, false)
 	if err != nil || found {
 		t.Fatalf("remove absent: found=%v err=%v", found, err)
 	}
@@ -234,4 +235,123 @@ func jsonEqual(t *testing.T, a, b map[string]any) bool {
 	ab, _ := json.Marshal(a)
 	bb, _ := json.Marshal(b)
 	return bytes.Equal(ab, bb)
+}
+
+// TestRemoveSettingScalarRestoresPrior proves reversing a scalar set puts back
+// what the user had at that key, and only deletes when the install created it.
+func TestRemoveSettingScalarRestoresPrior(t *testing.T) {
+	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
+
+	tests := []struct {
+		name         string
+		existing     string
+		prior        any
+		priorPresent bool
+		want         string
+	}{
+		{
+			name:         "restores a prior the user had set",
+			existing:     `{"mcpServers":{"serena":{"command":"uvx"},"other":{"command":"x"}}}`,
+			prior:        map[string]any{"command": "my-own-serena"},
+			priorPresent: true,
+			want:         `{"mcpServers":{"other":{"command":"x"},"serena":{"command":"my-own-serena"}}}`,
+		},
+		{
+			name:         "deletes when there was no prior",
+			existing:     `{"mcpServers":{"serena":{"command":"uvx"},"other":{"command":"x"}}}`,
+			prior:        nil,
+			priorPresent: false,
+			want:         `{"mcpServers":{"other":{"command":"x"}}}`,
+		},
+		{
+			name:         "restores an explicit null prior rather than deleting",
+			existing:     `{"mcpServers":{"serena":{"command":"uvx"}}}`,
+			prior:        nil,
+			priorPresent: true,
+			want:         `{"mcpServers":{"serena":null}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, found, err := RemoveSettingScalar([]byte(tt.existing), ft, "mcpServers.serena", tt.prior, tt.priorPresent)
+			if err != nil {
+				t.Fatalf("RemoveSettingScalar: %v", err)
+			}
+			if !found {
+				t.Fatal("found = false, want true")
+			}
+			assertJSONEqual(t, got, []byte(tt.want))
+		})
+	}
+}
+
+// TestReadDotted proves the prior-capture read distinguishes an absent key from
+// one holding an explicit null, which is what lets remove restore a null.
+func TestReadDotted(t *testing.T) {
+	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
+	existing := []byte(`{"mcpServers":{"serena":{"command":"mine"},"nulled":null}}`)
+
+	t.Run("present key returns its value", func(t *testing.T) {
+		got, present, err := ReadDotted(existing, ft, "mcpServers.serena")
+		if err != nil {
+			t.Fatalf("ReadDotted: %v", err)
+		}
+		if !present {
+			t.Fatal("present = false, want true")
+		}
+		m, ok := got.(map[string]any)
+		if !ok || m["command"] != "mine" {
+			t.Fatalf("value = %#v, want map with command=mine", got)
+		}
+	})
+
+	t.Run("absent key reports not present", func(t *testing.T) {
+		_, present, err := ReadDotted(existing, ft, "mcpServers.graphify")
+		if err != nil {
+			t.Fatalf("ReadDotted: %v", err)
+		}
+		if present {
+			t.Fatal("present = true, want false")
+		}
+	})
+
+	t.Run("explicit null is present with a nil value", func(t *testing.T) {
+		got, present, err := ReadDotted(existing, ft, "mcpServers.nulled")
+		if err != nil {
+			t.Fatalf("ReadDotted: %v", err)
+		}
+		if !present {
+			t.Fatal("present = false, want true for an explicit null")
+		}
+		if got != nil {
+			t.Fatalf("value = %#v, want nil", got)
+		}
+	})
+
+	t.Run("path that does not reach a leaf reports not present", func(t *testing.T) {
+		_, present, err := ReadDotted(existing, ft, "notThere.deeper.key")
+		if err != nil {
+			t.Fatalf("ReadDotted: %v", err)
+		}
+		if present {
+			t.Fatal("present = true, want false")
+		}
+	})
+}
+
+// assertJSONEqual compares two JSON documents structurally, so key order and
+// whitespace do not decide the result.
+func assertJSONEqual(t *testing.T, got, want []byte) {
+	t.Helper()
+	var g, w any
+	if err := json.Unmarshal(got, &g); err != nil {
+		t.Fatalf("unmarshal got: %v (%s)", err, got)
+	}
+	if err := json.Unmarshal(want, &w); err != nil {
+		t.Fatalf("unmarshal want: %v (%s)", err, want)
+	}
+	if !reflect.DeepEqual(g, w) {
+		t.Fatalf("got  %s\nwant %s", got, want)
+	}
 }

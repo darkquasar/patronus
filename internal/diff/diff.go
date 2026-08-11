@@ -188,19 +188,29 @@ type SectionContrib struct {
 // it onto an accumulated config (several settings edits can land on one file). It
 // has two forms, distinguished by IdentityKey:
 //   - LIST-APPEND (IdentityKey != ""): append/replace Elem in the array at Dotted,
-//     keyed by Identity — a hook registration. Remove strips exactly that element.
-//   - SCALAR SET (IdentityKey == ""): set ScalarValue at Dotted — a statusline /
-//     sandbox toggle. Remove restores the prior value (wholesale Prior).
+//     keyed by Identity, a hook registration. Remove strips exactly that element.
+//   - SCALAR SET (IdentityKey == ""): set ScalarValue at Dotted, an MCP server
+//     block, a statusline/sandbox toggle, an OpenCode permission gate. Remove
+//     restores PriorValue at Dotted when PriorPresent, and deletes the key when
+//     the install created it. This is a PER-KEY prior, not a whole-file snapshot:
+//     reversing one edit leaves every sibling key untouched.
 //
 // Either way the edit is re-foldable, so a scalar set folded after some hooks no
 // longer clobbers them. The full FileTarget travels along for re-parse/serialize.
 type SettingEdit struct {
 	Target      FileTargetRef  // file + format the merge applies to
-	Dotted      string         // resolved path, e.g. "hooks.PreToolUse" (list) or "statusLine" (scalar)
+	Dotted      string         // resolved path, e.g. "hooks.PreToolUse" (list) or "mcpServers.serena" (scalar)
 	IdentityKey string         // array form: element field carrying the identity ("" => scalar set)
 	Identity    string         // array form: this element's identity value
 	Elem        map[string]any // array form: the element to (re-)append
 	ScalarValue any            // scalar form: the value to set at Dotted
+
+	// PriorValue is the key's value before this edit, and PriorPresent says
+	// whether the key existed at all. Both are needed: an explicit JSON null is a
+	// legitimate prior that PriorValue == nil alone cannot tell apart from "no key
+	// here before". Scalar form only; the list form reverses by identity.
+	PriorValue   any
+	PriorPresent bool
 }
 
 // FileTargetRef is the minimal file/format descriptor a SettingEdit needs to
