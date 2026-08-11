@@ -1,94 +1,42 @@
----
-name: writing-style
-description: >
-  The canonical writing and editorial style guide, and the on-demand action for critiquing prose
-  against it. This is the single source of truth for how written output should read: tone,
-  punctuation, and craft. Use it in two ways. (1) REFERENCE while composing: consult it whenever you
-  are writing prose a reader will see, so the house style is there from the first draft rather than
-  fixed afterwards. That covers notebook prose and .ipynb/marimo markdown cells, docstrings and
-  module headers, READMEs, design docs, ADRs, specs, PR descriptions, commit bodies, lessons and
-  topic explanations, Confluence pages, emails, and longer messages. (2) EDITORIAL REVIEW: invoke
-  WHENEVER the user asks to "review this draft", "critique my writing", "check this against my
-  style", "does this follow my rules", "edit this prose", "clean up this text", "make this sound
-  like me", or pastes a paragraph/doc/email/message and asks how to improve the writing. The rules are split into
-  two tiers by scope: ALWAYS-ON mechanics (em-dashes, quote punctuation; on nearly
-  everything) and MEANING-LED PROSE (deciding meaning before sound, grounding abstractions, keeping
-  the actor and consequence visible, scaling claims to evidence, using contrast only to close a real
-  interpretive branch, connective tissue that names a real relationship, explaining in the positive,
-  and cutting AI-slop puffery and filler; on anything that carries reasoning or teaches). Do NOT use it to change code logic, to lint code style, or as a
-  general writing-from-scratch generator; it governs how prose reads, not what it says.
----
+# tier-3: meaning and connective tissue
 
-# Writing style
+**Gate:** live whenever the prose has a reader who will judge it, or carries a claim that reader will
+act on. Length is not the test. The exception list is closed: a status ping, a one-line factual
+answer, a code comment, a commit subject line.
+**Operation:** compose. This is the only pass permitted to restructure. It may add a concession,
+repair a weak ending, or reorder a paragraph, because those are composition decisions no subtractive
+pass can make.
+**Reads:** the draft, the **PRESERVE list** emitted by tier-2, and the **contrast ledger** emitted by
+tier-1.
 
-This is the one place the writing rules live. Two things read it: an **editorial review** you
-invoke on a draft, and **any task that produces prose**, which consults it so the house style is
-there from the first draft. CLAUDE.md points here as a soft enforcer, so the always-on rules below
-should reach everything, even when this skill is not explicitly invoked.
+## Read the contrast ledger before composing
 
-The rules come in two tiers, and the tier decides *when* a rule applies: Tier 1 mechanics on nearly
-everything, Tier 2 meaning-led prose on anything that carries reasoning or teaches. Getting the tier
-right is the whole point: a rule fired in the wrong context is as bad as a rule missed.
+This is the only pass that writes new sentences, which makes it the one most likely to spend an
+allowance it never saw. tier-1.3's ledger is scoped to the finished piece, not to that pass:
 
-These rules are diagnostic tools, not a machine for producing prose. They tell you where to look and
-what to weigh. The last rule of Tier 2 is that any of them may be broken when breaking it serves the
-meaning; read that rule as seriously as the rest, because a guide applied mechanically produces
-exactly the lifeless writing it is meant to prevent.
+```
+CONTRAST-LEDGER:
+  retained: "actualization is not resemblance but invention"
+  remaining: 0
+```
 
-## When each tier applies
+With `remaining: 0`, compose in the positive. A staged reveal is rewritten whatever the ledger says,
+and a new live correction is available only by displacing the retained one, with a stated reason.
+Composing fresh prose is not a fresh allowance: the reader sees one finished piece, not the four
+passes that made it.
 
-**Tier 1, always-on mechanics.** These govern the mechanics of a sentence. They apply to nearly
-everything with a reader: lessons, docs, emails, Slack messages, PR descriptions, commit bodies,
-this file itself. The only writing they skip is where the mechanics genuinely do not matter, such
-as throwaway scratch notes or machine-read output. When in doubt, apply them.
+This binds the comparative form too, so `X rather than merely Y` counts against the ledger exactly
+as `not X but Y` does. tier-3.8 below carries the taxonomy that says when it counts at all.
 
-**Tier 2, meaning-led prose.** These govern how prose carries reasoning. They apply to any
-substantial writing that makes a case, explains something, or teaches: design docs, architecture
-writeups, PR descriptions, emails, proposals, longer messages, and every lesson or topic
-explanation. They do not apply to a one-line reply, a status ping, or a code comment, where there is
-no argument to articulate. This tier also holds the anti-AI-slop layer (the phrasings that make
-writing read as machine-generated) and the teaching-specific guidance (how to explain a concept from
-its own frame). Read the user's intent: if they lean toward wanting understanding or a written
-artifact, Tier 2 is live.
+## Read the PRESERVE list first
 
----
+Before editing anything, read the PRESERVE list and treat those spans as fixed. They are the spans
+the previous pass identified as carrying the author's hand: a coined term doing real work, an earned
+fragment, deliberate repetition, a self-interrupting aside.
 
-## Tier 1: always-on mechanics
-
-### 1. Avoid em-dashes; use them very sparingly
-
-The em-dash (`—`) is a crutch that papers over a sentence that has not decided what it is. Almost
-every em-dash is better as a comma, a pair of parentheses, a colon, or a full stop. Reach for those
-first. Keep an em-dash only on the rare occasion where nothing else carries the same break, and even
-then prefer to rewrite.
-
-- Comma for a light aside: `The pipeline runs nightly, filtered by tag, and caps at 100 stories.`
-- Parentheses for a true aside: `The model (Sonnet 4.5, via Bedrock) enriches each subworkflow.`
-- Colon to introduce what follows: `The rule is simple: fetch once, analyse locally.`
-- Full stop when the second half is its own thought: `It fails closed. No token, no request.`
-
-**Don't:** `The dashboard reads two views — one for issues, one for sprints — from Snowflake.`
-**Do:** `The dashboard reads two views from Snowflake: one for issues, one for sprints.`
-
-Titles and headings are the exception. An em-dash as a separator in a title reads cleanly and is
-fine to keep (`Deploy pipeline — nightly export`, `D&R G&I Calibration — collect data, then write`).
-The rule is about prose sentences, where the em-dash hides an undecided structure; a heading has no
-such structure to hide.
-
-### 2. Keep punctuation outside closing quotation marks
-
-Put commas and full stops *after* the closing quote, not inside it, so the quoted text stays exactly
-what was said and the punctuation belongs to your sentence.
-
-**Don't:** `The flag is called "fail-closed."`
-**Do:** `The flag is called "fail-closed".`
-
-**Don't:** `He said the build was "green," so we shipped.`
-**Do:** `He said the build was "green", so we shipped.`
-
----
-
-## Tier 2: meaning-led prose
+You may override an entry when you have a reason, and **you must then say which entry you overrode
+and why**. Silent removal is a failure. A preserved span can become wrong once the surrounding
+argument is restructured, which is exactly why the override exists and exactly why it is disclosed.
 
 One distinction governs this whole tier:
 
@@ -103,12 +51,19 @@ restates the last one in bigger words. The rules below are how you tell articula
 performed fluency. None of them asks you to write less; they ask you to make every part earn its
 place.
 
-The rules are grouped as they were conceived: meaning and precision first, then the connective
-tissue that moves a reader through an argument, then image, rhythm, and voice.
+The rules come in two groups: meaning and precision first, then the connective tissue that moves a
+reader through an argument. Image and voice are surface craft, and tier-2 owns them.
 
-### Meaning and precision
+**Rhythm is shared, and this is the pass that can fix it.** tier-2 detects flattening and repairs
+what a local edit reaches; anything deeper arrives here as an unresolved finding, because rejoining a
+claim to its qualification or reshaping a paragraph's sequence is restructuring, and this is the only
+pass licensed to do it. Widening the spread is a legitimate output of composing, so do not tidy it
+back: when supplying a missing inference produces a long subordinated sentence, that sentence is the
+reasoning made visible, and it is the first thing a later pass will flatten.
 
-#### 3. Decide what the sentence means before you make it sound good
+## Meaning and precision
+
+## tier-3.3 Decide what the sentence means before you make it sound good
 
 Be able to state the sentence's core proposition plainly. This does not mean the plain version has
 to appear in the finished prose; it is a diagnostic step. Once the meaning is stable, you can shape
@@ -126,7 +81,7 @@ The second statement gives you something real to write from. You can then expand
 adding the context and consequence that matter, without sliding back into vague grandeur. The plain
 version is the anchor you keep checking the ornate one against.
 
-#### 4. Make abstract claims answerable to something concrete
+## tier-3.4 Make abstract claims answerable to something concrete
 
 Abstraction is necessary. Words such as *trust*, *culture*, *quality*, *strategy*, and *fairness*
 cannot always be traded for physical detail, and you should not try to. The trouble begins when
@@ -140,7 +95,7 @@ The first sentence interprets. The second grounds the interpretation and names t
 Neither has to be removed; the interpretive claim is welcome once it is answerable to something a
 reader can picture.
 
-#### 5. Keep the actor, action, and consequence visible
+## tier-3.5 Keep the actor, action, and consequence visible
 
 Ask four questions of a claim: who or what acted, what changed, how it changed, and what followed.
 When a sentence hides these behind nominalizations and passive machinery, the mechanism disappears.
@@ -160,21 +115,7 @@ matter more than the actor:
 Here the accounts and the sequence carry the point, and the still-unknown attacker would only get in
 the way. Choose the passive on purpose, not by reflex.
 
-#### 6. Choose the simplest exact word, not merely the shortest
-
-A long or technical word earns its place when it carries a distinction the shorter alternative
-loses. The rule cuts both ways: prefer the plain word when the meaning is identical, and keep the
-precise one when it is not.
-
-- Use *use* rather than *utilize* when they mean the same thing.
-- Use *latency* rather than *delay* when the technical distinction matters.
-- Use *correlation* rather than *relationship* when statistical meaning matters, and *relationship*
-  when statistical precision does not.
-
-Plainness should never come at the cost of accuracy. The target is the exact word, and sometimes the
-exact word is the longer one.
-
-#### 7. Separate observation, inference, and judgment
+## tier-3.7 Separate observation, inference, and judgment
 
 AI prose often slides between these three without showing the move, so a narrow fact suddenly
 carries a sweeping verdict.
@@ -191,7 +132,10 @@ inference that would connect them. Supply it, and the judgment becomes earned ra
 This version still interprets the facts. It simply makes the reasoning visible, so the reader can
 follow the step from what happened to what it means.
 
-#### 8. Use contrast only to close a real interpretive branch
+## tier-3.8 Use contrast only to close a real interpretive branch
+
+tier-1.3 catches the mirrored-swap shapes of this pattern everywhere, ungated by stakes. This is the
+fuller treatment of the judgment behind it, over contrast generally, and the two share one test.
 
 Lead with the positive claim. Do not attach an opposing claim merely to sharpen the sentence, create
 rhythm, or make an ordinary point sound more decisive. Patterns such as `X, not Y`, `not A but B`,
@@ -279,11 +223,72 @@ Ornamental:
 > The dashboard is not a mirror but a portal.
 
 Explanatory:
-> The dashboard lets teams intervene in the system rather than merely observe it.
+> The dashboard lets teams change the system it reports on.
 
 The second keeps the actual distinction and drops the staged profundity. A metaphorical contrast
 survives only when both images clarify the concept and the difference between them does real
 explanatory work.
+
+Note what the repair does not do: it does not swap the antithesis for a tidier antithesis. `lets
+teams intervene rather than merely observe` would carry the same mirrored shape in comparative
+clothing, and `merely` is the tell that the second limb was put there to be dismissed. State the
+capability and stop.
+
+### `rather than` and `instead of` are not automatically contrast
+
+Both phrases appear throughout good prose doing work that has nothing to do with antithesis, so
+neither is a banned form. The question is what the second limb is for.
+
+These are prototypes to think with, **not exclusive bins**. A real sentence can sit in several at
+once (`use the transaction API rather than direct writes, because concurrent writers would otherwise
+lose updates` is choice, comparison, and causal explanation together), and the list does not name
+every case: preference, substitution, exception, sequencing, and manner all take the same form. So
+the classification never decides anything on its own. **The three-part live-branch test decides**,
+and these prototypes only tell you whether it is worth running.
+
+| Use | Shape | Verdict |
+|---|---|---|
+| Rhetorical dismissal | opposed predicates about one subject, the second limb put there to be knocked down | **run the live-branch test.** Usually rewrite |
+| Explanatory comparison | two real options weighed, both live for the reader | ordinary prose |
+| Causal attribution | assigns which cause did the work | ordinary prose |
+| Operational choice | tells the reader which action to take | ordinary prose |
+| Boundary setting | names a scope limit the reader would otherwise overstep | ordinary prose |
+
+```
+FIRES     "Desire produces rather than lacks."
+           One subject, two opposed predicates, and the second
+           exists to be knocked down.
+
+ORDINARY  "Most of the saving came from prevention rather than
+           faster recovery."
+           Causal attribution. Names which cause did the work.
+
+ORDINARY  "Email the owner instead of opening another ticket."
+           Operational choice. Tells the reader what to do.
+
+ORDINARY  "Use the plain word rather than the ornate one when
+           they mean the same thing."
+           Explanatory comparison between two live options.
+```
+
+**`merely`, `simply`, and `just` in the second limb are a strong cue, not a verdict.** They often
+mark a limb placed there to be dismissed, which is the staged reveal wearing comparative clothing:
+`generative rather than merely waiting to be realized` fires, and `generative` alone says it. But
+each word has honest senses that carry scope or timing, and those are ordinary prose:
+
+```
+FIRES     "The fix is structural rather than merely cosmetic."
+           `merely` belittles a limb nobody proposed.
+
+ORDINARY  "Notify all maintainers rather than just the admins."
+           `just` marks scope. The narrower set is a real option.
+
+ORDINARY  "Run the check continuously rather than just before a
+           release."
+           `just` marks timing, and both schedules are live.
+```
+
+Treat the cue as a reason to run the test, never as the result of running it.
 
 **Editorial test.** For every contrastive negation, ask what genuine misunderstanding the negated
 half prevents, then ask whether the positive half already prevents it. If no misunderstanding is
@@ -299,7 +304,7 @@ Reduce `not only X but also Y` to `X and Y` unless the expansion of scope is its
 polished antitheses such as `not a mirror but a portal` as suspect unless the contrast genuinely
 explains the concept.
 
-#### 9. Explain in the positive, not as a rebuttal
+## tier-3.9 Explain in the positive, not as a rebuttal
 
 The user's prompt, including any confusion, contradiction, or "X vs Y isn't clear" they voice, is
 input about *what* to teach. It is not a script for *how* to stage the explanation. Never open a
@@ -323,9 +328,9 @@ Reserve the myth-then-correction move for when the user explicitly asks you to c
 confusion, and even then keep it to one line, never a paragraph. A section should read as if it were
 written before the question existed.
 
-#### 10. Teach from the model, not from the misconception
+## tier-3.10 Teach from the model, not from the misconception
 
-Rule 9 states this at the level of a single sentence; this rule is about the architecture of a whole
+tier-3.9 states this at the level of a single sentence; this rule is about the architecture of a whole
 section. Treat the reader's confusion as evidence about what needs explaining, not as the structure
 of the explanation. Begin with the correct concept: what the thing is, which parts it has, and how
 those parts relate. Let that model resolve the confusion through its own clarity.
@@ -376,9 +381,9 @@ section by restaging an objection or false model. Use explicit correction only w
 is itself relevant, and keep the correction brief. Every section should remain intelligible to a
 reader who never saw the question that prompted it.
 
-### Connective tissue and movement
+## Connective tissue and movement
 
-#### 11. Keep connective tissue when it names a real relationship
+## tier-3.11 Keep connective tissue when it names a real relationship
 
 Connective prose is valuable when it tells the reader how one idea relates to another. It can carry
 cause, consequence, contrast, concession, sequence, qualification, a change of scale, or a return to
@@ -399,7 +404,7 @@ The second sentence does not merely change topics. It explains why the next topi
 last. That is the test for any connective phrase: does it name the relationship, or only gesture at
 one.
 
-#### 12. Let each sentence inherit something and add something
+## tier-3.12 Let each sentence inherit something and add something
 
 Seamless prose rarely comes from elaborate transitions. It comes from continuity: each sentence
 picks up a subject, term, question, contrast, image, or consequence from the sentence before it, and
@@ -413,7 +418,7 @@ Each sentence inherits and advances: *reduced time* becomes *speed*; *speed* rev
 *inconsistency*; *inconsistency* sets the next priority. That is connective tissue with no padding,
 built from the ideas themselves rather than bolted on between them.
 
-#### 13. Make paragraphs move rather than merely accumulate
+## tier-3.13 Make paragraphs move
 
 A paragraph that works usually has a shape: an anchor, some development, a turn or qualification, and
 a consequence.
@@ -428,7 +433,7 @@ robotically factual, yet every sentence advances the thought. Not every paragrap
 form. The one thing that must hold is movement: the last sentence should carry the thought somewhere
 new, never restate the first in grander language.
 
-#### 14. Allow interpretation, but make the bridge visible
+## tier-3.14 Allow interpretation, but make the bridge visible
 
 Signposting phrases such as *this matters*, *the deeper problem*, or *the important distinction* can
 be genuinely useful. They turn empty when what follows is a second abstraction instead of the
@@ -443,7 +448,7 @@ Specific:
 Interpretation is part of good prose. Moralizing without analysis is the counterfeit of it. When you
 tell the reader something matters, show the bridge from the evidence to why.
 
-#### 15. Scale the language to the evidence
+## tier-3.15 Scale the language to the evidence
 
 Treat words like *transformative*, *profound*, *revolutionary*, *unprecedented*, *fundamental*,
 *critical*, *defining*, *inevitable*, *universally*, and *entirely* as claims that require support.
@@ -461,69 +466,10 @@ Or, where the larger claim is genuinely warranted, earn it by describing the str
 > The feature changes the starting point of the work: users now begin with an editable draft rather
 > than an empty page.
 
-The second still communicates significance. It does so by showing the structural change rather than
-announcing that the change is significant, which is the difference between a claim a reader can weigh
-and one they are merely asked to accept.
+The second still communicates significance, by showing the structural change. That gives the reader
+a claim they can weigh, instead of one they are asked to accept.
 
-### Image, rhythm, and voice
-
-#### 16. Use metaphor as an instrument of thought, not decoration
-
-Imagery is welcome. The distinction is between a fresh image that assists thought and a worn one
-that spares the writer from thinking. A metaphor earns its place when it reveals a useful
-resemblance, makes a mechanism easier to grasp, stays coherent when examined, does not exaggerate
-the subject, and is not immediately crossed by a second, conflicting image.
-
-Decorative:
-> The platform is a beacon that unlocks a new frontier and lays the foundation for an ecosystem.
-
-That asks the reader to hold a beacon, a lock, a frontier, a foundation, and an ecosystem in mind at
-once, and so pictures nothing. Functional:
-> The template acts as scaffolding: it supports the first stages of the work and is meant to come
-> down as the final structure takes shape.
-
-One image, and it explains both the function and its limits.
-
-#### 17. Cut repetition that does not develop; keep repetition that builds structure
-
-Restating an idea in slightly different words, then restating its importance, is static repetition:
-
-> The policy makes ownership clearer. It creates greater clarity around responsibility. This
-> highlights the importance of clearly defined ownership.
-
-Nothing develops across those three sentences. But repetition can also do real rhetorical work,
-building rhythm, contrast, or escalation:
-
-> The first failure delayed a decision. The second delayed a launch. The third showed that the delay
-> was part of the system.
-
-The repeated structure is the point there. The test is not "can these words be removed" but "what
-would be lost if they were: meaning, logic, emphasis, tone, rhythm, or nothing". Cut only when the
-answer is nothing.
-
-#### 18. Vary sentence length according to the movement of the thought
-
-Uniformly short sentences turn abrupt and mechanical. Uniformly long ones hide weak logic in their
-folds. Use length deliberately: a short sentence lands a conclusion, a medium one carries the main
-explanation, a long one holds comparison, qualification, or accumulating detail as long as its
-structure stays visible.
-
-> The proposal looked cheaper. It was not. Once migration, support, and retraining were included, the
-> apparent saving became a two-year cost.
-
-The brief middle sentence creates the emphasis. It is not more factual than a longer version would
-be; it simply controls the pace, and pace is part of the meaning.
-
-#### 19. Preserve voice, but do not confuse voice with verbal ornament
-
-Voice comes from what the writer notices, the order in which details arrive, the confidence or
-caution of the judgments, the rhythm of the sentences, restrained humour, the quality of the
-comparisons, and the willingness to state a hard conclusion plainly. It does not come from a
-constant layer of flourish. The standard to hold: the writing should sound like a particular mind
-attending carefully to a particular subject, rather than a generic style applied to any subject at
-all.
-
-### Breaking these rules
+## Breaking these rules
 
 Break any rule the moment breaking it makes the meaning more accurate, more natural, or more
 memorable. This is central, not a loophole. A passive sentence may place the emphasis exactly right.
@@ -533,36 +479,7 @@ technical language, long sentences, and familiar expressions deliberately rather
 either direction. The rules earn their keep as questions to ask, and they stop earning it the moment
 they become a checklist you obey without reading the sentence.
 
-### Phrasings that read as machine-generated
-
-A scannable catalogue of the tells the rules above are meant to catch. Treat each as a prompt to
-stop and look at the sentence, not as a banned-word list; any of these can be right in the rare case
-where it performs thought rather than importance.
-
-- **Significance puffery:** `stands as`, `is a testament to`, `a pivotal moment`, `marks a shift`,
-  `leaves an indelible mark`, `plays a vital role`, `rich tapestry`, `vibrant`. Inflates importance
-  with no evidence under it (see rule 15).
-- **Elaborate copulas dodging "is":** `serves as`, `boasts`, `features`, `represents` where `is`
-  would say it straight. `The gallery serves as the exhibition space` is just `The gallery is the
-  exhibition space`.
-- **Trailing participle summaries:** a vague impact clause bolted to the end of a sentence, such as
-  `..., highlighting its importance`, `..., underscoring the shift`, `..., reflecting broader
-  trends`, `..., ensuring success`. It performs analysis without adding a fact (see rule 7).
-- **Editorializing throat-clearing:** `it is important to note`, `it is worth noting`, `it should be
-  remembered`, `notably`. Usually deletable with no loss.
-- **Ceremonial transitions:** `Moreover`, `Furthermore`, `Additionally` stacked as filler, or `In
-  today's ever-evolving landscape`. Keep only when they name a real relationship (see rule 11).
-- **Vague attribution and weasel wording:** `Industry reports suggest`, `Observers have noted`,
-  `Experts argue`, `it is widely regarded as`. Name the source or drop the claim.
-- **Summary restatement:** `In summary`, `Overall`, `In conclusion` followed by the opening sentence
-  in grander words. A close should add a consequence, not re-announce the topic.
-- **Vogue words:** `delve`, `tapestry`, `landscape`, `realm`, `underscore`, `showcase`, `navigate the
-  complexities`, `unlock`, `leverage`. Reach for the plain verb instead.
-- **Rule-of-three padding:** triads assembled for cadence, such as `identity, authenticity, and
-  belonging`, where one exact term would carry the meaning.
-- **Negative parallelism:** `not only X, but also Y`, `not a mirror but a portal`. Covered by rule 8.
-
-### The five-function test
+## The five-function test
 
 To protect real connective tissue while cutting filler, do not ask only whether a phrase adds a
 *fact*. Ask whether it performs any of these five functions. A phrase that performs none is probably
@@ -575,7 +492,7 @@ and articulation while still removing sentences that merely perform fluency.
 4. **Orientation:** where the reader is in the argument, and why the subject is changing.
 5. **Expression:** deliberate rhythm, emphasis, tone, or image.
 
-### A worked example: the intended balance
+## A worked example: the intended balance
 
 The target sits between two failures, so it helps to see all three versions of one paragraph.
 
@@ -598,55 +515,3 @@ consequence, with the contrast in its final clause giving the paragraph a natura
 as an articulated piece of reasoning, which is what the middle stripped-down version threw away and
 the inflated version only pretended to be.
 
----
-
-## Editorial review workflow
-
-When invoked to review a draft (not to write from scratch), work through it against the applicable
-tiers and return targeted edits, not a rewrite of the whole thing:
-
-1. **Decide the tiers in scope.** Tier 1 always applies. If the draft carries reasoning or teaches
-   (a doc, an email, a proposal, a lesson, a longer message), Tier 2 applies too. A one-line reply or
-   status update is Tier 1 only.
-2. **Scan for each rule in order.** For every hit, quote the offending span, name the rule, and give
-   the fix inline. Concrete beats abstract: show the rewritten sentence, and where a rule offers two
-   honest repairs (rule 15), show which one fits and why.
-3. **Preserve the author's voice and meaning.** Fix how it reads, never what it claims. When a fix
-   would change the meaning, flag it and ask rather than guess.
-4. **Do not invent problems.** If a passage is clean, say so and move on. Silence on a paragraph
-   means it passed. Remember rule 19: leave the author's voice intact, and do not sand prose down to
-   bare facts in the name of the rules.
-
-Report format: a short list, each entry as `rule -> quoted span -> suggested fix`. Lead with the
-edits that matter most, and skip preamble.
-
----
-
-## Adding rules
-
-This guide is meant to grow. When the user gives a new rule, add it under the correct tier with the
-same shape as the others, and do not compress it into a bare command. Keep three things: **the rule,
-the reasoning behind it, and worked examples (a Don't/Do pair, or a short before-and-after) with the
-commentary that says what each example demonstrates.** The reasoning and the commentary matter most:
-a rule with its why gets applied intelligently in cases the examples never covered, while a bare
-imperative gets misfired or ignored. The examples are not decoration; they are how the model learns
-the judgment the rule is pointing at. Assign the rule by scope: Tier 1 if it governs sentence
-mechanics that hold everywhere, Tier 2 if it governs how prose carries reasoning or teaches. A rule
-that fits neither cleanly earns a new tier of its own.
-
----
-
-## References
-
-For the human maintaining this guide, not for the model applying it. These are the sources the rules
-were distilled from, kept here so the provenance is not lost.
-
-- **Wikipedia, "Signs of AI writing"** — the catalogue of machine-generated tells behind the
-  puffery, participle-summary, weasel-attribution, and vogue-word entries.
-  <https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing>
-- **George Orwell, "Politics and the English Language"** — the source of the meaning-and-precision,
-  connective-tissue, and image-rhythm-voice principles, including the rule to break any rule when it
-  serves the meaning.
-  <https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/>
-- **The Gods of good narrative** — the working name for the third source, on positive-first
-  exposition and using contrast only to close a live interpretive branch.

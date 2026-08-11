@@ -117,9 +117,15 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
 		// The house writing style, split by how it is consulted: an invocable
 		// editorial review (core.capabilities) and an always-on pointer whose
-		// stanza inlines the two Tier-1 mechanics (core.instructions).
-		"writing-style":         {manifest.TypeSkill, manifest.RoleCapability},
+		// stanza inlines the two tier-1 mechanics (core.instructions). The
+		// pointer keeps its own name: renaming it would rewrite the user's
+		// global CLAUDE.md wiring, a wider blast radius than the skill rename.
+		// writing-like-me composes those tiers with a private voice corpus; it
+		// is opt-in via the `writing` profile, never core, because it ships
+		// empty exemplar files and does nothing until a corpus exists.
+		"writing-editorial":     {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
+		"writing-like-me":       {manifest.TypeSkill, manifest.RoleCapability},
 		// L2 notebook-authoring cluster, chained by requires: and wired by the
 		// visual profile. generate-notebooks owns the uv edge (it owns
 		// bootstrap_env.sh); marimo-visual-explanation owns the mermaid-cli edge;
@@ -220,7 +226,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L4 context recipes (live docs + local semantic search) — wire-only MCP.
 		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"serena":   {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		// Codex as an MCP server: a second model reachable as a tool. Standalone
+		// by design, bound to no profile, because it presumes a working codex CLI
+		// with credentials Patronus cannot supply.
+		"codex-mcp": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"serena":    {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		// P7.3 L5 tool recipes (opt-in) — all wire-only MCP (npx/uvx on demand, or hosted).
 		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
 		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
@@ -310,7 +320,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	}
 
 	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"ai-memory", "code-intel", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "tdd-enforced", "python", "quiet", "terse", "visual", "web-dev"}
+	wantProfiles := []string{"ai-memory", "code-intel", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "tdd-enforced", "python", "quiet", "terse", "visual", "web-dev", "writing"}
 	if len(cat.Profiles) != len(wantProfiles) {
 		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
 	}

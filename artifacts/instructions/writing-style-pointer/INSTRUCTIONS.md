@@ -33,5 +33,5 @@ evidence, use contrast only to close a real interpretive branch, explain in the
 positive, and cut puffery and filler.
 
 Those rules carry their reasoning and worked examples, which is what makes them
-applicable rather than mechanical. Load the `writing-style` skill for them, and
+applicable rather than mechanical. Load the `writing-editorial` skill for them, and
 to review a draft against them.

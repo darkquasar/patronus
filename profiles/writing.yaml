@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle                            # L11 — profiles are lifecycle by nature
+name: writing
+version: 1.0.0
+summary: "Prose environment: the house editorial style as four sequenced tier files, plus the voice pipeline that composes them with your own writing corpus. An overlay — compose it onto `core` for the rest of the environment. `core` already carries writing-editorial; this profile is what you add when you want the voice pipeline too."
+# An L2 overlay. It composes ONTO a base profile (core) rather than
+# `extends: core`, so it stays additive.
+#
+# writing-like-me is NOT in core: it ships with empty exemplar files and does
+# nothing useful until the user supplies a corpus at ~/.claude/patronus/voice/,
+# so it belongs in a profile a user opts into. Same reasoning as ai-memory and
+# code-intel. It is Claude-only (it orchestrates subagents and shells out to
+# `codex exec`), and its `requires:` edge pulls writing-editorial into the
+# install closure automatically.
+layers:
+  capabilities:
+    - writing-editorial                    # the four sequenced tier files + the editorial review that applies them
+    - writing-like-me@claude               # the voice pipeline (requires: writing-editorial); Claude-only, so @claude → no-op on codex/opencode

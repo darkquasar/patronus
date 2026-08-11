@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-editorial
+description: "The house writing style, and the editorial review that applies it, as four tier files applied in sequence. Use when COMPOSING any prose a reader will see (notebook and .ipynb/marimo cells, docstrings and module headers, READMEs, design docs, ADRs, PR descriptions, commit bodies, application answers, long-form explanations) so the style is there from the first draft. Short prose counts: the tiers are gated by stakes, not by length. Also use on demand to review a draft: 'critique my writing', 'check this against my style', 'clean up this text'. Tier 0 strips machine phrasings, tier 1 fixes mechanics, tier 2 removes machine tells and protects the author's voice, tier 3 works on meaning and movement. Governs how prose reads, not what it claims; not a code linter."
+version: 2.1.0
+entry: SKILL.md
+files: [tier-0.md, tier-1.md, tier-1-fixtures.md, tier-2.md, tier-3.md]
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/conorbronsdon/avoid-ai-writing
+  license: MIT
+  copyright: "Copyright (c) 2026 Conor Bronsdon"
+  note: "tier-2 extracts rules and patterns, not prose: the 1A/1B word-tier split and its band structure, the load-bearing hyphen and construction carve-outs, the never-inject list and its provenance rule, and the burstiness framing. Word tables are re-authored and trimmed against tier-0. tier-2.1's trope catalogue is built from ossa-ma's 'AI Writing Tropes to Avoid' (tropes.fyi), whose Avoid: specimens are quoted as observed examples. Authored and assembled for Patronus by Diego Perez (@darkquasar). No source prose is reproduced wholesale."
