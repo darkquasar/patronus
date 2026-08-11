@@ -54,6 +54,11 @@ type Applier struct {
 	Fetcher Fetcher
 	// Ctx, if set, scopes downloads (cancellation/timeout). Defaults to Background.
 	Ctx context.Context
+	// readBack reads a file back after writing it, so state records the bytes that
+	// actually reached disk rather than the bytes we intended to write. nil means
+	// os.ReadFile. A real filesystem will not return different bytes than it was
+	// given, so this exists to make the mismatch branch testable.
+	readBack func(string) ([]byte, error)
 }
 
 // Result reports the outcome of an Apply. Applied lists the ops actually written
@@ -138,6 +143,24 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 			res.Failed = &d
 			return res, fmt.Errorf("install: write %s: %w", d.Path, err)
 		}
+		// Read back and verify. A mismatch means the bytes on disk are not the bytes
+		// we wrote: a filesystem lie or a concurrent writer, not a planning error. It
+		// is treated exactly like a write error, so state reflects reality and
+		// re-running is safe.
+		read := a.readBack
+		if read == nil {
+			read = os.ReadFile
+		}
+		onDisk, err := read(d.Path)
+		if err != nil {
+			res.Failed = &d
+			return res, fmt.Errorf("install: verify %s: %w", d.Path, err)
+		}
+		if !bytes.Equal(onDisk, d.After) {
+			res.Failed = &d
+			return res, fmt.Errorf("install: verify %s: expected %s, observed %s",
+				d.Path, shortSHA(d.After), shortSHA(onDisk))
+		}
 		a.note("%s %s", d.Action, d.Path)
 		res.Applied = append(res.Applied, d)
 	}
@@ -212,6 +235,13 @@ func verifySHA256(r io.Reader, wantHex string) ([]byte, error) {
 		return nil, fmt.Errorf("verify: sha256 mismatch (got %s, want %s)", got, lowerHex(want))
 	}
 	return data, nil
+}
+
+// shortSHA renders a content digest for an error message: enough to compare two
+// by eye, not so much that the message wraps.
+func shortSHA(b []byte) string {
+	sum := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(sum[:])[:12]
 }
 
 func lowerHex(s string) string {
