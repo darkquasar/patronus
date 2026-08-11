@@ -330,9 +330,19 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 		}
 
 		spec := serverSpec(rec.Name, wm, installPath, tool)
+		dotted, obj, err := adapter.McpMergeParts(ft, tr, spec)
+		if err != nil {
+			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
+		}
 		after, err := adapter.MergeConfig(before, ft, tr, spec)
 		if err != nil {
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
+		}
+		// What the user had at this key before we set it, so remove restores it
+		// instead of deleting a block they configured themselves.
+		prior, priorPresent, err := adapter.ReadDotted(before, ft, dotted)
+		if err != nil {
+			return nil, fmt.Errorf("recipe %q -> %s: read prior: %w", rec.Name, tool, err)
 		}
 
 		out = append(out, diff.FileDiff{
@@ -346,6 +356,16 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 			Tool:     tool,
 			Scope:    scope,
 			Note:     "wire mcp: " + rec.Name,
+			// An MCP merge IS a scalar setting-set. Carrying the edit lets the
+			// planner re-fold it onto an accumulated config, so two servers on one
+			// file both survive, and lets remove strip exactly this server block.
+			Setting: &diff.SettingEdit{
+				Target:       diff.FileTargetRef{File: ft.File, Format: ft.Format},
+				Dotted:       dotted,
+				ScalarValue:  obj,
+				PriorValue:   prior,
+				PriorPresent: priorPresent,
+			},
 		})
 	}
 	return out, nil
