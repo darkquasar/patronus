@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -65,5 +66,35 @@ func TestPlanExecuteManifest(t *testing.T) {
 	}
 	if len(wantTargets) != 0 {
 		t.Errorf("targets missing %v (got %v)", wantTargets, found.Targets)
+	}
+}
+
+// TestSupersededSkillsPointAtTheRouter guards the only mitigation available for
+// trigger competition today. Catalog metadata that could express this
+// structurally (supersededBy, recommended: false) is a manifest-schema change
+// and does not exist, so the description field carries it: each original names
+// plan-execute as the default and says what it is FOR instead.
+func TestSupersededSkillsPointAtTheRouter(t *testing.T) {
+	root := repoRoot(t)
+	reg := NewLocalRegistry(root)
+	cat, err := reg.Catalog(context.Background())
+	if err != nil {
+		t.Fatalf("loading real catalog: %v", err)
+	}
+
+	byName := map[string]*manifest.Artifact{}
+	for _, e := range cat.Artifacts {
+		byName[e.Manifest.Name] = e.Manifest
+	}
+
+	for _, name := range []string{"executing-plans", "subagent-driven-development"} {
+		a, ok := byName[name]
+		if !ok {
+			t.Errorf("%s must stay in the catalog, installable and opt-in", name)
+			continue
+		}
+		if !strings.Contains(a.Description, "plan-execute") {
+			t.Errorf("%s: description must name plan-execute as the default:\n%s", name, a.Description)
+		}
 	}
 }
