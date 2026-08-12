@@ -83,7 +83,7 @@ independently testable deliverable.
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** Use the executing-plans skill to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Use the plan-execute skill to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -271,16 +271,19 @@ which one you are using, so the next session knows where to look.
 
 ## Execution Handoff
 
-After saving the plan, hand off to the **executing-plans** skill to implement it task-by-task with
-review checkpoints. **If subagents are available, dispatch one per task** (with review between
-tasks) — a fresh subagent starts with a clean context window, unsullied by the accumulated context
-of the session that produced the work. If the host has no subagents, execute inline and say so.
+After saving the plan, hand off to the **plan-execute** skill to implement it task-by-task.
+plan-execute assesses the plan and chooses its own execution mode: a sequential single-context run,
+or a fresh implementer subagent per task with an independent reviewer after each. It states which
+mode it picked and why, citing the plan sections that drove the choice, then proceeds. Both modes
+end with an independent whole-branch review.
 
 The Self-Review above is your own pass over the plan. For an independent one — a fresh reviewer who
 reads what the plan *says* rather than what you meant — run the **plan-review** skill before
 handing off. It applies the same coverage / placeholder / type-consistency checks plus engineering,
 design, DevEx, and strategy lenses, and it is advisory: it closes planning, it does not block it.
+plan-review also forks the build path, sending a plan whose tasks split into disjoint file-owning
+boundaries to a parallel team instead.
 
 **Next:** the plan is written. Consider **`plan-review`** before building — a fresh subagent reads
-what each step *says*, where the author knows what each step *meant*. Then `executing-plans`.
+what each step *says*, where the author knows what each step *meant*. Then `plan-execute`.
 (Suggestion, not a gate.)

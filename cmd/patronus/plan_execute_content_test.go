@@ -107,3 +107,26 @@ func TestPlanReviewForkNamesBothArms(t *testing.T) {
 		}
 	}
 }
+
+// TestWritingPlansHandsOffToPlanExecute pins the hand-off rename AND the
+// reviewer-dispatch fix from 79f9b64 that must survive it. Task 1 reverted that
+// commit's executing-plans half; its writing-plans half is a wanted fix, and
+// editing the neighbouring hand-off text is exactly where it could be lost.
+func TestWritingPlansHandsOffToPlanExecute(t *testing.T) {
+	b, err := os.ReadFile("../../artifacts/skills/writing-plans/SKILL.md")
+	if err != nil {
+		t.Fatalf("read writing-plans SKILL.md: %v", err)
+	}
+	body := string(b)
+
+	if !strings.Contains(body, "plan-execute") {
+		t.Error("writing-plans must hand off to plan-execute")
+	}
+	if strings.Contains(body, "executing-plans") {
+		t.Error("writing-plans still names executing-plans; the hand-off moved to plan-execute")
+	}
+	// The 79f9b64 reviewer-dispatch fix stays.
+	if !strings.Contains(body, "plan-review") {
+		t.Error("the plan-review reviewer-dispatch pointer from 79f9b64 was lost")
+	}
+}
