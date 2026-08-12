@@ -94,7 +94,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
 		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
 		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
-		// pat-670z code-intel checkpoints: a serena onboarding pointer (all tools) +
+		// code-intel checkpoints: a serena onboarding pointer (all tools) +
 		// two claude/codex-only nudges (edit-time caller check, graph staleness).
 		// Wired by the opt-in code-intel profile.
 		"serena-pointer":          {manifest.TypeInstruction, manifest.RoleContext},

@@ -88,7 +88,7 @@ func checkVersions(changes []artifactChange) []violation {
 	return out
 }
 
-// newCheckVersionsCmd is the PR-side guard for pat-3mz5: it fails when an artifact's
+// newCheckVersionsCmd is the PR-side guard for artifact versioning: it fails when an artifact's
 // CONTENT changed against the PR base but its patronus.yaml version: did not. The
 // rule lives in CONTRIBUTING.md ("bump version: on any content change") but was
 // unenforced until this — PR #26 shipped 8 un-bumped content changes that only

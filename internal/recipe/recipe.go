@@ -450,7 +450,7 @@ func execDiffs(rec *manifest.Recipe, tools []string, scope, installPath string) 
 			// Resolve {installPath}/{toolContext} (the fetched binary's absolute path
 			// and the per-tool client label) the same way the MCP-merge path does, so a
 			// fetch+run recipe invokes its own binary by absolute path — reachable even
-			// when the install dir is off $PATH (pat-as4h). {tool} is the raw tool name.
+			// when the install dir is off $PATH. {tool} is the raw tool name.
 			line := substPlaceholders(strings.ReplaceAll(raw, "{tool}", tool), installPath, tool)
 			argv := strings.Fields(line)
 			if len(argv) == 0 {

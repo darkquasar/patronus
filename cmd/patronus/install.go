@@ -232,7 +232,7 @@ func newInstallCmd() *cobra.Command {
 			// on dry-run too, so the user sees what they'd need before deploying.
 			printReadiness(cmd.OutOrStdout(), readinessReport(cs, exec.LookPath))
 
-			// Always-on PATH readiness (pat-as4h): warn when a FETCH-delivered binary
+			// Always-on PATH readiness: warn when a FETCH-delivered binary
 			// lands in a dir absent from the inherited $PATH, so a hook / MCP server /
 			// shell that must execute it by bare name cannot resolve it. Shown on
 			// dry-run too. A GUI-launched agent's $PATH is frozen at launch, so this is
