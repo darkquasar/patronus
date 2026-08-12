@@ -87,19 +87,29 @@ Its sibling gate, `spec-review`, closes the spec phase the same way.
 ## The Fork: how to build it
 
 plan-review is where the pipeline forks into execution. Once the plan is accepted, choose the
-build path — this routing is plan-review's, and only plan-review's:
+build path — this routing is plan-review's, and only plan-review's. The criterion is
+**parallelism**, and it is unchanged: can you draw disjoint file-owning boundaries across the
+plan's tasks?
 
-- **`executing-plans` (solo)** — one agent works the plan task-by-task with review between tasks.
-  Choose it for a **small or single-concern** stream: the tasks share files or must land in order,
-  so parallelism buys nothing and coordination only adds risk.
-- **`team-implement` (parallel team)** — a Team Lead spawns teammates in worktree isolation, each
-  owning a disjoint concern, then merges. Choose it for a **multi-concern, parallelizable** stream:
-  the plan's tasks split cleanly into 2–5 boundaries that touch non-overlapping files.
+- **`plan-execute-parallel` (parallel team)** — a Team Lead spawns teammates in worktree
+  isolation, each owning a disjoint concern, then merges. Choose it for a **multi-concern,
+  parallelizable** stream: the plan's tasks split cleanly into 2–5 boundaries that touch
+  non-overlapping files.
+- **`plan-execute` (single stream)** — for everything else: the tasks share files or must land in
+  order, so parallelism buys nothing and coordination only adds risk.
 
-The criterion is the plan's own shape: if you can draw disjoint file-owning boundaries, it is a
-team-implement candidate; if you cannot, it is a solo executing-plans job. Offer the choice; do not
-gate on it.
+A second, orthogonal question lives **inside** the `plan-execute` arm: does independent per-task
+review earn its cost for this plan? That is **proportionality**, and `plan-execute` gates on it
+itself, choosing a sequential mode or a fresh-subagent-per-task mode. You do not need to answer it
+here.
+
+Parallelism decides first, and it decides outright. A plan that is both parallelizable and risky
+still goes to `plan-execute-parallel`: its disjoint per-teammate boundaries and merge phase already
+impose review structure, and re-partitioning it into per-task subagents would fight that.
+
+Offer the choice; do not gate on it.
 
 **Next:** once the findings are addressed, **mirror the plan into the `tk` work-graph** (one epic to
 group it, one ticket per plan task, `tk dep` for the order — see the `ticket` instruction), then take
-the fork above — **`executing-plans`** for a solo build, **`team-implement`** for a parallel one.
+the fork above — **`plan-execute`** for a single stream, **`plan-execute-parallel`** for a parallel
+one.

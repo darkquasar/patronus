@@ -78,3 +78,32 @@ func TestSDDAuxFilesCarriedOver(t *testing.T) {
 		}
 	}
 }
+
+// TestPlanReviewForkNamesBothArms pins that plan-review's fork keeps BOTH arms
+// after being rewritten. The fork's criterion is PARALLELISM and is unchanged;
+// only the destination names move, and the proportionality gate is noted as
+// living inside the non-parallel arm. A one-arm pointer would collapse two
+// orthogonal axes into one.
+func TestPlanReviewForkNamesBothArms(t *testing.T) {
+	b, err := os.ReadFile("../../artifacts/skills/plan-review/SKILL.md")
+	if err != nil {
+		t.Fatalf("read plan-review SKILL.md: %v", err)
+	}
+	body := string(b)
+
+	for _, want := range []string{
+		"plan-execute-parallel",
+		"disjoint file-owning boundaries",
+		"proportionality",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("plan-review fork missing %q", want)
+		}
+	}
+	// The old destinations must be gone from the fork.
+	for _, unwanted := range []string{"`executing-plans` (solo)", "`team-implement` (parallel team)"} {
+		if strings.Contains(body, unwanted) {
+			t.Errorf("plan-review still routes to the retired destination %q", unwanted)
+		}
+	}
+}
