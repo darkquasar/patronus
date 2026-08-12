@@ -130,3 +130,38 @@ func TestWritingPlansHandsOffToPlanExecute(t *testing.T) {
 		t.Error("the plan-review reviewer-dispatch pointer from 79f9b64 was lost")
 	}
 }
+
+// TestGateFixturesPresent pins the nine gate fixtures and their declared expected
+// modes. The gate is prose evaluated by a model and has no automated harness, so
+// these fixtures plus the protocol in fixtures/README.md are the whole
+// verification story. This test cannot check that the gate ROUTES them correctly
+// (that is the manual protocol's job); it checks that the corpus the protocol
+// needs exists and is unambiguous about what each case expects.
+func TestGateFixturesPresent(t *testing.T) {
+	dir := "../../artifacts/skills/plan-execute/fixtures/"
+
+	want := map[string]string{
+		"01-hard-trigger-one-task.md":     "sdd",
+		"02-one-soft-signal.md":           "solo",
+		"03-two-soft-signals.md":          "sdd",
+		"04-twenty-mechanical-tasks.md":   "solo",
+		"05-risky-coupled-multimodule.md": "sdd",
+		"06-qualitative-with-oracle.md":   "solo",
+		"07-lexical-false-positive.md":    "solo",
+		"08-override-to-solo.md":          "solo",
+		"09-override-to-sdd.md":           "sdd",
+	}
+	for name, mode := range want {
+		b, err := os.ReadFile(dir + name)
+		if err != nil {
+			t.Errorf("gate fixture %q missing: %v", name, err)
+			continue
+		}
+		if !strings.Contains(string(b), "Expected mode: "+mode) {
+			t.Errorf("fixture %q must declare %q", name, "Expected mode: "+mode)
+		}
+	}
+	if _, err := os.Stat(dir + "README.md"); err != nil {
+		t.Errorf("fixtures/README.md (the manual protocol) missing: %v", err)
+	}
+}

@@ -51,7 +51,8 @@ func TestPlanExecuteManifest(t *testing.T) {
 	wantFiles := map[string]bool{
 		"solo.md": true, "sdd.md": true,
 		"implementer-prompt.md": true, "task-reviewer-prompt.md": true,
-		"scripts": true,
+		"scripts":  true,
+		"fixtures": true,
 	}
 	for _, f := range found.Files {
 		delete(wantFiles, f)
