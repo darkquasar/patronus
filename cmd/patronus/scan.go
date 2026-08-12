@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -281,9 +282,21 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		isArtifact[cat.Artifacts[i].Manifest.Name] = true
 	}
 
+	// recordedMerge is one contributor's setting-level claim on a shared config: the
+	// dotted key it owns and the value it would write there. A composed config has N
+	// of these and one whole-file checksum that matches none of them, so it is
+	// reconciled per contributor (pass 1c) rather than whole-file.
+	type recordedMerge struct {
+		item string
+		path string
+		edit *diff.SettingEdit
+	}
+
 	rows := map[string]recordedFile{}
 	var sectionRows []recordedSection
 	appendPath := map[string]bool{} // paths reconciled per-section, not whole-file
+	var mergeRows []recordedMerge
+	mergePath := map[string]bool{} // paths reconciled per-setting, not whole-file
 	installedArtifacts := map[string]bool{}
 	installedRecipes := map[string]bool{} // recipe items whose MERGE rows need a computed source
 	for _, dir := range []string{inv.Home, inv.ProjectDir} {
@@ -316,14 +329,26 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 					appendPath[f.Path] = true
 					continue
 				}
+				// A composed MERGE (settings.json, .claude.json) is a fold of many
+				// setting edits from different artifacts; its whole-file checksum
+				// never matches any single contributor, so it is reconciled PER
+				// SETTING below, not here.
+				if f.Action == string(diff.Merge) && f.Setting != nil {
+					mergeRows = append(mergeRows, recordedMerge{item: it.Artifact, path: f.Path, edit: f.Setting})
+					mergePath[f.Path] = true
+					continue
+				}
 				rows[f.Path] = recordedFile{item: it.Artifact, checksum: f.Checksum}
 			}
 		}
 	}
-	// A path that ANY contributor appended to is a composed file; never also
-	// whole-file reconcile it (a non-section MERGE row for the same file would
-	// otherwise re-introduce the false whole-file compare).
+	// A path that ANY contributor appended to or merged into is a composed file;
+	// never also whole-file reconcile it (a non-section, non-setting row for the
+	// same file would otherwise re-introduce the false whole-file compare).
 	for p := range appendPath {
+		delete(rows, p)
+	}
+	for p := range mergePath {
 		delete(rows, p)
 	}
 
@@ -401,6 +426,34 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 			Item:    sr.item,
 			Verdict: v,
 			Detail:  driftDetail(v),
+		})
+	}
+
+	// PASS 1c: composed MERGE files, reconciled PER SETTING. A settings.json or
+	// .claude.json is a fold of many scalar sets and list-appends from different
+	// artifacts; whole-file Classify cannot judge it, and keying by path kept only
+	// one contributor, so every edit was attributed to whichever row survived. For
+	// each recorded edit, ask the narrow question: is MY dotted path present with
+	// MY value?
+	//
+	// recorded[path] is set for every row whatever the verdict, exactly as pass 1b
+	// does. It is what tells pass 2 the occupancy is explained; without it a
+	// composed config trades a false STALE for a false shadow.
+	for _, mr := range mergeRows {
+		recorded[mr.path] = true
+		current, exists := readIfExists(mr.path)
+		if !exists {
+			findings = append(findings, drift.Finding{
+				Path: mr.path, Item: mr.item, Verdict: drift.Missing, Detail: driftDetail(drift.Missing),
+			})
+			continue
+		}
+		v := classifySettingEdit(current, mr.edit)
+		if v == drift.OK {
+			continue
+		}
+		findings = append(findings, drift.Finding{
+			Path: mr.path, Item: mr.item, Verdict: v, Detail: driftDetail(v),
 		})
 	}
 
@@ -698,9 +751,55 @@ func recipeMergeSources(cat *registry.Catalog, adapters map[string]*manifest.Ada
 		}
 		for _, d := range diffs {
 			if d.Action == diff.Merge {
+				// Accumulate: two recipes merging into one config each contribute, and
+				// keeping only the last made the comparison source one recipe's
+				// standalone bytes. Fold each onto the previous result.
+				if prev, ok := out[d.Path]; ok && d.Setting != nil {
+					if folded, err := adapter.ApplySettingEdit(prev.source, d.Setting); err == nil {
+						out[d.Path] = wouldWrite{source: folded, item: prev.item}
+						continue
+					}
+				}
 				out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
 			}
 		}
+	}
+	return out
+}
+
+// classifySettingEdit reconciles ONE contributor's edit against a composed config:
+// is its dotted path present, and does it hold the value the edit would write? A
+// sibling artifact's key on the same file is none of this contributor's business,
+// which is what makes this correct where a whole-file checksum is not.
+func classifySettingEdit(current []byte, e *diff.SettingEdit) drift.Verdict {
+	refolded, err := adapter.ApplySettingEdit(current, e)
+	if err != nil {
+		// An unparseable config is not this contributor's drift to report.
+		return drift.OK
+	}
+	if bytes.Equal(normalizeJSON(refolded), normalizeJSON(current)) {
+		// Re-applying our edit changes nothing: our claim is already satisfied.
+		return drift.OK
+	}
+	return drift.Stale
+}
+
+// normalizeJSON round-trips bytes through unmarshal/marshal so key ordering and
+// whitespace do not read as drift. Both sides of the compare need it, not just
+// one: ApplySettingEdit returns bytes that went through serializeConfig, while
+// the on-disk side is whatever is there. After a Patronus write those agree, but
+// after any user reformat they would not, and an unnormalized compare would then
+// report a permanent false STALE for exactly the reformat case this reconcile
+// exists to stop reporting. Bytes that do not parse as JSON pass through
+// unchanged (a TOML config compares literally, which is what it already did).
+func normalizeJSON(b []byte) []byte {
+	var v any
+	if err := json.Unmarshal(b, &v); err != nil {
+		return b
+	}
+	out, err := json.Marshal(v)
+	if err != nil {
+		return b
 	}
 	return out
 }

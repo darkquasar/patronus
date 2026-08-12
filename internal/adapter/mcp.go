@@ -16,6 +16,20 @@ type ServerSpec struct {
 	Values    map[string]any // placeholder values: command, args, env, url, headers, commandArray, bearerTokenEnvVar
 }
 
+// McpMergeParts computes the two inputs an MCP merge is made of: the dotted path
+// the server block lands at, and the transport object that goes there. MergeConfig
+// applies them; the recipe engine also needs them verbatim to build the
+// SettingEdit the planner re-folds, so they are computed once here rather than
+// derived twice and drifting apart.
+func McpMergeParts(ft manifest.FileTarget, tr manifest.Transport, spec ServerSpec) (string, map[string]any, error) {
+	if tr.Keys == nil {
+		return "", nil, fmt.Errorf("mcp: transport %q has no key template", spec.Transport)
+	}
+	obj := buildTransportObject(tr, spec.Values)
+	dotted := strings.ReplaceAll(ft.Path, "{name}", spec.Name)
+	return dotted, obj, nil
+}
+
 // MergeConfig computes the new bytes of a tool config after wiring spec into it
 // at the layout's dotted path. It builds the transport object from the layout's
 // ordered key templates, then rides the format-neutral merger in config.go to
@@ -23,11 +37,10 @@ type ServerSpec struct {
 // only thing here that is genuinely about MCP is buildTransportObject; the merge
 // itself is shared with settings/hook wiring.
 func MergeConfig(existing []byte, ft manifest.FileTarget, tr manifest.Transport, spec ServerSpec) ([]byte, error) {
-	if tr.Keys == nil {
-		return nil, fmt.Errorf("mcp: transport %q has no key template", spec.Transport)
+	dotted, obj, err := McpMergeParts(ft, tr, spec)
+	if err != nil {
+		return nil, err
 	}
-	obj := buildTransportObject(tr, spec.Values)
-	dotted := strings.ReplaceAll(ft.Path, "{name}", spec.Name)
 	return MergeSettings(existing, ft, dotted, obj)
 }
 

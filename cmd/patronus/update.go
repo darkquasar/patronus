@@ -18,12 +18,14 @@ import (
 //
 //	update            — REFRESH THE REGISTRY CACHE (Phase 6): fetch the latest
 //	                    discovery index.json and overwrite the local cache, the one
-//	                    explicit action that bypasses the apt-style cache policy.
+//	                    explicit action that bypasses the apt-style cache policy. A
+//	                    local checkout has no cache, so there it just reads the
+//	                    checkout and reports that.
 //	update <name>...  — INSTALLED-ITEM REFRESH (Phase 8): after refreshing the
 //	                    cache, compare each named installed item's recorded version
 //	                    against the registry's latest and, if newer, re-drive its
 //	                    install (re-fetch/rewire) at its recorded tool/scope. This is
-//	                    a MANUAL, explicit action — Patronus never auto-updates.
+//	                    a MANUAL, explicit action: Patronus never auto-updates.
 //
 // Like install, the installed-item refresh is a dry run unless --deploy.
 func newUpdateCmd() *cobra.Command {
@@ -37,13 +39,15 @@ func newUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [name...]",
 		Short: "Refresh the registry cache, or re-install named items at the latest version",
-		Long: "With no arguments, fetches the latest catalog/index.json from the registry and\n" +
+		Long: "With no arguments and a remote registry, fetches the latest catalog/index.json and\n" +
 			"overwrites the local cache at ~/.patronus/cache (day-to-day commands read the\n" +
 			"cache offline; this is the explicit refresh). If the network is unreachable but\n" +
-			"a cache already exists, the cache is kept.\n\n" +
+			"a cache already exists, the cache is kept. Against a local registry checkout\n" +
+			"(--local-registry, or running inside the repo) there is no cache: the checkout\n" +
+			"is read directly.\n\n" +
 			"With one or more names (or --all), also compares each installed item's recorded\n" +
 			"version against the registry's latest and, when newer, re-installs it at the\n" +
-			"tool/scope it was originally installed to. Manual and explicit — nothing auto-\n" +
+			"tool/scope it was originally installed to. Manual and explicit, nothing auto-\n" +
 			"updates. Like install, this is a dry run unless --deploy.",
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,7 +63,7 @@ func newUpdateCmd() *cobra.Command {
 
 			// Resolve the registry the same way install/list do (local checkout vs
 			// remote R2), then refresh its catalog so the comparison sees the latest.
-			reg, _, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
+			reg, root, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
 			if err != nil {
 				return err
 			}
@@ -70,6 +74,13 @@ func newUpdateCmd() *cobra.Command {
 			if len(args) == 0 && !all {
 				if cat == nil {
 					return fmt.Errorf("update: unable to refresh registry (offline and no cache)")
+				}
+				// A local checkout has no cache to write; say what actually happened
+				// rather than naming a file that was never touched.
+				if root != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "read local registry checkout %s (%d artifacts, %d recipes, %d profiles)\n",
+						root, len(cat.Artifacts), len(cat.Recipes), len(cat.Profiles))
+					return nil
 				}
 				fmt.Fprintf(cmd.OutOrStdout(), "updated registry cache (%d artifacts, %d recipes, %d profiles)\n",
 					len(cat.Artifacts), len(cat.Recipes), len(cat.Profiles))
@@ -219,7 +230,7 @@ func newUpdateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&regSel.url, "registry-url", "", "registry base URL override (fork/mirror)")
+	addRegistryFlags(cmd, &regSel) // --local-registry + --registry-url, same as list/install
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually re-install updated items (default: dry run only)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
 	cmd.Flags().BoolVar(&all, "all", false, "check every installed item for updates")

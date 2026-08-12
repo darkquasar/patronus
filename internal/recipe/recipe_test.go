@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/toolpath"
@@ -296,6 +298,84 @@ func TestFetchDiffURLSource(t *testing.T) {
 			t.Errorf("advisory %q should name the unsupported platform", warnings[0])
 		}
 	})
+}
+
+// mcpRecipe builds a stdio MCP recipe named name, in the shape
+// TestComputeRemoteHttpMcp_NoFetch already uses.
+func mcpRecipe(name string) *manifest.Recipe {
+	return &manifest.Recipe{
+		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: name, Role: manifest.RoleTools},
+		Wire: manifest.Wire{
+			Method: manifest.WireMerge,
+			Actor:  manifest.ActorPatronus,
+			Mcp:    &manifest.WireMcp{Transport: "stdio", Command: "uvx", Args: []string{name}},
+			Tools:  []string{"claude"},
+		},
+	}
+}
+
+func TestComputeAttachesSettingToMcpDiff(t *testing.T) {
+	res, home, _ := testEnv(t)
+
+	// A serena block the user configured themselves, so prior-capture is exercised.
+	// The claude adapter's global MCP target is ~/.claude.json.
+	cfg := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(cfg, []byte(`{"mcpServers":{"serena":{"command":"my-own"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	diffs, err := Compute(Request{
+		Recipe: mcpRecipe("serena"), Adapters: loadAdapters(t), Resolver: res,
+		Tool: "claude", Scope: "global",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 1 || diffs[0].Action != diff.Merge {
+		t.Fatalf("expected 1 MERGE diff, got %+v", diffs)
+	}
+	d := diffs[0]
+
+	if d.Setting == nil {
+		t.Fatal("Setting is nil; the planner cannot re-fold this merge")
+	}
+	if d.Setting.IdentityKey != "" {
+		t.Fatalf("IdentityKey = %q, want \"\" (scalar set)", d.Setting.IdentityKey)
+	}
+	if d.Setting.Dotted != "mcpServers.serena" {
+		t.Fatalf("Dotted = %q, want mcpServers.serena", d.Setting.Dotted)
+	}
+	if !d.Setting.PriorPresent {
+		t.Fatal("PriorPresent = false; the user's existing serena block was not captured")
+	}
+	prior, ok := d.Setting.PriorValue.(map[string]any)
+	if !ok || prior["command"] != "my-own" {
+		t.Fatalf("PriorValue = %#v, want the user's pre-existing block", d.Setting.PriorValue)
+	}
+
+	// The attached edit must reproduce the diff's own After, or the planner's fold
+	// diverges from the merge the recipe computed.
+	refolded, err := adapter.ApplySettingEdit(d.Before, d.Setting)
+	if err != nil {
+		t.Fatalf("ApplySettingEdit: %v", err)
+	}
+	if !bytes.Equal(refolded, d.After) {
+		t.Fatalf("re-fold diverges from the computed merge:\n fold  %s\n after %s", refolded, d.After)
+	}
+}
+
+func TestComputeCapturesAbsentPrior(t *testing.T) {
+	res, _, _ := testEnv(t)
+	diffs, err := Compute(Request{
+		Recipe: mcpRecipe("serena"), Adapters: loadAdapters(t), Resolver: res,
+		Tool: "claude", Scope: "global",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diffs[0].Setting.PriorPresent {
+		t.Fatal("PriorPresent = true for a key that never existed; remove would restore a phantom")
+	}
 }
 
 func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {

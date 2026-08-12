@@ -187,6 +187,24 @@ wire:
   tools: [claude, codex, opencode]
 `)
 
+	// fix-mcp-two: a second MCP recipe merging into the SAME config file as
+	// fix-mcp-bin, so composition is exercised. An http transport needs no
+	// delivery and no binary, so it adds no download to the fixture.
+	write("recipes/fix-mcp-two.yaml", `apiVersion: patronus/v2
+family: recipe
+name: fix-mcp-two
+version: 1.0.0
+role: tools
+summary: "Second fixture MCP recipe: merges into the SAME config file as fix-mcp-bin, so composition is exercised."
+wire:
+  method: merge
+  actor: patronus
+  mcp:
+    transport: http
+    url: "https://fixture.invalid/mcp/"
+  tools: [claude, codex, opencode]
+`)
+
 	// --- artifacts ---------------------------------------------------------
 	// fix-instruction requires: [fix-bin] — this edge is what the requires-closure
 	// tests assert. It is the fixture's stand-in for ticket -> tk.
@@ -394,6 +412,20 @@ layers:
     - fix-hook
   guardrails:
     - fix-hook-2
+`)
+
+	// fix-two-mcp: two MCP recipes landing on ONE config file. Installing this
+	// profile is the end-to-end compose gate: both server blocks must survive.
+	write("profiles/fix-two-mcp.yaml", `apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: fix-two-mcp
+version: 1.0.0
+summary: "Fixture profile with TWO MCP recipes on one config file: the compose gate."
+layers:
+  capabilities:
+    - fix-mcp-bin
+    - fix-mcp-two
 `)
 
 	write("profiles/fix-extends.yaml", `apiVersion: patronus/v2

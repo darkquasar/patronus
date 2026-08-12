@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bytes"
 	"encoding/json"
 	"path/filepath"
 	"strings"
@@ -215,6 +216,41 @@ func TestBuildTransportObjectOmitsMissing(t *testing.T) {
 	}
 	if obj["command"] != "c" {
 		t.Errorf("command = %v", obj["command"])
+	}
+}
+
+func TestMcpMergePartsMatchesMergeConfig(t *testing.T) {
+	ad := loadAdapter(t, "claude")
+	// Claude declares project + user for MCP, no global block, so ForScope("global")
+	// is empty by design; ResolveTarget is what falls back to user.
+	ft := ad.Layout.Mcp.ForScope("local")
+	tr := ad.Layout.Mcp.Transports["stdio"]
+	spec := ServerSpec{
+		Name:      "serena",
+		Transport: "stdio",
+		Values:    map[string]any{"command": "uvx", "args": []string{"serena"}},
+	}
+
+	dotted, obj, err := McpMergeParts(ft, tr, spec)
+	if err != nil {
+		t.Fatalf("McpMergeParts: %v", err)
+	}
+	if dotted != "mcpServers.serena" {
+		t.Fatalf("dotted = %q, want mcpServers.serena", dotted)
+	}
+
+	// The parts must reproduce MergeConfig byte for byte, or the SettingEdit the
+	// planner folds would diverge from the merge the recipe computed.
+	viaParts, err := MergeSettings(nil, ft, dotted, obj)
+	if err != nil {
+		t.Fatalf("MergeSettings: %v", err)
+	}
+	viaMerge, err := MergeConfig(nil, ft, tr, spec)
+	if err != nil {
+		t.Fatalf("MergeConfig: %v", err)
+	}
+	if !bytes.Equal(viaParts, viaMerge) {
+		t.Fatalf("parts and MergeConfig diverge:\n parts %s\n merge %s", viaParts, viaMerge)
 	}
 }
 

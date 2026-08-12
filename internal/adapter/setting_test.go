@@ -62,6 +62,34 @@ func TestTransformSettingClaudeMerges(t *testing.T) {
 	}
 }
 
+// A scalar setting captures whatever the user already had at that key, so remove
+// restores their value instead of deleting the key outright.
+func TestSettingDiffCapturesPrior(t *testing.T) {
+	home := t.TempDir()
+	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
+	art := settingArtifact("ccusage-statusline", "statusLine",
+		map[string]any{"type": "command", "command": "ccusage statusline"})
+
+	// The user already configured a statusLine of their own.
+	existing := []byte(`{"statusLine":{"type":"command","command":"my-own"}}`)
+	diffs, err := eng.Transform(art, loadAdapter(t, "claude"), "global", "", existingBytes(existing))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := diffs[0]
+
+	if d.Setting == nil {
+		t.Fatal("Setting is nil")
+	}
+	if !d.Setting.PriorPresent {
+		t.Fatal("PriorPresent = false; the user's existing statusLine was not captured")
+	}
+	prior, ok := d.Setting.PriorValue.(map[string]any)
+	if !ok || prior["command"] != "my-own" {
+		t.Fatalf("PriorValue = %#v, want the user's statusLine; remove would delete it", d.Setting.PriorValue)
+	}
+}
+
 // settingFor applies per-tool overrides (path + value) over the base setting, so
 // ONE artifact carries divergent native switches (native-sandbox: Claude's object
 // vs Codex's string).

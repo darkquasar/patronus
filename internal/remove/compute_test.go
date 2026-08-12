@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/adapter"
@@ -266,6 +267,109 @@ func TestHookMergeStripsOneElement(t *testing.T) {
 		if !bytes.Contains(d.After, []byte(want)) {
 			t.Errorf("sibling %s was clobbered:\n%s", want, d.After)
 		}
+	}
+}
+
+// mcpItem builds the state one MCP recipe records for a shared config: a MERGE
+// row whose SettingEdit names exactly its own server key.
+func mcpItem(artifact, path, name string, installed []byte, prior any, priorPresent bool) state.Item {
+	return state.Item{
+		Artifact: artifact, Tool: "claude", Scope: "global",
+		Files: []state.FileState{{
+			Path: path, Action: string(diff.Merge), Checksum: sum(installed),
+			Setting: &diff.SettingEdit{
+				Target:       diff.FileTargetRef{File: ".claude.json", Format: "json"},
+				Dotted:       "mcpServers." + name,
+				PriorValue:   prior,
+				PriorPresent: priorPresent,
+			},
+		}},
+	}
+}
+
+func assertServers(t *testing.T, b []byte, present, absent []string) {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("parse result: %v (%s)", err, b)
+	}
+	got, _ := m["mcpServers"].(map[string]any)
+	for _, name := range present {
+		if _, ok := got[name]; !ok {
+			t.Errorf("sibling %q was clobbered:\n%s", name, b)
+		}
+	}
+	for _, name := range absent {
+		if _, ok := got[name]; ok {
+			t.Errorf("%q should have been removed:\n%s", name, b)
+		}
+	}
+}
+
+func TestRemoveMcpContributorLeavesSiblings(t *testing.T) {
+	// graphify installed first (the owner), serena second (a contributor).
+	// Removing serena must leave graphify and the user's context7 alone.
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
+
+	cs, warns, err := Compute(
+		[]state.Item{mcpItem("serena", path, "serena", installed, nil, false)},
+		readerFrom(map[string][]byte{path: installed}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Errorf("unexpected warnings: %+v", warns)
+	}
+	d := cs.Diffs[0]
+	if d.Action != diff.Restore {
+		t.Fatalf("want RESTORE (surgically edited bytes), got %s", d.Action)
+	}
+	assertServers(t, d.After, []string{"context7", "graphify"}, []string{"serena"})
+}
+
+func TestRemoveMcpOwnerLeavesSiblings(t *testing.T) {
+	// The FIRST-installed recipe is the owning `prev`, so its edit rides FileState
+	// rather than SettingContrib. It must still remove surgically.
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
+
+	cs, _, err := Compute(
+		[]state.Item{mcpItem("graphify", path, "graphify", installed, nil, false)},
+		readerFrom(map[string][]byte{path: installed}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertServers(t, cs.Diffs[0].After, []string{"context7", "serena"}, []string{"graphify"})
+}
+
+func TestRemoveMcpRestoresUserPrior(t *testing.T) {
+	// The user had their own serena block before install; remove puts it back
+	// rather than deleting the key.
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"serena":{"command":"uvx"}}}`)
+	prior := map[string]any{"command": "my-own"}
+
+	cs, _, err := Compute(
+		[]state.Item{mcpItem("serena", path, "serena", installed, prior, true)},
+		readerFrom(map[string][]byte{path: installed}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(cs.Diffs[0].After, &m); err != nil {
+		t.Fatal(err)
+	}
+	blk, ok := m["mcpServers"].(map[string]any)["serena"].(map[string]any)
+	if !ok {
+		t.Fatalf("serena was deleted, not restored:\n%s", cs.Diffs[0].After)
+	}
+	if blk["command"] != "my-own" {
+		t.Fatalf("serena.command = %v, want my-own", blk["command"])
 	}
 }
 

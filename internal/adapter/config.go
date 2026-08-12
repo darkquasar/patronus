@@ -105,19 +105,46 @@ func ApplySettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, error) {
 
 // RemoveSettingEdit reverses e from existing surgically — without restoring a
 // whole-file snapshot, which would clobber edits that folded in afterward. For a
-// LIST edit it strips the identified array element; for a SCALAR edit it deletes
-// the key at Dotted. Reports whether anything was removed.
+// LIST edit it strips the identified array element; for a SCALAR edit it restores
+// the per-key prior at Dotted, deleting the key when there was none. Reports
+// whether anything was removed.
 func RemoveSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, error) {
 	if e.IdentityKey == "" {
-		return RemoveSettingScalar(existing, ftOf(e), e.Dotted)
+		return RemoveSettingScalar(existing, ftOf(e), e.Dotted, e.PriorValue, e.PriorPresent)
 	}
 	return RemoveSettingsList(existing, ftOf(e), e.Dotted, e.IdentityKey, e.Identity)
 }
 
-// RemoveSettingScalar deletes the key at ft's dotted path within existing and
-// reports whether it was present. It is the scalar twin of RemoveSettingsList:
-// surgical, so sibling keys (other settings, hook arrays) are untouched.
-func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string) ([]byte, bool, error) {
+// ReadDotted returns the value at ft's dotted path within existing and whether
+// the key is present. It is how a scalar SettingEdit captures the prior value it
+// is about to overwrite, read from bytes the caller already holds. An explicit
+// null is reported as present with a nil value, which is what lets remove restore
+// a null rather than deleting the key.
+//
+// descendExisting normalizes intermediate maps as it walks (cur[p] = m). That
+// writes into the throwaway root parsed here and never reaches the caller's bytes,
+// so this stays a read despite the shared helper's mutation.
+func ReadDotted(existing []byte, ft manifest.FileTarget, dotted string) (any, bool, error) {
+	if !ft.OK() {
+		return nil, false, fmt.Errorf("config: empty file target")
+	}
+	root, err := parseConfig(existing, ft.Format)
+	if err != nil {
+		return nil, false, err
+	}
+	parent, leaf := descendExisting(root, dotted)
+	if parent == nil {
+		return nil, false, nil
+	}
+	val, present := parent[leaf]
+	return val, present, nil
+}
+
+// RemoveSettingScalar reverses a scalar set at ft's dotted path: it restores
+// prior when priorPresent, and deletes the key when the install created it. It
+// reports whether the key was there to reverse. Surgical, so sibling keys (other
+// settings, hook arrays, other MCP servers) are untouched.
+func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string, prior any, priorPresent bool) ([]byte, bool, error) {
 	if !ft.OK() {
 		return nil, false, fmt.Errorf("config: empty file target")
 	}
@@ -132,7 +159,12 @@ func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string)
 	if _, present := parent[leaf]; !present {
 		return existing, false, nil
 	}
-	delete(parent, leaf)
+	if priorPresent {
+		// The user had a value here before we installed over it; put it back.
+		parent[leaf] = prior
+	} else {
+		delete(parent, leaf)
+	}
 	out, err := serializeConfig(root, ft.Format)
 	if err != nil {
 		return nil, false, err

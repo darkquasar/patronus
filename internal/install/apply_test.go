@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -240,5 +241,71 @@ func TestApplyIsDirRowsIgnored(t *testing.T) {
 	}
 	if len(res.Applied) != 0 {
 		t.Error("IsDir summary rows must not be written")
+	}
+}
+
+func TestApplyFailsWhenDiskDisagrees(t *testing.T) {
+	dir := t.TempDir()
+	pathA := filepath.Join(dir, "a.json")
+	pathB := filepath.Join(dir, "b.json")
+
+	a := &Applier{}
+	// Simulate a filesystem that hands back something other than what we wrote.
+	// A real filesystem will not do this, so the branch needs an injected seam or
+	// its test is a permanent skip.
+	a.readBack = func(p string) ([]byte, error) {
+		if p == pathA {
+			return []byte("not what we wrote"), nil
+		}
+		return os.ReadFile(p)
+	}
+
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
+		{Path: pathA, Action: diff.Create, After: []byte(`{"a":1}`)},
+		{Path: pathB, Action: diff.Create, After: []byte(`{"b":2}`)},
+	}}
+
+	res, err := a.Apply(cs)
+	if err == nil {
+		t.Fatal("Apply returned nil error; want a verification failure")
+	}
+	if res.Failed == nil || res.Failed.Path != pathA {
+		t.Fatalf("Failed = %+v, want the op at %s", res.Failed, pathA)
+	}
+	if len(res.Applied) != 0 {
+		t.Fatalf("Applied = %d ops, want 0 (the failing op is not applied)", len(res.Applied))
+	}
+	if _, statErr := os.Stat(pathB); statErr == nil {
+		t.Error("the op after the failure was attempted; it must be left unattempted")
+	}
+	for _, want := range []string{pathA, "expected", "observed"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name %q", err, want)
+		}
+	}
+}
+
+func TestApplyRecordsOnDiskBytes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ok.json")
+
+	a := &Applier{}
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
+		{Path: path, Action: diff.Create, After: []byte(`{"a":1}`)},
+	}}
+
+	res, err := a.Apply(cs)
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if len(res.Applied) != 1 {
+		t.Fatalf("Applied = %d, want 1", len(res.Applied))
+	}
+	on, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(res.Applied[0].After, on) {
+		t.Fatal("the recorded op's After does not match the bytes on disk")
 	}
 }

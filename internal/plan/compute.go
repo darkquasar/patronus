@@ -220,12 +220,13 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 			prev.After = adapter.AppendSection(prev.After, d.Section.Name, d.Section.Body)
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		case d.Action == diff.Merge && d.Setting != nil:
-			// A settings list-append (hook registration) was computed against the
-			// ORIGINAL file, so — unlike a scalar merge — it must be re-applied onto
-			// the already-composed After, or a second hook into one settings.json
-			// would silently drop the first. This is the MERGE-side twin of the
-			// composed-APPEND fold: record a per-artifact contributor so remove can
-			// strip exactly this element later.
+			// Every settings MERGE was computed against the ORIGINAL file, so it must
+			// be re-applied onto the already-composed After or a second edit into one
+			// file silently drops the first. This covers hook registrations, scalar
+			// toggles, permission gates, and MCP server blocks alike: all of them are
+			// SettingEdits, and all of them compose. This is the MERGE-side twin of
+			// the composed-APPEND fold: record a per-artifact contributor so remove
+			// can strip exactly this element later.
 			folded, err := adapter.ApplySettingEdit(prev.After, d.Setting)
 			if err != nil {
 				// A malformed re-fold is a planner bug, not user input; surface it by
@@ -254,13 +255,11 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 				})
 			}
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
-		case d.Action == diff.Merge:
-			// Scalar merge (MCP, native-switch): already operates on accumulated
-			// config; keep latest result.
-			prev.After = d.After
-			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		default:
-			// CREATE (or append without section): keep the first, note sharing.
+			// CREATE, an append without a section, or a MERGE with no SettingEdit:
+			// keep the first, note sharing. Every MERGE producer in the tree attaches
+			// a Setting, so in production the MERGE arm of this is unreachable; it
+			// stays as an honest fallback rather than a silent last-wins.
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		}
 	}
