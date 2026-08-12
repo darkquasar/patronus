@@ -410,7 +410,7 @@ func TestComputeRemoteHttpMcp_NoFetch(t *testing.T) {
 // resolve {installPath} (and {tool}) to the fetched binary's absolute dest — the same
 // substitution the MCP-merge path already does (serverSpec). A fetch+run recipe that
 // invokes its OWN delivered binary must reference it by absolute path, or a process
-// whose $PATH never saw the install dir cannot execute it (pat-as4h(c)).
+// whose $PATH never saw the install dir cannot execute it.
 func TestComputeExecSubstitutesInstallPath(t *testing.T) {
 	res, home, _ := testEnv(t)
 	rec := &manifest.Recipe{

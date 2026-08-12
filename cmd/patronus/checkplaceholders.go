@@ -83,7 +83,7 @@ func checkPlaceholders(file string, content []byte) []badPlaceholder {
 	return out
 }
 
-// newCheckPlaceholdersCmd is the build guard for pat-twgb. Placeholder substitution leaves
+// newCheckPlaceholdersCmd is the build guard for placeholder substitution, which leaves
 // unknown braces untouched by design (skill bodies carry JSON, f-strings, and
 // shell expansions, so erroring on every unrecognised {…} would be unusable), which
 // means a typo like {skilDir} ships silently as a literal and fails only when a

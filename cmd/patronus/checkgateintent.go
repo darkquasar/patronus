@@ -108,7 +108,7 @@ func firstToken(command string) string {
 	return fields[0]
 }
 
-// newCheckGateIntentCmd is the build/PR guard for pat-8jow: it fails when a hook
+// newCheckGateIntentCmd is the build guard for hook gate intent: it fails when a hook
 // that BLOCKS the agent (a script that exits 2, or a command running an
 // allowlisted blocking binary) does not declare intent: gate. Without the
 // declaration, a tool that keys wiring on intent — OpenCode, which maps a gate to

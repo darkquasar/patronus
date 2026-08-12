@@ -263,14 +263,14 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	// are the only ones whose SOURCE we need (to tell STALE from OK). Fetching the
 	// rest would download content just to browse it.
 	type recordedFile struct {
-		item     string
+		key      artifactInstallKey
 		checksum string
 	}
 	// One recorded APPEND section of a composed file (CLAUDE.md/AGENTS.md). Several
 	// of these can share a path — one per contributing artifact — which is exactly
 	// why they cannot be keyed by path like the whole-file rows.
 	type recordedSection struct {
-		item    string
+		key     artifactInstallKey
 		path    string
 		section string
 	}
@@ -287,7 +287,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	// of these and one whole-file checksum that matches none of them, so it is
 	// reconciled per contributor (pass 1c) rather than whole-file.
 	type recordedMerge struct {
-		item string
+		key  artifactInstallKey
 		path string
 		edit *diff.SettingEdit
 	}
@@ -297,8 +297,22 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	appendPath := map[string]bool{} // paths reconciled per-section, not whole-file
 	var mergeRows []recordedMerge
 	mergePath := map[string]bool{} // paths reconciled per-setting, not whole-file
-	installedArtifacts := map[string]bool{}
+	// Two sets, because they answer different questions. installedIdents is WHERE
+	// each artifact was installed — the recorded {artifact, tool, scope} triples we
+	// must replan at, one plan.Request each. installedNames is WHICH sources to
+	// fetch, once per artifact however many identities it has.
+	installedIdents := map[artifactInstallKey]struct{}{}
+	installedNames := map[string]struct{}{}
 	installedRecipes := map[string]bool{} // recipe items whose MERGE rows need a computed source
+	// The scope to assume for a legacy row that records none. Which state file held
+	// the row is the only evidence of scope left in that case.
+	scopeOfDir := map[string]string{}
+	if inv.Home != "" {
+		scopeOfDir[inv.Home] = toolpath.ScopeGlobal
+	}
+	if inv.ProjectDir != "" {
+		scopeOfDir[inv.ProjectDir] = toolpath.ScopeLocal
+	}
 	for _, dir := range []string{inv.Home, inv.ProjectDir} {
 		if dir == "" {
 			continue
@@ -308,8 +322,18 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 			continue // unreadable state: nothing recorded that we can reconcile
 		}
 		for _, it := range s.Items {
+			// The identity this item's file rows reconcile against. Scope is taken
+			// from the row, never left empty: an empty Scope is not neutral, it makes
+			// plan.Compute fall back to the artifact's manifest default, which is
+			// precisely the false-ORPHANED bug.
+			key := artifactInstallKey{artifact: it.Artifact, tool: it.Tool, scope: it.Scope}
+			if key.scope == "" {
+				key.scope = scopeOfDir[dir]
+				warnf("drift: %s (%s) records no scope; assuming %q from %s", it.Artifact, it.Tool, key.scope, dir)
+			}
 			if isArtifact[it.Artifact] {
-				installedArtifacts[it.Artifact] = true
+				installedNames[it.Artifact] = struct{}{}
+				installedIdents[key] = struct{}{}
 			}
 			if catalogHasRecipe(cat, it.Artifact) {
 				installedRecipes[it.Artifact] = true
@@ -325,7 +349,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 				// into one file; its whole-file checksum never matches any single
 				// source, so it is reconciled PER SECTION below, not here.
 				if f.Action == string(diff.Append) && f.Section != "" {
-					sectionRows = append(sectionRows, recordedSection{item: it.Artifact, path: f.Path, section: f.Section})
+					sectionRows = append(sectionRows, recordedSection{key: key, path: f.Path, section: f.Section})
 					appendPath[f.Path] = true
 					continue
 				}
@@ -334,11 +358,11 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 				// never matches any single contributor, so it is reconciled PER
 				// SETTING below, not here.
 				if f.Action == string(diff.Merge) && f.Setting != nil {
-					mergeRows = append(mergeRows, recordedMerge{item: it.Artifact, path: f.Path, edit: f.Setting})
+					mergeRows = append(mergeRows, recordedMerge{key: key, path: f.Path, edit: f.Setting})
 					mergePath[f.Path] = true
 					continue
 				}
-				rows[f.Path] = recordedFile{item: it.Artifact, checksum: f.Checksum}
+				rows[f.Path] = recordedFile{key: key, checksum: f.Checksum}
 			}
 		}
 	}
@@ -353,9 +377,11 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	}
 
 	// Materialize ONLY the installed artifacts, so their source bytes are on disk for
-	// the content comparison. A no-op for a local checkout (LocalDir is already set).
-	names := make([]string, 0, len(installedArtifacts))
-	for name := range installedArtifacts {
+	// the content comparison. Keyed by NAME, not by identity: one artifact installed
+	// at two identities still has one source to fetch. A no-op for a local checkout
+	// (LocalDir is already set).
+	names := make([]string, 0, len(installedNames))
+	for name := range installedNames {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -363,14 +389,20 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		warnf("drift: cannot fetch installed sources: %v", err)
 	}
 
-	// What the INSTALLED artifacts would deploy now: for each of their paths, the
-	// bytes the catalog source would write there. Pass 1 reads this to tell STALE
-	// from OK. Non-installed artifacts are pass 2's job (and need no source).
-	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, names, warnf)
+	// What the INSTALLED artifacts would deploy now, replanned AT THE RECORDED
+	// IDENTITY: for each of their paths, the bytes the catalog source would write
+	// there. Pass 1 reads this to tell STALE from OK. Non-installed artifacts are
+	// pass 2's job (and need no source).
+	idents := make([]artifactInstallKey, 0, len(installedIdents))
+	for k := range installedIdents {
+		idents = append(idents, k)
+	}
+	sortInstallKeys(idents)
+	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, idents, warnf)
 
 	// Recipe MERGE rows (MCP entries) are ownable bytes Patronus computes, but
 	// wouldDeploy is artifact-only — so add them here or Pass 1 misreads every
-	// installed MCP recipe as ORPHANED-STATE (pat-4s3f).
+	// installed MCP recipe as ORPHANED-STATE.
 	recNames := make([]string, 0, len(installedRecipes))
 	for name := range installedRecipes {
 		recNames = append(recNames, name)
@@ -379,7 +411,9 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	if len(recNames) > 0 {
 		res := toolpath.New(os.LookupEnv, toolpath.HomeDir(os.LookupEnv), wd)
 		for path, w := range recipeMergeSources(cat, adapterMap(adapters), res, recNames, warnf) {
-			would[path] = w
+			// A recipe has no artifact identity to plan at; its rows are found by the
+			// recipe NAME the state row carries, which is what lookupWould falls back to.
+			would[wouldKey{artifact: w.item, path: path}] = w
 		}
 	}
 
@@ -387,18 +421,26 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	recorded := map[string]bool{}
 
 	// PASS 1: state -> disk. Every file we RECORDED writing, reconciled against what
-	// is there now and against what the source says now.
-	for path, row := range rows {
+	// is there now and against what the source says now. The lookup is per IDENTITY:
+	// the same artifact installed at two tool/scope identities has two placements,
+	// and a path-only lookup would let one silently answer for the other.
+	paths := make([]string, 0, len(rows))
+	for path := range rows {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		row := rows[path]
 		recorded[path] = true
 		current, exists := readIfExists(path)
-		w, hasSource := would[path]
+		w, hasSource := lookupWould(would, row.key, path)
 		v := drift.Classify(current, exists, row.checksum, w.source, hasSource)
 		if v == drift.OK {
 			continue
 		}
 		findings = append(findings, drift.Finding{
 			Path:    path,
-			Item:    row.item,
+			Item:    row.key.artifact,
 			Verdict: v,
 			Detail:  driftDetail(v),
 		})
@@ -416,14 +458,14 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		if exists {
 			onDisk, present = adapter.SectionBody(current, sr.section)
 		}
-		src, hasSource := wouldSection[sectionKey{sr.path, sr.section}]
+		src, hasSource := lookupWouldSection(wouldSection, sr.key, sr.path, sr.section)
 		v := drift.ClassifySection(onDisk, present, src, hasSource)
 		if v == drift.OK {
 			continue
 		}
 		findings = append(findings, drift.Finding{
 			Path:    sr.path,
-			Item:    sr.item,
+			Item:    sr.key.artifact,
 			Verdict: v,
 			Detail:  driftDetail(v),
 		})
@@ -444,7 +486,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		current, exists := readIfExists(mr.path)
 		if !exists {
 			findings = append(findings, drift.Finding{
-				Path: mr.path, Item: mr.item, Verdict: drift.Missing, Detail: driftDetail(drift.Missing),
+				Path: mr.path, Item: mr.key.artifact, Verdict: drift.Missing, Detail: driftDetail(drift.Missing),
 			})
 			continue
 		}
@@ -453,7 +495,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 			continue
 		}
 		findings = append(findings, drift.Finding{
-			Path: mr.path, Item: mr.item, Verdict: v, Detail: driftDetail(v),
+			Path: mr.path, Item: mr.key.artifact, Verdict: v, Detail: driftDetail(v),
 		})
 	}
 
@@ -639,22 +681,73 @@ func driftDetail(v drift.Verdict) string {
 	return ""
 }
 
-// deployDiffs runs the NAMED artifacts through the install spine (plan.Compute) to
-// learn where each WOULD land and what bytes it WOULD write. This is the single
-// source of truth for artifact placement — scan asks the same question install
-// answers, via the same code.
+// artifactInstallKey is one RECORDED install identity: an artifact, the tool label
+// state stored for it, and the scope it was installed at. It is the unit
+// reconciliation replans at, because it is the unit install recorded. Reconciling by
+// name alone loses the scope, and plan.Compute then falls back to the artifact's
+// MANIFEST DEFAULT — which reports every non-default-scope install as ORPHANED-STATE
+// .
 //
-// It takes an explicit name list rather than the whole catalog on purpose: pass 1
+// tool holds the label verbatim as state stored it, which is an ATTRIBUTION and not
+// a selector: it can be a composite ("claude+opencode") for a shared path, or the
+// "agnostic" placeholder. replayTools translates it into the concrete selectors
+// plan.Request accepts.
+type artifactInstallKey struct {
+	artifact string
+	tool     string
+	scope    string
+}
+
+// sortInstallKeys orders identities by artifact, then tool, then scope. Planning
+// order comes from a map, and a map's order is random; two identities can converge
+// on one path, so an unsorted plan makes the winner differ between runs.
+func sortInstallKeys(keys []artifactInstallKey) {
+	sort.Slice(keys, func(i, j int) bool {
+		a, b := keys[i], keys[j]
+		if a.artifact != b.artifact {
+			return a.artifact < b.artifact
+		}
+		if a.tool != b.tool {
+			return a.tool < b.tool
+		}
+		return a.scope < b.scope
+	})
+}
+
+// replayTools turns the tool label state RECORDED into the concrete tool selectors
+// plan.Request accepts. The two vocabularies are not the same one:
+//
+//   - A concrete tool ("claude") is already a selector; it passes through.
+//   - A composite ("claude+opencode") is what plan.mergeTool writes when several
+//     tools share one path. It replays as EXACTLY those tools. Mapping it to "all"
+//     would be wrong in both directions: "all" is detection-sensitive, so it can
+//     plan for a tool the install never touched, or drop one it did.
+//   - "agnostic" is a RECIPE-row label (internal/recipe). On an artifact row it is
+//     invalid state, and there is no honest expansion: "" and "all" both invent
+//     targets. It yields no tools, and the caller warns.
+func replayTools(label string) []string {
+	if label == "" || label == recipe.TargetAgnostic {
+		return nil
+	}
+	return strings.Split(label, "+")
+}
+
+// deployDiffs runs each RECORDED IDENTITY through the install spine (plan.Compute)
+// to learn where it WOULD land and what bytes it WOULD write. This is the single
+// source of truth for artifact placement — scan asks the same question install
+// answers, via the same code, at the same tool and scope install used.
+//
+// It takes an explicit identity list rather than the whole catalog on purpose: pass 1
 // only needs the artifacts that are actually INSTALLED (the ones with a state row),
 // and computing diffs for the rest would both waste work and try to read source that
 // a remote catalog never fetched. Artifacts only: a recipe FETCHes a binary (verified
 // against its pin by classifyFetch on every run), and a plugin is registered through
 // the tool's own CLI — neither is a file Patronus renders from a source it can diff.
 //
-// It computes ONE ARTIFACT AT A TIME. A single artifact that cannot be transformed
-// must not blind the drift check for every other one; per-artifact isolation degrades
+// It computes ONE IDENTITY AT A TIME. A single artifact that cannot be transformed
+// must not blind the drift check for every other one; per-identity isolation degrades
 // to "we could not read that one" instead of "we saw nothing".
-func deployDiffs(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, names []string, warnf func(string, ...any)) []diff.FileDiff {
+func deployDiffs(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, idents []artifactInstallKey, warnf func(string, ...any)) map[artifactInstallKey][]diff.FileDiff {
 	env := os.LookupEnv
 	req := plan.Request{
 		Catalog:   cat,
@@ -663,23 +756,36 @@ func deployDiffs(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifes
 		Resolver:  toolpath.New(env, toolpath.HomeDir(env), wd),
 	}
 
-	var out []diff.FileDiff
-	for _, name := range names {
-		r := req
-		r.Names = []string{name}
-		cs, err := plan.Compute(r)
-		if err != nil {
-			// Not fatal: this artifact simply cannot be compared. Every other one
-			// still can, and a partial drift report beats a silent one.
+	out := make(map[artifactInstallKey][]diff.FileDiff, len(idents))
+	for _, k := range idents {
+		tools := replayTools(k.tool)
+		if len(tools) == 0 {
+			// No honest selector to replan at. Say so: a swallowed identity here would
+			// turn a false ORPHANED into a silent one, which is the worse failure.
 			if warnf != nil {
-				warnf("drift: cannot resolve %s: %v", name, err)
+				warnf("drift: %s records tool %q, which is not an artifact target; cannot reconcile it", k.artifact, k.tool)
 			}
 			continue
 		}
-		// Compute classifies Action against the real filesystem but never rewrites
-		// After — After stays the bytes the catalog WOULD write, which is exactly
-		// the side of the comparison drift needs.
-		out = append(out, cs.Diffs...)
+		for _, tool := range tools {
+			r := req
+			r.Names = []string{k.artifact}
+			r.Tool = tool
+			r.Scope = k.scope
+			cs, err := plan.Compute(r)
+			if err != nil {
+				// Not fatal: this identity simply cannot be compared. Every other one
+				// still can, and a partial drift report beats a silent one.
+				if warnf != nil {
+					warnf("drift: cannot resolve %s (%s/%s): %v", k.artifact, tool, k.scope, err)
+				}
+				continue
+			}
+			// Compute classifies Action against the real filesystem but never rewrites
+			// After — After stays the bytes the catalog WOULD write, which is exactly
+			// the side of the comparison drift needs.
+			out[k] = append(out[k], cs.Diffs...)
+		}
 	}
 	return out
 }
@@ -691,43 +797,79 @@ type wouldWrite struct {
 	item   string
 }
 
-// sectionKey identifies one fenced APPEND section within a shared composed file.
-type sectionKey struct {
-	path    string
-	section string
+// wouldKey identifies one would-deploy result by the IDENTITY that produced it plus
+// the path it lands on. Keying by path alone is the trap this closes: a
+// second identity landing on the same path would silently answer for the first, and
+// with a map source the winner varied run to run.
+type wouldKey struct {
+	artifact string
+	tool     string
+	scope    string
+	path     string
 }
 
-// wouldDeploy maps every path the NAMED artifacts would deploy to -> what they would
-// write there (for whole-file STALE/OK), AND every composed APPEND section
-// (path+name) -> the body the catalog would fold in there now (for per-section
-// reconciliation of CLAUDE.md/AGENTS.md). deployDiffs computes one artifact at a
-// time, so each artifact's own diff carries ITS section's Body — which is exactly
-// the per-section source a fold cannot recover from the merged whole file.
-func wouldDeploy(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, names []string, warnf func(string, ...any)) (map[string]wouldWrite, map[sectionKey][]byte) {
-	diffs := deployDiffs(cat, inv, adapters, wd, names, warnf)
-	out := make(map[string]wouldWrite, len(diffs))
+// sectionKey identifies one fenced APPEND section within a shared composed file,
+// under the identity that would fold it in.
+type sectionKey struct {
+	artifact string
+	tool     string
+	scope    string
+	path     string
+	section  string
+}
+
+// wouldDeploy maps each identity's deploy paths -> what it would write there (for
+// whole-file STALE/OK), AND each composed APPEND section -> the body the catalog
+// would fold in there now (for per-section reconciliation of CLAUDE.md/AGENTS.md).
+// deployDiffs computes one identity at a time, so each artifact's own diff carries
+// ITS section's Body — which is exactly the per-section source a fold cannot recover
+// from the merged whole file.
+func wouldDeploy(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifest.Adapter, wd string, idents []artifactInstallKey, warnf func(string, ...any)) (map[wouldKey]wouldWrite, map[sectionKey][]byte) {
+	byIdent := deployDiffs(cat, inv, adapters, wd, idents, warnf)
+	out := map[wouldKey]wouldWrite{}
 	sections := map[sectionKey][]byte{}
-	for _, d := range diffs {
-		if d.IsDir {
-			continue
-		}
-		out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
-		// Capture the section body whenever the diff carries one — including when
-		// plan.Compute has already downgraded the APPEND to SKIP because the section
-		// is present and unchanged (the reclassify keeps Section intact, only Action
-		// changes). Gating on Action==Append would miss exactly the OK case.
-		if d.Section != nil {
-			sections[sectionKey{d.Path, d.Section.Name}] = d.Section.Body
+	// Walk idents (sorted) rather than the map, so a later identity overwriting an
+	// earlier one on the same key is deterministic.
+	for _, k := range idents {
+		for _, d := range byIdent[k] {
+			if d.IsDir {
+				continue
+			}
+			out[wouldKey{artifact: k.artifact, tool: k.tool, scope: k.scope, path: d.Path}] = wouldWrite{source: d.After, item: d.Artifact}
+			// Capture the section body whenever the diff carries one — including when
+			// plan.Compute has already downgraded the APPEND to SKIP because the section
+			// is present and unchanged (the reclassify keeps Section intact, only Action
+			// changes). Gating on Action==Append would miss exactly the OK case.
+			if d.Section != nil {
+				sections[sectionKey{artifact: k.artifact, tool: k.tool, scope: k.scope, path: d.Path, section: d.Section.Name}] = d.Section.Body
+			}
 		}
 	}
 	return out, sections
+}
+
+// lookupWould finds what a recorded row's OWN identity would write at its path.
+// Recipe rows are added under their name with no tool/scope (a recipe is planned
+// once, not per artifact identity), so a miss falls back to the name-only key.
+func lookupWould(would map[wouldKey]wouldWrite, k artifactInstallKey, path string) (wouldWrite, bool) {
+	if w, ok := would[wouldKey{artifact: k.artifact, tool: k.tool, scope: k.scope, path: path}]; ok {
+		return w, true
+	}
+	w, ok := would[wouldKey{artifact: k.artifact, path: path}]
+	return w, ok
+}
+
+// lookupWouldSection is lookupWould for one fenced section of a composed file.
+func lookupWouldSection(sections map[sectionKey][]byte, k artifactInstallKey, path, section string) ([]byte, bool) {
+	b, ok := sections[sectionKey{artifact: k.artifact, tool: k.tool, scope: k.scope, path: path, section: section}]
+	return b, ok
 }
 
 // recipeMergeSources computes the would-deploy bytes for each installed recipe's
 // MERGE rows (an MCP entry folded into a tool's own config, e.g. .claude.json).
 // scan's artifact-only wouldDeploy never sees these, so without them a recipe's
 // MERGE row reaches drift.Classify with hasSource=false and is misread as
-// ORPHANED-STATE (pat-4s3f). FETCH/EXEC rows are skipped: a fetched binary has no
+// ORPHANED-STATE. FETCH/EXEC rows are skipped: a fetched binary has no
 // diffable source (classifyFetch verifies it against its pin) and an EXEC is an
 // advisory Patronus never ran.
 func recipeMergeSources(cat *registry.Catalog, adapters map[string]*manifest.Adapter, res toolpath.Resolver, names []string, warnf func(string, ...any)) map[string]wouldWrite {

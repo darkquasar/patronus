@@ -239,7 +239,7 @@ func TestInstallRecipeFetchDryRun(t *testing.T) {
 	}
 }
 
-// TestInstallPathReadinessWarningFires is the pat-as4h acceptance check: installing a
+// TestInstallPathReadinessWarningFires is the PATH-readiness acceptance check: installing a
 // recipe that FETCHes a binary into a dir absent from the inherited $PATH prints the
 // PATH-readiness warning, and installing with that dir ON $PATH does not. Uses the
 // fixture raw-delivery recipe (fix-bin → ~/.patronus/bin) with $PATH controlled per

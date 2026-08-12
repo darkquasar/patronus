@@ -226,7 +226,7 @@ func TestTransformSkillNonUTF8FileUntouched(t *testing.T) {
 // TestTransformSkillPreservesExecBit: a sidecar under files: that is executable at
 // source installs 0755, and a non-executable sibling stays at the default (Mode 0).
 // The mode is carried from the source file so the repo is the single source of truth
-// for it — a driver.sh an agent is told to run must be runnable directly (pat-cmiz).
+// for it — a driver.sh an agent is told to run must be runnable directly.
 func TestTransformSkillPreservesExecBit(t *testing.T) {
 	src := t.TempDir()
 	mustWrite(t, filepath.Join(src, "SKILL.md"), "x")

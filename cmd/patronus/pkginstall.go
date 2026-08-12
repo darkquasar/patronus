@@ -96,7 +96,7 @@ type pathReadinessRow struct {
 
 // pathReadiness inspects every FETCH diff in the change set and reports those whose
 // placement directory is not among pathDirs (the dirs on the inherited $PATH). This
-// is the always-on PATH-readiness value behind pat-as4h: a binary placed in
+// is the always-on PATH-readiness value: a binary placed in
 // ~/.patronus/bin is invisible to a GUI-launched agent whose $PATH never saw that
 // dir. pathDirs is passed in (not read from the env here) so the check is pure and
 // table-testable. Returns nil when every FETCH dest is reachable.

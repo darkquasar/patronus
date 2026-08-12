@@ -226,7 +226,7 @@ func TestTransformGateOpenCodePartialWireWarns(t *testing.T) {
 
 // A gate whose EVERY token is unmappable to OpenCode is an error — there is no
 // honest permission key to deny, so silently wiring nothing would recreate the
-// pat-8jow no-op.
+// unmappable-token no-op.
 func TestTransformGateOpenCodeAllUnmappableErrors(t *testing.T) {
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))

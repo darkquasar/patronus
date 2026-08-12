@@ -135,7 +135,7 @@ var _claudeToOpenCode = map[string]string{
 //
 // A token with no OpenCode equivalent (Claude-only, e.g. TodoWrite) is dropped
 // with a warning rather than wired as a bogus key that OpenCode would silently
-// ignore — the pat-8jow no-op. When EVERY token is unmappable there is no honest
+// ignore — the unmappable-token no-op. When EVERY token is unmappable there is no honest
 // deny to emit, so that is an error, not a silent empty plan.
 func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
 	target := ad.Layout.Hook.ForScope(scope)
