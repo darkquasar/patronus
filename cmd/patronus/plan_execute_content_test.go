@@ -28,3 +28,53 @@ func TestSoloModeEndsWithIndependentReview(t *testing.T) {
 		}
 	}
 }
+
+// TestSDDModeSafetyRules pins the three ways this sdd.md is deliberately not a
+// copy of upstream's subagent-driven-development. Each is a correctness rule the
+// spec calls out, and each is invisible to any structural check, so it gets a
+// content assertion.
+func TestSDDModeSafetyRules(t *testing.T) {
+	b, err := os.ReadFile("../../artifacts/skills/plan-execute/sdd.md")
+	if err != nil {
+		t.Fatalf("read sdd.md: %v", err)
+	}
+	body := string(b)
+
+	cases := []struct {
+		rule string
+		want string
+	}{
+		{"three-round fix-loop ceiling", "three failed review rounds"},
+		{"prior-task contracts in the brief", "contracts established by earlier tasks"},
+		{"stop and report on dispatch failure", "Stop and report"},
+		{"reviewer context is never the transcript", "never from the implementer's transcript"},
+	}
+	for _, c := range cases {
+		if !strings.Contains(body, c.want) {
+			t.Errorf("sdd.md is missing the %s rule (want substring %q)", c.rule, c.want)
+		}
+	}
+}
+
+// TestSDDAuxFilesCarriedOver proves the prompt templates and script helpers the
+// sdd mode invokes actually ship in this artifact's directory, executable where
+// they need to be. sdd.md references them by relative path, so an unpacked helper
+// is a broken skill, not a missing nicety.
+func TestSDDAuxFilesCarriedOver(t *testing.T) {
+	dir := "../../artifacts/skills/plan-execute/"
+	for _, rel := range []string{"implementer-prompt.md", "task-reviewer-prompt.md"} {
+		if _, err := os.Stat(dir + rel); err != nil {
+			t.Errorf("prompt template %q not carried over: %v", rel, err)
+		}
+	}
+	for _, rel := range []string{"scripts/task-brief", "scripts/review-package", "scripts/sdd-workspace"} {
+		fi, err := os.Stat(dir + rel)
+		if err != nil {
+			t.Errorf("script helper %q not carried over: %v", rel, err)
+			continue
+		}
+		if fi.Mode().Perm()&0o111 == 0 {
+			t.Errorf("script helper %q mode = %v, want executable", rel, fi.Mode().Perm())
+		}
+	}
+}
