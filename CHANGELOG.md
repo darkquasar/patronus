@@ -3,7 +3,7 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
-## Unreleased
+## v2.2.0
 
 ### Breaking
 
@@ -97,3 +97,40 @@ person upgrading: it leads with what will behave differently on their machine.
   (`cmd/patronus/testdata/tk`, 47KB of upstream bash, is gone), and no test can reach
   the network: the fetcher seams fail closed in tests and panic with the URL if one
   tries.
+
+### Fixed
+
+- **`patronus scan` no longer reports false `ORPHANED-STATE` for anything installed
+  away from its default scope.** Reconciliation replanned each recorded item without
+  the tool and scope it was installed at, so an artifact declaring
+  `defaults.scope: project` but installed `--global` was looked for under the project
+  layout, found nothing, and was reported as "recorded, but no longer in the catalog."
+  Reconciliation is now keyed by the `{artifact, tool, scope}` triple install records,
+  so each install is checked where it actually went. On one real machine this took the
+  drift report from 78 false rows to none.
+
+  Two rows on that machine changed from a false `ORPHANED-STATE` to `STALE`. That is
+  real drift the old verdict was masking: those items need a re-run of `install`.
+
+- **A config file that several items merge into is no longer reported as
+  `USER-EDITED` or `STALE` just for holding more than one contributor.** A composed
+  `settings.json` or `.claude.json` never matches any single contributor's whole-file
+  checksum, so every contributor to it was misjudged, and edits were attributed to
+  whichever row happened to survive. Each contributor is now reconciled against the
+  one setting it owns, so a hand-edited MCP server block is reported against the
+  recipe that owns it and its siblings stay silent.
+
+- **Two MCP servers targeting one config file no longer clobber each other.** Merges
+  landing on the same path were computed from the original bytes and applied
+  last-wins, so exactly one server survived an install while state recorded a valid
+  checksum for both. They accumulate now, and `remove` strips one server's block
+  without disturbing the rest.
+
+- **An install fails loudly if a write did not land.** State hashed the bytes
+  Patronus planned to write rather than the bytes on disk, which is how a dropped
+  merge earned a real checksum for a write that never happened. Each written file is
+  read back and verified; work that already succeeded stays recorded, so re-running is
+  safe.
+
+- `patronus update` reported "updated registry cache" even against a local registry,
+  which has no cache to write, and never accepted `--local-registry`.
