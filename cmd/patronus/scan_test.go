@@ -13,6 +13,7 @@ import (
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
+	"github.com/darkquasar/patronus/internal/state"
 )
 
 // runScan drives the real cobra scan command and captures both streams —
@@ -218,21 +219,13 @@ func serveFixtureFrom(t *testing.T, root string) *servingFetcher {
 //
 // Class A: it asserts Patronus's BEHAVIOR, so it binds to the fixture catalog, never
 // to the real one.
-// TestScanInstallPathWiredRecipeNotUserEdited is the pat-as4h(c) drift-tolerance
-// SPIKE, kept as a regression test. It answers the one question (c) needed settled:
-// does absolutizing {installPath} into a wired surface make a CLEAN install read back
-// as a machine-specific-bytes false positive (USER-EDITED / STALE)? It does NOT — the
-// on-disk config is compared against the checksum recorded at install, which already
-// embeds the absolute path, so the bytes are self-consistent. This is what lets (c)
-// extend {installPath} to more wired surfaces without path-normalization coming into
-// scope.
-//
-// The spike also SURFACED a separate, pre-existing bug: an installed fetch+WIRE recipe
-// reads as ORPHANED-STATE because reconcileDrift builds would-deploy sources only for
-// artifacts, so a recipe's MERGE config always classifies as "no longer in the
-// catalog." That is tracked in pat-4s3f and is out of scope here; this test asserts
-// only the byte-consistency property (c) depends on, tolerating the known
-// ORPHANED-STATE row until pat-4s3f lands.
+// TestScanInstallPathWiredRecipeNotUserEdited is the {installPath} drift-tolerance
+// regression test. It answers the question that had to be settled before absolutizing
+// {installPath} into more wired surfaces: does an absolute path baked into a wired
+// config make a CLEAN install read back as a machine-specific-bytes false positive
+// (USER-EDITED / STALE)? It does NOT — the on-disk config is compared against the
+// checksum recorded at install, which already embeds the absolute path, so the bytes
+// are self-consistent. That is what keeps path normalization out of scope.
 func TestScanNoDriftOnInstallPathWiredRecipe(t *testing.T) {
 	root := fixtureCatalog(t)
 	outDir := t.TempDir()
@@ -281,9 +274,9 @@ func TestScanInstallPathWiredRecipeNotUserEdited(t *testing.T) {
 		t.Fatalf("scan: %v", err)
 	}
 	// A clean install of a wired recipe is fully in sync — no drift of any kind,
-	// including the ORPHANED-STATE false positive that pat-4s3f fixed.
+	// including the ORPHANED-STATE false positive a recipe MERGE row once produced.
 	if hasVerdict(out, "ORPHANED-STATE") {
-		t.Errorf("wired recipe reported ORPHANED-STATE (pat-4s3f regression):\n%s", out)
+		t.Errorf("wired recipe reported ORPHANED-STATE (recipe MERGE regression):\n%s", out)
 	}
 	for _, r := range parseDriftRows(out) {
 		if r.verdict == "USER-EDITED" || r.verdict == "STALE" {
@@ -441,6 +434,223 @@ func TestScanReportsStale(t *testing.T) {
 	}
 }
 
+// TestScanReconcilesAtRecordedScope is the acceptance gate for recorded-scope
+// reconciliation. An artifact whose MANIFEST defaults to project scope, installed --global, must
+// reconcile against the scope it was RECORDED at.
+//
+// Before the fix, scan collected installed artifacts into a name-only set and
+// replanned each with an empty Scope, so plan.Compute fell back to the manifest
+// default. The global copy then had no would-deploy source, drift.Classify saw
+// hasSource=false, and every such install was reported ORPHANED-STATE. On a real
+// machine that was ~78 false rows.
+func TestScanReconcilesAtRecordedScope(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	// fix-skill-project defaults to PROJECT scope; install it at GLOBAL.
+	if _, errOut, err := runInstall(t, "fix-skill-project", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	skill := filepath.Join(home, ".claude", "skills", "fix-skill-project", "SKILL.md")
+	if _, err := os.Stat(skill); err != nil {
+		t.Fatalf("precondition: the artifact was not deployed at GLOBAL scope: %v", err)
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if hasDriftItem(out, "ORPHANED-STATE", "fix-skill-project", skill) {
+		t.Errorf("a clean --global install of a project-default artifact was reported "+
+			"ORPHANED-STATE: reconciliation replanned at the MANIFEST default instead of "+
+			"the RECORDED scope:\n%s", out)
+	}
+	// Nor may suppressing the false verdict trade it for a different false one.
+	for _, verdict := range []string{"STALE", "USER-EDITED", "MISSING"} {
+		if hasDrift(out, verdict, skill) {
+			t.Errorf("clean install reported %s at %s:\n%s", verdict, skill, out)
+		}
+	}
+}
+
+// TestScanReconcilesAtRecordedScopeReverse is the mirror direction: an artifact
+// whose manifest defaults to GLOBAL, installed --local. Both directions matter,
+// because a fix that hardcoded either scope would pass only one of them.
+func TestScanReconcilesAtRecordedScopeReverse(t *testing.T) {
+	f := fixtureRegistry(t)
+	withRemoteEnv(t, f)
+
+	if _, errOut, err := runInstall(t, "fix-instruction-global", "--target", "claude", "--local", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	for _, r := range parseDriftRows(out) {
+		if r.verdict == "ORPHANED-STATE" {
+			t.Errorf("a clean --local install of a global-default artifact was reported "+
+				"ORPHANED-STATE at %s (reverse scope direction):\n%s", r.path, out)
+		}
+	}
+}
+
+// TestScanReconcilesEachIdentitySeparately proves the unit of reconciliation is the
+// {artifact, tool, scope} TRIPLE, not the name. The same artifact installed at two
+// scopes has two placements, and each must be judged against its own recorded scope
+// — which is exactly what a --scope flag could not express, since one state file
+// holds both rows at once.
+func TestScanReconcilesEachIdentitySeparately(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	// The same artifact at BOTH scopes. Its manifest default is project, so the
+	// global row is the one a manifest-default replan gets wrong.
+	if _, errOut, err := runInstall(t, "fix-skill-project", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install global: %v\n%s", err, errOut)
+	}
+	if _, errOut, err := runInstall(t, "fix-skill-project", "--target", "claude", "--local", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install local: %v\n%s", err, errOut)
+	}
+
+	globalSkill := filepath.Join(home, ".claude", "skills", "fix-skill-project", "SKILL.md")
+
+	// Only the GLOBAL copy is hand-edited. Each identity must answer for its own
+	// path: the edited one is USER-EDITED, the untouched one stays silent.
+	if err := os.WriteFile(globalSkill, []byte("the user typed this\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if !hasDrift(out, "USER-EDITED", globalSkill) {
+		t.Errorf("the hand-edited GLOBAL copy was not reported; each identity must "+
+			"reconcile against its own recorded scope:\n%s", out)
+	}
+	if hasVerdict(out, "ORPHANED-STATE") {
+		t.Errorf("two identities of one artifact produced a false ORPHANED-STATE:\n%s", out)
+	}
+}
+
+// TestScanDriftIsDeterministic guards the map-ordering trap: identities are collected
+// into a MAP, and a map's iteration order is random. Two identities converging on
+// one path must not make the reported verdict depend on which one the runtime
+// happened to visit last.
+func TestScanDriftIsDeterministic(t *testing.T) {
+	f := fixtureRegistry(t)
+	withRemoteEnv(t, f)
+
+	// Several artifacts across tools and scopes, including two instructions folding
+	// into one composed CLAUDE.md and one artifact at two scopes.
+	if _, errOut, err := runInstall(t, "fix-instruction", "fix-instruction-2", "fix-skill-project", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install global: %v\n%s", err, errOut)
+	}
+	if _, errOut, err := runInstall(t, "fix-skill-project", "--target", "claude", "--local", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install local: %v\n%s", err, errOut)
+	}
+
+	first, _, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	for i := 0; i < 5; i++ {
+		out, _, err := runScan(t)
+		if err != nil {
+			t.Fatalf("scan %d: %v", i, err)
+		}
+		if out != first {
+			t.Fatalf("scan output varies between runs — a map-ordered winner is leaking "+
+				"into the report.\nfirst:\n%s\nrun %d:\n%s", first, i, out)
+		}
+	}
+}
+
+// TestScanWarnsOnUnreplayableToolLabel guards the label-vs-selector split. state stores an ATTRIBUTION
+// label, and plan.Request.Tool takes a SELECTOR; "agnostic" is a recipe-row label
+// with no honest artifact expansion ("" and "all" both invent targets). Such a row
+// must WARN, never be dropped in silence — a swallowed identity turns a false
+// ORPHANED into a silent one, which is the worse failure.
+func TestScanWarnsOnUnreplayableToolLabel(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	if _, errOut, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+
+	// Corrupt the recorded tool label into the recipe-only "agnostic" placeholder,
+	// which is invalid on an artifact row.
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	st, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for i := range st.Items {
+		if st.Items[i].Artifact == "fix-skill" {
+			st.Items[i].Tool = "agnostic"
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("precondition: no state row for fix-skill")
+	}
+	if err := state.Save(statePath, st); err != nil {
+		t.Fatal(err)
+	}
+
+	_, errOut, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if !strings.Contains(errOut, "fix-skill") || !strings.Contains(errOut, "agnostic") {
+		t.Errorf("an unreplayable tool label was handled SILENTLY; it must warn:\n%s", errOut)
+	}
+}
+
+// TestScanWarnsOnMissingRecordedScope guards the empty-scope case. An empty Scope is not neutral:
+// it re-triggers the manifest-default fallback, which is the bug. A legacy row
+// without a scope must have one INFERRED from the state file that held it, and the
+// inference must be announced rather than applied in silence.
+func TestScanWarnsOnMissingRecordedScope(t *testing.T) {
+	f := fixtureRegistry(t)
+	home := withRemoteEnv(t, f)
+
+	// fix-skill-project defaults to PROJECT; installed --global, then its recorded
+	// scope is erased the way a pre-scope state file would have left it.
+	if _, errOut, err := runInstall(t, "fix-skill-project", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v\n%s", err, errOut)
+	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	st, err := state.Load(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range st.Items {
+		st.Items[i].Scope = ""
+	}
+	if err := state.Save(statePath, st); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, err := runScan(t)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if !strings.Contains(errOut, "no scope") {
+		t.Errorf("a legacy row with no recorded scope was reconciled silently:\n%s", errOut)
+	}
+	// The inference is from the HOME state file, so it must be global — which is
+	// where the artifact actually lives, so the row still reads clean.
+	skill := filepath.Join(home, ".claude", "skills", "fix-skill-project", "SKILL.md")
+	if hasDrift(out, "ORPHANED-STATE", skill) {
+		t.Errorf("the inferred scope did not match where the file actually is:\n%s", out)
+	}
+}
+
 // hasDriftItem is hasDrift plus the ITEM column: a composed CLAUDE.md carries one
 // row per fenced section, all sharing the file path, so the section's OWNING
 // artifact is the only thing that tells them apart.
@@ -455,7 +665,7 @@ func hasDriftItem(out, verdict, item, path string) bool {
 }
 
 // TestScanReportsComposedSectionDrift is the acceptance gate for the composed/APPEND
-// gap (pat-wkp3). A CLAUDE.md/AGENTS.md is a fold of many fenced sections from
+// gap. A CLAUDE.md/AGENTS.md is a fold of many fenced sections from
 // different artifacts; whole-file Classify cannot judge it, because the file never
 // equals any single source and every contributor records the same whole-file
 // checksum. So drift reconciles PER SECTION.

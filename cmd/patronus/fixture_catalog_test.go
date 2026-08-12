@@ -258,6 +258,45 @@ defaults:
 	write("artifacts/skills/fix-skill/SKILL.md",
 		"---\nname: fix-skill\ndescription: fixture skill\n---\nDo the fixture thing.\n")
 
+	// fix-skill-project defaults to PROJECT scope. Installing it --global is the
+	// recorded-scope reproduction: reconciliation that replans at the manifest default
+	// instead of the recorded scope looks for it under the project layout, finds no
+	// source for the global path, and reports a false ORPHANED-STATE. Its default
+	// must stay `project` (not `local`) so the project -> local normalization is
+	// exercised on the way through.
+	write("artifacts/skills/fix-skill-project/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: fix-skill-project
+description: "Fixture skill defaulting to PROJECT scope, so a --global install reconciles against the RECORDED scope."
+version: 1.0.0
+entry: SKILL.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: project
+`)
+	write("artifacts/skills/fix-skill-project/SKILL.md",
+		"---\nname: fix-skill-project\ndescription: fixture skill defaulting to project scope\n---\nDo the project-scoped fixture thing.\n")
+
+	// fix-instruction-global defaults to GLOBAL and is installed --local in the
+	// reverse-direction test: the mirror of fix-skill-project, on the composed
+	// APPEND path (a fenced CLAUDE.md section) rather than the whole-file path.
+	write("artifacts/instructions/fix-instruction-global/patronus.yaml", `apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: fix-instruction-global
+description: "Fixture instruction defaulting to GLOBAL, installed --local to prove the reverse scope direction."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: global
+`)
+	write("artifacts/instructions/fix-instruction-global/INSTRUCTIONS.md",
+		"# Global-default fixture instruction\n\nInstalled at project scope on purpose.\n")
+
 	// The @tool flavour pair: one profile slot resolves a DIFFERENT item per tool.
 	for _, tool := range []string{"claude", "codex"} {
 		write("artifacts/skills/fix-skill-"+tool+"/patronus.yaml", `apiVersion: patronus/v2
