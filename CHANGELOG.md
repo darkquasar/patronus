@@ -9,7 +9,8 @@ person upgrading: it leads with what will behave differently on their machine.
 
 - **`core` executes plans through the new `plan-execute` skill.** It no longer installs
   `executing-plans` or `subagent-driven-development`. Both stay in the catalog and
-  install on request, unchanged in body.
+  install on request. `subagent-driven-development`'s body is untouched;
+  `executing-plans` has the two-line revert described under Changed below.
 
   Upstream splits those two skills on whether the host has subagents: `executing-plans`
   is the fallback, `subagent-driven-development` the intended path. All three Patronus

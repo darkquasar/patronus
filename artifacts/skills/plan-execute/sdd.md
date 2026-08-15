@@ -23,11 +23,13 @@ dispute the fix loop could not settle, or all tasks complete.
    without comment.
 2. Record the branch's merge base: `git merge-base main HEAD`. The final review needs it.
 3. Check for a progress ledger:
-   `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md"`. Tasks marked
-   complete there are done. Do not re-dispatch them; resume at the first task not marked
-   complete. Conversation memory does not survive compaction, and a controller that lost
-   its place re-dispatching a finished sequence is the most expensive failure this mode
-   has.
+   `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md" 2>/dev/null`. On a
+   first run the file does not exist and the command prints nothing: that is the normal
+   starting state, not a blocker. Create the ledger when you record task 1. If it does
+   exist, tasks marked complete there are done. Do not re-dispatch them; resume at the
+   first task not marked complete. Conversation memory does not survive compaction, and a
+   controller that lost its place re-dispatching a finished sequence is the most expensive
+   failure this mode has.
 
 ## Per task
 

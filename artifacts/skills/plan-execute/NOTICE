@@ -21,8 +21,10 @@ no-subagent fallback, subagent-driven-development the intended path where
 subagents exist. Patronus forks on PROPORTIONALITY instead, because all three
 targets have subagents and the capability axis has no audience here. That
 divergence is why this is a new artifact rather than an edit to a vendored one,
-and it is why both upstream skills remain in the catalog, pristine and
-re-vendorable.
+and it is why both upstream skills remain in the catalog, each still tracking its
+own upstream and independently re-vendorable. (subagent-driven-development is
+kept verbatim to upstream; executing-plans carries the Patronus tk-close
+re-coupling recorded in its own attribution note.)
 
 The scripts/ helpers were audited before shipping: they perform only git reads
 and file writes (no network access, no destructive operations).

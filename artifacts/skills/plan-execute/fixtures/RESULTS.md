@@ -52,5 +52,13 @@ recorded the triggers they considered and rejected, with reasons, rather than on
 ones that fired. On 03 and 05 several runs noted which additional signals existed but
 were not load-bearing for the decision.
 
+**One challenge to fixture 06, raised in peer review and rejected.** A reviewer read
+Task 1's `migrations/0051_search_trigram_index.sql` as a schema migration, which would be
+a Rule 2 hard trigger and would make the expected mode wrong. It is not one: the task adds
+a GIN index, which is additive and droppable, with no data rewritten or destroyed. All
+five runs reached that conclusion independently and said so in their records. The
+challenge is itself an instance of what fixture 07 isolates, routing on the vocabulary in
+a path rather than on what the plan does. The fixture stands as written.
+
 The one-time nature of this gate is unchanged: nothing re-runs it when the criteria in
 `SKILL.md` are edited. See `README.md`.
