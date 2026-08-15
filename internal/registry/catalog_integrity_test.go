@@ -62,6 +62,9 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-plans":   {manifest.TypeSkill, manifest.RoleCapability},
 		"executing-plans": {manifest.TypeSkill, manifest.RoleCapability},
+		// The authored proportionality router core installs in place of the two
+		// upstream execution skills, which stay in the catalog as opt-ins.
+		"plan-execute":    {manifest.TypeSkill, manifest.RoleCapability},
 		"grilling":        {manifest.TypeSkill, manifest.RoleCapability},
 		"diagnosing-bugs": {manifest.TypeSkill, manifest.RoleCapability},
 		"tdd":             {manifest.TypeSkill, manifest.RoleCapability},
@@ -182,6 +185,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	for _, name := range []string{
 		"agents-spine", "ddd-distilled", "refactoring-distilled", "diagram-explain",
 		"skills-dispatch", "writing-plans", "executing-plans",
+		"plan-execute", // authored, but derived from superpowers: attribution + NOTICE required
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
 		"go-style-uber",

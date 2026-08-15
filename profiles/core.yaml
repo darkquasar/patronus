@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 1.0.2
+version: 1.1.0
 summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `ai-memory` (ambient memory), `quiet` (no diagrams)."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
@@ -20,7 +20,7 @@ layers:
     - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + ai-memory (externalized state); Claude-only, conditional on what's wired
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
     - writing-plans                        # plan a multi-step task before touching code
-    - executing-plans                      # execute a plan task-by-task with checkpoints
+    - plan-execute                         # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review])
     - grilling                             # interrogate a plan before building
     - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
     - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
@@ -70,7 +70,6 @@ layers:
   orchestration:
     - ticket                               # work-graph discipline (AGENTS.md APPEND) — `requires: [tk]`, so the tk binary recipe is pulled into the install/lock closure automatically
     - session-completion                   # end-of-session discipline: file follow-ups, run the gates, commit, PUSH — tracker-agnostic, no requires edge
-    - subagent-driven-development          # execute a plan task-by-task with fresh implementer+reviewer subagents
     - dispatching-parallel-agents          # fan out independent problem domains to concurrent subagents
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
