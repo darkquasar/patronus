@@ -10,7 +10,7 @@ summary: "The opinionated default environment — agent house rules + design dis
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
-    - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
+    - diagram-explain                      # ASCII diagrams on by default, appended into CLAUDE.md/AGENTS.md
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
     - writing-style-pointer                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-editorial skill
   capabilities:
