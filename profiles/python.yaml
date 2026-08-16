@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: python
-version: 1.0.0
+version: 1.0.1
 summary: "STUB — Python project agent environment. Items to be sourced (see todo)."
 status: stub
 layers:

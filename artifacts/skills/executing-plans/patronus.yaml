@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: executing-plans
 description: "Upstream-compatible alternative, not the default. `plan-execute` is the skill to use for executing a plan; it assesses the plan and chooses a mode. This is the superpowers `executing-plans` skill kept close to upstream: sequential task-by-task execution for a host WITHOUT subagents, which is the axis upstream forks on. Use it only to stay aligned with upstream, or on a runtime where subagent dispatch is unavailable."
-version: 1.5.0
+version: 1.6.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]

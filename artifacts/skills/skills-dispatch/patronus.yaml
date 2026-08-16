@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: skills-dispatch
 description: "The skill-dispatch keystone — establishes how an agent finds and invokes the installed skills, requiring a skill check before ANY response, across the ENTIRE installed set regardless of origin. The auto-trigger discipline the rest of the skill library leans on."
-version: 1.0.1
+version: 1.1.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]
