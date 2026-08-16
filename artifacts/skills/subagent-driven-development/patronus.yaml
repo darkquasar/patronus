@@ -4,7 +4,7 @@ type: skill
 role: orchestration
 name: subagent-driven-development
 description: "Upstream-compatible alternative, not the default. `plan-execute` is the skill to use for executing a plan; its `sdd` mode runs this discipline when the plan warrants it. This is the superpowers `subagent-driven-development` skill kept verbatim to upstream: a fresh implementer subagent per task, a spec-and-quality review after each, one broad whole-branch review at the end, applied unconditionally rather than gated. Use it only to stay aligned with upstream, or to run every task under per-task review regardless of what the plan costs."
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: [implementer-prompt.md, task-reviewer-prompt.md, scripts]
 targets: [claude, codex, opencode]

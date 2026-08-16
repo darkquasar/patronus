@@ -5,7 +5,7 @@ description: Use when executing implementation plans with independent tasks in t
 
 > **Patronus note:** vendored from superpowers. The `superpowers:`-prefixed
 > sibling skills referenced below all map to Patronus artifacts —
-> `superpowers:writing-plans` → `writing-plans`, `superpowers:executing-plans` →
+> `superpowers:writing-plans` → `plan-writing`, `superpowers:executing-plans` →
 > `executing-plans`, `superpowers:test-driven-development` → the `tdd` skill,
 > `superpowers:dispatching-parallel-agents` → `dispatching-parallel-agents`,
 > `superpowers:requesting-code-review` → `requesting-code-review` (whose

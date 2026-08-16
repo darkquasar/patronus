@@ -1,9 +1,9 @@
 ---
-name: brainstorming-spec
+name: spec-brainstorming
 description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design, then authors the spec. Reads an existing research.md when present and scales its dialogue to it."
 ---
 
-# Brainstorming Ideas Into Specs
+# Spec Brainstorming: Ideas Into Specs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
@@ -29,12 +29,12 @@ You MUST create a task for each of these items and complete them in order:
 6. **Write spec** — into a research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit — `docs/specs/` is gitignored by default.
 7. **Spec placeholder scan** — cheap inline check for placeholders and internal contradictions only; the real review is `spec-review` in a fresh subagent (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `writing-plans`. Each hop is a suggestion the user may decline.
+9. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `plan-writing`. Each hop is a suggestion the user may decline.
 
 ## Process Flow
 
 ```dot
-digraph brainstorming_spec {
+digraph spec_brainstorming {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -58,14 +58,14 @@ digraph brainstorming_spec {
 }
 ```
 
-**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `writing-plans`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → writing-plans → plan-review → build, and each hop is a suggestion the user may decline.
+**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `plan-writing`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → plan-writing → plan-review → build, and each hop is a suggestion the user may decline.
 
 ## The Process
 
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
-- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `team-research`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
+- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `research-team`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
   - **Research answers the design questions** → skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: … — does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
   - **Research leaves design questions open** → ask only those, one at a time, in the normal flow below.
   There is no separate "research-seeded" skill — same author, dialogue scaled to input richness.
@@ -73,11 +73,11 @@ digraph brainstorming_spec {
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
 
-  > "This looks broad enough to research in parallel. Want me to run `team-research` — spawn
+  > "This looks broad enough to research in parallel. Want me to run `research-team` — spawn
   > parallel researchers to investigate each unknown and synthesize research.md, spec.md, and
   > plan.md — instead of designing solo?"
 
-  If yes, hand off to the **team-research** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while team-research investigates work you *don't*. A project can need one, both, or neither.
+  If yes, hand off to the **research-team** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while research-team investigates work you *don't*. A project can need one, both, or neither.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
@@ -173,13 +173,13 @@ streams:
   - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
     intent: "One line: what this stream is."
     spec: <stream>-spec.md      # the file you just wrote
-    plan: null                  # writing-plans fills this in
-    epic: null                  # team-implement fills this in with the tk epic id, e.g. pat-a1b2
+    plan: null                  # plan-writing fills this in
+    epic: null                  # plan-execute-parallel fills this in with the tk epic id, e.g. pat-a1b2
 ```
 
-If `meta.yaml` already exists (e.g. `team-research` created it), append your stream to `streams:` and
-bump `updated:`. Each skill owns exactly the field it produces: `writing-plans` fills `plan:`,
-`team-implement` fills `epic:`.
+If `meta.yaml` already exists (e.g. `research-team` created it), append your stream to `streams:` and
+bump `updated:`. Each skill owns exactly the field it produces: `plan-writing` fills `plan:`,
+`plan-execute-parallel` fills `epic:`.
 
 **One stream = one spec + one plan.** If the work forks into pieces that are independently
 specifiable, reviewable, and shippable, that is **more than one stream** — add a stream, not a second
@@ -238,9 +238,9 @@ Wait for the user's response. If they request changes, make them and re-run the 
 **Next:**
 
 > "Spec written to `docs/specs/NN-slug/<stream>-spec.md`. Want me to run **`spec-review`** over it
->  first — a fresh subagent, clean context, reading only what the spec *says*? Then `writing-plans`."
+>  first — a fresh subagent, clean context, reading only what the spec *says*? Then `plan-writing`."
 
-The user may skip straight to `writing-plans`. Do not gate on the review — each hop is a suggestion.
+The user may skip straight to `plan-writing`. Do not gate on the review — each hop is a suggestion.
 
 ## Key Principles
 
@@ -268,4 +268,4 @@ A browser-based companion for showing mockups, diagrams, and visual options duri
 A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
 
 If they agree to the companion, read the detailed guide before proceeding:
-`skills/brainstorming-spec/visual-companion.md`
+`skills/spec-brainstorming/visual-companion.md`

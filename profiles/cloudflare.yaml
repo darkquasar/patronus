@@ -2,12 +2,12 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: cloudflare
-version: 1.0.0
+version: 1.0.1
 summary: "Cloudflare project agent environment. Partly real — ships the pattern-cloudflare context skill; remaining layers stubbed."
 status: stub                               # still warns: instructions/eval/etc. not yet sourced
 layers:
   instructions: [agent-principles]                # role: instruction — generic agent house rules
-  capabilities: [team-research@claude, team-implement@claude]   # role: capability (Claude-flavoured; codex variant separate)
+  capabilities: [research-team@claude, plan-execute-parallel@claude]   # role: capability (Claude-flavoured; codex variant separate)
   context: [pattern-cloudflare]                   # role: context — the populated L4 slot
   tools: [cloudflare-mcp]                          # role: tools — hosted Cloudflare Docs MCP (keyless)
   memory: memory-ai-memory

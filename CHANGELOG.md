@@ -3,6 +3,74 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## Unreleased
+
+### Breaking
+
+- **`diagram-explain` was an output style and is now an instruction, so it finally does
+  something on Claude.** A placed output style sits inert until you select it in the Claude
+  UI, and Patronus cannot make that selection for you, so this artifact has been installed
+  and doing nothing on its primary target since it shipped. Its body now appends into
+  `CLAUDE.md` as a `patronus:start diagram-explain` section and is live from install.
+
+  Codex and OpenCode are unaffected in where the content lands: both already routed
+  instructions and output styles to the same `AGENTS.md` append, so the section keeps its
+  name and position. The body itself is six lines shorter, having dropped the output-style
+  frontmatter that only Claude ever read.
+
+  **If you installed a previous version on Claude, delete the stale file by hand:**
+
+  ```sh
+  rm ~/.claude/output-styles/diagram-explain.md    # or .claude/output-styles/ for a local install
+  ```
+
+  `patronus scan` will not point you at it. The artifact kept its name, so the upgrade
+  overwrites its state row in place with the new `CLAUDE.md` path rather than marking the
+  old one an orphan, and nothing scans for files that state has forgotten. Left there, the
+  file is harmless unless you had selected the output style, in which case it keeps
+  applying the old copy on top of the new instruction.
+
+- **Two slash commands changed name. `/team-research` is now `/research-team`, and
+  `/team-implement` is now `/plan-execute-parallel`.** If either is in your muscle memory,
+  your own notes, or a script, it stops resolving after this upgrade. Nothing aliases the
+  old form: type the new one.
+
+- **Four lifecycle skills were renamed so the phase leads the name, and the old skills are
+  left on your machine.**
+
+  | was | is now |
+  |---|---|
+  | `brainstorming-spec` | `spec-brainstorming` |
+  | `writing-plans` | `plan-writing` |
+  | `team-research` | `research-team` |
+  | `team-implement` | `plan-execute-parallel` |
+
+  What each skill does is unchanged; only its name, its heading, and the cross-references
+  that point at it moved. `spec-brainstorming` now sorts beside `spec-review`,
+  `plan-writing` beside `plan-review` and `plan-execute`, and `plan-execute-parallel` reads
+  as the other arm of the same fork. Scanning your installed set now shows which skills
+  belong to one phase.
+
+  **You need to remove the old skills by hand.** A rename changes the artifact's identity,
+  so Patronus treats each new name as an install and never learns the old one is now an
+  orphan: `install` acts only on the names you ask for, and state rows are keyed by artifact
+  name. Both the old directories and their state rows survive the upgrade. Leaving them
+  there means two skills competing for one trigger, and the stale one points at hand-off
+  targets that no longer exist.
+
+  ```sh
+  patronus scan                            # shows the four old names as ORPHANED-STATE
+  patronus remove team-research            # dry run, inspect what it will undo
+  patronus remove team-research --deploy
+  ```
+
+  Repeat for `team-implement`, `writing-plans`, and `brainstorming-spec`. Omit `--target` and
+  the scope flags to cover every tool and both scopes you installed them for: `--global` and
+  `--local` each narrow the removal to one scope, and with neither flag both state files are
+  consulted. If you edited an installed skill, the drift check skips it and you need
+  `--force`. `remove` deletes the files and the state row, and leaves the now-empty skill
+  directory behind; delete it yourself if an empty directory bothers you.
+
 ## v2.3.0
 
 ### Breaking

@@ -36,7 +36,7 @@ func TestTransformSkillPassthrough(t *testing.T) {
 	}
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
-	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Role: manifest.RoleCapability}, Type: manifest.TypeSkill, Entry: "SKILL.md"}
+	art := &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "research-team", Role: manifest.RoleCapability}, Type: manifest.TypeSkill, Entry: "SKILL.md"}
 
 	diffs, err := eng.Transform(art, claudeAdapter(t), "global", src, noExisting)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestTransformSkillPassthrough(t *testing.T) {
 		t.Fatalf("want 1 diff, got %d", len(diffs))
 	}
 	d := diffs[0]
-	wantPath := filepath.Join(home, ".claude", "skills", "team-research", "SKILL.md")
+	wantPath := filepath.Join(home, ".claude", "skills", "research-team", "SKILL.md")
 	if d.Path != wantPath {
 		t.Errorf("path = %q, want %q", d.Path, wantPath)
 	}

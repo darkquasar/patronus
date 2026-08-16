@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: diagram-explain
+description: "Accompany non-trivial explanations with a compact ASCII diagram (architecture, flow, or state) using a consistent charset. Appended into CLAUDE.md/AGENTS.md on all three targets."
+version: 2.0.0
+entry: INSTRUCTIONS.md
+targets: [claude, codex, opencode]
+defaults:
+  scope: global
+attribution:
+  upstream: github.com/tjboudreaux/cc-visualization-skills
+  license: MIT
+  copyright: "Copyright (c) 2026 TJ Boudreaux"
+  commit: 4513e46b4a1bccea0f5177b16a8ee069a4d01b30
+  note: "Authored Patronus instruction; only the ASCII charset/convention rules are borrowed from the upstream tools-visual-ascii-arch skill, not its prose."

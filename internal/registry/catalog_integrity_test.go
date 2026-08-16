@@ -50,17 +50,19 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		typ  manifest.ArtifactType
 		role manifest.Role
 	}{
-		"agent-principles":   {manifest.TypeInstruction, manifest.RoleInstruction},
-		"team-research":      {manifest.TypeSkill, manifest.RoleCapability},
-		"team-implement":     {manifest.TypeSkill, manifest.RoleCapability},
-		"pattern-cloudflare": {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
-		"pattern-mcp":        {manifest.TypeSkill, manifest.RoleContext},
-		// P7.2-L1 vendored/authored instructions + the diagram-explain output-style.
+		"agent-principles":      {manifest.TypeInstruction, manifest.RoleInstruction},
+		"research-team":         {manifest.TypeSkill, manifest.RoleCapability},
+		"plan-execute-parallel": {manifest.TypeSkill, manifest.RoleCapability},
+		"pattern-cloudflare":    {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
+		"pattern-mcp":           {manifest.TypeSkill, manifest.RoleContext},
+		// P7.2-L1 vendored/authored instructions. diagram-explain was an
+		// output-style; it is an instruction so its body appends into
+		// CLAUDE.md/AGENTS.md and is live on Claude from install.
 		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
-		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
+		"diagram-explain": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.2-L2 vendored capability skills (superpowers + mattpocock subset).
 		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
-		"writing-plans":   {manifest.TypeSkill, manifest.RoleCapability},
+		"plan-writing":    {manifest.TypeSkill, manifest.RoleCapability},
 		"executing-plans": {manifest.TypeSkill, manifest.RoleCapability},
 		// The authored proportionality router core installs in place of the two
 		// upstream execution skills, which stay in the catalog as opt-ins.
@@ -109,7 +111,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
-		"brainstorming-spec":             {manifest.TypeSkill, manifest.RoleCapability},
+		"spec-brainstorming":             {manifest.TypeSkill, manifest.RoleCapability},
 		"using-git-worktrees":            {manifest.TypeSkill, manifest.RoleCapability},
 		"finishing-a-development-branch": {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
@@ -184,7 +186,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 	// upstream provenance and the build packs a NOTICE.
 	for _, name := range []string{
 		"agents-spine", "ddd-distilled", "refactoring-distilled", "diagram-explain",
-		"skills-dispatch", "writing-plans", "executing-plans",
+		"skills-dispatch", "plan-writing", "executing-plans",
 		"plan-execute", // authored, but derived from superpowers: attribution + NOTICE required
 		"grilling", "diagnosing-bugs", "tdd",
 		"codebase-design", "domain-modeling",
@@ -195,7 +197,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// L10 orchestration: ticket (authored-but-attributed instruction) + 2 vendored superpowers skills.
 		"ticket", "subagent-driven-development", "dispatching-parallel-agents",
 		// The remaining vendored superpowers workflow skills.
-		"brainstorming-spec", "using-git-worktrees", "finishing-a-development-branch",
+		"spec-brainstorming", "using-git-worktrees", "finishing-a-development-branch",
 		"writing-skills", "requesting-code-review", "receiving-code-review",
 		// Vendored ai-memory lifecycle hooks.
 		"ai-memory-session-start", "ai-memory-user-prompt", "ai-memory-pre-tool-use",

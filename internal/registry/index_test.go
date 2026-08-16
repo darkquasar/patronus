@@ -11,8 +11,8 @@ func sampleIndex() *Index {
 		SchemaVersion: IndexSchemaVersion,
 		Generated:     "2026-06-08T00:00:00Z",
 		Artifacts: []IndexArtifact{{
-			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Version: "1.0.0"}, Type: manifest.TypeSkill},
-			Tarball:  Tarball{URL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:abc"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "research-team", Version: "1.0.0"}, Type: manifest.TypeSkill},
+			Tarball:  Tarball{URL: "https://x/catalog/research-team/1.0.0/research-team-1.0.0.tar.gz", SHA256: "sha256:abc"},
 		}},
 		Recipes: []IndexRecipe{{
 			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: "memory"}},
@@ -34,7 +34,7 @@ func TestIndexMarshalLoadRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(got.Artifacts) != 1 ||
-		got.Artifacts[0].Manifest.Name != "team-research" ||
+		got.Artifacts[0].Manifest.Name != "research-team" ||
 		got.Artifacts[0].Tarball.SHA256 != "sha256:abc" {
 		t.Fatalf("round trip mismatch: %+v", got)
 	}

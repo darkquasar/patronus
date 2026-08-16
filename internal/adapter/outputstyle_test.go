@@ -11,9 +11,11 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+// fixture-style is an invented name, deliberately not a real catalog artifact:
+// this test proves the output-style TYPE's transform, not any shipped item.
 func outputStyleArtifact() *manifest.Artifact {
 	return &manifest.Artifact{
-		Meta:  manifest.Meta{Family: manifest.FamilyArtifact, Name: "diagram-explain", Role: manifest.RoleInstruction},
+		Meta:  manifest.Meta{Family: manifest.FamilyArtifact, Name: "fixture-style", Role: manifest.RoleInstruction},
 		Type:  manifest.TypeOutputStyle,
 		Entry: "STYLE.md",
 	}
@@ -44,7 +46,7 @@ func TestTransformOutputStyleClaudeCreates(t *testing.T) {
 		t.Fatalf("want 1 diff, got %d", len(diffs))
 	}
 	d := diffs[0]
-	want := filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")
+	want := filepath.Join(home, ".claude", "output-styles", "fixture-style.md")
 	if d.Path != want {
 		t.Errorf("path = %q, want %q", d.Path, want)
 	}
@@ -68,7 +70,7 @@ func TestTransformOutputStyleClaudeProjectPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(proj, ".claude", "output-styles", "diagram-explain.md")
+	want := filepath.Join(proj, ".claude", "output-styles", "fixture-style.md")
 	if diffs[0].Path != want {
 		t.Errorf("project path = %q, want %q", diffs[0].Path, want)
 	}
@@ -114,13 +116,13 @@ func TestTransformOutputStyleAppendsAgentsMd(t *testing.T) {
 				t.Errorf("action = %s, want APPEND", d.Action)
 			}
 			s := string(d.After)
-			if !strings.Contains(s, "<!-- patronus:start diagram-explain -->") {
+			if !strings.Contains(s, "<!-- patronus:start fixture-style -->") {
 				t.Errorf("missing fenced section:\n%s", s)
 			}
 			if !strings.Contains(s, "# My rules") || !strings.Contains(s, "keep it tidy") {
 				t.Errorf("user prose not preserved:\n%s", s)
 			}
-			if d.Section == nil || d.Section.Name != "diagram-explain" {
+			if d.Section == nil || d.Section.Name != "fixture-style" {
 				t.Errorf("section edit not recorded: %+v", d.Section)
 			}
 

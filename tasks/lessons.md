@@ -116,7 +116,7 @@ Empirically probed `Agent` + `isolation: "worktree"` (Claude Code):
 | Auto-cleaned? | **Only if unchanged.** A worktree with a commit **persists**, and `.claude/` is gitignored → **leaks are invisible to `git status`** |
 | Subagents spawning subagents | **Works** |
 
-**This disproves `team-implement/SKILL.md:79-81`**, which forbids native isolation *"so you retain
+**This disproves `plan-execute-parallel/SKILL.md:79-81`**, which forbids native isolation *"so you retain
 ownership of the branches to merge"* — the lead **can** merge them. It bans the right tool for a
 wrong reason.
 
@@ -157,8 +157,9 @@ coupling bite.
 
 Two of nine tickets had a stale premise that would have sent the fix the wrong way:
 
-- **pat-qo3r** said "writing-plans has NO spec.md step." Opening the artifacts showed
-  team-research and writing-plans had ALREADY moved to per-stream spec/plan output
+- **pat-qo3r** said "writing-plans has NO spec.md step" (the skill now called
+  `plan-writing`). Opening the artifacts showed
+  research-team and plan-writing had ALREADY moved to per-stream spec/plan output
   (ADR-0003). The real work was hand-off *rewiring* (a behavior-preserving move of
   spec-synthesis prose), not the parity *build* the ticket described. Planning from the
   ticket text would have re-built something that exists.

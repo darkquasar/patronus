@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 1.1.0
+version: 1.1.1
 summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `ai-memory` (ambient memory), `quiet` (no diagrams)."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
@@ -10,7 +10,7 @@ summary: "The opinionated default environment — agent house rules + design dis
 layers:
   instructions:
     - agents-spine                         # the AGENTS.md format spine
-    - diagram-explain                      # output-style — ASCII diagrams on by default (strict default)
+    - diagram-explain                      # ASCII diagrams on by default, appended into CLAUDE.md/AGENTS.md
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
     - writing-style-pointer                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-editorial skill
   capabilities:
@@ -19,18 +19,18 @@ layers:
     - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
     - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + ai-memory (externalized state); Claude-only, conditional on what's wired
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
-    - writing-plans                        # plan a multi-step task before touching code
+    - plan-writing                         # plan a multi-step task before touching code
     - plan-execute                         # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review])
     - grilling                             # interrogate a plan before building
     - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
     - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
-    - brainstorming-spec                   # explore intent + requirements + design, then author the spec, BEFORE any creative work
+    - spec-brainstorming                   # explore intent + requirements + design, then author the spec, BEFORE any creative work
     - using-git-worktrees                  # start feature work in an isolated workspace
     - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
     - writing-skills                       # author/edit/verify skills (the meta-skill)
     - writing-editorial                    # the house writing style as four sequenced tier files + the editorial review that applies them
-    - team-research@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
-    - team-implement@claude                # spec-driven parallel implementation (Claude tools; codex flavour is a separate artifact)
+    - research-team@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
+    - plan-execute-parallel@claude         # the parallel arm of plan-review's fork (Claude tools; codex flavour is a separate artifact)
   context:
     - codebase-design                      # deep-module design vocabulary
     - domain-modeling                      # ubiquitous-language + ADR discipline
@@ -52,7 +52,7 @@ layers:
     # The hard PreToolUse gate (tdd-guard recipe + tdd-guard-hook) is opt-in via the
     # `tdd-enforced` profile — it blocks every edit lacking a failing test, which is
     # too aggressive for the default (it can't tell impl code from a YAML/docs edit).
-    - spec-review                          # advisory gate — closes the spec phase (4-lens rubric) before writing-plans
+    - spec-review                          # advisory gate — closes the spec phase (4-lens rubric) before plan-writing
     - plan-review                          # advisory gate — closes the planning phase (coverage vs the spec) before implementation
     - verification-before-completion       # evidence-before-claims discipline
     - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)

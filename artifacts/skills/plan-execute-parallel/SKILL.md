@@ -1,9 +1,9 @@
 ---
-name: team-implement
-description: "/team-implement — Spec-Driven Team Implementation. Use when the user wants to implement a feature from existing research (spec.md + plan.md). Spawns parallel teammate agents, each owning a concern boundary. Requires explicit invocation."
+name: plan-execute-parallel
+description: "/plan-execute-parallel — parallel plan execution. Use when the user wants to implement a stream's plan (spec.md + plan.md) with parallel teammate agents, each owning a concern boundary. Requires explicit invocation."
 ---
 
-# /team-implement — Spec-Driven Team Implementation
+# /plan-execute-parallel — Parallel Plan Execution
 
 You are executing a **spec-driven team implementation**. Research has already been done by someone else. Your job is to read the specs, understand the architecture, define concern boundaries, and spin up a team of agents to build it.
 
@@ -24,7 +24,7 @@ The user will provide a research-effort folder path under `docs/specs/` (e.g. `d
 3. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's conventions and constraints.
 4. **Read `tasks/lessons.md`** if it exists — internalize past mistakes.
 
-If your stream names no spec or plan, STOP and tell the user: "This stream has no spec or plan. The canonical path is `/team-research` (research) → `brainstorming-spec` (spec) → `writing-plans` (plan); run those first before using `/team-implement`."
+If your stream names no spec or plan, STOP and tell the user: "This stream has no spec or plan. The canonical path is `/research-team` (research) → `spec-brainstorming` (spec) → `plan-writing` (plan); run those first before using `/plan-execute-parallel`."
 
 ---
 

@@ -20,7 +20,7 @@ stress-tester — anything with a design tree (a raw idea, research, or a spec) 
 spirit hands the sharpened idea back **upstream** (to research or design-settling) or lets the user
 proceed. **grilling has NO forward hop into planning or execution.** It produces clarity, not an
 artifact, so it has no edge into the plan stage; that routing is `plan-review`'s, not grilling's.
-Do not suggest `writing-plans`, `plan-review`, `executing-plans`, or `team-implement`.
+Do not suggest `plan-writing`, `plan-review`, `executing-plans`, or `plan-execute-parallel`.
 
 **Tailor the outbound suggestion to where you entered from.** Detect it cheaply from files in the
 current `docs/specs/NN-slug/` effort — whether a `<slug>-research.md` and/or a `<stream>-spec.md`
@@ -30,25 +30,25 @@ exist. Entry-awareness only tunes *which upstream offer to surface*; it never ro
   research): file presence cannot tell "grilling to harden a fresh spec" from "grilling a spec
   that's already sharp," so **ASK, do not auto-route**:
 
-  > "The spec looks sharper now. Want me to harden it further with `brainstorming-spec` — fold what
+  > "The spec looks sharper now. Want me to harden it further with `spec-brainstorming` — fold what
   >  we surfaced back into the spec — or just build it however you like?"
 
 - **Research only** (a `<slug>-research.md` exists, no spec yet) — unambiguous next hop:
 
-  > "The findings look sharp now. Author the spec from them with `brainstorming-spec`? (Or just
+  > "The findings look sharp now. Author the spec from them with `spec-brainstorming`? (Or just
   >  build it however you like.)"
 
-  Do NOT re-suggest `team-research` here — that's a loop.
+  Do NOT re-suggest `research-team` here — that's a loop.
 
-- **Entered from team-research** (research exists, you were called to stress-test before the spec):
-  same as research-only — offer `brainstorming-spec`; do not loop back to `team-research`.
+- **Entered from research-team** (research exists, you were called to stress-test before the spec):
+  same as research-only — offer `spec-brainstorming`; do not loop back to `research-team`.
 
 - **Called cold** (no `research.md` and no `<stream>-spec.md` present) — the full two-option menu:
 
   > "The idea looks sharp now. Two ways forward — your call:
   >  - **The domain has real unknowns** (several things you'd have to go investigate before the
-  >    design is even tractable) → `/team-research`.
-  >  - **You know the domain; it's the design that needs settling** → the `brainstorming-spec` skill.
+  >    design is even tractable) → `/research-team`.
+  >  - **You know the domain; it's the design that needs settling** → the `spec-brainstorming` skill.
   >
   >  Or neither, if you'd rather just build it."
 

@@ -22,7 +22,7 @@ func TestLoadMissingIsEmpty(t *testing.T) {
 func TestSaveLoadRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "state.json")
 	s := &State{Version: Version, Items: []Item{{
-		Artifact: "team-research", Tool: "claude", Scope: "global",
+		Artifact: "research-team", Tool: "claude", Scope: "global",
 		Files: []FileState{{Path: "/x/SKILL.md", Action: "CREATE", Checksum: "sha256:abc"}},
 	}}}
 	if err := Save(p, s); err != nil {
@@ -32,7 +32,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != 1 || got.Items[0].Artifact != "team-research" {
+	if len(got.Items) != 1 || got.Items[0].Artifact != "research-team" {
 		t.Errorf("round trip lost data: %+v", got)
 	}
 }

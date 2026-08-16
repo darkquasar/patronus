@@ -2,9 +2,9 @@ apiVersion: patronus/v2
 family: artifact
 type: skill
 role: capability
-name: team-implement
-description: "Spec-Driven Team Implementation — implement a feature from existing research (spec.md + plan.md) with parallel teammate agents, each owning a concern boundary."
-version: 2.2.0
+name: plan-execute-parallel
+description: "Parallel plan execution — implement a stream's plan with parallel teammate agents, each owning a disjoint concern boundary. The parallel arm of plan-review's build fork; plan-execute is the other."
+version: 3.0.0
 entry: SKILL.md
 files: []
 targets: [claude]   # Claude-flavoured: body uses Agent/SendMessage/Task*/isolation:worktree (Claude-only). Codex parity is a separate codex-flavoured artifact (codex exec + worktrees + supervisor); opencode TBD.

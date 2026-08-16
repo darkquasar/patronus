@@ -305,7 +305,7 @@ func TestScanReportsDrift(t *testing.T) {
 	}
 
 	// (b) UNMANAGED SHADOW: put a file where Patronus WOULD deploy fix-skill-claude,
-	// but never install it — so there is NO state row. This is the team-research bug:
+	// but never install it — so there is NO state row. This is the research-team bug:
 	// placed by hand or by another tool, invisible to any state.json-only check.
 	shadow := filepath.Join(home, ".claude", "skills", "fix-skill-claude", "SKILL.md")
 	if err := os.MkdirAll(filepath.Dir(shadow), 0o755); err != nil {
@@ -365,7 +365,7 @@ func TestScanReportsCrossScopeShadow(t *testing.T) {
 
 // TestScanReportsStale proves the STALE verdict: the deployed copy is exactly what
 // Patronus wrote, but the SOURCE moved on and nothing re-deployed it. This is the
-// team-research drift in miniature — the installed skill said TeamCreate while the
+// research-team drift in miniature — the installed skill said TeamCreate while the
 // source said Agent, and every status reported "installed".
 //
 // It is the one verdict that needs a MUTABLE source, so it builds from a fixture root

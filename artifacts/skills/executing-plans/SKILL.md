@@ -29,7 +29,7 @@ For each task:
 3. Run verifications as specified
 4. Mark as completed
    - If the plan's tasks were mirrored into ticket (see the optional ticket mirror in
-     **writing-plans**), also close the matching ticket: `tk close <id>`. Closing is what
+     **plan-writing**), also close the matching ticket: `tk close <id>`. Closing is what
      unblocks the next ready task in the work-graph, so a mirrored plan that is never closed
      stalls `tk ready`. Skip this if ticket was not used.
 
@@ -68,5 +68,5 @@ After all tasks complete and verified:
 
 ## Integration
 
-- **writing-plans** — creates the plan this skill executes.
+- **plan-writing** — creates the plan this skill executes.
 - If your platform supports it, dispatch a fresh subagent per task and review between tasks instead of executing inline.

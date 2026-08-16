@@ -1,7 +1,7 @@
-This is an authored Patronus output style. Only the ASCII charset and layout
+This is an authored Patronus instruction. Only the ASCII charset and layout
 conventions (box/edge characters, sync `=>` vs async `~>`, the ≤100-column / no-tabs
 rule, and the context/container/component zoom levels) are borrowed from the upstream
-`tools-visual-ascii-arch` skill. The prose and the style's behavior are original.
+`tools-visual-ascii-arch` skill. The prose and the instruction's behavior are original.
 
 Conventions borrowed from: https://github.com/tjboudreaux/cc-visualization-skills
 Commit:  4513e46b4a1bccea0f5177b16a8ee069a4d01b30
