@@ -35,13 +35,13 @@ func runInstall(t *testing.T, args ...string) (string, string, error) {
 
 func TestInstallSkillDryRun(t *testing.T) {
 	// Isolate HOME so --global resolves to an empty sandbox (not the developer's
-	// real ~/.claude, where team-research may already be installed → SKIP not CREATE).
+	// real ~/.claude, where research-team may already be installed → SKIP not CREATE).
 	t.Setenv("HOME", t.TempDir())
-	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
-	for _, want := range []string{"team-research", "SKILL.md", "CREATE", "skill", "dry run"} {
+	for _, want := range []string{"research-team", "SKILL.md", "CREATE", "skill", "dry run"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}
@@ -63,7 +63,7 @@ func TestInstallVerboseShowsDiff(t *testing.T) {
 }
 
 func TestInstallMutuallyExclusiveScope(t *testing.T) {
-	_, _, err := runInstall(t, "team-research", "--global", "--local")
+	_, _, err := runInstall(t, "research-team", "--global", "--local")
 	if err == nil {
 		t.Error("expected error for --global and --local together")
 	}
@@ -76,7 +76,7 @@ func TestInstallProfileCloudflareDryRun(t *testing.T) {
 	}
 	// The cloudflare profile spans instructions + capabilities + context + memory;
 	// every populated slot's item should appear in the combined plan.
-	for _, want := range []string{"agent-principles", "team-research", "plan-execute-parallel", "pattern-cloudflare", "memory-ai-memory"} {
+	for _, want := range []string{"agent-principles", "research-team", "plan-execute-parallel", "pattern-cloudflare", "memory-ai-memory"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("profile plan missing %q:\n%s", want, out)
 		}
@@ -91,7 +91,7 @@ func TestInstallProfileCloudflareDryRun(t *testing.T) {
 }
 
 func TestInstallProfileAndPositionalMutuallyExclusive(t *testing.T) {
-	_, _, err := runInstall(t, "team-research", "--profile", "golang")
+	_, _, err := runInstall(t, "research-team", "--profile", "golang")
 	if err == nil {
 		t.Error("expected error for --profile with positional names")
 	}
@@ -113,7 +113,7 @@ func TestInstallUnknownArtifact(t *testing.T) {
 
 func TestInstallDefaultIsDryRun(t *testing.T) {
 	// No --deploy, no --dry-run: must be a safe dry run, no error, plan shown.
-	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global")
+	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global")
 	if err != nil {
 		t.Fatalf("default install should succeed as dry run: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestRecordStateSplitsByScope(t *testing.T) {
 }
 
 func TestInstallDeployAndDryRunMutuallyExclusive(t *testing.T) {
-	_, _, err := runInstall(t, "team-research", "--deploy", "--dry-run")
+	_, _, err := runInstall(t, "research-team", "--deploy", "--dry-run")
 	if err == nil {
 		t.Error("expected error for --deploy and --dry-run together")
 	}
@@ -198,7 +198,7 @@ func TestInstallJSON(t *testing.T) {
 	// since we run the subcommand in isolation here.
 	jsonOutput = true
 	defer func() { jsonOutput = false }()
-	out, _, err := runInstall(t, "team-research", "--target", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}

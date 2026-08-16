@@ -1,9 +1,9 @@
 ---
-name: team-research
-description: "/team-research — Spec-Driven Team Research. Use when the user wants to investigate an unknown domain, produce validated findings, and synthesize them into research.md. Spawns parallel researcher agents. Requires explicit invocation."
+name: research-team
+description: "/research-team — team research. Use when the user wants to investigate an unknown domain, produce validated findings, and synthesize them into research.md. Spawns parallel researcher agents. Requires explicit invocation."
 ---
 
-# /team-research — Spec-Driven Team Research
+# /research-team — Team Research
 
 You are executing a **spec-driven team research** phase. Your job is to deeply investigate an unknown domain and produce validated findings — one consolidated **`<slug>-research.md`** — plus the `meta.yaml` skeleton that the downstream stages fill in. A folder is **one research effort with many streams**; a stream is **one spec and one plan** (ADR-0003). This skill owns the **research** stage only: it investigates the unknown, it does not author the specs or the plans.
 

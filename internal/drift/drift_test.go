@@ -13,7 +13,7 @@ func sum(b []byte) string {
 
 // TestClassify covers every verdict — and the one that matters is UnmanagedShadow:
 // it is the ONLY verdict that would have caught the defect that motivated this
-// guard. The stale team-research skill was never in state.json at all (it was placed
+// guard. The stale research-team skill was never in state.json at all (it was placed
 // by hand or by another tool), so a check that walks only state.json reports NOTHING
 // WRONG while the agent keeps executing a protocol from a deleted era.
 func TestClassify(t *testing.T) {

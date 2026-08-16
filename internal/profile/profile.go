@@ -57,7 +57,7 @@ var flavourTools = map[string]bool{"claude": true, "codex": true, "opencode": tr
 // splitFlavour separates a slot item into its base name and optional `@tool`
 // flavour. Only a trailing `@<tool>` where <tool> is a known tool counts; every
 // other `@` is part of the base. "sandbox@opencode" → ("sandbox","opencode");
-// "team-research" → ("team-research",""); "a@b.com" → ("a@b.com","").
+// "research-team" → ("research-team",""); "a@b.com" → ("a@b.com","").
 func splitFlavour(item string) (base, flavour string) {
 	i := strings.LastIndexByte(item, '@')
 	if i < 0 {

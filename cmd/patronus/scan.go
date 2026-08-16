@@ -226,7 +226,7 @@ func scanCatalog(ctx context.Context, wd string, warnf func(string, ...any)) *re
 //	                          never wrote it.
 //
 // You CANNOT find an unmanaged shadow by walking state.json: by definition it has no
-// state row. That is exactly how the stale team-research skill hid — placed by hand
+// state row. That is exactly how the stale research-team skill hid — placed by hand
 // or by another tool, Patronus had no record of it, and every check that walked
 // state.json reported nothing wrong while the agent executed a protocol from a
 // deleted era.

@@ -2,9 +2,9 @@ apiVersion: patronus/v2
 family: artifact
 type: skill
 role: capability
-name: team-research
-description: "Spec-Driven Team Research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md. Hands off to spec-brainstorming to author the spec."
-version: 3.0.0
+name: research-team
+description: "Team research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md. Hands off to spec-brainstorming to author the spec."
+version: 4.0.0
 entry: SKILL.md
 files: []
 targets: [claude]   # Claude-flavoured: body uses Agent/SendMessage/Task* (Claude-only). Codex parity is a separate codex-flavoured artifact (native subagents); opencode TBD.

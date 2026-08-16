@@ -38,16 +38,16 @@ exist. Entry-awareness only tunes *which upstream offer to surface*; it never ro
   > "The findings look sharp now. Author the spec from them with `spec-brainstorming`? (Or just
   >  build it however you like.)"
 
-  Do NOT re-suggest `team-research` here — that's a loop.
+  Do NOT re-suggest `research-team` here — that's a loop.
 
-- **Entered from team-research** (research exists, you were called to stress-test before the spec):
-  same as research-only — offer `spec-brainstorming`; do not loop back to `team-research`.
+- **Entered from research-team** (research exists, you were called to stress-test before the spec):
+  same as research-only — offer `spec-brainstorming`; do not loop back to `research-team`.
 
 - **Called cold** (no `research.md` and no `<stream>-spec.md` present) — the full two-option menu:
 
   > "The idea looks sharp now. Two ways forward — your call:
   >  - **The domain has real unknowns** (several things you'd have to go investigate before the
-  >    design is even tractable) → `/team-research`.
+  >    design is even tractable) → `/research-team`.
   >  - **You know the domain; it's the design that needs settling** → the `spec-brainstorming` skill.
   >
   >  Or neither, if you'd rather just build it."

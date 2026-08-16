@@ -28,7 +28,7 @@ Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`s
   stream: "This stream has no spec. Author it with `spec-brainstorming` first — it reads the
   research (if any) and specifies what to build; I'll plan from that." Do NOT synthesize a spec, do
   NOT infer one from `research.md`, and do NOT proceed to planning.
-- **A `<stream>-plan.md` already exists for this stream** (an older `team-research` or a prior run
+- **A `<stream>-plan.md` already exists for this stream** (an older `research-team` or a prior run
   may have written one) → do NOT silently overwrite reviewed or edited work. Report it and ask:
   revise in place, or supersede? And note the two spec cases:
   - **plan exists + its spec exists** → ask revise-vs-supersede as above.

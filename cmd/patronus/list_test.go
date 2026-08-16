@@ -16,7 +16,7 @@ func TestPluginStatusFromLock(t *testing.T) {
 	wd := t.TempDir()
 	if err := lock.Save(filepath.Join(wd, "patronus.lock"), &lock.Lock{Version: lock.Version, Entries: []lock.Entry{
 		{Name: "superpowers", Kind: "plugin", Status: lock.StatusVerified},
-		{Name: "team-research", Kind: "artifact"},
+		{Name: "research-team", Kind: "artifact"},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestPluginStatusFromLock(t *testing.T) {
 	if got["superpowers"] != lock.StatusVerified {
 		t.Errorf("superpowers status = %q, want verified", got["superpowers"])
 	}
-	if _, ok := got["team-research"]; ok {
+	if _, ok := got["research-team"]; ok {
 		t.Errorf("artifact entry must not appear in plugin status map: %v", got)
 	}
 }

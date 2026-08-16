@@ -115,7 +115,7 @@ In one line each:
 - **L1 Instructions** = *what you tell the agent to always do.* You write it; it's static prose;
   Patronus **appends** it into `CLAUDE.md`/`AGENTS.md`. Example in this repo: `agent-principles`.
 - **L2 Capabilities** = *what the agent can do on demand.* Invocable skills/agents/commands;
-  Patronus **creates** them as files. Examples: `team-research`, `plan-execute-parallel`, `pattern-cloudflare`.
+  Patronus **creates** them as files. Examples: `research-team`, `plan-execute-parallel`, `pattern-cloudflare`.
 - **L3 Memory** = *what the agent remembers on its own.* A running store the agent writes to;
   Patronus **fetches and wires** an external engine. Example recipe: `memory-ai-memory`.
 
@@ -211,15 +211,15 @@ Adapters (`adapters/*.yaml`) carry the per-tool layout rules — they are **data
 
 ```mermaid
 flowchart LR
-    Src["Portable artifact<br/>(artifacts/skills/team-research/<br/>SKILL.md + patronus.yaml)"]
+    Src["Portable artifact<br/>(artifacts/skills/research-team/<br/>SKILL.md + patronus.yaml)"]
 
     Src --> AdC["adapter: claude"]
     Src --> AdX["adapter: codex"]
     Src --> AdO["adapter: opencode"]
 
-    AdC --> OutC["~/.claude/skills/<br/>team-research/SKILL.md"]
-    AdX --> OutX["~/.codex/skills/<br/>team-research/SKILL.md"]
-    AdO --> OutO["~/.config/opencode/skills/<br/>team-research/SKILL.md"]
+    AdC --> OutC["~/.claude/skills/<br/>research-team/SKILL.md"]
+    AdX --> OutX["~/.codex/skills/<br/>research-team/SKILL.md"]
+    AdO --> OutO["~/.config/opencode/skills/<br/>research-team/SKILL.md"]
 
     classDef src fill:#e6f4ea,stroke:#34a853,color:#000;
     classDef out fill:#eee,stroke:#888,color:#000;
@@ -289,7 +289,7 @@ patronus/
 │   ├── instructions/
 │   │   └── agent-principles/   # L1 — type: instruction (ambient house rules)
 │   └── skills/
-│       ├── team-research/          # L2 — type: skill, role: capability
+│       ├── research-team/          # L2 — type: skill, role: capability
 │       ├── plan-execute-parallel/  # L2 — type: skill, role: capability
 │       ├── pattern-cloudflare/     # L4 — type: skill, role: context
 │       └── pattern-mcp/            # L4 — type: skill, role: context
@@ -388,7 +388,7 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 ├───────────────────────┼─────────────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
 │ pattern-cloudflare    │ ./.claude/skills/pattern-cloudflare/ (8…)       │ CREATE    │ skill       │ context     │ claude │ local │
 │ plan-execute-parallel │ ./.claude/skills/plan-execute-parallel/SKILL.md │ CREATE    │ skill       │ capability  │ claude │ local │
-│ team-research         │ ./.claude/skills/team-research/SKILL.md         │ CREATE    │ skill       │ capability  │ claude │ local │
+│ research-team         │ ./.claude/skills/research-team/SKILL.md         │ CREATE    │ skill       │ capability  │ claude │ local │
 │ agent-principles      │ ./CLAUDE.md                                     │ APPEND    │ instruction │ instruction │ claude │ local │
 │ memory-ai-memory      │ ai-memory install-hooks --agent claude          │ EXEC      │ fetch+run   │ memory      │ claude │ local │
 │ memory-ai-memory      │ ai-memory install-mcp   --client claude         │ EXEC      │ fetch+run   │ memory      │ claude │ local │
@@ -404,7 +404,7 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 │       │       └── … (006 more)  (new)  # CREATE — role: context
 │       ├── plan-execute-parallel/       # L2 capability
 │       │   └── SKILL.md  (new)  # CREATE — role: capability
-│       └── team-research/               # L2 capability
+│       └── research-team/               # L2 capability
 │           └── SKILL.md  (new)  # CREATE — role: capability
 └── CLAUDE.md  (appended)  # APPEND — role: instruction   ← your prose preserved
 

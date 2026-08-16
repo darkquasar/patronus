@@ -65,7 +65,7 @@ digraph spec_brainstorming {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
-- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `team-research`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
+- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `research-team`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
   - **Research answers the design questions** → skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: … — does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
   - **Research leaves design questions open** → ask only those, one at a time, in the normal flow below.
   There is no separate "research-seeded" skill — same author, dialogue scaled to input richness.
@@ -73,11 +73,11 @@ digraph spec_brainstorming {
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
 
-  > "This looks broad enough to research in parallel. Want me to run `team-research` — spawn
+  > "This looks broad enough to research in parallel. Want me to run `research-team` — spawn
   > parallel researchers to investigate each unknown and synthesize research.md, spec.md, and
   > plan.md — instead of designing solo?"
 
-  If yes, hand off to the **team-research** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while team-research investigates work you *don't*. A project can need one, both, or neither.
+  If yes, hand off to the **research-team** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while research-team investigates work you *don't*. A project can need one, both, or neither.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
@@ -177,7 +177,7 @@ streams:
     epic: null                  # plan-execute-parallel fills this in with the tk epic id, e.g. pat-a1b2
 ```
 
-If `meta.yaml` already exists (e.g. `team-research` created it), append your stream to `streams:` and
+If `meta.yaml` already exists (e.g. `research-team` created it), append your stream to `streams:` and
 bump `updated:`. Each skill owns exactly the field it produces: `plan-writing` fills `plan:`,
 `plan-execute-parallel` fills `epic:`.
 

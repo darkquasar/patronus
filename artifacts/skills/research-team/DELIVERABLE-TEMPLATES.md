@@ -3,7 +3,7 @@
 The Team Lead synthesizes one deliverable — the consolidated `<slug>-research.md` — from the raw
 `*-findings.md` files produced by researchers, and writes the folder's `meta.yaml` streams skeleton.
 The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-brainstorming` and
-`plan-writing`; team-research does not write them.
+`plan-writing`; research-team does not write them.
 
 ---
 

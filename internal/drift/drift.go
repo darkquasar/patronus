@@ -9,7 +9,7 @@
 // (compute.go:237) — wired into `remove`, and nothing else. No install-path or
 // scan-path caller ever compared a deployed artifact to its source.
 //
-// The consequence, in production: the installed team-research skill drifted behind
+// The consequence, in production: the installed research-team skill drifted behind
 // its source and instructed the agent to call a tool that does not exist. Nothing
 // detected it. This package is what detects it.
 //
@@ -31,7 +31,7 @@ const (
 	// unrecorded, which is not our business.
 	OK Verdict = "OK"
 	// Stale means on-disk matches what we wrote, but the source has moved on.
-	// `install` should re-deploy. This is the team-research bug.
+	// `install` should re-deploy. This is the research-team bug.
 	Stale Verdict = "STALE"
 	// UserEdited means on-disk differs from what we recorded writing. Report it;
 	// never silently overwrite it.

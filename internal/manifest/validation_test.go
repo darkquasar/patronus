@@ -194,7 +194,7 @@ role: lifecycle
 name: demo
 version: 1.0.0
 layers:
-  capabilities: [team-research]
+  capabilities: [research-team]
 `
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)

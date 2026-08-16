@@ -51,7 +51,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		role manifest.Role
 	}{
 		"agent-principles":      {manifest.TypeInstruction, manifest.RoleInstruction},
-		"team-research":         {manifest.TypeSkill, manifest.RoleCapability},
+		"research-team":         {manifest.TypeSkill, manifest.RoleCapability},
 		"plan-execute-parallel": {manifest.TypeSkill, manifest.RoleCapability},
 		"pattern-cloudflare":    {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
 		"pattern-mcp":           {manifest.TypeSkill, manifest.RoleContext},

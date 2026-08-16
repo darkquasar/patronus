@@ -82,7 +82,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 		Profile:   "cloudflare",
 		Generated: "2026-06-07T00:00:00Z",
 		Entries: []Entry{
-			{Name: "team-research", Source: "registry", Version: "1.0.0", SHA256: "sha256:abc", Slot: "capabilities", Kind: "artifact"},
+			{Name: "research-team", Source: "registry", Version: "1.0.0", SHA256: "sha256:abc", Slot: "capabilities", Kind: "artifact"},
 		},
 	}
 	path := filepath.Join(t.TempDir(), "patronus.lock")
@@ -132,15 +132,15 @@ func TestSaveDeterministic(t *testing.T) {
 func TestFromResolvedSortsAndProvenance(t *testing.T) {
 	// Build a fake catalog with on-disk artifact content so hashing has inputs.
 	dir := t.TempDir()
-	skillDir := filepath.Join(dir, "team-research")
+	skillDir := filepath.Join(dir, "research-team")
 	mustWrite(t, filepath.Join(skillDir, "SKILL.md"), "# body")
 
 	cat := &registry.Catalog{
 		Artifacts: []registry.ArtifactEntry{{
-			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "team-research", Version: "1.0.0"}, Entry: "SKILL.md"},
+			Manifest: &manifest.Artifact{Meta: manifest.Meta{Family: manifest.FamilyArtifact, Name: "research-team", Version: "1.0.0"}, Entry: "SKILL.md"},
 			// LocalDir drives the content-fold hash; TarballURL/SHA256 mirror a
 			// remote-resolved entry so the lock pins the tarball bytes too.
-			Source: registry.Source{LocalDir: skillDir, TarballURL: "https://x/catalog/team-research/1.0.0/team-research-1.0.0.tar.gz", SHA256: "sha256:tarbytes"},
+			Source: registry.Source{LocalDir: skillDir, TarballURL: "https://x/catalog/research-team/1.0.0/research-team-1.0.0.tar.gz", SHA256: "sha256:tarbytes"},
 		}},
 		Recipes: []registry.RecipeEntry{{
 			Manifest: &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "memory-ai-memory", Role: "memory"}},
@@ -150,7 +150,7 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 		Profile: &manifest.Profile{Meta: manifest.Meta{Family: manifest.FamilyProfile, Name: "p"}},
 		Items: []profile.ResolvedItem{
 			{Name: "memory-ai-memory", Slot: "memory", Family: manifest.FamilyRecipe, Source: "registry"},
-			{Name: "team-research", Slot: "capabilities", Family: manifest.FamilyArtifact, Source: "registry"},
+			{Name: "research-team", Slot: "capabilities", Family: manifest.FamilyArtifact, Source: "registry"},
 		},
 	}
 	l, err := FromResolved(cat, r, "2026-06-07T00:00:00Z")
@@ -160,8 +160,8 @@ func TestFromResolvedSortsAndProvenance(t *testing.T) {
 	if l.Version != 2 {
 		t.Errorf("lock version = %d, want 2", l.Version)
 	}
-	// Sorted by name: memory-ai-memory before team-research.
-	if l.Entries[0].Name != "memory-ai-memory" || l.Entries[1].Name != "team-research" {
+	// Sorted by name: memory-ai-memory before research-team.
+	if l.Entries[0].Name != "memory-ai-memory" || l.Entries[1].Name != "research-team" {
 		t.Fatalf("entries not sorted: %+v", l.Entries)
 	}
 	for _, e := range l.Entries {

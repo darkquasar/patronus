@@ -7,7 +7,7 @@ description: "Write in your own voice, editorially clean first. Runs the writing
 version: 1.1.0
 entry: SKILL.md
 files: [short-form.md, long-form.md, weights.md]
-targets: [claude]   # Claude-flavoured: orchestrates subagents and calls codex over MCP (`codex mcp-server`). Codex/opencode parity is a separate stream, following the team-research precedent.
+targets: [claude]   # Claude-flavoured: orchestrates subagents and calls codex over MCP (`codex mcp-server`). Codex/opencode parity is a separate stream, following the research-team precedent.
 defaults:
   scope: project
 requires: [writing-editorial]

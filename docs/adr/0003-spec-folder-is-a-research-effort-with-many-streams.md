@@ -141,7 +141,7 @@ mechanically checkable.
   `streams[].epic` — an id you can resolve, not a bit you can only trust. The old `tasks:` flag meant
   *"a `tasks.md` exists"*, and `tasks.md` no longer does.
 
-- **Skills read and write this schema, each owning exactly the field it produces**: `team-research`
+- **Skills read and write this schema, each owning exactly the field it produces**: `research-team`
   (creates the folder, writes the research doc, and lays down the `streams:` skeleton with `spec:
   null`/`plan: null`), `spec-brainstorming` (authors a stream's spec and fills its `spec:` — it can
   also create the folder and first stream when starting without prior research), `plan-writing`
