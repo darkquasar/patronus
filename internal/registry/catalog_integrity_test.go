@@ -55,9 +55,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"plan-execute-parallel": {manifest.TypeSkill, manifest.RoleCapability},
 		"pattern-cloudflare":    {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
 		"pattern-mcp":           {manifest.TypeSkill, manifest.RoleContext},
-		// P7.2-L1 vendored/authored instructions + the diagram-explain output-style.
+		// P7.2-L1 vendored/authored instructions. diagram-explain was an
+		// output-style; it is an instruction so its body appends into
+		// CLAUDE.md/AGENTS.md and is live on Claude from install.
 		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
-		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
+		"diagram-explain": {manifest.TypeInstruction, manifest.RoleInstruction},
 		// P7.2-L2 vendored capability skills (superpowers + mattpocock subset).
 		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
 		"plan-writing":    {manifest.TypeSkill, manifest.RoleCapability},

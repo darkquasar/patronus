@@ -9,9 +9,10 @@ import (
 
 // These drive the real `visual` profile (shipped in-repo as of P7.2-L1) end-to-end
 // against the built catalog: the vendored L1 spine (agents-spine), the authored
-// diagram-explain output-style, and the design-discipline skills (ddd-distilled,
-// refactoring-distilled). They prove the output-style flavour diverges per tool AND
-// that an APPENDed instruction section is recorded in state and removed cleanly.
+// diagram-explain instruction, and the design-discipline skills (ddd-distilled,
+// refactoring-distilled). They prove that the two instructions append identically
+// on every target, and that an APPENDed instruction section is recorded in state
+// and removed cleanly.
 //
 // (The composed-APPEND fix — TWO instructions sharing one CLAUDE.md, removed
 // independently — is proven against the fixture catalog by
@@ -43,25 +44,22 @@ func TestVisualProfileClaude(t *testing.T) {
 		t.Fatalf("install: %v\n%s", err, errOut)
 	}
 
-	// diagram-explain → a Claude output-styles FILE (CREATE), carrying the strict
-	// keep-coding-instructions frontmatter.
-	style := filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")
-	sb, err := os.ReadFile(style)
-	if err != nil {
-		t.Fatalf("output-style not created: %v", err)
-	}
-	if !strings.Contains(string(sb), "keep-coding-instructions: true") {
-		t.Errorf("output-style missing strict frontmatter:\n%s", sb)
+	// diagram-explain is an instruction, so nothing lands under output-styles/ and
+	// nothing needs selecting: the body appends into CLAUDE.md, live from install.
+	if _, err := os.Stat(filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")); err == nil {
+		t.Error("diagram-explain must not write a Claude output-styles file")
 	}
 
-	// The agents-spine instruction lands as a fenced section in CLAUDE.md.
+	// Both instructions land as fenced sections in CLAUDE.md.
 	claudeMd := filepath.Join(home, ".claude", "CLAUDE.md")
 	cb, err := os.ReadFile(claudeMd)
 	if err != nil {
 		t.Fatalf("CLAUDE.md not written: %v", err)
 	}
-	if !strings.Contains(string(cb), "patronus:start agents-spine") {
-		t.Errorf("CLAUDE.md missing %q:\n%s", "patronus:start agents-spine", cb)
+	for _, want := range []string{"patronus:start agents-spine", "patronus:start diagram-explain"} {
+		if !strings.Contains(string(cb), want) {
+			t.Errorf("CLAUDE.md missing %q:\n%s", want, cb)
+		}
 	}
 
 	// The design-discipline skills land as standalone SKILL.md files (CREATE), not
@@ -107,7 +105,16 @@ func TestVisualProfileClaude(t *testing.T) {
 	}
 }
 
-func TestVisualProfileOutputStyleDivergesForCodexOpencode(t *testing.T) {
+// The regression guard for the retype: codex and opencode route BOTH instruction
+// and output-style to the same AGENTS.md appendSection target, so the change from
+// one type to the other must be invisible here. Both instructions land as fenced
+// AGENTS.md sections, and nothing appears under Claude's output-styles/.
+//
+// The output-style type's per-target divergence (CREATE on Claude, APPEND
+// elsewhere) is still proven end-to-end, against the `smoke-style` fixture in
+// outputstyle_integration_test.go. It is not proven here any more, because no
+// real catalog artifact carries that type.
+func TestVisualProfileAppendsDiagramExplainForCodexOpencode(t *testing.T) {
 	for _, tc := range []struct {
 		tool, agentsRel string
 	}{
@@ -125,9 +132,9 @@ func TestVisualProfileOutputStyleDivergesForCodexOpencode(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(home, ".claude", "output-styles", "diagram-explain.md")); err == nil {
 				t.Errorf("%s must not write a Claude output-styles file", tc.tool)
 			}
-			// diagram-explain (as an output-style with no native surface here) and the
-			// agents-spine instruction both land as AGENTS.md sections. The
-			// design-discipline skills are CREATEd under skills/, not appended here.
+			// The diagram-explain and agents-spine instructions both land as AGENTS.md
+			// sections. The design-discipline skills are CREATEd under skills/, not
+			// appended here.
 			body := string(mustRead(t, filepath.Join(home, tc.agentsRel)))
 			for _, want := range []string{
 				"patronus:start agents-spine",

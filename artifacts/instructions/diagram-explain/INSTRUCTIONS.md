@@ -1,10 +1,4 @@
----
-name: diagram-explain
-description: Accompany non-trivial explanations with a compact ASCII diagram using a consistent charset.
-keep-coding-instructions: true
----
-
-# Diagram-explain output style
+# Diagram-explain
 
 When explaining anything non-trivial — an architecture, a control/data flow, a state
 machine, or how a change moves through a system — include a small ASCII diagram
