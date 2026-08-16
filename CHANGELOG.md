@@ -3,6 +3,69 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## v2.3.0
+
+### Breaking
+
+- **`core` executes plans through the new `plan-execute` skill.** It no longer installs
+  `executing-plans` or `subagent-driven-development`. Both stay in the catalog and
+  install on request. `subagent-driven-development`'s body is untouched;
+  `executing-plans` has the two-line revert described under Changed below.
+
+  Upstream splits those two skills on whether the host has subagents: `executing-plans`
+  is the fallback, `subagent-driven-development` the intended path. All three Patronus
+  targets have subagents, so that axis has no audience here, and a fallback for runtimes
+  we do not support was dead weight in `core`. `plan-execute` forks on proportionality
+  instead: it reads the plan, asks whether independent per-task review earns its cost,
+  states which mode it chose and cites the plan sections that drove the choice, then runs
+  `solo` (sequential, one context) or `sdd` (fresh implementer subagent per task,
+  independent reviewer after each). Both modes end with an independent whole-branch
+  review.
+
+  It does not block for your answer, so an unattended run does not stall. To override,
+  say so in the invocation: "execute this plan solo", "run it in sdd mode".
+
+  **The two old skills are left on your machine, and `patronus scan` will not tell you.**
+  Patronus keys state rows by artifact name, so dropping them from `core` does not remove
+  what you already installed. `scan` reports `ORPHANED-STATE` only for items that left the
+  catalog, and both of these deliberately stayed in it, so an upgrade in place leaves them
+  installed and unreported. You need to remove them by hand, or you will have three
+  loadable skills matching "execute this plan":
+
+  ```sh
+  patronus remove executing-plans subagent-driven-development            # dry run
+  patronus remove executing-plans subagent-driven-development --deploy   # remove
+  ```
+
+  Keep them if you want the upstream behaviour. Their descriptions now say plainly that
+  they are upstream-compatible alternatives rather than the default.
+
+- **`dispatching-parallel-agents` is unaffected** and still ships in `core`. It fans out
+  independent problem domains and has nothing to do with this fork.
+
+### Changed
+
+- **`plan-review` forks on parallelism only.** Its criterion is unchanged (can you draw
+  disjoint file-owning boundaries?), and both arms survive; only the destination names
+  move, to `plan-execute` and `plan-execute-parallel`. The proportionality question now
+  lives inside `plan-execute`, so `plan-review` names where it lives and stops there.
+- **`writing-plans` hands off to `plan-execute`**, and no longer tells the executor how
+  to run. That decision belongs to the executor now.
+- **`executing-plans` reverts two lines** to their upstream hedge. A previous release had
+  turned "if your platform supports subagents, prefer that" into an instruction to
+  dispatch one per task, which made the fallback describe the thing it was the fallback
+  for. Its Patronus `tk close` re-coupling is untouched.
+
+### Known limitation
+
+- **`plan-execute`'s gate ships without automated verification.** It is prose evaluated by
+  a model, and Patronus has no prompt-eval harness yet. In its place, nine fixture plans
+  and a manual protocol ship in the skill's `fixtures/` directory, run once before
+  release: five runs per fixture, 5/5 agreement with the expected mode required, and every
+  citation must exist and support the trigger it names. Results are recorded in
+  `fixtures/RESULTS.md`. This is a one-time gate, not a regression guard: nothing re-runs
+  it when the criteria are edited.
+
 ## v2.2.0
 
 ### Breaking

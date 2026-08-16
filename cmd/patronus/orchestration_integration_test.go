@@ -86,7 +86,10 @@ func TestRequiresClosureDirectInstall(t *testing.T) {
 
 // TestOrchestrationSkillsInstall proves the two vendored superpowers orchestration
 // skills land as per-tool skills/<name>/SKILL.md, with the SDD skill's aux files
-// (prompts + scripts) packed alongside.
+// (prompts + scripts) packed alongside. Both are installed DIRECTLY here: core no
+// longer wires subagent-driven-development (plan-execute's sdd mode replaced it),
+// but the skill stays in the catalog as an upstream-compatible opt-in, and this is
+// the test that it still installs cleanly on its own.
 //
 // CLASS B: "the real SDD skill really ships implementer-prompt.md and
 // scripts/review-package" is a statement about the CATALOG's contents — the names
@@ -119,8 +122,10 @@ func TestOrchestrationSkillsInstall(t *testing.T) {
 }
 
 // TestCoreOrchestrationSlotAndLock proves the core profile's orchestration slot
-// resolves (ticket + tk via closure + session-completion + the 2 skills) and the
-// lock pins the closure — tk is pinned even though no slot names it directly.
+// resolves (ticket + tk via closure + session-completion + dispatching-parallel-agents)
+// and the lock pins the closure — tk is pinned even though no slot names it directly.
+// subagent-driven-development is deliberately absent: core executes plans through
+// plan-execute now, whose sdd mode carries that discipline.
 //
 // CLASS B: "the real core profile really wires ticket, and the closure really pins
 // tk" — the names ARE the assertion, so they stay real. It only LOCKS, which
@@ -138,7 +143,7 @@ func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	for _, want := range []string{
 		"ticket", "tk", // tk pinned via the requires closure, not a direct slot entry
 		"session-completion",
-		"subagent-driven-development", "dispatching-parallel-agents",
+		"dispatching-parallel-agents",
 		"tarballSha256",
 	} {
 		if !strings.Contains(s, want) {

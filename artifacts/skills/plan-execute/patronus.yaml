@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-execute
+description: "Execute a written implementation plan, choosing the execution mode by proportionality: does independent per-task review earn its cost for THIS plan? Assesses the plan against hard triggers (security, irreversible state, concurrency, compatibility contract, weak verification, high blast radius) and soft signals, states its choice with citations to the plan sections that drove it, then runs either `solo` (sequential, one context) or `sdd` (fresh implementer subagent per task, independent reviewer after each). Both modes end with an independent whole-branch review. Use when you have a plan to implement and no disjoint file-owning boundaries to split it across a team."
+version: 1.3.2
+entry: SKILL.md
+files: [solo.md, sdd.md, implementer-prompt.md, task-reviewer-prompt.md, scripts, fixtures]
+targets: [claude, codex, opencode]
+requires: [requesting-code-review]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "AUTHORED for Patronus, with material derived from two upstream superpowers skills at the pinned commit. SKILL.md and solo.md are authored: the proportionality gate is a Patronus axis with no upstream counterpart (upstream forks on subagent CAPABILITY, this forks on whether independent review earns its cost). sdd.md is authored FROM the upstream `subagent-driven-development` discipline rather than lifted from it, and adds a three-round fix-loop ceiling, a carried-forward contract of prior tasks' interfaces in each implementer brief, and a stop-and-report rule on mid-run dispatch failure. implementer-prompt.md, task-reviewer-prompt.md, and the scripts/ helpers (task-brief, review-package, sdd-workspace) ARE vendored from upstream's subagent-driven-development, unchanged apart from path references (audited: git-read + file-write only, no network or destructive operations). Patronus re-coupling (per ADR-0001): solo.md closes each task with `tk close <id>` when the plan was mirrored into ticket, and both modes end by dispatching the reviewer from the `requesting-code-review` skill, which the requires: edge pulls into the install closure."
