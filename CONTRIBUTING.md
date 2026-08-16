@@ -13,6 +13,30 @@ do **not** try to `git add .tickets/`; the ignore rule makes it a no-op. If you 
 to hand the graph to another machine or contributor, share it out of band rather than
 through git.
 
+**This section is the authoritative statement, and `.gitignore` is its enforcement.** Both are
+tracked, so both travel to a fresh clone. `CLAUDE.md` and `AGENTS.md` are *not* the place to put
+it: both are gitignored (`.gitignore:20-21`) because Patronus itself appends instruction sections
+into them at install time, so anything hand-written there is local to one machine and can be
+rewritten by the next `patronus install`.
+
+The upstream `ticket` instruction Patronus ships (`artifacts/instructions/ticket/INSTRUCTIONS.md`)
+says the opposite, that `.tickets/` is "committed like any other file". That is the correct default
+for the projects the catalog serves, and it deliberately stays as it is. **This repo is the
+exception, and this file is where the exception lives.** Do not edit the shipped artifact to match
+local practice.
+
+`tk` is the only tracker this repo uses. If you find a generated `bd`/beads block claiming
+otherwise in an ignored instruction file, it is boilerplate from a tool that was never installed
+here: `bd` is not on this machine and `.beads/` has never existed in this history.
+
+Two consequences fall out of the graph being local, and both have misled a session before:
+
+- **A ticket id resolves only on the machine that created it.** A plan that hands work to
+  another contributor cannot assume `tk show <id>` works for them.
+- **`docs/specs/` is gitignored too**, so a ticket pointing at a plan names a path a fresh clone
+  does not have. Say so in the ticket body rather than leaving the reader to improvise from a
+  heading they cannot open.
+
 ## Deployed skills are not tracked
 
 This repo dogfoods its own `core` profile, so `patronus install` writes deploy output
