@@ -24,7 +24,7 @@ The user will provide a research-effort folder path under `docs/specs/` (e.g. `d
 3. **Read the project's instructions file** (`CLAUDE.md` / `AGENTS.md` if present) — internalize the project's conventions and constraints.
 4. **Read `tasks/lessons.md`** if it exists — internalize past mistakes.
 
-If your stream names no spec or plan, STOP and tell the user: "This stream has no spec or plan. The canonical path is `/team-research` (research) → `spec-brainstorming` (spec) → `writing-plans` (plan); run those first before using `/team-implement`."
+If your stream names no spec or plan, STOP and tell the user: "This stream has no spec or plan. The canonical path is `/team-research` (research) → `spec-brainstorming` (spec) → `plan-writing` (plan); run those first before using `/team-implement`."
 
 ---
 

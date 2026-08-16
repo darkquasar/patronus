@@ -3,7 +3,7 @@
 The Team Lead synthesizes one deliverable — the consolidated `<slug>-research.md` — from the raw
 `*-findings.md` files produced by researchers, and writes the folder's `meta.yaml` streams skeleton.
 The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-brainstorming` and
-`writing-plans`; team-research does not write them.
+`plan-writing`; team-research does not write them.
 
 ---
 
@@ -77,6 +77,6 @@ streams:
   - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
     intent: "One line: what this stream is."
     spec: null                  # spec-brainstorming fills this in
-    plan: null                  # writing-plans fills this in
+    plan: null                  # plan-writing fills this in
     epic: null                  # team-implement fills this in with the tk epic id
 ```

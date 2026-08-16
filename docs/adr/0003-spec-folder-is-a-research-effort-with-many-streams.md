@@ -144,7 +144,7 @@ mechanically checkable.
 - **Skills read and write this schema, each owning exactly the field it produces**: `team-research`
   (creates the folder, writes the research doc, and lays down the `streams:` skeleton with `spec:
   null`/`plan: null`), `spec-brainstorming` (authors a stream's spec and fills its `spec:` — it can
-  also create the folder and first stream when starting without prior research), `writing-plans`
+  also create the folder and first stream when starting without prior research), `plan-writing`
   (fills in its stream's `plan:`), and `team-implement` (fills in `epic:` when it seeds the graph).
   No skill sets a flag for work it did not do. (The stage set and the `brainstorming` →
   `spec-brainstorming` rename were settled later, in the nine-tickets triage; the schema this ADR

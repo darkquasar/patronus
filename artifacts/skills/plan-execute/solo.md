@@ -16,7 +16,7 @@ without stopping between tasks.
    proceed on an unread command.
 4. Mark the task complete.
 5. If the plan's tasks were mirrored into the `tk` work-graph (see the optional ticket
-   mirror in **writing-plans**), close the matching ticket: `tk close <id>`. Closing is
+   mirror in **plan-writing**), close the matching ticket: `tk close <id>`. Closing is
    what unblocks the next ready task, so a mirrored plan that is never closed stalls
    `tk ready`. Skip this when ticket was not used.
 

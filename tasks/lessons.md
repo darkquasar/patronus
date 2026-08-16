@@ -157,8 +157,8 @@ coupling bite.
 
 Two of nine tickets had a stale premise that would have sent the fix the wrong way:
 
-- **pat-qo3r** said "writing-plans has NO spec.md step." Opening the artifacts showed
-  team-research and writing-plans had ALREADY moved to per-stream spec/plan output
+- **pat-qo3r** said "plan-writing has NO spec.md step." Opening the artifacts showed
+  team-research and plan-writing had ALREADY moved to per-stream spec/plan output
   (ADR-0003). The real work was hand-off *rewiring* (a behavior-preserving move of
   spec-synthesis prose), not the parity *build* the ticket described. Planning from the
   ticket text would have re-built something that exists.

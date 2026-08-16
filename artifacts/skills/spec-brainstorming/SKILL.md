@@ -29,7 +29,7 @@ You MUST create a task for each of these items and complete them in order:
 6. **Write spec** — into a research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit — `docs/specs/` is gitignored by default.
 7. **Spec placeholder scan** — cheap inline check for placeholders and internal contradictions only; the real review is `spec-review` in a fresh subagent (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `writing-plans`. Each hop is a suggestion the user may decline.
+9. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `plan-writing`. Each hop is a suggestion the user may decline.
 
 ## Process Flow
 
@@ -58,7 +58,7 @@ digraph spec_brainstorming {
 }
 ```
 
-**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `writing-plans`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → writing-plans → plan-review → build, and each hop is a suggestion the user may decline.
+**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `plan-writing`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → plan-writing → plan-review → build, and each hop is a suggestion the user may decline.
 
 ## The Process
 
@@ -173,12 +173,12 @@ streams:
   - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
     intent: "One line: what this stream is."
     spec: <stream>-spec.md      # the file you just wrote
-    plan: null                  # writing-plans fills this in
+    plan: null                  # plan-writing fills this in
     epic: null                  # team-implement fills this in with the tk epic id, e.g. pat-a1b2
 ```
 
 If `meta.yaml` already exists (e.g. `team-research` created it), append your stream to `streams:` and
-bump `updated:`. Each skill owns exactly the field it produces: `writing-plans` fills `plan:`,
+bump `updated:`. Each skill owns exactly the field it produces: `plan-writing` fills `plan:`,
 `team-implement` fills `epic:`.
 
 **One stream = one spec + one plan.** If the work forks into pieces that are independently
@@ -238,9 +238,9 @@ Wait for the user's response. If they request changes, make them and re-run the 
 **Next:**
 
 > "Spec written to `docs/specs/NN-slug/<stream>-spec.md`. Want me to run **`spec-review`** over it
->  first — a fresh subagent, clean context, reading only what the spec *says*? Then `writing-plans`."
+>  first — a fresh subagent, clean context, reading only what the spec *says*? Then `plan-writing`."
 
-The user may skip straight to `writing-plans`. Do not gate on the review — each hop is a suggestion.
+The user may skip straight to `plan-writing`. Do not gate on the review — each hop is a suggestion.
 
 ## Key Principles
 

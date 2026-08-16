@@ -1,6 +1,6 @@
 ---
 name: spec-review
-description: Use at the END of the spec phase, before writing-plans — dispatches a reviewer applying spec basics plus engineering / design / devex / strategy lenses, surfacing Critical/Important/Minor findings. Advisory; you decide whether to proceed.
+description: Use at the END of the spec phase, before plan-writing — dispatches a reviewer applying spec basics plus engineering / design / devex / strategy lenses, surfacing Critical/Important/Minor findings. Advisory; you decide whether to proceed.
 ---
 
 # Spec Review
@@ -17,7 +17,7 @@ You decide what to act on.
 
 **Use it when:**
 - A spec or design doc has been written — by `spec-brainstorming` (optionally seeded by
-  `team-research`) or by hand — and the next step is `writing-plans`.
+  `team-research`) or by hand — and the next step is `plan-writing`.
 - You are about to plan from someone else's spec and want an independent read first.
 
 **Skip it when:**
@@ -76,9 +76,9 @@ committed to something.
 
 ## Where This Sits
 
-`team-research` → `spec-brainstorming` → **spec-review** → `writing-plans` → `plan-review` → build.
+`team-research` → `spec-brainstorming` → **spec-review** → `plan-writing` → `plan-review` → build.
 
 Its sibling gate, `plan-review`, closes the planning phase the same way.
 
 **Next:** once the findings are addressed (or consciously declined), the next hop is
-**`writing-plans`**.
+**`plan-writing`**.

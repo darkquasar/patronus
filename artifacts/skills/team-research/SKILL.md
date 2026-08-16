@@ -12,7 +12,7 @@ The single deliverable is:
 1. **one `<slug>-research.md`** — raw findings, evidence, constraints, trade-offs, shared by every stream
 2. **the folder `meta.yaml`** — one `research:` entry plus a `streams:` skeleton with `spec: null`/`plan: null` per stream you identified
 
-You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `writing-plans`' job. You do NOT seed the tk work-graph — that's `/team-implement`'s job. Each downstream skill fills the field it owns: `spec-brainstorming` fills `spec:`, `writing-plans` fills `plan:`, `team-implement` fills `epic:`.
+You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `plan-writing`' job. You do NOT seed the tk work-graph — that's `/team-implement`'s job. Each downstream skill fills the field it owns: `spec-brainstorming` fills `spec:`, `plan-writing` fills `plan:`, `team-implement` fills `epic:`.
 
 **You are the Team Lead.** Your job is to orchestrate, not to do the investigation yourself: you plan the streams, spawn parallel researchers, coordinate them, and synthesize their findings. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 3.
 
@@ -23,7 +23,7 @@ You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it 
 The user will provide a research question, problem space, or feature area. If the description is too vague, ask clarifying questions until you have:
 
 1. **The problem statement** — what are we trying to solve or understand?
-2. **The output destination** — a research-effort folder under `docs/specs/`: `docs/specs/NN-slug/` (sequential number + short slug, e.g. `docs/specs/07-logging-improvement/`). Scan `docs/specs/` for the highest existing `NN` and increment. The deliverable — one `<slug>-research.md`, the `<stream>-<who>-findings.md` appendix, and a `meta.yaml` manifest with a `streams:` skeleton — lands in this one folder. (The `<stream>-spec.md` and `<stream>-plan.md` are authored later by `spec-brainstorming` and `writing-plans` into the same folder.) Confirm `docs/specs/` is gitignored: `git check-ignore -q docs/specs/ && echo ignored`; if not, add `/docs/specs/` to `.gitignore` and tell the user.
+2. **The output destination** — a research-effort folder under `docs/specs/`: `docs/specs/NN-slug/` (sequential number + short slug, e.g. `docs/specs/07-logging-improvement/`). Scan `docs/specs/` for the highest existing `NN` and increment. The deliverable — one `<slug>-research.md`, the `<stream>-<who>-findings.md` appendix, and a `meta.yaml` manifest with a `streams:` skeleton — lands in this one folder. (The `<stream>-spec.md` and `<stream>-plan.md` are authored later by `spec-brainstorming` and `plan-writing` into the same folder.) Confirm `docs/specs/` is gitignored: `git check-ignore -q docs/specs/ && echo ignored`; if not, add `/docs/specs/` to `.gitignore` and tell the user.
 3. **Scope boundaries** — what's in scope and what's explicitly out of scope.
 4. **Success criteria** — what does "research complete" look like? What questions must be answered?
 
@@ -121,7 +121,7 @@ When all researchers' tasks are complete (you're notified as each background age
      - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
        intent: "One line: what this stream is."
        spec: null                  # spec-brainstorming fills this in
-       plan: null                  # writing-plans fills this in
+       plan: null                  # plan-writing fills this in
        epic: null                  # team-implement fills this in with the tk epic id
    ```
 
@@ -205,7 +205,7 @@ before they harden into a spec.)
 3. **Maximum 4 researchers.** Prefer fewer when the domain allows it.
 4. **Every finding needs evidence.** Opinions without evidence don't go in the spec.
 5. **The Team Lead writes the deliverables.** Researchers produce raw findings; synthesis is your job.
-6. **The output is exactly one `<slug>-research.md` plus a `meta.yaml` streams skeleton (`spec: null`/`plan: null`), in `docs/specs/NN-slug/`.** Authoring the specs is `spec-brainstorming`'s job, writing the plans is `writing-plans`', and seeding the tk graph is `/team-implement`'s. Do not proceed past Phase 5 until `<slug>-research.md` exists and is named in `meta.yaml`. `docs/specs/` is gitignored — do not commit the deliverable.
+6. **The output is exactly one `<slug>-research.md` plus a `meta.yaml` streams skeleton (`spec: null`/`plan: null`), in `docs/specs/NN-slug/`.** Authoring the specs is `spec-brainstorming`'s job, writing the plans is `plan-writing`', and seeding the tk graph is `/team-implement`'s. Do not proceed past Phase 5 until `<slug>-research.md` exists and is named in `meta.yaml`. `docs/specs/` is gitignored — do not commit the deliverable.
 7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** for the research lifecycle (plan streams, spawn parallel researchers, coordinate, synthesize).
 8. **Touch the actual code/system.** "I believe X works this way" is not a finding. "I read X at line Y and confirmed Z" is.
 9. **Existing research is prior art.** Check `docs/specs/` (prior feature folders) before investigating something that may already be answered.

@@ -8,7 +8,7 @@ Vendored files (upstream paths):
 
 The SKILL.md body is upstream-verbatim; a short "Patronus note" block was
 prepended at the top mapping the `superpowers:` sibling cross-references to the
-corresponding Patronus artifacts (writing-plans, executing-plans, tdd,
+corresponding Patronus artifacts (plan-writing, executing-plans, tdd,
 dispatching-parallel-agents) and marking the un-vendored siblings
 (requesting-code-review, finishing-a-development-branch, using-git-worktrees)
 optional. The scripts/ helpers were audited before shipping: they perform only

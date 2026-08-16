@@ -20,7 +20,7 @@ re-run per task.
 ## When to Use
 
 **Use it when:**
-- `writing-plans` has produced a plan and the next step is implementation.
+- `plan-writing` has produced a plan and the next step is implementation.
 - You are about to execute someone else's plan and want an independent read first.
 
 **Skip it when:**
@@ -59,7 +59,7 @@ Offer the choice plainly: fix the findings, accept them and proceed, or revise t
 block, and do not proceed past a Critical finding without the user explicitly accepting it.
 
 This is also the natural point for the **plan → ticket** offer: once the plan is accepted, mirroring
-its tasks into the work-graph is what makes them survive a context compaction. See `writing-plans`.
+its tasks into the work-graph is what makes them survive a context compaction. See `plan-writing`.
 
 ## The Rubric
 
@@ -80,7 +80,7 @@ Full rubric: [plan-reviewer.md](plan-reviewer.md)
 
 ## Where This Sits
 
-`spec-brainstorming` → `spec-review` → `writing-plans` → **plan-review** → the build fork.
+`spec-brainstorming` → `spec-review` → `plan-writing` → **plan-review** → the build fork.
 
 Its sibling gate, `spec-review`, closes the spec phase the same way.
 

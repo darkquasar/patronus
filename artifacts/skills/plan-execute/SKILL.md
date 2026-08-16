@@ -136,7 +136,7 @@ Read one. The mode you did not choose does not enter your context.
 
 ## Integration
 
-- **writing-plans** — creates the plan this skill executes.
+- **plan-writing** — creates the plan this skill executes.
 - **plan-review** — the gate before this one; it forks on parallelism and hands the
   non-parallel arm here.
 - **requesting-code-review** — ships the `code-reviewer.md` prompt both modes use for
