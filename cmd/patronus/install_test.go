@@ -76,7 +76,7 @@ func TestInstallProfileCloudflareDryRun(t *testing.T) {
 	}
 	// The cloudflare profile spans instructions + capabilities + context + memory;
 	// every populated slot's item should appear in the combined plan.
-	for _, want := range []string{"agent-principles", "team-research", "team-implement", "pattern-cloudflare", "memory-ai-memory"} {
+	for _, want := range []string{"agent-principles", "team-research", "plan-execute-parallel", "pattern-cloudflare", "memory-ai-memory"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("profile plan missing %q:\n%s", want, out)
 		}

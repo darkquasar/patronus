@@ -145,7 +145,7 @@ mechanically checkable.
   (creates the folder, writes the research doc, and lays down the `streams:` skeleton with `spec:
   null`/`plan: null`), `spec-brainstorming` (authors a stream's spec and fills its `spec:` — it can
   also create the folder and first stream when starting without prior research), `plan-writing`
-  (fills in its stream's `plan:`), and `team-implement` (fills in `epic:` when it seeds the graph).
+  (fills in its stream's `plan:`), and `plan-execute-parallel` (fills in `epic:` when it seeds the graph).
   No skill sets a flag for work it did not do. (The stage set and the `brainstorming` →
   `spec-brainstorming` rename were settled later, in the nine-tickets triage; the schema this ADR
   records is unchanged — only which skill owns `spec:` moved, from the renamed skill.)

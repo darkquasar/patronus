@@ -174,12 +174,12 @@ streams:
     intent: "One line: what this stream is."
     spec: <stream>-spec.md      # the file you just wrote
     plan: null                  # plan-writing fills this in
-    epic: null                  # team-implement fills this in with the tk epic id, e.g. pat-a1b2
+    epic: null                  # plan-execute-parallel fills this in with the tk epic id, e.g. pat-a1b2
 ```
 
 If `meta.yaml` already exists (e.g. `team-research` created it), append your stream to `streams:` and
 bump `updated:`. Each skill owns exactly the field it produces: `plan-writing` fills `plan:`,
-`team-implement` fills `epic:`.
+`plan-execute-parallel` fills `epic:`.
 
 **One stream = one spec + one plan.** If the work forks into pieces that are independently
 specifiable, reviewable, and shippable, that is **more than one stream** — add a stream, not a second

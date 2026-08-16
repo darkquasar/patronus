@@ -115,7 +115,7 @@ In one line each:
 - **L1 Instructions** = *what you tell the agent to always do.* You write it; it's static prose;
   Patronus **appends** it into `CLAUDE.md`/`AGENTS.md`. Example in this repo: `agent-principles`.
 - **L2 Capabilities** = *what the agent can do on demand.* Invocable skills/agents/commands;
-  Patronus **creates** them as files. Examples: `team-research`, `team-implement`, `pattern-cloudflare`.
+  Patronus **creates** them as files. Examples: `team-research`, `plan-execute-parallel`, `pattern-cloudflare`.
 - **L3 Memory** = *what the agent remembers on its own.* A running store the agent writes to;
   Patronus **fetches and wires** an external engine. Example recipe: `memory-ai-memory`.
 
@@ -289,10 +289,10 @@ patronus/
 │   ├── instructions/
 │   │   └── agent-principles/   # L1 — type: instruction (ambient house rules)
 │   └── skills/
-│       ├── team-research/      # L2 — type: skill, role: capability
-│       ├── team-implement/     # L2 — type: skill, role: capability
-│       ├── pattern-cloudflare/ # L4 — type: skill, role: context
-│       └── pattern-mcp/        # L4 — type: skill, role: context
+│       ├── team-research/          # L2 — type: skill, role: capability
+│       ├── plan-execute-parallel/  # L2 — type: skill, role: capability
+│       ├── pattern-cloudflare/     # L4 — type: skill, role: context
+│       └── pattern-mcp/            # L4 — type: skill, role: context
 ├── recipes/                    # external binaries to fetch + wire
 │   ├── memory-ai-memory.yaml   # L3 — default memory (self-wiring)
 │   ├── memory-engram.yaml      # L3 — fallback memory (binary-only)
@@ -383,16 +383,16 @@ so you see precisely what will be created, appended, and run *before* anything h
 ```console
 $ patronus install --profile cloudflare --target claude --local
 warning: profile "cloudflare" is a stub: layers marked TODO are not yet populated
-┌────────────────────┬───────────────────────────────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
-│ Artifact           │ Impacted path(s)                          │ Operation │ Type        │ Role        │ Tool   │ Scope │
-├────────────────────┼───────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
-│ pattern-cloudflare │ ./.claude/skills/pattern-cloudflare/ (8…) │ CREATE    │ skill       │ context     │ claude │ local │
-│ team-implement     │ ./.claude/skills/team-implement/SKILL.md  │ CREATE    │ skill       │ capability  │ claude │ local │
-│ team-research      │ ./.claude/skills/team-research/SKILL.md   │ CREATE    │ skill       │ capability  │ claude │ local │
-│ agent-principles   │ ./CLAUDE.md                               │ APPEND    │ instruction │ instruction │ claude │ local │
-│ memory-ai-memory   │ ai-memory install-hooks --agent claude    │ EXEC      │ fetch+run   │ memory      │ claude │ local │
-│ memory-ai-memory   │ ai-memory install-mcp   --client claude   │ EXEC      │ fetch+run   │ memory      │ claude │ local │
-└────────────────────┴───────────────────────────────────────────┴───────────┴─────────────┴─────────────┴────────┴───────┘
+┌───────────────────────┬─────────────────────────────────────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
+│ Artifact              │ Impacted path(s)                                │ Operation │ Type        │ Role        │ Tool   │ Scope │
+├───────────────────────┼─────────────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
+│ pattern-cloudflare    │ ./.claude/skills/pattern-cloudflare/ (8…)       │ CREATE    │ skill       │ context     │ claude │ local │
+│ plan-execute-parallel │ ./.claude/skills/plan-execute-parallel/SKILL.md │ CREATE    │ skill       │ capability  │ claude │ local │
+│ team-research         │ ./.claude/skills/team-research/SKILL.md         │ CREATE    │ skill       │ capability  │ claude │ local │
+│ agent-principles      │ ./CLAUDE.md                                     │ APPEND    │ instruction │ instruction │ claude │ local │
+│ memory-ai-memory      │ ai-memory install-hooks --agent claude          │ EXEC      │ fetch+run   │ memory      │ claude │ local │
+│ memory-ai-memory      │ ai-memory install-mcp   --client claude         │ EXEC      │ fetch+run   │ memory      │ claude │ local │
+└───────────────────────┴─────────────────────────────────────────────────┴───────────┴─────────────┴─────────────┴────────┴───────┘
 
 ./
 ├── .claude/
@@ -402,7 +402,7 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 │       │   └── patterns/
 │       │       ├── pattern-001.md  (new)  # CREATE — role: context
 │       │       └── … (006 more)  (new)  # CREATE — role: context
-│       ├── team-implement/              # L2 capability
+│       ├── plan-execute-parallel/       # L2 capability
 │       │   └── SKILL.md  (new)  # CREATE — role: capability
 │       └── team-research/               # L2 capability
 │           └── SKILL.md  (new)  # CREATE — role: capability

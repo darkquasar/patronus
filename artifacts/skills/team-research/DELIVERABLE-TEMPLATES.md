@@ -78,5 +78,5 @@ streams:
     intent: "One line: what this stream is."
     spec: null                  # spec-brainstorming fills this in
     plan: null                  # plan-writing fills this in
-    epic: null                  # team-implement fills this in with the tk epic id
+    epic: null                  # plan-execute-parallel fills this in with the tk epic id
 ```

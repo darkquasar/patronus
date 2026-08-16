@@ -116,7 +116,7 @@ Empirically probed `Agent` + `isolation: "worktree"` (Claude Code):
 | Auto-cleaned? | **Only if unchanged.** A worktree with a commit **persists**, and `.claude/` is gitignored → **leaks are invisible to `git status`** |
 | Subagents spawning subagents | **Works** |
 
-**This disproves `team-implement/SKILL.md:79-81`**, which forbids native isolation *"so you retain
+**This disproves `plan-execute-parallel/SKILL.md:79-81`**, which forbids native isolation *"so you retain
 ownership of the branches to merge"* — the lead **can** merge them. It bans the right tool for a
 wrong reason.
 

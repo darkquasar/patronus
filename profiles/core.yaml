@@ -30,7 +30,7 @@ layers:
     - writing-skills                       # author/edit/verify skills (the meta-skill)
     - writing-editorial                    # the house writing style as four sequenced tier files + the editorial review that applies them
     - team-research@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
-    - team-implement@claude                # spec-driven parallel implementation (Claude tools; codex flavour is a separate artifact)
+    - plan-execute-parallel@claude         # the parallel arm of plan-review's fork (Claude tools; codex flavour is a separate artifact)
   context:
     - codebase-design                      # deep-module design vocabulary
     - domain-modeling                      # ubiquitous-language + ADR discipline

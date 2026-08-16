@@ -12,7 +12,7 @@ The single deliverable is:
 1. **one `<slug>-research.md`** — raw findings, evidence, constraints, trade-offs, shared by every stream
 2. **the folder `meta.yaml`** — one `research:` entry plus a `streams:` skeleton with `spec: null`/`plan: null` per stream you identified
 
-You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `plan-writing`' job. You do NOT seed the tk work-graph — that's `/team-implement`'s job. Each downstream skill fills the field it owns: `spec-brainstorming` fills `spec:`, `plan-writing` fills `plan:`, `team-implement` fills `epic:`.
+You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `plan-writing`' job. You do NOT seed the tk work-graph — that's `/plan-execute-parallel`'s job. Each downstream skill fills the field it owns: `spec-brainstorming` fills `spec:`, `plan-writing` fills `plan:`, `plan-execute-parallel` fills `epic:`.
 
 **You are the Team Lead.** Your job is to orchestrate, not to do the investigation yourself: you plan the streams, spawn parallel researchers, coordinate them, and synthesize their findings. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 3.
 
@@ -122,7 +122,7 @@ When all researchers' tasks are complete (you're notified as each background age
        intent: "One line: what this stream is."
        spec: null                  # spec-brainstorming fills this in
        plan: null                  # plan-writing fills this in
-       epic: null                  # team-implement fills this in with the tk epic id
+       epic: null                  # plan-execute-parallel fills this in with the tk epic id
    ```
 
    **One stream = one spec + one plan.** If the research forks into pieces that are independently
@@ -205,7 +205,7 @@ before they harden into a spec.)
 3. **Maximum 4 researchers.** Prefer fewer when the domain allows it.
 4. **Every finding needs evidence.** Opinions without evidence don't go in the spec.
 5. **The Team Lead writes the deliverables.** Researchers produce raw findings; synthesis is your job.
-6. **The output is exactly one `<slug>-research.md` plus a `meta.yaml` streams skeleton (`spec: null`/`plan: null`), in `docs/specs/NN-slug/`.** Authoring the specs is `spec-brainstorming`'s job, writing the plans is `plan-writing`', and seeding the tk graph is `/team-implement`'s. Do not proceed past Phase 5 until `<slug>-research.md` exists and is named in `meta.yaml`. `docs/specs/` is gitignored — do not commit the deliverable.
+6. **The output is exactly one `<slug>-research.md` plus a `meta.yaml` streams skeleton (`spec: null`/`plan: null`), in `docs/specs/NN-slug/`.** Authoring the specs is `spec-brainstorming`'s job, writing the plans is `plan-writing`', and seeding the tk graph is `/plan-execute-parallel`'s. Do not proceed past Phase 5 until `<slug>-research.md` exists and is named in `meta.yaml`. `docs/specs/` is gitignored — do not commit the deliverable.
 7. **Follow the [Coordination Protocol](#coordination-protocol) to the letter** for the research lifecycle (plan streams, spawn parallel researchers, coordinate, synthesize).
 8. **Touch the actual code/system.** "I believe X works this way" is not a finding. "I read X at line Y and confirmed Z" is.
 9. **Existing research is prior art.** Check `docs/specs/` (prior feature folders) before investigating something that may already be answered.
@@ -218,7 +218,7 @@ before they harden into a spec.)
 This is the protocol the Team Lead follows end-to-end. Research is **read-only**: researchers
 investigate the codebase/web and each writes its own `*-findings.md`. Because no researcher
 edits shared files, they need **no git worktrees, no branches, and no merge step** — that isolation
-machinery is only for teammates that write code (that is team-implement's job, not this one's).
+machinery is only for teammates that write code (that is plan-execute-parallel's job, not this one's).
 
 **Team sizing:** Maximum 4 researchers — coordination overhead dominates beyond that. Use 2 for
 a focused question, 3–4 for a broad domain with distinct unknowns. Each researcher owns one

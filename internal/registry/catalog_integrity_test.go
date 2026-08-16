@@ -50,11 +50,11 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		typ  manifest.ArtifactType
 		role manifest.Role
 	}{
-		"agent-principles":   {manifest.TypeInstruction, manifest.RoleInstruction},
-		"team-research":      {manifest.TypeSkill, manifest.RoleCapability},
-		"team-implement":     {manifest.TypeSkill, manifest.RoleCapability},
-		"pattern-cloudflare": {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
-		"pattern-mcp":        {manifest.TypeSkill, manifest.RoleContext},
+		"agent-principles":      {manifest.TypeInstruction, manifest.RoleInstruction},
+		"team-research":         {manifest.TypeSkill, manifest.RoleCapability},
+		"plan-execute-parallel": {manifest.TypeSkill, manifest.RoleCapability},
+		"pattern-cloudflare":    {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
+		"pattern-mcp":           {manifest.TypeSkill, manifest.RoleContext},
 		// P7.2-L1 vendored/authored instructions + the diagram-explain output-style.
 		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
 		"diagram-explain": {manifest.TypeOutputStyle, manifest.RoleInstruction},
