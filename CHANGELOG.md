@@ -7,6 +7,29 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ### Breaking
 
+- **`diagram-explain` was an output style and is now an instruction, so it finally does
+  something on Claude.** A placed output style sits inert until you select it in the Claude
+  UI, and Patronus cannot make that selection for you, so this artifact has been installed
+  and doing nothing on its primary target since it shipped. Its body now appends into
+  `CLAUDE.md` as a `patronus:start diagram-explain` section and is live from install.
+
+  Codex and OpenCode are unaffected in where the content lands: both already routed
+  instructions and output styles to the same `AGENTS.md` append, so the section keeps its
+  name and position. The body itself is six lines shorter, having dropped the output-style
+  frontmatter that only Claude ever read.
+
+  **If you installed a previous version on Claude, delete the stale file by hand:**
+
+  ```sh
+  rm ~/.claude/output-styles/diagram-explain.md    # or .claude/output-styles/ for a local install
+  ```
+
+  `patronus scan` will not point you at it. The artifact kept its name, so the upgrade
+  overwrites its state row in place with the new `CLAUDE.md` path rather than marking the
+  old one an orphan, and nothing scans for files that state has forgotten. Left there, the
+  file is harmless unless you had selected the output style, in which case it keeps
+  applying the old copy on top of the new instruction.
+
 - **Two slash commands changed name. `/team-research` is now `/research-team`, and
   `/team-implement` is now `/plan-execute-parallel`.** If either is in your muscle memory,
   your own notes, or a script, it stops resolving after this upgrade. Nothing aliases the
