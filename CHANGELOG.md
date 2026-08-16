@@ -22,7 +22,8 @@ person upgrading: it leads with what will behave differently on their machine.
   | `team-research` | `research-team` |
   | `team-implement` | `plan-execute-parallel` |
 
-  The bodies are unchanged. `spec-brainstorming` now sorts beside `spec-review`,
+  What each skill does is unchanged; only its name, its heading, and the cross-references
+  that point at it moved. `spec-brainstorming` now sorts beside `spec-review`,
   `plan-writing` beside `plan-review` and `plan-execute`, and `plan-execute-parallel` reads
   as the other arm of the same fork. Scanning your installed set now shows which skills
   belong to one phase.
@@ -35,16 +36,17 @@ person upgrading: it leads with what will behave differently on their machine.
   targets that no longer exist.
 
   ```sh
-  patronus scan                              # shows the four old names as ORPHANED-STATE
-  patronus remove team-research --global     # dry run, inspect what it will undo
-  patronus remove team-research --global --deploy
+  patronus scan                            # shows the four old names as ORPHANED-STATE
+  patronus remove team-research            # dry run, inspect what it will undo
+  patronus remove team-research --deploy
   ```
 
-  Repeat for `team-implement`, `writing-plans`, and `brainstorming-spec`. Omit `--target` to
-  cover every tool you installed them for; both scope state files are consulted by default.
-  If you edited an installed skill, the drift check skips it and you need `--force`.
-  `remove` deletes the files and the state row, and leaves the now-empty skill directory
-  behind; delete it yourself if an empty directory bothers you.
+  Repeat for `team-implement`, `writing-plans`, and `brainstorming-spec`. Omit `--target` and
+  the scope flags to cover every tool and both scopes you installed them for: `--global` and
+  `--local` each narrow the removal to one scope, and with neither flag both state files are
+  consulted. If you edited an installed skill, the drift check skips it and you need
+  `--force`. `remove` deletes the files and the state row, and leaves the now-empty skill
+  directory behind; delete it yourself if an empty directory bothers you.
 
 ## v2.3.0
 
