@@ -80,7 +80,7 @@ Full rubric: [plan-reviewer.md](plan-reviewer.md)
 
 ## Where This Sits
 
-`brainstorming-spec` → `spec-review` → `writing-plans` → **plan-review** → the build fork.
+`spec-brainstorming` → `spec-review` → `writing-plans` → **plan-review** → the build fork.
 
 Its sibling gate, `spec-review`, closes the spec phase the same way.
 

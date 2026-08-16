@@ -109,7 +109,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
 		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
 		// Remaining superpowers workflow skills (complete the vendored set).
-		"brainstorming-spec":             {manifest.TypeSkill, manifest.RoleCapability},
+		"spec-brainstorming":             {manifest.TypeSkill, manifest.RoleCapability},
 		"using-git-worktrees":            {manifest.TypeSkill, manifest.RoleCapability},
 		"finishing-a-development-branch": {manifest.TypeSkill, manifest.RoleCapability},
 		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
@@ -195,7 +195,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// L10 orchestration: ticket (authored-but-attributed instruction) + 2 vendored superpowers skills.
 		"ticket", "subagent-driven-development", "dispatching-parallel-agents",
 		// The remaining vendored superpowers workflow skills.
-		"brainstorming-spec", "using-git-worktrees", "finishing-a-development-branch",
+		"spec-brainstorming", "using-git-worktrees", "finishing-a-development-branch",
 		"writing-skills", "requesting-code-review", "receiving-code-review",
 		// Vendored ai-memory lifecycle hooks.
 		"ai-memory-session-start", "ai-memory-user-prompt", "ai-memory-pre-tool-use",

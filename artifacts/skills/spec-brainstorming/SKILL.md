@@ -1,9 +1,9 @@
 ---
-name: brainstorming-spec
+name: spec-brainstorming
 description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design, then authors the spec. Reads an existing research.md when present and scales its dialogue to it."
 ---
 
-# Brainstorming Ideas Into Specs
+# Spec Brainstorming: Ideas Into Specs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
@@ -34,7 +34,7 @@ You MUST create a task for each of these items and complete them in order:
 ## Process Flow
 
 ```dot
-digraph brainstorming_spec {
+digraph spec_brainstorming {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -268,4 +268,4 @@ A browser-based companion for showing mockups, diagrams, and visual options duri
 A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
 
 If they agree to the companion, read the detailed guide before proceeding:
-`skills/brainstorming-spec/visual-companion.md`
+`skills/spec-brainstorming/visual-companion.md`

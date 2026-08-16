@@ -30,25 +30,25 @@ exist. Entry-awareness only tunes *which upstream offer to surface*; it never ro
   research): file presence cannot tell "grilling to harden a fresh spec" from "grilling a spec
   that's already sharp," so **ASK, do not auto-route**:
 
-  > "The spec looks sharper now. Want me to harden it further with `brainstorming-spec` — fold what
+  > "The spec looks sharper now. Want me to harden it further with `spec-brainstorming` — fold what
   >  we surfaced back into the spec — or just build it however you like?"
 
 - **Research only** (a `<slug>-research.md` exists, no spec yet) — unambiguous next hop:
 
-  > "The findings look sharp now. Author the spec from them with `brainstorming-spec`? (Or just
+  > "The findings look sharp now. Author the spec from them with `spec-brainstorming`? (Or just
   >  build it however you like.)"
 
   Do NOT re-suggest `team-research` here — that's a loop.
 
 - **Entered from team-research** (research exists, you were called to stress-test before the spec):
-  same as research-only — offer `brainstorming-spec`; do not loop back to `team-research`.
+  same as research-only — offer `spec-brainstorming`; do not loop back to `team-research`.
 
 - **Called cold** (no `research.md` and no `<stream>-spec.md` present) — the full two-option menu:
 
   > "The idea looks sharp now. Two ways forward — your call:
   >  - **The domain has real unknowns** (several things you'd have to go investigate before the
   >    design is even tractable) → `/team-research`.
-  >  - **You know the domain; it's the design that needs settling** → the `brainstorming-spec` skill.
+  >  - **You know the domain; it's the design that needs settling** → the `spec-brainstorming` skill.
   >
   >  Or neither, if you'd rather just build it."
 

@@ -99,7 +99,7 @@ These thoughts mean STOP—you're rationalizing:
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (brainstorming-spec, grilling, diagnosing-bugs) - these determine HOW to approach the task
+1. **Process skills first** (spec-brainstorming, grilling, diagnosing-bugs) - these determine HOW to approach the task
 2. **Implementation skills second** - these guide execution
 
 "Let's build X" → brainstorm/interrogate the plan first, then implementation skills.
