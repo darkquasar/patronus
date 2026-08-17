@@ -191,21 +191,44 @@ func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result
 	return res, nil
 }
 
-// Occupancy reports, for a recorded path, every artifact that has a MERGE row on
-// it in the loaded state — including artifacts this command was not asked to
-// remove. The legacy whole-file restore consults it to prove sole ownership
-// before overwriting a file that someone else may be wired into.
-type Occupancy map[string][]string
+// Contributor identifies one recorded writer of a config file. The name alone is
+// not the identity: state is keyed by (artifact, tool, scope), so the SAME
+// artifact installed for two tools or two scopes is two independent records that
+// can both be wired into one absolute path.
+type Contributor struct {
+	Artifact string
+	Tool     string
+	Scope    string
+}
 
-// contributorsOtherThan returns the artifacts recorded on path that are not the
-// given artifact. An unknown path yields nothing, which is the honest answer when
-// no wider state view was supplied.
-func (o Occupancy) contributorsOtherThan(path, artifact string) []string {
+// Label renders a contributor for a user-facing warning, naming the tool/scope
+// only when it is what distinguishes this record from the one being removed.
+func (c Contributor) Label() string {
+	if c.Tool == "" && c.Scope == "" {
+		return c.Artifact
+	}
+	return c.Artifact + " (" + strings.TrimSpace(c.Tool+" "+c.Scope) + ")"
+}
+
+// Occupancy reports, for a recorded path, every contributor that has a MERGE row
+// on it in the recorded state — including ones this command was not asked to
+// remove. The legacy whole-file restore consults it to prove sole ownership
+// before overwriting a file someone else may be wired into.
+//
+// Paths are absolute, so an entry from ANY scope's state file belongs here: what
+// is being protected is the file, not the bookkeeping that happens to mention it.
+type Occupancy map[string][]Contributor
+
+// othersOn returns the contributors recorded on path that are not the given
+// record. An unknown path yields nothing, which is the honest answer when no
+// wider state view was supplied.
+func (o Occupancy) othersOn(path string, self Contributor) []string {
 	var out []string
-	for _, a := range o[path] {
-		if a != artifact {
-			out = append(out, a)
+	for _, c := range o[path] {
+		if c == self {
+			continue
 		}
+		out = append(out, c.Label())
 	}
 	return out
 }
@@ -284,17 +307,15 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 	}
 
 	// All-or-nothing on parse failure: a buffer we cannot read is a buffer we must
-	// not partially rewrite.
-	if unreadable := probeParse(current, group[0].file.Setting); unreadable != "" {
-		for _, fi := range group {
-			d := baseDiff(fi)
-			d.Action = diff.Skip
-			d.Note = "settings unreadable — skipped"
-			out.diffs = append(out.diffs, d)
-			out.ledger = append(out.ledger, ledgerEntry(fi, UnreadableSkipped))
-			out.warnings = append(out.warnings, Warning{Item: fi.item.Artifact, Path: path, Message: unreadable})
+	// not partially rewrite. Probe with EVERY row's edit, not just the first —
+	// rows on one path can disagree about the file's format, and a probe that
+	// only tried one of them would let the disagreement surface mid-fold.
+	for _, fi := range group {
+		unreadable := probeParse(current, fi.file.Setting)
+		if unreadable == "" {
+			continue
 		}
-		return out, nil
+		return refuseGroup(group, path, unreadable), nil
 	}
 
 	foldable, ambiguous := partitionByOverlap(group)
@@ -323,10 +344,12 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 	for _, fi := range foldable {
 		stripped, found, unreadable := stripSetting(buf, fi.file.Setting)
 		if unreadable != "" {
-			// The buffer parsed a moment ago, so this can only mean our own fold
-			// produced something unreadable — refuse the whole group rather than
-			// write a partial buffer.
-			return settingGroup{}, fmt.Errorf("remove: compose %s: %s", path, unreadable)
+			// Every row's edit parsed the original bytes, so reaching here means a
+			// fold produced something a later row cannot read. Discard the partial
+			// buffer and refuse the whole group: an unreadable config is a
+			// recoverable warn-and-skip the user can fix and re-run, never a fatal
+			// and never a partial write.
+			return refuseGroup(group, path, unreadable), nil
 		}
 		if !found {
 			d := baseDiff(fi)
@@ -362,6 +385,23 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 		out.ledger = append(out.ledger, ledgerEntry(fi, Applied))
 	}
 	return out, nil
+}
+
+// refuseGroup skips every contributor on a path with the same unreadable-config
+// warning, writing nothing. It is the all-or-nothing answer to a file we cannot
+// parse: the removal is not done, so each row is held open for a re-run once the
+// user has repaired the file.
+func refuseGroup(group []fileIntent, path, unreadable string) settingGroup {
+	var out settingGroup
+	for _, fi := range group {
+		d := baseDiff(fi)
+		d.Action = diff.Skip
+		d.Note = "settings unreadable — skipped"
+		out.diffs = append(out.diffs, d)
+		out.ledger = append(out.ledger, ledgerEntry(fi, UnreadableSkipped))
+		out.warnings = append(out.warnings, Warning{Item: fi.item.Artifact, Path: path, Message: unreadable})
+	}
+	return out
 }
 
 // partitionByOverlap splits a path's settings rows into those that can be folded
@@ -590,7 +630,8 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting, occupancy Occ
 		// The refusal is deliberately NOT promotable (no Intended): --force means
 		// "I accept losing my own edit to this file", never "I accept losing another
 		// artifact's wiring".
-		if others := occupancy.contributorsOtherThan(f.Path, it.Artifact); len(others) > 0 {
+		self := Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
+		if others := occupancy.othersOn(f.Path, self); len(others) > 0 {
 			base.Action = diff.Skip
 			base.Note = "shared config with a pre-compose record — skipped"
 			return base, &Warning{

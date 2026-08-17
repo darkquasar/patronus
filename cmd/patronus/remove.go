@@ -121,11 +121,17 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				return b, true, nil
 			}
 
-			// The sole-contributor gate on pre-compose MERGE rows must see the WHOLE
-			// state, not just what was selected: an unselected artifact still wired
-			// into a shared config is exactly the sibling a wholesale restore would
-			// destroy, and within the selection it is invisible.
-			computed, err := remove.Compute(selected, read, occupancyOf(loaded))
+			// The sole-contributor gate on pre-compose MERGE rows must see EVERY
+			// recorded contributor, not just the selected ones and not just the
+			// scopes this command touches: an artifact still wired into a shared
+			// config is exactly the sibling a wholesale restore would destroy, and
+			// a --global remove would otherwise be blind to a local record naming
+			// the same absolute path.
+			occupancy, err := fullOccupancy(home, wd, loaded)
+			if err != nil {
+				return err
+			}
+			computed, err := remove.Compute(selected, read, occupancy)
 			if err != nil {
 				return err
 			}
@@ -207,28 +213,59 @@ func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, war
 	return out
 }
 
-// occupancyOf indexes every recorded MERGE row across the loaded scopes by path,
-// listing the artifacts wired into each. remove.Compute uses it to tell a config
-// file this artifact owns alone from one it shares, which is what makes a
+// fullOccupancy builds the contributor index from BOTH scopes' state files,
+// reusing whatever this command already loaded and reading the rest. A scope
+// filter narrows what gets REMOVED; it must not narrow what the safety gate can
+// see, or a --global remove would restore a snapshot over a local record's
+// wiring simply because it never looked.
+func fullOccupancy(home, projectDir string, loaded map[string]*state.State) (remove.Occupancy, error) {
+	states := make([]*state.State, 0, 2)
+	for _, scope := range []string{"global", "local"} {
+		if s, ok := loaded[scope]; ok {
+			states = append(states, s)
+			continue
+		}
+		s, err := state.Load(removeStatePath(scope, home, projectDir))
+		if err != nil {
+			return nil, fmt.Errorf("load %s state: %w", scope, err)
+		}
+		states = append(states, s)
+	}
+	return occupancyOf(states), nil
+}
+
+// occupancyOf indexes every recorded MERGE row across the given states by path,
+// listing the contributors wired into each. remove.Compute uses it to tell a
+// config file this record owns alone from one it shares, which is what makes a
 // pre-compose whole-file restore safe or unsafe.
-func occupancyOf(loaded map[string]*state.State) remove.Occupancy {
+//
+// Recorded paths are absolute, so a row from any scope's state file counts:
+// what the gate protects is the FILE, and a contributor recorded in the scope
+// this command did not load is exactly the one the user cannot see coming.
+func occupancyOf(states []*state.State) remove.Occupancy {
 	occ := remove.Occupancy{}
-	seen := map[string]bool{}
-	for _, s := range loaded {
+	seen := map[remove.Contributor]map[string]bool{}
+	for _, s := range states {
 		if s == nil {
 			continue
 		}
 		for _, it := range s.Items {
+			// State identity is (artifact, tool, scope): the same artifact installed
+			// for two tools is two independent records, and one must not vouch for
+			// the other's contribution to a shared file.
+			c := remove.Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
 			for _, f := range it.Files {
 				if f.Action != string(diff.Merge) {
 					continue
 				}
-				k := f.Path + "\x00" + it.Artifact
-				if seen[k] {
-					continue // one artifact may record several edits on one file
+				if seen[c] == nil {
+					seen[c] = map[string]bool{}
 				}
-				seen[k] = true
-				occ[f.Path] = append(occ[f.Path], it.Artifact)
+				if seen[c][f.Path] {
+					continue // one record may hold several edits to one file
+				}
+				seen[c][f.Path] = true
+				occ[f.Path] = append(occ[f.Path], c)
 			}
 		}
 	}
@@ -280,15 +317,24 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	for _, d := range result.Applied {
 		writtenPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
 	}
-	undone := map[string]bool{} // artifact+tool+scope+path -> this contribution is settled
+	// One artifact can record SEVERAL edits on one path — an OpenCode gate whose
+	// matcher maps to more than one permission key is the standing case — so the
+	// identity tuple is not unique per ledger row. Accumulate with AND: every
+	// outcome on the tuple must be settled, or the row stays open. Overwriting
+	// instead would let one landed edit vouch for a refused sibling, retiring an
+	// artifact whose wiring is still on disk.
+	undone := map[string]bool{} // artifact+tool+scope+path -> EVERY contribution there is settled
 	for _, e := range ledger {
 		k := e.Artifact + "\x00" + e.Tool + "\x00" + e.Scope + "\x00" + e.Path
+		settled := e.Outcome.Complete()
 		if e.Outcome == remove.Applied {
 			// Predicted to be written; credit it only if the write actually landed.
-			undone[k] = writtenPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
-			continue
+			settled = writtenPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
 		}
-		undone[k] = e.Outcome.Complete()
+		if prev, seen := undone[k]; seen {
+			settled = settled && prev
+		}
+		undone[k] = settled
 	}
 
 	dirty := map[string]bool{} // scopes whose state file changed

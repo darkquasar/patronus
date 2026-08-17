@@ -644,7 +644,7 @@ func TestLegacySoleContributorStillRestores(t *testing.T) {
 	r, err := Compute(
 		[]state.Item{legacyItem("old", path, prior, installed)},
 		readerFrom(map[string][]byte{path: installed}),
-		Occupancy{path: {"old"}},
+		Occupancy{path: {contributor("old")}},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -666,7 +666,7 @@ func TestLegacyRefusedWhenAnUnselectedArtifactSharesThePath(t *testing.T) {
 	r, err := Compute(
 		[]state.Item{legacyItem("old", path, []byte(`{}`), installed)},
 		readerFrom(map[string][]byte{path: installed}),
-		Occupancy{path: {"old", "still-installed"}},
+		Occupancy{path: {contributor("old"), contributor("still-installed")}},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -696,7 +696,7 @@ func TestMixedModernAndLegacyOnOnePath(t *testing.T) {
 			mcpItem("serena", path, "serena", installed, nil, false),
 		},
 		readerFrom(map[string][]byte{path: installed}),
-		Occupancy{path: {"old", "serena"}},
+		Occupancy{path: {contributor("old"), contributor("serena")}},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -710,6 +710,12 @@ func TestMixedModernAndLegacyOnOnePath(t *testing.T) {
 }
 
 // --- helpers -----------------------------------------------------------------
+
+// contributor builds an occupancy entry at the (claude, global) identity every
+// case in this file uses.
+func contributor(artifact string) Contributor {
+	return Contributor{Artifact: artifact, Tool: "claude", Scope: "global"}
+}
 
 func restoreDiffs(cs *diff.ChangeSet) []diff.FileDiff {
 	var out []diff.FileDiff
@@ -735,4 +741,63 @@ func assertLedger(t *testing.T, l Ledger, want map[string]Outcome) {
 			t.Errorf("ledger[%s] = %q, want %q", artifact, got[artifact], w)
 		}
 	}
+}
+
+// --- peer-review regressions -------------------------------------------------
+
+// The same artifact installed for two TOOLS is two independent state records. If
+// occupancy identified contributors by name alone, the second record would look
+// like "self" and the legacy snapshot would be restored straight over its wiring.
+func TestLegacyRefusedWhenSameArtifactIsInstalledForAnotherTool(t *testing.T) {
+	const path = "/p/shared.json"
+	installed := []byte(`{"a":1}`)
+
+	item := legacyItem("foo", path, []byte(`{}`), installed)
+	other := Contributor{Artifact: "foo", Tool: "opencode", Scope: "global"}
+
+	r, err := Compute(
+		[]state.Item{item},
+		readerFrom(map[string][]byte{path: installed}),
+		Occupancy{path: {contributor("foo"), other}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.ChangeSet.Diffs[0].Action != diff.Skip {
+		t.Fatalf("a second record of the same artifact is still another contributor; want SKIP, got %s",
+			r.ChangeSet.Diffs[0].Action)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"foo": UnsafeLegacySkipped})
+}
+
+// A row whose edit cannot parse the file must refuse the WHOLE group, even when
+// an earlier row in the group parsed it happily.
+func TestUnparseableLaterRowStillRefusesWholeGroup(t *testing.T) {
+	const path = "/p/config"
+	// Valid JSON, so a json-targeted edit parses it; a toml-targeted edit cannot.
+	content := []byte(`{"mcpServers":{"serena":{"command":"uvx"}}}`)
+
+	tomlRow := state.Item{
+		Artifact: "mismatched", Tool: "claude", Scope: "global",
+		Files: []state.FileState{{
+			Path: path, Action: string(diff.Merge), Checksum: sum(content),
+			Setting: &diff.SettingEdit{
+				Target: diff.FileTargetRef{File: "config", Format: "toml"},
+				Dotted: "whatever",
+			},
+		}},
+	}
+
+	r, err := Compute(
+		[]state.Item{mcpItem("serena", path, "serena", content, nil, false), tomlRow},
+		readerFrom(map[string][]byte{path: content}),
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("an unreadable config is a recoverable warn-and-skip, never a fatal: %v", err)
+	}
+	if got := len(restoreDiffs(r.ChangeSet)); got != 0 {
+		t.Fatalf("the whole group must be refused, got %d writes", got)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"serena": UnreadableSkipped, "mismatched": UnreadableSkipped})
 }
