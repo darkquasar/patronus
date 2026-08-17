@@ -10,10 +10,10 @@ import (
 
 // transformSetting writes a setting artifact's value at its dotted path in the
 // agent's settings file (a scalar MERGE — the twin of a hook's array-append). It
-// rides the same config merger as MCP and hooks, but uses the wholesale-Prior
-// remove path (state records the pre-install bytes; remove RESTOREs them) rather
-// than the targeted element-strip, because a scalar key has one value to restore,
-// not an array element to pull. A tool that models no setting surface at this
+// rides the same config merger as MCP and hooks, and like them it records a
+// SettingEdit, so removal is surgical: a scalar edit carries its own per-key
+// prior and remove restores or deletes exactly that key, leaving every sibling
+// (other artifacts' edits and the user's) untouched. A tool that models no setting surface at this
 // scope is an honest no-op, so a @tool-flavoured setting installs cleanly only
 // where it applies.
 func (e *Engine) transformSetting(art *manifest.Artifact, ad *manifest.Adapter, scope string, readExisting ReadExisting) ([]diff.FileDiff, error) {

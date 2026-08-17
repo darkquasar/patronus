@@ -33,7 +33,8 @@ func TestRemoveRevertsV1OrphanPluginMerge(t *testing.T) {
 		}},
 	}}
 	read := func(string) ([]byte, bool, error) { return current, true, nil }
-	cs, _, err := remove.Compute(items, read)
+	r, err := remove.Compute(items, read, nil)
+	cs := r.ChangeSet
 	if err != nil {
 		t.Fatal(err)
 	}

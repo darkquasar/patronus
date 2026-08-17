@@ -100,6 +100,21 @@ func PrintSummaryTable(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 			}
 			cg.paths = append(cg.paths, displayPath(r, d.Path))
 		}
+
+		// And the remove-side mirror: several artifacts wired into one settings
+		// file are reversed by ONE write, but the user asked to remove each of
+		// them and must see each one accounted for. Showing only the owning
+		// artifact would report a partial removal as if it were the whole job.
+		for _, c := range d.RestoreContrib {
+			ck := key{c.Artifact, string(diff.Restore), c.Type, c.Role, d.Tool, d.Scope, ""}
+			cg, ok := groups[ck]
+			if !ok {
+				cg = &group{key: ck}
+				groups[ck] = cg
+				order = append(order, ck)
+			}
+			cg.paths = append(cg.paths, displayPath(r, d.Path))
+		}
 	}
 
 	headers := []string{"Artifact", "Impacted path(s)", "Operation", "Type", "Role", "Tool", "Scope"}

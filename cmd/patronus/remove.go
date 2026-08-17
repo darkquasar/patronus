@@ -121,10 +121,15 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				return b, true, nil
 			}
 
-			cs, warnings, err := remove.Compute(selected, read)
+			// The sole-contributor gate on pre-compose MERGE rows must see the WHOLE
+			// state, not just what was selected: an unselected artifact still wired
+			// into a shared config is exactly the sibling a wholesale restore would
+			// destroy, and within the selection it is invisible.
+			computed, err := remove.Compute(selected, read, occupancyOf(loaded))
 			if err != nil {
 				return err
 			}
+			cs, warnings, ledger := computed.ChangeSet, computed.Warnings, computed.Ledger
 
 			// Symmetric plugin teardown: for any selected item that is a tracked
 			// plugin, append the tool's uninstall EXEC(s) (advisory when its CLI is
@@ -135,7 +140,8 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			}
 
 			if force {
-				remove.Promote(cs)
+				computed = remove.Promote(computed)
+				cs, ledger = computed.ChangeSet, computed.Ledger
 			}
 			for _, w := range warnings {
 				if w.Path != "" {
@@ -157,7 +163,7 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runRemove(cmd, cs, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
+			return runRemove(cmd, cs, ledger, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
 		},
 	}
 
@@ -201,6 +207,34 @@ func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, war
 	return out
 }
 
+// occupancyOf indexes every recorded MERGE row across the loaded scopes by path,
+// listing the artifacts wired into each. remove.Compute uses it to tell a config
+// file this artifact owns alone from one it shares, which is what makes a
+// pre-compose whole-file restore safe or unsafe.
+func occupancyOf(loaded map[string]*state.State) remove.Occupancy {
+	occ := remove.Occupancy{}
+	seen := map[string]bool{}
+	for _, s := range loaded {
+		if s == nil {
+			continue
+		}
+		for _, it := range s.Items {
+			for _, f := range it.Files {
+				if f.Action != string(diff.Merge) {
+					continue
+				}
+				k := f.Path + "\x00" + it.Artifact
+				if seen[k] {
+					continue // one artifact may record several edits on one file
+				}
+				seen[k] = true
+				occ[f.Path] = append(occ[f.Path], it.Artifact)
+			}
+		}
+	}
+	return occ
+}
+
 // removeStateOpts carries what runRemove needs to rewrite state after an undo.
 type removeStateOpts struct {
 	home       string
@@ -214,7 +248,7 @@ type removeStateOpts struct {
 // the new reality. An item is dropped from state only when every one of its files
 // was actually undone (not skipped as drift); a partially-skipped item stays so a
 // later --force can finish it.
-func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
+func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
 	out := cmd.OutOrStdout()
 
 	app := &install.Applier{}
@@ -237,19 +271,31 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 		}
 	}
 
-	// Determine which (artifact,tool,scope) items were fully undone: every recorded
-	// file for that item must appear in result.Applied (not skipped). We key applied
-	// paths by the same identity the diffs carry.
-	appliedPaths := map[string]bool{}
+	// Determine which (artifact,tool,scope) items were fully undone. Completion is
+	// keyed by ARTIFACT IDENTITY, not by path: composition folds several artifacts'
+	// contributions into one physical write, so a landed path no longer identifies
+	// who was undone. The ledger answers that per contributor; the applier's
+	// Applied set confirms the write it predicted actually happened.
+	writtenPaths := map[string]bool{}
 	for _, d := range result.Applied {
-		appliedPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
+		writtenPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
+	}
+	undone := map[string]bool{} // artifact+tool+scope+path -> this contribution is settled
+	for _, e := range ledger {
+		k := e.Artifact + "\x00" + e.Tool + "\x00" + e.Scope + "\x00" + e.Path
+		if e.Outcome == remove.Applied {
+			// Predicted to be written; credit it only if the write actually landed.
+			undone[k] = writtenPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
+			continue
+		}
+		undone[k] = e.Outcome.Complete()
 	}
 
 	dirty := map[string]bool{} // scopes whose state file changed
 	for _, it := range selected {
 		fullyUndone := true
 		for _, f := range it.Files {
-			if !appliedPaths[it.Tool+"\x00"+it.Scope+"\x00"+f.Path] {
+			if !undone[it.Artifact+"\x00"+it.Tool+"\x00"+it.Scope+"\x00"+f.Path] {
 				fullyUndone = false
 				break
 			}
@@ -278,7 +324,19 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 		}
 	}
 
-	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", len(result.Applied), len(result.Skipped))
+	// Report LOGICAL contributions, not physical writes. Several artifacts can be
+	// reversed by one composed write, and counting the writes would say "1 undone"
+	// after removing three — under-reporting the change beneath a table that
+	// already shows a row per contributor. Install hit this same trap on its
+	// composed MERGE footer and resolved it the same way.
+	undoneCount, skippedCount := 0, 0
+	for _, d := range result.Applied {
+		undoneCount += 1 + len(d.RestoreContrib)
+	}
+	for _, d := range result.Skipped {
+		skippedCount += 1 + len(d.RestoreContrib)
+	}
+	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", undoneCount, skippedCount)
 	return applyErr
 }
 

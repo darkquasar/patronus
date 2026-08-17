@@ -64,10 +64,14 @@ type FileState struct {
 	Section string `json:"section,omitempty"`
 	Prior   []byte `json:"prior,omitempty"`
 
-	// Setting is the list-append intent for a hook MERGE (settings.json element),
-	// so revert strips exactly this array element without disturbing sibling
-	// hooks. When set, remove uses the targeted Setting path instead of the
-	// wholesale Prior restore that a scalar MERGE (MCP) uses.
+	// Setting is the structural edit intent for a MERGE, in either of its two
+	// forms: a list-append (a hook element, keyed by identity) or a scalar set (an
+	// MCP server block, a toggle, a permission gate, keyed by its dotted path with
+	// its own per-key prior). Every MERGE producer in the tree records one, so
+	// removal is surgical and sibling edits survive. The wholesale Prior restore
+	// below is the PRE-COMPOSE path: it applies only to rows written before
+	// SettingEdits existed, and remove refuses it outright when anyone else is
+	// wired into the same file.
 	Setting *diff.SettingEdit `json:"setting,omitempty"`
 }
 

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/adapter"
@@ -21,6 +22,18 @@ func readerFrom(files map[string][]byte) ReadExisting {
 	}
 }
 
+// computeForTest keeps the pre-composition (changeSet, warnings, error) shape the
+// older cases were written against, so they keep asserting the same behavior
+// without restating the ledger they do not exercise. Occupancy is nil: these
+// cases each remove a single artifact, which is the sole-contributor case.
+func computeForTest(items []state.Item, read ReadExisting) (*diff.ChangeSet, []Warning, error) {
+	r, err := Compute(items, read, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return r.ChangeSet, r.Warnings, nil
+}
+
 func sum(b []byte) string {
 	s := sha256.Sum256(b)
 	return "sha256:" + hex.EncodeToString(s[:])
@@ -32,7 +45,7 @@ func TestCreateBecomesDelete(t *testing.T) {
 		Artifact: "s", Tool: "claude", Scope: "global",
 		Files: []state.FileState{{Path: "/c/SKILL.md", Action: "CREATE", Checksum: sum(body)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/c/SKILL.md": body}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/c/SKILL.md": body}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +65,7 @@ func TestCreateAlreadyAbsentSkips(t *testing.T) {
 		Artifact: "s", Tool: "claude", Scope: "global",
 		Files: []state.FileState{{Path: "/c/SKILL.md", Action: "CREATE", Checksum: sum([]byte("x"))}},
 	}}
-	cs, _, err := Compute(items, readerFrom(map[string][]byte{}))
+	cs, _, err := computeForTest(items, readerFrom(map[string][]byte{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +79,7 @@ func TestCreateDriftSkipsWithIntent(t *testing.T) {
 		Artifact: "s", Tool: "claude", Scope: "global",
 		Files: []state.FileState{{Path: "/c/SKILL.md", Action: "CREATE", Checksum: sum([]byte("original"))}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/c/SKILL.md": []byte("USER EDITED")}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/c/SKILL.md": []byte("USER EDITED")}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +90,7 @@ func TestCreateDriftSkipsWithIntent(t *testing.T) {
 		t.Errorf("want one drift warning, got %d", len(warns))
 	}
 	// --force promotes it.
-	Promote(cs)
+	Promote(Result{ChangeSet: cs})
 	if cs.Diffs[0].Action != diff.Delete {
 		t.Errorf("Promote should turn drift SKIP into DELETE, got %s", cs.Diffs[0].Action)
 	}
@@ -90,7 +103,7 @@ func TestAppendBecomesUnappend(t *testing.T) {
 		Artifact: "ap", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "ap", Prior: prior, Checksum: sum(installed)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": installed}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": installed}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +131,7 @@ func TestAppendSectionAlreadyGoneRetiresRow(t *testing.T) {
 		Artifact: "gone", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "gone", Prior: nil, Checksum: sum([]byte("whatever was recorded"))}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": other}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": other}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +157,7 @@ func TestAppendDriftSkipsWithIntent(t *testing.T) {
 		Artifact: "ap", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "ap", Prior: prior, Checksum: sum(installed)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": edited}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": edited}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +179,7 @@ func TestAppendIntoFreshFileDriftSkips(t *testing.T) {
 		Artifact: "ap", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "ap", Prior: nil, Checksum: sum(installed)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": edited}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": edited}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +198,7 @@ func TestAppendIntoFreshFileCleanUnappend(t *testing.T) {
 		Artifact: "ap", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/CLAUDE.md", Action: "APPEND", Section: "ap", Prior: nil, Checksum: sum(installed)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": installed}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/CLAUDE.md": installed}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +217,7 @@ func TestMergeBecomesRestore(t *testing.T) {
 		Artifact: "mem", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{Path: "/p/.mcp.json", Action: "MERGE", Prior: prior, Checksum: sum(installed)}},
 	}}
-	cs, _, err := Compute(items, readerFrom(map[string][]byte{"/p/.mcp.json": installed}))
+	cs, _, err := computeForTest(items, readerFrom(map[string][]byte{"/p/.mcp.json": installed}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +261,7 @@ func TestHookMergeStripsOneElement(t *testing.T) {
 		Artifact: "tdd-guard", Tool: "claude", Scope: "global",
 		Files: []state.FileState{{Path: "/p/settings.json", Action: "MERGE", Setting: editA, Checksum: sum(installed)}},
 	}}
-	cs, warns, err := Compute(items, readerFrom(map[string][]byte{"/p/settings.json": installed}))
+	cs, warns, err := computeForTest(items, readerFrom(map[string][]byte{"/p/settings.json": installed}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +325,7 @@ func TestRemoveMcpContributorLeavesSiblings(t *testing.T) {
 	const path = "/p/.claude.json"
 	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
 
-	cs, warns, err := Compute(
+	cs, warns, err := computeForTest(
 		[]state.Item{mcpItem("serena", path, "serena", installed, nil, false)},
 		readerFrom(map[string][]byte{path: installed}),
 	)
@@ -335,7 +348,7 @@ func TestRemoveMcpOwnerLeavesSiblings(t *testing.T) {
 	const path = "/p/.claude.json"
 	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
 
-	cs, _, err := Compute(
+	cs, _, err := computeForTest(
 		[]state.Item{mcpItem("graphify", path, "graphify", installed, nil, false)},
 		readerFrom(map[string][]byte{path: installed}),
 	)
@@ -352,7 +365,7 @@ func TestRemoveMcpRestoresUserPrior(t *testing.T) {
 	installed := []byte(`{"mcpServers":{"serena":{"command":"uvx"}}}`)
 	prior := map[string]any{"command": "my-own"}
 
-	cs, _, err := Compute(
+	cs, _, err := computeForTest(
 		[]state.Item{mcpItem("serena", path, "serena", installed, prior, true)},
 		readerFrom(map[string][]byte{path: installed}),
 	)
@@ -378,11 +391,348 @@ func TestSelfWiredWarnsAndSkips(t *testing.T) {
 		Artifact: "ai-memory", Tool: "claude", Scope: "global",
 		SelfWired: true, PostInstall: []string{"docker run ..."},
 	}}
-	_, warns, err := Compute(items, readerFrom(map[string][]byte{}))
+	_, warns, err := computeForTest(items, readerFrom(map[string][]byte{}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(warns) != 1 {
 		t.Fatalf("want one self-wired warning, got %d: %+v", len(warns), warns)
+	}
+}
+
+// --- composition (pat-1cnz) --------------------------------------------------
+
+// The reproduction the ticket was filed on: two MCP recipes wired into ONE
+// config, removed in ONE command. Computed independently, each undo was correct
+// in isolation and wrong in sequence — the second write, built from the original
+// bytes, put back the server the first had just removed. The artifact the user
+// asked to remove SURVIVED the removal.
+func TestTwoContributorsOnOnePathCompose(t *testing.T) {
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
+
+	r, err := Compute(
+		[]state.Item{
+			mcpItem("graphify", path, "graphify", installed, nil, false),
+			mcpItem("serena", path, "serena", installed, nil, false),
+		},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writes := 0
+	for _, d := range r.ChangeSet.Diffs {
+		if d.Action == diff.Restore {
+			writes++
+			// Both are gone from the ONE composed buffer; the user's server stays.
+			assertServers(t, d.After, []string{"context7"}, []string{"graphify", "serena"})
+		}
+	}
+	if writes != 1 {
+		t.Fatalf("want ONE composed write, got %d: %+v", writes, r.ChangeSet.Diffs)
+	}
+	// Both contributors are credited, and the display carries the second one so
+	// the plan and the footer still report two logical removals.
+	assertLedger(t, r.Ledger, map[string]Outcome{"graphify": Applied, "serena": Applied})
+	if got := len(r.ChangeSet.Diffs[0].RestoreContrib); got != 1 {
+		t.Errorf("want one RestoreContrib for the second artifact, got %d", got)
+	}
+}
+
+// Removing one of N leaves the others alone — the single-contributor promise the
+// composition must not break.
+func TestOneOfSeveralContributorsLeavesSiblings(t *testing.T) {
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"context7":{"command":"c7"},"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
+
+	r, err := Compute(
+		[]state.Item{mcpItem("serena", path, "serena", installed, nil, false)},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertServers(t, r.ChangeSet.Diffs[0].After, []string{"context7", "graphify"}, []string{"serena"})
+}
+
+// Two hooks in one array are distinct list identities, so they commute and fold.
+func TestTwoHookContributorsCompose(t *testing.T) {
+	ft := manifest.FileTarget{File: "settings.json", Format: "json"}
+	const dotted = "hooks.PreToolUse"
+	const path = "/p/settings.json"
+
+	elemA := map[string]any{"patronusId": "A", "matcher": "Edit"}
+	elemB := map[string]any{"patronusId": "B", "matcher": "Write"}
+	withA, err := adapter.AppendSettingsList(nil, ft, dotted, "patronusId", elemA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed, err := adapter.AppendSettingsList(withA, ft, dotted, "patronusId", elemB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hookItem := func(artifact, id string, elem map[string]any) state.Item {
+		return state.Item{
+			Artifact: artifact, Tool: "claude", Scope: "global",
+			Files: []state.FileState{{
+				Path: path, Action: string(diff.Merge), Checksum: sum(installed),
+				Setting: &diff.SettingEdit{
+					Target:      diff.FileTargetRef{File: ft.File, Format: ft.Format},
+					Dotted:      dotted,
+					IdentityKey: "patronusId", Identity: id, Elem: elem,
+				},
+			}},
+		}
+	}
+
+	r, err := Compute(
+		[]state.Item{hookItem("tdd-guard", "A", elemA), hookItem("gitleaks", "B", elemB)},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restores := restoreDiffs(r.ChangeSet)
+	if len(restores) != 1 {
+		t.Fatalf("want one composed write, got %d", len(restores))
+	}
+	for _, gone := range []string{`"A"`, `"B"`} {
+		if bytes.Contains(restores[0].After, []byte(gone)) {
+			t.Errorf("element %s survived the composed removal:\n%s", gone, restores[0].After)
+		}
+	}
+}
+
+// Two edits at the SAME dotted key do not commute: no order-independent result
+// exists, and state carries no trustworthy chronology to break the tie. Both are
+// refused, and neither refusal is promotable — --force is consent to lose your
+// own edit, not another artifact's wiring.
+func TestOverlappingScalarEditsAreRefused(t *testing.T) {
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"serena":{"command":"uvx"}}}`)
+
+	r, err := Compute(
+		[]state.Item{
+			mcpItem("recipe-a", path, "serena", installed, nil, false),
+			mcpItem("recipe-b", path, "serena", installed, nil, false),
+		},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(restoreDiffs(r.ChangeSet)); got != 0 {
+		t.Fatalf("an ambiguous overlap must write nothing, got %d writes", got)
+	}
+	for _, d := range r.ChangeSet.Diffs {
+		if d.Action != diff.Skip {
+			t.Errorf("want SKIP, got %s", d.Action)
+		}
+		if d.Intended != "" {
+			t.Errorf("an ambiguous SKIP must not be promotable, got Intended=%s", d.Intended)
+		}
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"recipe-a": AmbiguousSkipped, "recipe-b": AmbiguousSkipped})
+	if len(r.Warnings) != 2 {
+		t.Errorf("want a warning per refused contributor, got %d", len(r.Warnings))
+	}
+}
+
+// An ancestor/descendant pair overlaps too: removing the parent key would take
+// the child with it.
+func TestAncestorDescendantEditsAreRefused(t *testing.T) {
+	const path = "/p/settings.json"
+	installed := []byte(`{"a":{"b":1}}`)
+	item := func(artifact, dotted string) state.Item {
+		return state.Item{
+			Artifact: artifact, Tool: "claude", Scope: "global",
+			Files: []state.FileState{{
+				Path: path, Action: string(diff.Merge), Checksum: sum(installed),
+				Setting: &diff.SettingEdit{
+					Target: diff.FileTargetRef{File: "settings.json", Format: "json"},
+					Dotted: dotted,
+				},
+			}},
+		}
+	}
+	r, err := Compute(
+		[]state.Item{item("parent", "a"), item("child", "a.b")},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"parent": AmbiguousSkipped, "child": AmbiguousSkipped})
+}
+
+// A sibling key under the same parent is NOT an overlap — "hooks.Pre" and
+// "hooks.PreToolUse" share a text prefix but not a path segment.
+func TestSiblingDottedKeysStillCompose(t *testing.T) {
+	const path = "/p/settings.json"
+	installed := []byte(`{"hooks":{"Pre":1,"PreToolUse":2}}`)
+	item := func(artifact, dotted string) state.Item {
+		return state.Item{
+			Artifact: artifact, Tool: "claude", Scope: "global",
+			Files: []state.FileState{{
+				Path: path, Action: string(diff.Merge), Checksum: sum(installed),
+				Setting: &diff.SettingEdit{
+					Target: diff.FileTargetRef{File: "settings.json", Format: "json"},
+					Dotted: dotted,
+				},
+			}},
+		}
+	}
+	r, err := Compute(
+		[]state.Item{item("one", "hooks.Pre"), item("two", "hooks.PreToolUse")},
+		readerFrom(map[string][]byte{path: installed}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"one": Applied, "two": Applied})
+}
+
+// An unparseable file refuses the WHOLE same-path group. A partial buffer written
+// over a file we could not read is worse than doing nothing.
+func TestUnparseableFileRefusesWholeGroup(t *testing.T) {
+	const path = "/p/.claude.json"
+	broken := []byte(`{"mcpServers": {`)
+
+	r, err := Compute(
+		[]state.Item{
+			mcpItem("graphify", path, "graphify", broken, nil, false),
+			mcpItem("serena", path, "serena", broken, nil, false),
+		},
+		readerFrom(map[string][]byte{path: broken}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(restoreDiffs(r.ChangeSet)); got != 0 {
+		t.Fatalf("an unparseable file must produce no write, got %d", got)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"graphify": UnreadableSkipped, "serena": UnreadableSkipped})
+}
+
+// --- the legacy (pre-compose) arm --------------------------------------------
+
+// legacyItem records a MERGE with NO SettingEdit: the pre-compose shape whose
+// only undo is a whole-file snapshot restore.
+func legacyItem(artifact, path string, prior, installed []byte) state.Item {
+	return state.Item{
+		Artifact: artifact, Tool: "claude", Scope: "global",
+		Files: []state.FileState{{
+			Path: path, Action: string(diff.Merge), Prior: prior, Checksum: sum(installed),
+		}},
+	}
+}
+
+func TestLegacySoleContributorStillRestores(t *testing.T) {
+	const path = "/p/.claude.json"
+	prior := []byte(`{}`)
+	installed := []byte(`{"mcpServers":{"x":{}}}`)
+
+	r, err := Compute(
+		[]state.Item{legacyItem("old", path, prior, installed)},
+		readerFrom(map[string][]byte{path: installed}),
+		Occupancy{path: {"old"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := r.ChangeSet.Diffs[0]
+	if d.Action != diff.Restore || !bytes.Equal(d.After, prior) {
+		t.Fatalf("sole contributor should still restore its snapshot, got %s / %q", d.Action, d.After)
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"old": Applied})
+}
+
+// The sole-contributor check must see UNSELECTED artifacts. Within the selection
+// "old" looks alone; the loaded state knows better, and restoring its snapshot
+// would silently un-wire the other artifact.
+func TestLegacyRefusedWhenAnUnselectedArtifactSharesThePath(t *testing.T) {
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"x":{}}}`)
+
+	r, err := Compute(
+		[]state.Item{legacyItem("old", path, []byte(`{}`), installed)},
+		readerFrom(map[string][]byte{path: installed}),
+		Occupancy{path: {"old", "still-installed"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := r.ChangeSet.Diffs[0]
+	if d.Action != diff.Skip {
+		t.Fatalf("a shared legacy path must be refused, got %s", d.Action)
+	}
+	if d.Intended != "" {
+		t.Error("the legacy refusal must not be promotable under --force")
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"old": UnsafeLegacySkipped})
+	if len(r.Warnings) != 1 || !strings.Contains(r.Warnings[0].Message, "still-installed") {
+		t.Errorf("want a warning naming the other contributor, got %+v", r.Warnings)
+	}
+}
+
+// A path carrying BOTH shapes: the modern composite is still written and the
+// legacy row is still refused. Neither blocks the other.
+func TestMixedModernAndLegacyOnOnePath(t *testing.T) {
+	const path = "/p/.claude.json"
+	installed := []byte(`{"mcpServers":{"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
+
+	r, err := Compute(
+		[]state.Item{
+			legacyItem("old", path, []byte(`{}`), installed),
+			mcpItem("serena", path, "serena", installed, nil, false),
+		},
+		readerFrom(map[string][]byte{path: installed}),
+		Occupancy{path: {"old", "serena"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restores := restoreDiffs(r.ChangeSet)
+	if len(restores) != 1 {
+		t.Fatalf("the modern removal must still be written, got %d writes", len(restores))
+	}
+	assertServers(t, restores[0].After, []string{"graphify"}, []string{"serena"})
+	assertLedger(t, r.Ledger, map[string]Outcome{"old": UnsafeLegacySkipped, "serena": Applied})
+}
+
+// --- helpers -----------------------------------------------------------------
+
+func restoreDiffs(cs *diff.ChangeSet) []diff.FileDiff {
+	var out []diff.FileDiff
+	for _, d := range cs.Diffs {
+		if d.Action == diff.Restore {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// assertLedger checks the outcome recorded for each named artifact. It asserts on
+// STRUCTURED codes, never on Note prose, which is user-facing copy and free to
+// change.
+func assertLedger(t *testing.T, l Ledger, want map[string]Outcome) {
+	t.Helper()
+	got := map[string]Outcome{}
+	for _, e := range l {
+		got[e.Artifact] = e.Outcome
+	}
+	for artifact, w := range want {
+		if got[artifact] != w {
+			t.Errorf("ledger[%s] = %q, want %q", artifact, got[artifact], w)
+		}
 	}
 }
