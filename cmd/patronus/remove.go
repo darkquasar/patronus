@@ -396,12 +396,18 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	// after removing three — under-reporting the change beneath a table that
 	// already shows a row per contributor. Install hit this same trap on its
 	// composed MERGE footer and resolved it the same way.
+	//
+	// Count from the settled-contribution view rather than the applier's own
+	// tally, which answers a different question: a file that was already gone
+	// needs no write and lands in Skipped, yet its removal is done, and reporting
+	// it as skipped would tell the user work remains when none does.
 	undoneCount, skippedCount := 0, 0
-	for _, d := range result.Applied {
-		undoneCount += 1 + len(d.RestoreContrib)
-	}
-	for _, d := range result.Skipped {
-		skippedCount += 1 + len(d.RestoreContrib)
+	for _, settled := range undone {
+		if settled {
+			undoneCount++
+			continue
+		}
+		skippedCount++
 	}
 	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", undoneCount, skippedCount)
 	return applyErr

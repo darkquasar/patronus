@@ -235,3 +235,66 @@ func TestPruneIsNeverRecursive(t *testing.T) {
 		t.Errorf("a file Patronus never wrote must survive the prune: %v", err)
 	}
 }
+
+// --- peer-review regressions -------------------------------------------------
+
+// A lexical containment check proves the RECORDED path sits under the root, but
+// os.Remove follows symlinked parents: a link inside the skill pointing into the
+// user's own tree would turn "prune our empty directory" into deleting an empty
+// directory somewhere else entirely.
+func TestPruneRefusesToFollowASymlinkOutOfTheTree(t *testing.T) {
+	root := t.TempDir()
+	outside := filepath.Join(root, "user-tree", "generated")
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := filepath.Join(root, "skills", "demo")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// assets/ inside the skill is a LINK into the user's own tree.
+	link := filepath.Join(dir, "assets")
+	if err := os.Symlink(filepath.Join(root, "user-tree"), link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	item := skillItem(dir, filepath.Join("assets", "generated", "file.txt"))
+	if _, err := Prune(item); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(outside); err != nil {
+		t.Errorf("a directory reached only through a symlink is not ours to delete: %v", err)
+	}
+	if _, err := os.Lstat(link); err != nil {
+		t.Errorf("the symlink itself must not be removed either: %v", err)
+	}
+}
+
+// A marker recorded DIRECTLY in a shared container means the state row is legacy,
+// hand-written, or malformed — not that Patronus owns the container. Deleting it
+// would take every other artifact's directory with it the moment it emptied.
+func TestPruneRefusesASharedContainerAsRoot(t *testing.T) {
+	for _, container := range []string{"skills", "agents", "commands"} {
+		t.Run(container, func(t *testing.T) {
+			root := t.TempDir()
+			shared := filepath.Join(root, ".claude", container)
+			if err := os.MkdirAll(shared, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			// The marker sits directly in the container, one level too high.
+			item := state.Item{
+				Artifact: "malformed", Tool: "claude", Scope: "global",
+				Files: []state.FileState{{Path: filepath.Join(shared, skillMarker), Action: string(diff.Create)}},
+			}
+
+			if _, err := Prune(item); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(shared); err != nil {
+				t.Errorf("the shared %s container must never be pruned: %v", container, err)
+			}
+		})
+	}
+}

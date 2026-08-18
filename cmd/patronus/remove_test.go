@@ -446,3 +446,21 @@ func TestRemoveSkillKeepsDirectoryWithUserFiles(t *testing.T) {
 		t.Errorf("the retention warning must name what is there:\n%s", errOut)
 	}
 }
+
+// The footer must count settled CONTRIBUTIONS, not the applier's classifications.
+// An already-absent file needs no write, so it lands in Skipped — but its removal
+// is done, and reporting it as skipped tells the user work remains when none does.
+func TestRemoveFooterCountsAlreadyGoneFilesAsUndone(t *testing.T) {
+	_, skillPath, _, _ := seedLocalInstall(t)
+	if err := os.Remove(skillPath); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, err := execRemove(t, "demo", "--local", "--deploy")
+	if err != nil {
+		t.Fatalf("remove --deploy failed: %v", err)
+	}
+	if !strings.Contains(out, "1 undone, 0 skipped") {
+		t.Errorf("an already-gone file is a completed removal, not a skip:\n%s", out)
+	}
+}

@@ -50,7 +50,21 @@ func Prune(item state.Item) ([]Warning, error) {
 
 	dirs := ancestorsWithin(item, root)
 	for _, dir := range dirs {
-		err := os.Remove(dir)
+		// A lexical containment check is not enough to make a delete safe. Rel()
+		// proves the RECORDED path sits under the root, but os.Remove follows
+		// symlinked parent components: if a directory inside the skill is a link
+		// into the user's own tree, "prune the empty directory under our root"
+		// silently becomes "delete an empty directory somewhere else entirely".
+		// Resolve against the real filesystem and refuse anything that leaves the
+		// tree, and never follow a link when removing.
+		real, ok, err := realPathWithin(root, dir)
+		if err != nil {
+			return nil, fmt.Errorf("remove: prune %s: %w", dir, err)
+		}
+		if !ok {
+			continue // a link out of the tree, or gone: not ours to remove
+		}
+		err = os.Remove(real)
 		switch {
 		case err == nil, errors.Is(err, os.ErrNotExist):
 			// Gone, or already gone: pruning what is not there is a no-op.
@@ -61,13 +75,52 @@ func Prune(item state.Item) ([]Warning, error) {
 			return []Warning{{
 				Item:    item.Artifact,
 				Path:    dir,
-				Message: "directory retained because it is not empty: " + strings.Join(entriesOf(dir), ", "),
+				Message: "directory retained because it is not empty: " + strings.Join(entriesOf(real), ", "),
 			}}, nil
 		default:
 			return nil, fmt.Errorf("remove: prune %s: %w", dir, err)
 		}
 	}
 	return nil, nil
+}
+
+// realPathWithin resolves dir through any symlinks and reports whether the REAL
+// directory still lies inside the real root — and whether it is a directory at
+// all rather than a link standing in for one. It answers false (not an error)
+// when the path is simply gone, which is the ordinary case for a tree that
+// already emptied.
+//
+// The lexical check in within() protects the recorded paths; this protects the
+// delete itself. Both are needed: one bounds what we plan, the other bounds what
+// the kernel actually acts on.
+func realPathWithin(root, dir string) (string, bool, error) {
+	if fi, err := os.Lstat(dir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, err
+	} else if fi.Mode()&os.ModeSymlink != 0 {
+		// A symlink is never a directory WE created, whatever it points at.
+		return "", false, nil
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	real, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	if !within(realRoot, real) {
+		return "", false, nil // a linked parent led out of the tree
+	}
+	return real, true, nil
 }
 
 // ownedRoot derives the directory this item owns from its RECORDED paths, and
@@ -104,6 +157,14 @@ func ownedRoot(item state.Item) (string, bool) {
 	for r := range roots {
 		root = r
 	}
+	if isSharedContainer(root) {
+		// The marker sits DIRECTLY in a container several artifacts share, so its
+		// parent is not a directory this item owns — every layout places a skill at
+		// <container>/<name>/SKILL.md, and a marker one level up means the state row
+		// is legacy, hand-written, or malformed. Deleting the container would take
+		// every other artifact's directory with it the moment it emptied.
+		return "", false
+	}
 
 	for _, f := range item.Files {
 		if !within(root, f.Path) {
@@ -111,6 +172,22 @@ func ownedRoot(item state.Item) (string, bool) {
 		}
 	}
 	return root, true
+}
+
+// sharedContainers are the directory names the adapter layouts use to HOLD
+// artifacts, as opposed to the per-artifact directory beneath them. A skill lives
+// at <container>/<name>/SKILL.md in every layout, so a root whose basename is one
+// of these is a container Patronus never owns exclusively.
+var sharedContainers = map[string]bool{
+	"skills":   true,
+	"agents":   true,
+	"commands": true,
+}
+
+// isSharedContainer reports whether root names a directory artifacts share rather
+// than one a single artifact owns.
+func isSharedContainer(root string) bool {
+	return sharedContainers[filepath.Base(root)]
 }
 
 // within reports whether path is at or below root, after cleaning, so a "../"
