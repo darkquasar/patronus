@@ -391,3 +391,58 @@ func TestRemoveKeepsRowOnDriftEvenWhenOtherFilesAreGone(t *testing.T) {
 	}
 	t.Error("a drift-skipped file leaves the removal incomplete; the row must stay so --force can finish it")
 }
+
+// The observed symptom: `remove <skill> --deploy` reported success and dropped the
+// state row, but ~/.claude/skills/<name>/ survived as an empty directory that
+// reads like an installed skill. Nothing in the tree pruned it, and with no state
+// row left, no drift pass could even see it.
+func TestRemoveSkillPrunesItsDirectory(t *testing.T) {
+	proj, skillPath, _, _ := seedLocalInstall(t)
+	skillDir := filepath.Dir(skillPath)
+
+	if _, _, err := execRemove(t, "demo", "--local", "--deploy"); err != nil {
+		t.Fatalf("remove --deploy failed: %v", err)
+	}
+
+	if _, err := os.Stat(skillDir); !os.IsNotExist(err) {
+		t.Errorf("the emptied skill directory must not survive the removal, stat err = %v", err)
+	}
+	// The shared skills/ parent is NOT the skill's to delete.
+	if _, err := os.Stat(filepath.Dir(skillDir)); err != nil {
+		t.Errorf("the shared skills/ parent must survive: %v", err)
+	}
+	s, err := state.Load(filepath.Join(proj, ".patronus", "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range s.Items {
+		if it.Artifact == "demo" {
+			t.Error("the row should still retire once the directory is pruned")
+		}
+	}
+}
+
+// A directory holding a file Patronus never wrote is RETAINED, its tracked files
+// are still deleted, and the user is told what is there.
+func TestRemoveSkillKeepsDirectoryWithUserFiles(t *testing.T) {
+	_, skillPath, _, _ := seedLocalInstall(t)
+	skillDir := filepath.Dir(skillPath)
+	userFile := filepath.Join(skillDir, "my-notes.md")
+	if err := os.WriteFile(userFile, []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, errOut, err := execRemove(t, "demo", "--local", "--deploy")
+	if err != nil {
+		t.Fatalf("a non-empty directory is a retention, never a failure: %v", err)
+	}
+	if _, err := os.Stat(skillPath); !os.IsNotExist(err) {
+		t.Error("the tracked file should still be deleted")
+	}
+	if _, err := os.Stat(userFile); err != nil {
+		t.Errorf("a file Patronus never wrote must survive: %v", err)
+	}
+	if !strings.Contains(errOut, "my-notes.md") {
+		t.Errorf("the retention warning must name what is there:\n%s", errOut)
+	}
+}

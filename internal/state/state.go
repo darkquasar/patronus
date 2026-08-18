@@ -32,8 +32,18 @@ type State struct {
 
 // Item is one installed artifact or recipe at one tool+scope.
 type Item struct {
-	Artifact    string      `json:"artifact"`
-	ItemVersion string      `json:"itemVersion,omitempty"` // the artifact's own version
+	Artifact    string `json:"artifact"`
+	ItemVersion string `json:"itemVersion,omitempty"` // the artifact's own version
+
+	// Type is the item's SHAPE (skill|agent|command|hook|instruction, or a
+	// recipe's computed Shape()). It is an ITEM-level property, which is why it
+	// lives here rather than on FileState. Remove needs it to tell a
+	// DIRECTORY-shaped artifact from a file-shaped one: a skill owns the
+	// directory holding its files and that directory must be pruned when it
+	// empties, while an agent merely sits inside a shared .claude/agents/ that
+	// must never be touched. Absent on rows written before this field existed.
+	Type string `json:"type,omitempty"`
+
 	Tool        string      `json:"tool"`
 	Scope       string      `json:"scope"`
 	InstalledAt string      `json:"installedAt,omitempty"` // RFC3339; supplied by caller (pkg stays clockless)
@@ -192,6 +202,11 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		// composed file) did not; record the first non-empty we see.
 		if it.ItemVersion == "" && d.Version != "" {
 			it.ItemVersion = d.Version
+		}
+		// Same first-non-empty-wins rule: a shared composed file's diff may carry
+		// no type where a later per-artifact diff does.
+		if it.Type == "" && d.Type != "" {
+			it.Type = d.Type
 		}
 		return it
 	}

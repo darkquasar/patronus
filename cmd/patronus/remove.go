@@ -354,11 +354,32 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 			fullyUndone = false
 			surfaceUninstallAdvisory(out, it)
 		}
-		if fullyUndone {
-			if s := loaded[it.Scope]; s != nil {
-				s.Remove(it.Artifact, it.Tool, it.Scope)
-				dirty[it.Scope] = true
+		if !fullyUndone {
+			continue
+		}
+		// Every tracked deletion for this item is settled, so a directory-shaped
+		// artifact's now-empty tree can be pruned. This is the only point that sees
+		// at once the full state.Item, which deletes actually landed, and whether
+		// the removal was complete — Compute runs before Apply and cannot know, and
+		// the applier is deliberately a per-diff writer with no artifact grouping.
+		//
+		// A prune failure that is NOT "directory not empty" keeps the state row:
+		// retiring it while an owned directory survives would make Patronus forget
+		// a directory it owns and failed to clean.
+		pruneWarnings, err := remove.Prune(it)
+		if err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
+			if applyErr == nil {
+				applyErr = err
 			}
+			continue
+		}
+		for _, w := range pruneWarnings {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s (%s): %s\n", w.Item, w.Path, w.Message)
+		}
+		if s := loaded[it.Scope]; s != nil {
+			s.Remove(it.Artifact, it.Tool, it.Scope)
+			dirty[it.Scope] = true
 		}
 	}
 
