@@ -801,3 +801,118 @@ func TestUnparseableLaterRowStillRefusesWholeGroup(t *testing.T) {
 	}
 	assertLedger(t, r.Ledger, map[string]Outcome{"serena": UnreadableSkipped, "mismatched": UnreadableSkipped})
 }
+
+// --- completion classification (pat-mc0r) ------------------------------------
+
+// An already-gone file means the deletion is DONE, not pending. Classifying it as
+// merely "skipped" left the state row open forever: re-running remove after a
+// partial cleanup never converged, and scan kept reporting the item installed
+// with no way to ever retire it.
+func TestAbsentTargetIsLogicallyComplete(t *testing.T) {
+	cases := []struct {
+		name  string
+		item  state.Item
+		files map[string][]byte
+		want  Outcome
+	}{{
+		name: "CREATE target already deleted",
+		item: state.Item{
+			Artifact: "s", Tool: "claude", Scope: "global",
+			Files: []state.FileState{{Path: "/c/SKILL.md", Action: "CREATE", Checksum: sum([]byte("x"))}},
+		},
+		files: map[string][]byte{},
+		want:  AlreadyAbsent,
+	}, {
+		name: "FETCH target already deleted",
+		item: state.Item{
+			Artifact: "bin", Tool: "claude", Scope: "global",
+			Files: []state.FileState{{Path: "/c/tool", Action: "FETCH", Checksum: sum([]byte("x"))}},
+		},
+		files: map[string][]byte{},
+		want:  AlreadyAbsent,
+	}, {
+		name: "settings file itself is gone",
+		item: state.Item{
+			Artifact: "serena", Tool: "claude", Scope: "global",
+			Files: []state.FileState{{
+				Path: "/p/.claude.json", Action: string(diff.Merge), Checksum: sum([]byte("x")),
+				Setting: &diff.SettingEdit{
+					Target: diff.FileTargetRef{File: ".claude.json", Format: "json"},
+					Dotted: "mcpServers.serena",
+				},
+			}},
+		},
+		files: map[string][]byte{},
+		want:  AlreadyAbsent,
+	}, {
+		name: "settings file present, our key already gone",
+		item: state.Item{
+			Artifact: "serena", Tool: "claude", Scope: "global",
+			Files: []state.FileState{{
+				Path: "/p/.claude.json", Action: string(diff.Merge), Checksum: sum([]byte("x")),
+				Setting: &diff.SettingEdit{
+					Target: diff.FileTargetRef{File: ".claude.json", Format: "json"},
+					Dotted: "mcpServers.serena",
+				},
+			}},
+		},
+		files: map[string][]byte{"/p/.claude.json": []byte(`{"mcpServers":{"other":{}}}`)},
+		want:  SettingAbsent,
+	}}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := Compute([]state.Item{tt.item}, readerFrom(tt.files), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := r.Ledger[0].Outcome; got != tt.want {
+				t.Fatalf("outcome = %q, want %q", got, tt.want)
+			}
+			if !r.Ledger[0].Outcome.Complete() {
+				t.Error("an already-satisfied removal must be COMPLETE, or the state row can never retire")
+			}
+		})
+	}
+}
+
+// The incomplete codes are the feature that lets a later --force (or a repair and
+// re-run) finish the job. Retiring the row on these would strand a file that is
+// still on disk.
+func TestUnfinishedRemovalsAreNotComplete(t *testing.T) {
+	for _, o := range []Outcome{DriftSkipped, UnreadableSkipped, UnsafeLegacySkipped, AmbiguousSkipped, UnknownAction} {
+		if o.Complete() {
+			t.Errorf("%q leaves work undone; it must NOT count as complete", o)
+		}
+	}
+}
+
+// A drift SKIP holds the row open even when the item's OTHER files are settled.
+// Partial completion is not completion.
+func TestMixedCompleteAndIncompleteFilesHoldTheRowOpen(t *testing.T) {
+	original := []byte("original")
+	item := state.Item{
+		Artifact: "s", Tool: "claude", Scope: "global",
+		Files: []state.FileState{
+			{Path: "/c/gone.md", Action: "CREATE", Checksum: sum(original)},   // already absent
+			{Path: "/c/edited.md", Action: "CREATE", Checksum: sum(original)}, // drifted
+		},
+	}
+	r, err := Compute(
+		[]state.Item{item},
+		readerFrom(map[string][]byte{"/c/edited.md": []byte("USER EDITED")}),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	complete := 0
+	for _, e := range r.Ledger {
+		if e.Outcome.Complete() {
+			complete++
+		}
+	}
+	if complete != 1 {
+		t.Fatalf("want exactly one settled file of two, got %d: %+v", complete, r.Ledger)
+	}
+}

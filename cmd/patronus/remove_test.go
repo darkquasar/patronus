@@ -341,3 +341,53 @@ func TestRemoveKeepsRowWhenOneOfSeveralEditsIsRefused(t *testing.T) {
 	}
 	t.Error("multi had an edit refused, so it is not fully removed — its state row must not retire")
 }
+
+// The convergence bug: a file that is ALREADY gone counted as "not done", so the
+// state row never retired. Re-running remove after a partial cleanup could never
+// finish, and scan kept reporting the item installed with no way to clean it up.
+func TestRemoveRetiresRowWhenFilesAreAlreadyGone(t *testing.T) {
+	proj, skillPath, instrPath, _ := seedLocalInstall(t)
+
+	// The user (or a half-finished earlier run) already deleted both targets.
+	for _, p := range []string{skillPath, instrPath} {
+		if err := os.Remove(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, _, err := execRemove(t, "demo", "demo-instr", "--local", "--deploy"); err != nil {
+		t.Fatalf("remove --deploy failed: %v", err)
+	}
+
+	s, err := state.Load(filepath.Join(proj, ".patronus", "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Items) != 0 {
+		t.Errorf("the files are gone, so the removal is done — the rows must retire, got %+v", s.Items)
+	}
+}
+
+// A drift skip is NOT an already-absent file: it still holds the row open, which
+// is what lets a later --force finish the job.
+func TestRemoveKeepsRowOnDriftEvenWhenOtherFilesAreGone(t *testing.T) {
+	proj, skillPath, _, _ := seedLocalInstall(t)
+	if err := os.WriteFile(skillPath, []byte("USER EDITED\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := execRemove(t, "demo", "--local", "--deploy"); err != nil {
+		t.Fatalf("remove --deploy failed: %v", err)
+	}
+
+	s, err := state.Load(filepath.Join(proj, ".patronus", "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range s.Items {
+		if it.Artifact == "demo" {
+			return // held open for --force, as it must be
+		}
+	}
+	t.Error("a drift-skipped file leaves the removal incomplete; the row must stay so --force can finish it")
+}
