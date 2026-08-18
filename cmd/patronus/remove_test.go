@@ -464,3 +464,41 @@ func TestRemoveFooterCountsAlreadyGoneFilesAsUndone(t *testing.T) {
 		t.Errorf("an already-gone file is a completed removal, not a skip:\n%s", out)
 	}
 }
+
+// A plugin's uninstall command is a real contribution with no recorded file
+// behind it, so it produces no ledger entry. Counting only ledger outcomes made
+// removing a file-less plugin report "0 undone" after doing the work.
+func TestRemoveFooterCountsPluginUninstallExecs(t *testing.T) {
+	proj := t.TempDir()
+	t.Chdir(proj)
+	t.Setenv("HOME", t.TempDir())
+
+	runner := &fakeRunner{}
+	prev := runnerForCommands
+	runnerForCommands = runner
+	t.Cleanup(func() { runnerForCommands = prev })
+
+	// A tracked plugin with NO files: its whole removal is the uninstall command.
+	item := state.Item{Artifact: "demo-plugin", Tool: "claude", Scope: "local"}
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{
+		Path: "plugin uninstall demo-plugin", Action: diff.Exec,
+		Artifact: "demo-plugin", Tool: "claude", Scope: "local",
+		Exec: &diff.ExecSpec{Command: []string{"claude", "plugin", "uninstall", "demo-plugin"}, Display: "claude plugin uninstall demo-plugin"},
+	}}}
+
+	cmd := newRemoveCmd("remove", nil)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&bytes.Buffer{})
+	loaded := map[string]*state.State{"local": {Version: state.Version, Items: []state.Item{item}}}
+
+	if err := runRemove(cmd, cs, nil, []state.Item{item}, loaded, removeStateOpts{home: t.TempDir(), projectDir: proj}); err != nil {
+		t.Fatalf("runRemove failed: %v", err)
+	}
+	if len(runner.ran) != 1 {
+		t.Fatalf("the uninstall command should have run, got %v", runner.ran)
+	}
+	if !strings.Contains(out.String(), "1 undone") {
+		t.Errorf("an uninstall command that ran is work done; the footer must say so:\n%s", out.String())
+	}
+}

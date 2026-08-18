@@ -56,7 +56,10 @@ func Prune(item state.Item) ([]Warning, error) {
 		// into the user's own tree, "prune the empty directory under our root"
 		// silently becomes "delete an empty directory somewhere else entirely".
 		// Resolve against the real filesystem and refuse anything that leaves the
-		// tree, and never follow a link when removing.
+		// tree, and never follow a link when removing. A window remains between
+		// resolving and removing, so this narrows the blast radius rather than
+		// closing it: rmdir is non-recursive, so the worst a lost race can do is
+		// unlink one empty directory.
 		real, ok, err := realPathWithin(root, dir)
 		if err != nil {
 			return nil, fmt.Errorf("remove: prune %s: %w", dir, err)
@@ -157,12 +160,17 @@ func ownedRoot(item state.Item) (string, bool) {
 	for r := range roots {
 		root = r
 	}
-	if isSharedContainer(root) {
-		// The marker sits DIRECTLY in a container several artifacts share, so its
-		// parent is not a directory this item owns — every layout places a skill at
-		// <container>/<name>/SKILL.md, and a marker one level up means the state row
-		// is legacy, hand-written, or malformed. Deleting the container would take
-		// every other artifact's directory with it the moment it emptied.
+	if filepath.Base(filepath.Dir(root)) != skillsContainer {
+		// Every skill layout in every adapter places the artifact at
+		// <...>/skills/<name>/SKILL.md, so the owned root's PARENT is always the
+		// skills container. A marker recorded one level up (.../skills/SKILL.md)
+		// would name the container itself as the root, and pruning it would take
+		// every other skill's directory with it the moment it emptied.
+		//
+		// Testing the parent rather than the root is what makes this exact: a skill
+		// legitimately NAMED "skills" lives at .../skills/skills/SKILL.md and still
+		// prunes, where a check on the root's own basename would refuse it and
+		// leave the empty directory this whole fix exists to remove.
 		return "", false
 	}
 
@@ -174,21 +182,12 @@ func ownedRoot(item state.Item) (string, bool) {
 	return root, true
 }
 
-// sharedContainers are the directory names the adapter layouts use to HOLD
-// artifacts, as opposed to the per-artifact directory beneath them. A skill lives
-// at <container>/<name>/SKILL.md in every layout, so a root whose basename is one
-// of these is a container Patronus never owns exclusively.
-var sharedContainers = map[string]bool{
-	"skills":   true,
-	"agents":   true,
-	"commands": true,
-}
-
-// isSharedContainer reports whether root names a directory artifacts share rather
-// than one a single artifact owns.
-func isSharedContainer(root string) bool {
-	return sharedContainers[filepath.Base(root)]
-}
+// skillsContainer is the directory every adapter layout places skills in, one
+// level above the artifact's own directory. It is the same in all of them
+// (~/.claude/skills, ~/.codex/skills, ~/.config/opencode/skills, .agents/skills),
+// which is what makes "the owned root's parent is named this" a precise ownership
+// test rather than a guess.
+const skillsContainer = "skills"
 
 // within reports whether path is at or below root, after cleaning, so a "../"
 // segment cannot smuggle a file outside the tree past the check.

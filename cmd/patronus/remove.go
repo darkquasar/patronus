@@ -290,6 +290,7 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 
 	app := &install.Applier{}
 	result, applyErr := app.Apply(cs)
+	var ranExecs []diff.FileDiff
 
 	// Run plugin uninstall EXECs (the applier skips EXEC diffs — it stays a pure
 	// file writer). Only after the file reverts succeed, mirroring runDeploy. An
@@ -303,7 +304,9 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 		// remove never installs packages: a no-install consent (yes, not allow) keeps
 		// every package-install advisory surface-only.
 		consent := installConsent{yes: true, look: exec.LookPath, out: cmd.OutOrStdout()}
-		if _, execErr := runExecs(cmd, cs, runner, consent); execErr != nil {
+		var execErr error
+		ranExecs, execErr = runExecs(cmd, cs, runner, consent)
+		if execErr != nil {
 			applyErr = execErr
 		}
 	}
@@ -409,6 +412,10 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 		}
 		skippedCount++
 	}
+	// A plugin's uninstall command is a real contribution with no recorded file
+	// behind it, so it has no ledger entry. Count what actually ran, or removing a
+	// file-less plugin would report "0 undone" after doing the work.
+	undoneCount += len(ranExecs)
 	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", undoneCount, skippedCount)
 	return applyErr
 }

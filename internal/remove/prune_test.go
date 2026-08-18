@@ -10,6 +10,12 @@ import (
 	"github.com/darkquasar/patronus/internal/state"
 )
 
+// skillDir returns the real on-disk layout every adapter uses for a skill:
+// <root>/skills/<name>, whose parent is the shared skills container.
+func skillDir(root, name string) string {
+	return filepath.Join(root, "skills", name)
+}
+
 // skillItem records a directory-shaped artifact rooted at dir, with SKILL.md plus
 // any extra relative paths.
 func skillItem(dir string, extra ...string) state.Item {
@@ -33,7 +39,7 @@ func write(t *testing.T, path string) {
 
 func TestPruneRemovesEmptiedSkillDirectory(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "skills", "writing-style")
+	dir := skillDir(root, "writing-style")
 	item := skillItem(dir)
 	// The applier has already deleted the files; only the directory is left.
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -58,7 +64,7 @@ func TestPruneRemovesEmptiedSkillDirectory(t *testing.T) {
 
 func TestPruneKeepsDirectoryHoldingUnrecordedFiles(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "writing-style")
+	dir := skillDir(root, "writing-style")
 	item := skillItem(dir)
 	write(t, filepath.Join(dir, "notes.md")) // the user's own file
 
@@ -85,7 +91,7 @@ func TestPruneKeepsDirectoryHoldingUnrecordedFiles(t *testing.T) {
 
 func TestPruneNestedDirectoriesDeepestFirst(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "deep-skill")
+	dir := skillDir(root, "deep-skill")
 	item := skillItem(dir, filepath.Join("references", "inner", "note.md"))
 	// Files already deleted; the nested tree remains.
 	if err := os.MkdirAll(filepath.Join(dir, "references", "inner"), 0o755); err != nil {
@@ -123,8 +129,8 @@ func TestPruneNeverTouchesFileShapedArtifacts(t *testing.T) {
 
 func TestPruneLeavesTheOtherSkillAlone(t *testing.T) {
 	root := t.TempDir()
-	mine := filepath.Join(root, "mine")
-	theirs := filepath.Join(root, "theirs")
+	mine := skillDir(root, "mine")
+	theirs := skillDir(root, "theirs")
 	if err := os.MkdirAll(mine, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +146,7 @@ func TestPruneLeavesTheOtherSkillAlone(t *testing.T) {
 
 func TestPruneIsIdempotent(t *testing.T) {
 	root := t.TempDir()
-	item := skillItem(filepath.Join(root, "already-gone"))
+	item := skillItem(skillDir(root, "already-gone"))
 	// The directory never existed / was already cleaned by hand.
 	warns, err := Prune(item)
 	if err != nil {
@@ -155,7 +161,7 @@ func TestPruneIsIdempotent(t *testing.T) {
 // but only when the layout is unambiguous.
 func TestPruneLegacyRowWithoutType(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "legacy")
+	dir := skillDir(root, "legacy")
 	item := skillItem(dir)
 	item.Type = ""
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -175,20 +181,20 @@ func TestPruneRefusesAmbiguousLayouts(t *testing.T) {
 
 	noMarker := state.Item{
 		Artifact: "no-marker", Tool: "claude", Scope: "global",
-		Files: []state.FileState{{Path: filepath.Join(root, "a", "README.md"), Action: string(diff.Create)}},
+		Files: []state.FileState{{Path: filepath.Join(root, "skills", "a", "README.md"), Action: string(diff.Create)}},
 	}
 	twoMarkers := state.Item{
 		Artifact: "two-roots", Tool: "claude", Scope: "global",
 		Files: []state.FileState{
-			{Path: filepath.Join(root, "b", skillMarker), Action: string(diff.Create)},
-			{Path: filepath.Join(root, "c", skillMarker), Action: string(diff.Create)},
+			{Path: filepath.Join(root, "skills", "b", skillMarker), Action: string(diff.Create)},
+			{Path: filepath.Join(root, "skills", "c", skillMarker), Action: string(diff.Create)},
 		},
 	}
 	escapes := state.Item{
 		Artifact: "escapee", Tool: "claude", Scope: "global",
 		Files: []state.FileState{
-			{Path: filepath.Join(root, "d", skillMarker), Action: string(diff.Create)},
-			{Path: filepath.Join(root, "elsewhere", "stray.md"), Action: string(diff.Create)},
+			{Path: filepath.Join(root, "skills", "d", skillMarker), Action: string(diff.Create)},
+			{Path: filepath.Join(root, "skills", "elsewhere", "stray.md"), Action: string(diff.Create)},
 		},
 	}
 
@@ -197,9 +203,9 @@ func TestPruneRefusesAmbiguousLayouts(t *testing.T) {
 		item state.Item
 		dirs []string
 	}{
-		{"no SKILL.md marker", noMarker, []string{"a"}},
-		{"more than one plausible root", twoMarkers, []string{"b", "c"}},
-		{"a file outside the inferred root", escapes, []string{"d", "elsewhere"}},
+		{"no SKILL.md marker", noMarker, []string{"skills/a"}},
+		{"more than one plausible root", twoMarkers, []string{"skills/b", "skills/c"}},
+		{"a file outside the inferred root", escapes, []string{"skills/d", "skills/elsewhere"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, d := range tt.dirs {
@@ -223,7 +229,7 @@ func TestPruneRefusesAmbiguousLayouts(t *testing.T) {
 // survives with everything in it.
 func TestPruneIsNeverRecursive(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "skill")
+	dir := skillDir(root, "skill")
 	item := skillItem(dir)
 	nested := filepath.Join(dir, "user-stuff", "keep.md")
 	write(t, nested)
@@ -249,7 +255,7 @@ func TestPruneRefusesToFollowASymlinkOutOfTheTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dir := filepath.Join(root, "skills", "demo")
+	dir := skillDir(root, "demo")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -296,5 +302,29 @@ func TestPruneRefusesASharedContainerAsRoot(t *testing.T) {
 				t.Errorf("the shared %s container must never be pruned: %v", container, err)
 			}
 		})
+	}
+}
+
+// The ownership test is on the root's PARENT, not the root's own name, which is
+// what keeps it exact. A skill legitimately named "skills" installs at
+// .../skills/skills/SKILL.md and must prune like any other; a check on the root's
+// basename would refuse it and leave behind the empty directory this whole fix
+// exists to remove.
+func TestPruneHandlesASkillNamedLikeItsContainer(t *testing.T) {
+	root := t.TempDir()
+	dir := skillDir(root, "skills")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Prune(skillItem(dir)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("a skill named %q owns its directory like any other: %v", "skills", err)
+	}
+	// And the container above it is still untouched.
+	if _, err := os.Stat(filepath.Join(root, "skills")); err != nil {
+		t.Errorf("the shared skills container must survive: %v", err)
 	}
 }
