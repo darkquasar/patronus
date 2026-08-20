@@ -16,7 +16,9 @@ description: >
   protects the author's voice (gated on stakes), tier-3 works on meaning and movement (gated on
   stakes, and the only pass that may restructure). Do NOT use it to change code logic, to lint code
   style, or as a general writing-from-scratch generator; it governs how prose reads, not what it
-  says.
+  says. On a long draft it cuts sections and fans the tiers out one subagent per section, merging
+  and running tier-3 whole-document; supply trail-root to get sections and span-anchored edit
+  records as files.
 ---
 
 # Writing editorial

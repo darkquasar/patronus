@@ -3,6 +3,22 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## Unreleased
+
+### writing-editorial 2.2.0
+
+Long drafts can now be cut into sections and edited in parallel. Tiers 0 through 2 fan out one
+subagent per section; the merge pass reconciles the contrast ledger, applies the four tier-2 rules
+whose evidence is the whole piece, and normalises terminology across sections; tier-3 runs once over
+the merged document.
+
+Supply `trail-root` and the run emits section files, span-anchored edit records
+(`editorial-edit-record/v1`) and section lineage (`section-lineage/v1`). With no `trail-root`, the
+skill behaves exactly as before and writes nothing.
+
+Per-section fan-out is dispatch option 3, and it is the default only when `trail-root` is supplied,
+so a direct caller's cost is unchanged.
+
 ## v2.3.0
 
 The binary release carries the `remove` fixes below. The catalog content in this entry
