@@ -67,6 +67,10 @@ never had. tier-3 is the one pass allowed to reorder, add a concession, or repai
 
 Worked cases for the mirrored-swap rule ship beside it, in `{skillDir}/tier-1-fixtures.md`.
 
+Two further references govern how the tiers are applied to a long draft, rather than what they
+judge: `{skillDir}/sectioning.md` (cutting, fan-out, merge, tier-3 projection) and
+`{skillDir}/edit-record.md` (the two schemas a caller joins on). Neither changes a tier's verdict.
+
 ## When each tier applies
 
 **tier-0** is ungated. Every piece of prose with a reader, at any length, in any register.
@@ -100,6 +104,7 @@ Four tiers to apply. How do you want them run?
 
   [1] One subagent, all four tiers in sequence     cheaper, one context
   [2] A fresh subagent per tier                    higher fidelity, ~4x tokens
+  [3] Per-section fan-out, then whole-document     highest fidelity, ~N x tokens
 
   Recommended: [2] for anything published or high-stakes.
 ```
@@ -110,6 +115,14 @@ re-reads the draft.
 
 Recommend per-tier when the prose has real stakes (a published post, a PR description, a design doc),
 and single-agent for quick passes. The skill recommends; the user decides.
+
+**Option 3 is the default only when the caller supplies `trail-root`.** A user invoking this skill
+directly gets option 2's recommendation and today's cost unless they choose otherwise. Be honest
+about the multiplier when recommending it: a ten-section essay is ten subagents for tiers 0 to 2, on
+top of whatever per-tier isolation was picked.
+
+Option 3 is governed by `{skillDir}/sectioning.md`, which owns the cut, the fan-out, the merge and
+the tier-3 projection.
 
 When run per-tier, each subagent receives the draft as it stands, its own tier file, and the state
 earlier tiers emitted: the **contrast ledger** from tier-1 and, for tier-3, the **PRESERVE list**
@@ -149,6 +162,16 @@ CONTRAST-LEDGER: (from tier-1; what is retained, what remains)
 ```
 
 Lead with the edits that matter most, and skip preamble.
+
+## trail-root: an optional caller-supplied path
+
+**This skill writes no files unless the caller supplies `trail-root`.** With none, both modes behave
+exactly as above: review mode returns targeted edits, compose mode returns an edited draft, and
+nothing appears on disk.
+
+With `trail-root` supplied, the section artifacts described in `{skillDir}/sectioning.md` are written
+under it. The caller owns that path. **Never** invent one, resolve one from the repository, or ask
+the user where a trail should live: that decision belongs to the calling skill.
 
 ## Adding rules
 
