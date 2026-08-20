@@ -10,7 +10,7 @@ unchanged: what changes is how many agents apply them, and at what altitude.
  sectioning            main agent, one pass: cut on headings, assign stable ids
    |
    v  section[i]
- [ s01 ][ s02 ][ sNN ] tiers 0-2, one subagent per section, in parallel
+ [ s00 ][ s01 ][ sNN ] tiers 0-2, one subagent per section, in parallel
    |
    v  edited section[i] + edit record[i]
  merge                 main agent: concatenate in id order, whole-document tier-2,
@@ -49,6 +49,10 @@ paragraph boundaries would produce subagents reasoning about fragments.
 **Spans.** At cut time, split each section into paragraph-level spans, numbered in document
 order, giving span ids of the form `<section-id>/pNN`. Every edit anchors to one. The schema
 and the resolution rules are in `{skillDir}/edit-record.md`.
+
+**The source snapshot.** The main agent takes each section's pre-tier text as its `source_rev`
+snapshot at cut time, before any subagent runs, and every offset in that section's record resolves
+against it. Under `trail-root` the snapshot is written to `sections/NN-slug.source.md`.
 
 ## Fan-out: tiers 0, 1 and 2
 

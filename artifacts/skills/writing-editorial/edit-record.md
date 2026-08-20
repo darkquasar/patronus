@@ -45,10 +45,16 @@ preserve:
     binding: advisory
 
 decisions:
-  - term: "workstation"
+  - kind: term                        # term | heading-case | spelling
+    subject: "workstation"
     chose: "workstation"
     over: ["machine", "box"]
     reason: "the draft's own dominant term"
+  - kind: heading-case
+    subject: "section headings"
+    chose: "sentence case"
+    over: ["title case"]
+    reason: "the draft's first two headings set it"
 ```
 
 ### decisions
@@ -56,6 +62,8 @@ decisions:
 A subagent holding one section decides terminology, heading case and spelling for that section
 alone. `decisions` records each choice the shared decision sheet did not already cover, so the
 merge pass can read them, resolve conflicts across sections and normalise the merged document.
+`kind` says which of the three a choice is, and `subject` names what it applies to: a word for a
+`term`, a convention for `heading-case` and `spelling`.
 **A choice made silently is a choice the merge cannot reconcile**, which is how independently
 edited sections drift into reading as several authors.
 
@@ -114,7 +122,8 @@ cannot locate every edit in the file.
 
 Two fields resolve this, and both are required on every edit:
 
-- **`occurrence` is the primary locator, and it survives earlier edits.** "The second `genuinely`
+- **`occurrence` is the primary locator, and it survives earlier edits against other text in the
+  span.** "The second `genuinely`
   in this span" stays true whether or not tier-0 removed a phrase ahead of it. A consumer resolves
   by scanning the span for the nth match of `removed`, and uses `offset` only to disambiguate.
 - **`offset_rev` names the text the offset was measured against**: `source` for the pre-tier
@@ -203,6 +212,11 @@ sections:
 `op` takes one of five values: `origin`, `moved`, `merged`, `split` and `cut`. The editorial
 stage writes only `origin` and `moved`; a downstream voice stage writes the rest, and both
 write this schema.
+
+**`op` classifies the section, not the text inside it.** Text tier-3 cut from within a section is
+carried by that section's `edits:`, and text tier-3 added is carried by `new_spans:`. Neither mints
+an `op`: `cut` means the whole section ceased to exist, and `merged` and `split` reshape section
+boundaries.
 
 ### Spans tier-3 created
 

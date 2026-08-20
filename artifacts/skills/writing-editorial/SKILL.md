@@ -119,7 +119,9 @@ Recommend per-tier when the prose has real stakes (a published post, a PR descri
 and single-agent for quick passes. The skill recommends; the user decides.
 
 **Option 3 is the default only when the caller supplies `trail-root`.** A user invoking this skill
-directly gets option 2's recommendation and today's cost unless they choose otherwise. Be honest
+directly gets option 2's recommendation and today's cost unless they choose otherwise. **This choice
+governs compose mode too.** A compose invocation does not ask the question, so it takes option 3 when
+`trail-root` is supplied and runs whole-document otherwise. Be honest
 about the multiplier when recommending it: a ten-section essay is ten subagents for tiers 0 to 2, on
 top of whatever per-tier isolation was picked.
 
@@ -161,6 +163,16 @@ Report format:
 EDITS:           rule id -> quoted span -> suggested fix
 PRESERVE:        (from tier-2; carried forward, or "(none)")
 CONTRAST-LEDGER: (from tier-1; what is retained, what remains)
+```
+
+Under option 3, the merge pass edits text the per-section agents had already settled, so it adds a
+fourth block. **Report it whether or not `trail-root` is supplied**: without it this is the only
+account the caller gets of what the merge changed.
+
+```
+MERGE:           which section keeps the ledger allowance, and how many surplus
+                 instances were rewritten positive; which whole-document tier-2
+                 rules fired; how many consistency conflicts were resolved
 ```
 
 Lead with the edits that matter most, and skip preamble.
