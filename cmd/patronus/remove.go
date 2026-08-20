@@ -121,10 +121,21 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				return b, true, nil
 			}
 
-			cs, warnings, err := remove.Compute(selected, read)
+			// The sole-contributor gate on pre-compose MERGE rows must see EVERY
+			// recorded contributor, not just the selected ones and not just the
+			// scopes this command touches: an artifact still wired into a shared
+			// config is exactly the sibling a wholesale restore would destroy, and
+			// a --global remove would otherwise be blind to a local record naming
+			// the same absolute path.
+			occupancy, err := fullOccupancy(home, wd, loaded)
 			if err != nil {
 				return err
 			}
+			computed, err := remove.Compute(selected, read, occupancy)
+			if err != nil {
+				return err
+			}
+			cs, warnings, ledger := computed.ChangeSet, computed.Warnings, computed.Ledger
 
 			// Symmetric plugin teardown: for any selected item that is a tracked
 			// plugin, append the tool's uninstall EXEC(s) (advisory when its CLI is
@@ -135,7 +146,8 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			}
 
 			if force {
-				remove.Promote(cs)
+				computed = remove.Promote(computed)
+				cs, ledger = computed.ChangeSet, computed.Ledger
 			}
 			for _, w := range warnings {
 				if w.Path != "" {
@@ -157,7 +169,7 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runRemove(cmd, cs, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
+			return runRemove(cmd, cs, ledger, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
 		},
 	}
 
@@ -201,6 +213,65 @@ func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, war
 	return out
 }
 
+// fullOccupancy builds the contributor index from BOTH scopes' state files,
+// reusing whatever this command already loaded and reading the rest. A scope
+// filter narrows what gets REMOVED; it must not narrow what the safety gate can
+// see, or a --global remove would restore a snapshot over a local record's
+// wiring simply because it never looked.
+func fullOccupancy(home, projectDir string, loaded map[string]*state.State) (remove.Occupancy, error) {
+	states := make([]*state.State, 0, 2)
+	for _, scope := range []string{"global", "local"} {
+		if s, ok := loaded[scope]; ok {
+			states = append(states, s)
+			continue
+		}
+		s, err := state.Load(removeStatePath(scope, home, projectDir))
+		if err != nil {
+			return nil, fmt.Errorf("load %s state: %w", scope, err)
+		}
+		states = append(states, s)
+	}
+	return occupancyOf(states), nil
+}
+
+// occupancyOf indexes every recorded MERGE row across the given states by path,
+// listing the contributors wired into each. remove.Compute uses it to tell a
+// config file this record owns alone from one it shares, which is what makes a
+// pre-compose whole-file restore safe or unsafe.
+//
+// Recorded paths are absolute, so a row from any scope's state file counts:
+// what the gate protects is the FILE, and a contributor recorded in the scope
+// this command did not load is exactly the one the user cannot see coming.
+func occupancyOf(states []*state.State) remove.Occupancy {
+	occ := remove.Occupancy{}
+	seen := map[remove.Contributor]map[string]bool{}
+	for _, s := range states {
+		if s == nil {
+			continue
+		}
+		for _, it := range s.Items {
+			// State identity is (artifact, tool, scope): the same artifact installed
+			// for two tools is two independent records, and one must not vouch for
+			// the other's contribution to a shared file.
+			c := remove.Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
+			for _, f := range it.Files {
+				if f.Action != string(diff.Merge) {
+					continue
+				}
+				if seen[c] == nil {
+					seen[c] = map[string]bool{}
+				}
+				if seen[c][f.Path] {
+					continue // one record may hold several edits to one file
+				}
+				seen[c][f.Path] = true
+				occ[f.Path] = append(occ[f.Path], c)
+			}
+		}
+	}
+	return occ
+}
+
 // removeStateOpts carries what runRemove needs to rewrite state after an undo.
 type removeStateOpts struct {
 	home       string
@@ -214,11 +285,12 @@ type removeStateOpts struct {
 // the new reality. An item is dropped from state only when every one of its files
 // was actually undone (not skipped as drift); a partially-skipped item stays so a
 // later --force can finish it.
-func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
+func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
 	out := cmd.OutOrStdout()
 
 	app := &install.Applier{}
 	result, applyErr := app.Apply(cs)
+	var ranExecs []diff.FileDiff
 
 	// Run plugin uninstall EXECs (the applier skips EXEC diffs — it stays a pure
 	// file writer). Only after the file reverts succeed, mirroring runDeploy. An
@@ -232,24 +304,47 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 		// remove never installs packages: a no-install consent (yes, not allow) keeps
 		// every package-install advisory surface-only.
 		consent := installConsent{yes: true, look: exec.LookPath, out: cmd.OutOrStdout()}
-		if _, execErr := runExecs(cmd, cs, runner, consent); execErr != nil {
+		var execErr error
+		ranExecs, execErr = runExecs(cmd, cs, runner, consent)
+		if execErr != nil {
 			applyErr = execErr
 		}
 	}
 
-	// Determine which (artifact,tool,scope) items were fully undone: every recorded
-	// file for that item must appear in result.Applied (not skipped). We key applied
-	// paths by the same identity the diffs carry.
-	appliedPaths := map[string]bool{}
+	// Determine which (artifact,tool,scope) items were fully undone. Completion is
+	// keyed by ARTIFACT IDENTITY, not by path: composition folds several artifacts'
+	// contributions into one physical write, so a landed path no longer identifies
+	// who was undone. The ledger answers that per contributor; the applier's
+	// Applied set confirms the write it predicted actually happened.
+	writtenPaths := map[string]bool{}
 	for _, d := range result.Applied {
-		appliedPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
+		writtenPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
+	}
+	// One artifact can record SEVERAL edits on one path — an OpenCode gate whose
+	// matcher maps to more than one permission key is the standing case — so the
+	// identity tuple is not unique per ledger row. Accumulate with AND: every
+	// outcome on the tuple must be settled, or the row stays open. Overwriting
+	// instead would let one landed edit vouch for a refused sibling, retiring an
+	// artifact whose wiring is still on disk.
+	undone := map[string]bool{} // artifact+tool+scope+path -> EVERY contribution there is settled
+	for _, e := range ledger {
+		k := e.Artifact + "\x00" + e.Tool + "\x00" + e.Scope + "\x00" + e.Path
+		settled := e.Outcome.Complete()
+		if e.Outcome == remove.Applied {
+			// Predicted to be written; credit it only if the write actually landed.
+			settled = writtenPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
+		}
+		if prev, seen := undone[k]; seen {
+			settled = settled && prev
+		}
+		undone[k] = settled
 	}
 
 	dirty := map[string]bool{} // scopes whose state file changed
 	for _, it := range selected {
 		fullyUndone := true
 		for _, f := range it.Files {
-			if !appliedPaths[it.Tool+"\x00"+it.Scope+"\x00"+f.Path] {
+			if !undone[it.Artifact+"\x00"+it.Tool+"\x00"+it.Scope+"\x00"+f.Path] {
 				fullyUndone = false
 				break
 			}
@@ -262,11 +357,32 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 			fullyUndone = false
 			surfaceUninstallAdvisory(out, it)
 		}
-		if fullyUndone {
-			if s := loaded[it.Scope]; s != nil {
-				s.Remove(it.Artifact, it.Tool, it.Scope)
-				dirty[it.Scope] = true
+		if !fullyUndone {
+			continue
+		}
+		// Every tracked deletion for this item is settled, so a directory-shaped
+		// artifact's now-empty tree can be pruned. This is the only point that sees
+		// at once the full state.Item, which deletes actually landed, and whether
+		// the removal was complete — Compute runs before Apply and cannot know, and
+		// the applier is deliberately a per-diff writer with no artifact grouping.
+		//
+		// A prune failure that is NOT "directory not empty" keeps the state row:
+		// retiring it while an owned directory survives would make Patronus forget
+		// a directory it owns and failed to clean.
+		pruneWarnings, err := remove.Prune(it)
+		if err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
+			if applyErr == nil {
+				applyErr = err
 			}
+			continue
+		}
+		for _, w := range pruneWarnings {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s (%s): %s\n", w.Item, w.Path, w.Message)
+		}
+		if s := loaded[it.Scope]; s != nil {
+			s.Remove(it.Artifact, it.Tool, it.Scope)
+			dirty[it.Scope] = true
 		}
 	}
 
@@ -278,7 +394,29 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, selected []state.Item, lo
 		}
 	}
 
-	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", len(result.Applied), len(result.Skipped))
+	// Report LOGICAL contributions, not physical writes. Several artifacts can be
+	// reversed by one composed write, and counting the writes would say "1 undone"
+	// after removing three — under-reporting the change beneath a table that
+	// already shows a row per contributor. Install hit this same trap on its
+	// composed MERGE footer and resolved it the same way.
+	//
+	// Count from the settled-contribution view rather than the applier's own
+	// tally, which answers a different question: a file that was already gone
+	// needs no write and lands in Skipped, yet its removal is done, and reporting
+	// it as skipped would tell the user work remains when none does.
+	undoneCount, skippedCount := 0, 0
+	for _, settled := range undone {
+		if settled {
+			undoneCount++
+			continue
+		}
+		skippedCount++
+	}
+	// A plugin's uninstall command is a real contribution with no recorded file
+	// behind it, so it has no ledger entry. Count what actually ran, or removing a
+	// file-less plugin would report "0 undone" after doing the work.
+	undoneCount += len(ranExecs)
+	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", undoneCount, skippedCount)
 	return applyErr
 }
 

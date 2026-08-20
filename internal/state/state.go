@@ -32,8 +32,18 @@ type State struct {
 
 // Item is one installed artifact or recipe at one tool+scope.
 type Item struct {
-	Artifact    string      `json:"artifact"`
-	ItemVersion string      `json:"itemVersion,omitempty"` // the artifact's own version
+	Artifact    string `json:"artifact"`
+	ItemVersion string `json:"itemVersion,omitempty"` // the artifact's own version
+
+	// Type is the item's SHAPE (skill|agent|command|hook|instruction, or a
+	// recipe's computed Shape()). It is an ITEM-level property, which is why it
+	// lives here rather than on FileState. Remove needs it to tell a
+	// DIRECTORY-shaped artifact from a file-shaped one: a skill owns the
+	// directory holding its files and that directory must be pruned when it
+	// empties, while an agent merely sits inside a shared .claude/agents/ that
+	// must never be touched. Absent on rows written before this field existed.
+	Type string `json:"type,omitempty"`
+
 	Tool        string      `json:"tool"`
 	Scope       string      `json:"scope"`
 	InstalledAt string      `json:"installedAt,omitempty"` // RFC3339; supplied by caller (pkg stays clockless)
@@ -64,10 +74,14 @@ type FileState struct {
 	Section string `json:"section,omitempty"`
 	Prior   []byte `json:"prior,omitempty"`
 
-	// Setting is the list-append intent for a hook MERGE (settings.json element),
-	// so revert strips exactly this array element without disturbing sibling
-	// hooks. When set, remove uses the targeted Setting path instead of the
-	// wholesale Prior restore that a scalar MERGE (MCP) uses.
+	// Setting is the structural edit intent for a MERGE, in either of its two
+	// forms: a list-append (a hook element, keyed by identity) or a scalar set (an
+	// MCP server block, a toggle, a permission gate, keyed by its dotted path with
+	// its own per-key prior). Every MERGE producer in the tree records one, so
+	// removal is surgical and sibling edits survive. The wholesale Prior restore
+	// below is the PRE-COMPOSE path: it applies only to rows written before
+	// SettingEdits existed, and remove refuses it outright when anyone else is
+	// wired into the same file.
 	Setting *diff.SettingEdit `json:"setting,omitempty"`
 }
 
@@ -188,6 +202,11 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		// composed file) did not; record the first non-empty we see.
 		if it.ItemVersion == "" && d.Version != "" {
 			it.ItemVersion = d.Version
+		}
+		// Same first-non-empty-wins rule: a shared composed file's diff may carry
+		// no type where a later per-artifact diff does.
+		if it.Type == "" && d.Type != "" {
+			it.Type = d.Type
 		}
 		return it
 	}

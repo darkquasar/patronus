@@ -348,3 +348,32 @@ func TestPlanRendersEverySettingsContributor(t *testing.T) {
 		}
 	}
 }
+
+// The remove-side mirror: one composed RESTORE reverses several artifacts, and
+// each must appear as its own row and in the footer tally. Reporting only the
+// owning artifact would tell a user who removed three that one thing happened.
+func TestPlanRendersEveryRemovedContributor(t *testing.T) {
+	settings := "/home/u/.claude/settings.json"
+	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{{
+		Action: diff.Restore, Path: settings, Artifact: "graphify",
+		Type: "recipe", Role: "tools", Tool: "claude", Scope: "global",
+		RestoreContrib: []diff.RestoreContrib{
+			{Artifact: "serena", Type: "recipe", Role: "tools"},
+			{Artifact: "context7", Type: "recipe", Role: "tools"},
+		},
+	}}}
+
+	var b bytes.Buffer
+	PrintPlan(&b, cs, testResolver(), false)
+	out := b.String()
+
+	for _, want := range []string{"graphify", "serena", "context7"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the plan does not name %q, yet --deploy would remove it.\n%s", want, out)
+		}
+	}
+	// The footer counts LOGICAL contributions, not the single physical write.
+	if !strings.Contains(out, "3 RESTORE") {
+		t.Errorf("the footer must report 3 RESTORE (one per artifact removed), got:\n%s", out)
+	}
+}

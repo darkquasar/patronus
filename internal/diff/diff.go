@@ -99,6 +99,17 @@ type FileDiff struct {
 	// Empty for the common single-contributor case.
 	SettingContrib []SettingContrib `json:"-"`
 
+	// RestoreContrib lists the ADDITIONAL artifacts whose recorded settings edits
+	// were reversed into this one composed RESTORE (the remove-side analogue of
+	// SettingContrib, which it deliberately does NOT reuse: SettingContrib means
+	// forward MERGE contributors, renders and counts as MERGE, and is excluded
+	// from JSON, so borrowing it here would mislabel and under-report every
+	// composed removal). It exists so the plan table, the JSON payload, and the
+	// footer report LOGICAL contributions: removing N artifacts wired into one
+	// settings file is N rows and a count of N, not the single physical write.
+	// Empty for the common single-contributor case.
+	RestoreContrib []RestoreContrib `json:"restoreContrib,omitempty"`
+
 	// Fetch, when set, describes a FETCH: a binary to download, verify, and
 	// place. It lives only on Action==Fetch diffs (Path is the placement dest;
 	// Before/After are empty — the bytes are streamed at apply time, never held
@@ -241,6 +252,17 @@ type SettingContrib struct {
 	Role string
 }
 
+// RestoreContrib records one additional artifact whose recorded settings edit was
+// reversed into a shared composed RESTORE. It carries only display identity: the
+// undo bytes live on the composite's After, and the authoritative per-contributor
+// verdict lives in the remove package's outcome ledger, not here.
+type RestoreContrib struct {
+	Artifact string `json:"artifact"`
+	Version  string `json:"version,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Role     string `json:"role,omitempty"`
+}
+
 // Classify decides the terminal Action for a proposed change, preserving
 // CREATE/APPEND/MERGE semantics:
 //
@@ -308,6 +330,11 @@ func (cs *ChangeSet) Counts() map[Action]int {
 		// table and under-reported the change the user was being asked to approve.
 		out[Append] += len(d.Contrib)
 		out[Merge] += len(d.SettingContrib)
+		// The same on the remove side: N artifacts wired into one settings file
+		// are reversed by ONE write, and counting writes would report "1 RESTORE"
+		// under N visible rows — the identical under-reporting the MERGE line
+		// above exists to prevent.
+		out[Restore] += len(d.RestoreContrib)
 	}
 	return out
 }
