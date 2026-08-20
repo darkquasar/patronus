@@ -20,6 +20,11 @@ This is the standard that protects good prose from this file. Report clusters, n
 for everything except the three **always-fire** classes: tier-0 phrasings, tier-1A words below, and
 the tier-1.3 mirrored swap.
 
+Four entries below take the whole piece as their evidence, not a span: one-point dilution, fractal
+summaries, the dead metaphor, and title-case headings. Under per-section fan-out they run at the
+merge pass rather than inside a section subagent, per `{skillDir}/sectioning.md`. Their judgement is
+unchanged; only where they execute is. Without fan-out they apply here as usual.
+
 ## tier-2.1 Trope catalogue
 
 Flag these in clusters. These are the shapes tier-0 does not already cover.
