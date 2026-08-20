@@ -3,7 +3,50 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
-## Unreleased
+## v2.3.0
+
+The binary release carries the `remove` fixes below. The catalog content in this entry
+(the skill renames, `diagram-explain`, `plan-execute`) ships on its own track and reaches
+you independently of the binary.
+
+### Fixed
+
+- **Removing two artifacts wired into one config file no longer resurrects one of them.**
+  Each removal was computed from the same original bytes and then written in sequence, so
+  the second write put back what the first had taken out: the artifact you asked to remove
+  survived the command, and its record was retired anyway, so nothing reported the
+  leftover. Removals that land on one file are now folded into a single write.
+
+  Where two recorded edits genuinely conflict — the same key, a key nested under another,
+  or the same list entry — neither is guessed at. Each is reported and left in place, and
+  `--force` does not override it: forcing means accepting the loss of your own edit to a
+  file, not another artifact's wiring. Remove them one at a time instead.
+
+  Records written before per-key removal existed carry only a whole-file snapshot, which
+  reverts everything in the file. Those are now restored only when nothing else is wired
+  into the same path, counting artifacts you did not ask to remove and both scopes' state
+  files. Otherwise the file is left alone and named on stderr.
+
+- **A file that was already gone no longer keeps an item marked installed forever.** It
+  counted as unfinished work, so the record was never retired: after any partial cleanup,
+  re-running `remove` could not converge and `scan` kept reporting the item. An absent
+  target now counts as removed, which is what it is. A file you edited since install, or a
+  config that will not parse, still holds the record open so `--force` or a repair can
+  finish the job.
+
+- **Removing a skill no longer leaves its empty directory behind.** Every file went, but
+  the directory stayed, and since a skill's directory is what marks it as present, the
+  remnant read as an installed skill that no command could see or clean up. The directory
+  is now removed once its tracked files are gone.
+
+  Only ever the artifact's own directory, and only when empty. A directory holding anything
+  Patronus did not write is kept, with its contents named on stderr; the removal is never
+  recursive, and file-shaped artifacts (agents, commands, output styles) never cause their
+  shared parent to be touched.
+
+- **`remove` counts what it did, not how many times it wrote.** Removing three artifacts
+  that share one config file reports three, not the single write, and a file that was
+  already gone counts as removed rather than skipped.
 
 ### Breaking
 
@@ -70,10 +113,6 @@ person upgrading: it leads with what will behave differently on their machine.
   consulted. If you edited an installed skill, the drift check skips it and you need
   `--force`. `remove` deletes the files and the state row, and leaves the now-empty skill
   directory behind; delete it yourself if an empty directory bothers you.
-
-## v2.3.0
-
-### Breaking
 
 - **`core` executes plans through the new `plan-execute` skill.** It no longer installs
   `executing-plans` or `subagent-driven-development`. Both stay in the catalog and
