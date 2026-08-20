@@ -81,6 +81,48 @@ expansions in a skill body are safe. The cost of that leniency is that a typo
 so `patronus check-placeholders` fails the build on a `{ski…dir}`-shaped string
 that is not exactly one of the two placeholders. It runs in CI on every push.
 
+## Releasing the binary
+
+**The binary and the catalog are two separate tracks on separate cadences, and a
+`v*` tag ships only one of them.** Getting this backwards is the standing trap:
+it makes agents tag releases that deliver nothing, and size a release against
+changes it does not carry.
+
+| Track | Ships | Triggered by | Versioned by |
+|---|---|---|---|
+| **Binary** | The `patronus` executable, for six platforms | pushing a `v*` tag (`release.yml`) | the git tag; stamped in via `-ldflags` |
+| **Catalog** | Artifact content under `artifacts/` and `profiles/` | pushing to `main` (`publish-catalog.yml`) | each artifact's own `version:` (see above) |
+
+Consequences worth stating plainly, because each one has misled somebody:
+
+- **A tag never re-ships catalog content, and a catalog change never re-ships the
+  binary.** Users reach them independently: `patronus update` pulls new artifact
+  versions from the registry without touching the installed binary.
+- **Only Go changes justify a tag.** If a change touches nothing but `artifacts/`
+  and `profiles/`, it reaches users the moment it lands on `main` and needs no
+  release. Check with `git diff --stat <last-tag>..HEAD -- '*.go' go.mod go.sum`.
+- **Size the release by what the binary does, not by what the CHANGELOG entry
+  says.** A breaking artifact rename is not a major binary release: nothing in the
+  binary's interface moved. Ask what differs between the old binary and the new one.
+- There is **no version constant in the Go source** to bump. Cutting a release is a
+  CHANGELOG commit plus an annotated tag, nothing else.
+
+A CHANGELOG entry usually spans both tracks, since one release cycle carries both
+kinds of change. When it does, say at the top of the entry which half the binary
+delivers, so a reader upgrading the binary knows what they are actually getting.
+
+### Cutting one
+
+1. Rename the `## Unreleased` heading to the new version, and write the entry for
+   the person upgrading (what behaves differently on their machine).
+2. Verify the gates the way CI will: `gofmt -l .`, `go vet ./...`,
+   `golangci-lint run`, `go test -race ./...`, and `patronus check-versions`.
+3. Commit as `chore(release): cut vX.Y.Z`, stating why the bump is the size it is.
+4. Push `main`, then push an annotated tag (`git tag -a vX.Y.Z`) whose message is
+   prose about what changed, matching the tone of the existing tags.
+5. Confirm `release.yml` went green and the six binaries plus `checksums.txt` are
+   attached to the release.
+
 ## Profiles and the catalog
 
 Profiles (`profiles/*.yaml`) select artifacts by name; they do not carry an
