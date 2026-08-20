@@ -43,7 +43,21 @@ preserve:
     text: "It splits in two."
     reason: "the piece's thesis turn"
     binding: advisory
+
+decisions:
+  - term: "workstation"
+    chose: "workstation"
+    over: ["machine", "box"]
+    reason: "the draft's own dominant term"
 ```
+
+### decisions
+
+A subagent holding one section decides terminology, heading case and spelling for that section
+alone. `decisions` records each choice the shared decision sheet did not already cover, so the
+merge pass can read them, resolve conflicts across sections and normalise the merged document.
+**A choice made silently is a choice the merge cannot reconcile**, which is how independently
+edited sections drift into reading as several authors.
 
 ### Span ids
 
@@ -117,6 +131,11 @@ Two fields resolve this, and both are required on every edit:
 the intermediate texts are not kept. Recording which text an offset saw is what stops a consumer
 applying it to the wrong one, which is the silent-corruption case this whole schema exists to
 prevent.
+
+`occurrence` is counted in the text its tier saw, so an earlier tier that added or removed another
+match of the same string shifts it. Where the ordinal is ambiguous against the `source_rev` snapshot,
+a consumer **reports the edit unresolvable rather than applying it to a guessed match**: a wrong
+match is a silent corruption, and an unresolved edit is a visible one.
 
 Where `occurrence` cannot resolve either, because the text the edit removed is itself gone from the
 snapshot, the edit is **reported unresolvable**. That is the honest outcome, and it is why

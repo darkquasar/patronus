@@ -14,7 +14,7 @@ unchanged: what changes is how many agents apply them, and at what altitude.
    |
    v  edited section[i] + edit record[i]
  merge                 main agent: concatenate in id order, whole-document tier-2,
-   |                   ledger reconcile and reallocate, consistency normalisation
+   |                   ledger reconcile, consistency normalisation
    v
  tier-3                whole-document, single agent, the only pass that may restructure
    |
@@ -102,10 +102,12 @@ Concatenate the edited sections in id order, then, as the main agent:
 1. **Apply the four whole-document tier-2 entries** named above.
 2. **Reconcile the ledger.** Count the contrastive constructions surviving across the merged
    document. Where the reconciled count exceeds the allowance, **select which instance is
-   retained, revert the others from their edit records, and record the reallocation.** A count
-   alone cannot do this: three sections may each independently keep the one allowance, and
-   counting afterwards discovers three where one was allowed. This is the one place the merge
-   edits text rather than concatenating it, and the selection is reported.
+   retained, rewrite the others in the positive per tier-1.3, and record the reconciliation.** A
+   count alone cannot do this: three sections may each independently keep the one allowance, and
+   counting afterwards discovers three where one was allowed. The surplus is repaired the way
+   tier-1.3 repairs it, by naming the mechanism the mirror gestured at; it is not restored by
+   reverting an edit, which would raise the count rather than lower it. This is the one place the
+   merge edits text rather than concatenating it, and the selection is reported.
 3. **Normalise consistency** per the decision sheet, reporting the conflicts resolved.
 
 ## Tier-3
@@ -196,7 +198,7 @@ sections:
       companion: present
   merge:
     ledger_retained: "not a productivity setup, but a distributed system"
-    ledger_reallocated: 2             # instances reverted so the allowance holds
+    ledger_rewritten: 2               # surplus instances rewritten positive so the allowance holds
     whole_document_rules_fired: [one-point dilution]
     consistency_conflicts_resolved: 1
 ```
