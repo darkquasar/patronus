@@ -257,84 +257,70 @@ stage it is meant to judge.
 Flat fires one rework. A second flat result is **accepted and flagged**, naming the section and what
 it failed.
 
-### The codex side
+## Stage 5: stitching
 
-Reach codex over MCP, not by driving its CLI. Codex ships an MCP server on stdio:
+The main agent joins the voiced sections in the spine's `running_order` and adds continuity.
 
-```
-codex mcp-server
-```
+**What it may add:** a callback, a returning image, the metaphor deepening across a boundary, the
+opening scene's character reappearing.
 
-Register it once as an MCP server named `codex`, then call its tools. It exposes two:
+**What it may not add: logical signposts.** Technique 2 binds this pass as it binds the subagents.
+"Furthermore" is banned at every stage; "she is still waiting on that runner" is the sanctioned way
+to connect two sections.
 
-| Tool | Use |
-|---|---|
-| `codex` | start a session. Required argument: `prompt`. Useful optional arguments: `sandbox`, `cwd`, `model`, `base-instructions` |
-| `codex-reply` | continue that session, with `threadId` and the next `prompt` |
+**It must not regress the rhythm.** `{skillDir}/weights.md` warns that a merge can undo two
+calibrated drafts by taking the shorter option at each divergence; here the equivalent risk is
+smoothing section seams into uniformity.
 
-Call `codex` with `sandbox: "read-only"`, and with `prompt` naming the paths of all six items: the
-draft, exemplars, weights, PRESERVE list, contrast ledger, and original. Codex reads them from disk
-itself.
+It also resolves duplicate coinages: where two sections independently reached for the same term
+outside any allocation, keep one and say which.
 
-**Put the corpus measurements in the prompt text, not only the paths.** Codex receives files, not
-this file, so anything stated here and nowhere else never reaches it. The numbers you measured are
-that kind of thing: state them in the prompt, or the model with the least context produces the
-flattest prose.
+**Then verify claims coverage across the finished piece**, not only per section. A claim assigned to
+a section that was later cut, and never reassigned, surfaces here rather than silently vanishing.
 
-**The draft never goes into a shell string, and over MCP it never goes into an argv either.** The
-prompt is a JSON string field, so quoting, backticks, newlines, and command-length limits stop being
-failure modes: the transport carries arbitrary bytes without escaping. Passing paths rather than
-pasted content keeps the prompt small and lets codex read exactly what stage 2 wrote.
+## Stage 6: one advisory codex read
 
-**The transport owns the timeout and the process.** The MCP client bounds the call, returns a typed
-error on expiry, and manages the server process, so this file specifies no signals, no reaping, and
-no fallback timer. Where the host lets you set a per-call timeout, allow around three minutes: a
-voice pass over a long draft is slower than a typical tool call.
+Codex runs **once**, over the finished stitched text, via the MCP server (`codex mcp-server`,
+registered as `codex`). Call its `codex` tool with `sandbox: "read-only"` and a prompt naming the
+paths of the text, the profile and the spine. It returns notes: where the piece reads flat, where a
+move is absent, where the voice slipped.
 
-**The result is the reply, not a delimited region of stdout.** An MCP tool call returns structured
-content, so there is no envelope to agree on and nothing to parse out of console chatter. Take the
-returned text as the voiced draft. Where codex returns commentary alongside it, ask for the draft
-alone via `codex-reply` rather than guessing which span is the draft.
+**The main agent decides what to thread in, and reports both what it took and what it declined,
+with reasons. Codex has no veto.**
 
-`codex-reply` is what makes this better than a one-shot call. If the first pass drifts from the
-corpus, over-corrects, or flattens a PRESERVE span, continue the same thread and say so, instead of
-restarting with a longer prompt.
+Placing a different model in the judging seat rather than the writing seat follows from the
+same-family bias argument: same-family judges favour low-perplexity text, which is the signature of
+generic prose, so a foreign model earns more as a critic than as a co-author.
 
-**Degrade, never block.** If the codex MCP server is not registered, the call errors, or it times
-out, continue with the Claude draft alone and say which of those happened, naming the error. The
-cross-model stage is an optional check, not a dependency.
+**Degrade, never block.** If codex is unregistered, errors or times out, continue and say which
+happened, naming the error. Where the host allows a per-call timeout, allow around three minutes.
 
-**Why a second model rather than a second Claude.** Same-family judges are biased toward
-low-perplexity text, and low perplexity is the signature of generic machine prose, so a same-family
-critic is biased in the wrong direction for voice work. One model from a different family captures
-nearly all the available benefit; a larger panel does not.
+## What PRESERVE and the ledger bind now
 
-## Stage 3: the merge
+- **PRESERVE is advisory to this stage.** It travels in the edit record marked
+  `binding: advisory`, as tier-2's opinion. A subagent may override an entry, **reporting which
+  entry and why**.
+- **The claims manifest protects ideas**, which are what must survive, rather than spans, which are
+  what should be rewritten.
+- **The contrast ledger is reconciled at the editorial merge and reported**, not enforced against
+  this stage. Where contrast is a named move in the profile, it is allowed.
+- **Irreversible house mechanics remain binding on every stage**: no em-dashes, punctuation outside
+  closing quotes, British spellings. Those are the author's stated rules.
 
-**The main agent merges**, not a third subagent. Produce three things:
+## Reporting
 
-1. The merged draft: one version, taking the stronger choice at each point of divergence.
-2. The disagreements, verbatim. Where the two drafts diverged materially, show both versions.
-   Disagreement goes to the human rather than to a vote: with two voters there is no majority, and
-   the disagreements are the most informative output of the stage.
-3. Two to four threadable variations, concrete alternatives the user can splice in, each named
-   for what it changes: open on the concrete case rather than the claim; keep or drop a hedge; add or
-   remove a coined term; hand off at the ending rather than summarizing.
+Report in **this order**:
 
-Report any PRESERVE entry that either model overrode, with the reason it gave.
+1. the finished draft;
+2. sections flagged as flat after rework, named;
+3. claims from the manifest that no section made, if any;
+4. tier restores, with their citations;
+5. PRESERVE overrides, with reasons;
+6. codex notes taken and declined;
+7. rhythm guard rails, **labelled as guard rails**.
 
-**Audit the merged draft's rhythm.** The merge writes the version the reader sees, so it can undo
-both calibrated drafts by taking the shorter option at each divergence. Two checks, both cheap:
-compare the merged draft's longest sentence against stage 1's, and take stage 1's construction back
-where a voice pass split it; then scan consecutive sentences for a repeated shape, per
-`{skillDir}/weights.md`. Report the merged draft's typical length and longest sentence alongside the
-corpus's.
-
-**Recompute the ledger from the merged draft.** The two voice passes run in parallel, so each may
-have displaced the retained correction independently. Taking the stronger half of each can therefore
-carry both replacements through and leave two live corrections where the ledger allows one. Never
-union the two branches' ledgers: read the merged text and count what is actually in it, then report
-that single reconciled ledger and any reallocation it records.
+**The ordering is the point: what the piece failed at comes before what it measured.** Never
+present item 7 as evidence the voice landed.
 
 ## The run trail
 
@@ -397,13 +383,24 @@ stages:
     longest_sentence: 41
     pct_past_26: 31
 voice:
-  corpus: ~/.claude/patronus/voice/short-form.md
-  exemplars_supplied: 12
-  corpus_typical_sentence: 15
-  corpus_pct_past_26: 19
-  merged_typical_sentence: 15
-  merged_longest_sentence: 38
-  model_reported_influences:      # the model's own account, not verified provenance
+  profile: ~/.claude/patronus/voice/voice-profile.md
+  profile_source: cached           # or: fresh
+  corpus_files: [short-form.md, long-form.md]
+  rhythm_source: english-pool      # or: unavailable
+  spine_approved: true
+  sections_voiced: 6
+  sections_reworked: [03-what-it-costs]
+  sections_flagged_flat: []
+  claims_unmade: []
+  restores: 2
+  preserve_overrides: 1
+  metaphor_escalations: []         # sections that asked for a metaphor the spine did not assign
+  unallocated_coinages: []         # terms coined outside an allocation; stitching says which it kept
+  codex: read-completed            # or: unregistered, error, timeout
+  guard_rails:                     # reported, never scored
+    merged_median_sentence: 15
+    merged_pct_past_26: 19
+  model_reported_influences:       # the model's own account, not verified provenance
     - "consequence-first turn opening on a bare connective"
 ```
 
@@ -424,12 +421,15 @@ exemplar count are knowable; the attribution is a claim.
   reliably the voice transfers, not about which lengths are allowed: a short corpus projecting onto
   a long piece is the supported path, and the constraint is that casual registers are harder to
   imitate at all.
-- A short corpus cannot teach long-form architecture. Sentence rhythm and diction scale from a
+- A short corpus teaches rhythm and diction but not architecture. Sentence rhythm scales from a
   120-word post to a 4000-word essay, but how this author sustains an argument across ten
-  paragraphs is not in the corpus to learn. That comes from the draft and from tier-3, and the
-  voice pass leaves it alone.
+  paragraphs is not in the corpus to learn. The spine invents a running order the corpus cannot
+  evidence, so a thin corpus produces a thin spine.
 - Style strength and content preservation trade off against each other. They are competing
   objectives, not a tuning failure. This pipeline picks a point on that curve by putting
   content-shaping first and voice second.
 - Scrubbing a widely circulated word list is itself becoming detectable, which is a reason the
   editorial tiers lean on structural rules rather than on lexical substitution alone.
+- Parallel subagents may converge on the same unallocated image. Each holds the same profile and
+  none sees another's text, so two sections can independently reach for the same figure. Only
+  stitching sees both, which is where the duplicate is caught rather than prevented.
