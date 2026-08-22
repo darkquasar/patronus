@@ -186,11 +186,18 @@ sectioning at all**, which is what keeps a direct caller's cost unchanged.
     00-preamble.md             post-tier-3 text; authoritative, and what downstream consumes
     00-preamble.edits.yaml     span-anchored records
     ...
-  sections/lineage.yaml
+  sections/lineage.yaml      one entry per section: what it derives from and whether its offsets resolve
   <draft>-edited.md            the merged, tier-3'd draft: the standalone output
   EDITS.md                     human-readable summary
   manifest.yaml                plus the sections block below
 ```
+
+**Write all four run-level files on every run, not only when something interesting happened.** A
+run with no moves still emits `lineage.yaml`, with `op: origin` for each section: that is what tells
+a consumer the sections were left in place, which an absent file cannot say. The same holds for
+`EDITS.md` and `manifest.yaml`. A downstream stage joins on `section-lineage/v1` and reads the
+manifest's `merge:` block to interpret the records, so a trail missing either is a trail it cannot
+use.
 
 Both section files are needed. Without the post-tier-3 file, a consumer reading section files
 reads text the final draft no longer contains; without the source snapshot, no offset in any
