@@ -118,6 +118,11 @@ re-reads the draft.
 Recommend per-tier when the prose has real stakes (a published post, a PR description, a design doc),
 and single-agent for quick passes. The skill recommends; the user decides.
 
+**Where nobody can be asked, do not ask.** In an unattended or non-interactive run the question has
+no answer, so take option 1 and say which option was taken and why. Option 3 still applies when
+`trail-root` is supplied, since that is the caller stating the choice rather than a user answering a
+prompt.
+
 **Option 3 is the default only when the caller supplies `trail-root`.** A user invoking this skill
 directly gets option 2's recommendation and today's cost unless they choose otherwise. **This choice
 governs compose mode too.** A compose invocation does not ask the question, so it takes option 3 when
