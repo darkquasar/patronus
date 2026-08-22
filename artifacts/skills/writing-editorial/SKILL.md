@@ -16,7 +16,9 @@ description: >
   protects the author's voice (gated on stakes), tier-3 works on meaning and movement (gated on
   stakes, and the only pass that may restructure). Do NOT use it to change code logic, to lint code
   style, or as a general writing-from-scratch generator; it governs how prose reads, not what it
-  says.
+  says. A long draft can optionally be cut into sections and the tiers fanned out one subagent per
+  section, merging and running tier-3 whole-document; that is dispatch option 3, which the caller
+  chooses. Supply trail-root to get sections and span-anchored edit records as files.
 ---
 
 # Writing editorial
@@ -67,6 +69,10 @@ never had. tier-3 is the one pass allowed to reorder, add a concession, or repai
 
 Worked cases for the mirrored-swap rule ship beside it, in `{skillDir}/tier-1-fixtures.md`.
 
+Two further references govern how the tiers are applied to a long draft, rather than what they
+judge: `{skillDir}/sectioning.md` (cutting, fan-out, merge, tier-3 projection) and
+`{skillDir}/edit-record.md` (the two schemas a caller joins on). Neither changes a tier's verdict.
+
 ## When each tier applies
 
 **tier-0** is ungated. Every piece of prose with a reader, at any length, in any register.
@@ -100,6 +106,7 @@ Four tiers to apply. How do you want them run?
 
   [1] One subagent, all four tiers in sequence     cheaper, one context
   [2] A fresh subagent per tier                    higher fidelity, ~4x tokens
+  [3] Per-section fan-out, then whole-document     highest fidelity, ~N x tokens
 
   Recommended: [2] for anything published or high-stakes.
 ```
@@ -110,6 +117,21 @@ re-reads the draft.
 
 Recommend per-tier when the prose has real stakes (a published post, a PR description, a design doc),
 and single-agent for quick passes. The skill recommends; the user decides.
+
+**Where nobody can be asked, do not ask.** In an unattended or non-interactive run the question has
+no answer, so take option 1 and say which option was taken and why. Option 3 still applies when
+`trail-root` is supplied, since that is the caller stating the choice rather than a user answering a
+prompt.
+
+**Option 3 is the default only when the caller supplies `trail-root`.** A user invoking this skill
+directly gets option 2's recommendation and today's cost unless they choose otherwise. **This choice
+governs compose mode too.** A compose invocation does not ask the question, so it takes option 3 when
+`trail-root` is supplied and runs whole-document otherwise. Be honest
+about the multiplier when recommending it: a ten-section essay is ten subagents for tiers 0 to 2, on
+top of whatever per-tier isolation was picked.
+
+Option 3 is governed by `{skillDir}/sectioning.md`, which owns the cut, the fan-out, the merge and
+the tier-3 projection.
 
 When run per-tier, each subagent receives the draft as it stands, its own tier file, and the state
 earlier tiers emitted: the **contrast ledger** from tier-1 and, for tier-3, the **PRESERVE list**
@@ -148,7 +170,27 @@ PRESERVE:        (from tier-2; carried forward, or "(none)")
 CONTRAST-LEDGER: (from tier-1; what is retained, what remains)
 ```
 
+Under option 3, the merge pass edits text the per-section agents had already settled, so it adds a
+fourth block. **Report it whether or not `trail-root` is supplied**: without it this is the only
+account the caller gets of what the merge changed.
+
+```
+MERGE:           which section keeps the ledger allowance, and how many surplus
+                 instances were rewritten positive; which whole-document tier-2
+                 rules fired; how many consistency conflicts were resolved
+```
+
 Lead with the edits that matter most, and skip preamble.
+
+## trail-root: an optional caller-supplied path
+
+**This skill writes no files unless the caller supplies `trail-root`.** With none, both modes behave
+exactly as above: review mode returns targeted edits, compose mode returns an edited draft, and
+nothing appears on disk.
+
+With `trail-root` supplied, the section artifacts described in `{skillDir}/sectioning.md` are written
+under it. The caller owns that path. **Never** invent one, resolve one from the repository, or ask
+the user where a trail should live: that decision belongs to the calling skill.
 
 ## Adding rules
 
