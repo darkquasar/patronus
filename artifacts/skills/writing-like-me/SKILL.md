@@ -171,8 +171,7 @@ sentences wholesale, and **never** introduce a claim they did not make. A voice 
 a user's draft from scratch has substituted its voice for theirs, which is the opposite of this
 skill's purpose.
 
-Every subagent is told which mode it is in. Where a rule below says "rewrite freely", read it as
-compose-mode licence.
+Every subagent is told which mode it is in, and every licence below is read against it.
 
 ### Restoring tier edits: the citation rule
 
@@ -183,8 +182,11 @@ The restore log is **this stream's own output, not an `editorial-edit-record/v1`
 two halves, and keeping them apart is what makes it checkable:
 
 - an `edit:` block that **quotes the upstream record's own field names verbatim**, so a consumer can
-  join back to it: `section_id` and `source_rev` from the record, `id`, `rule`, `span`, `offset` and
-  `occurrence` from the edit;
+  join back to it: `section_id` and `source_rev` from the record, `id`, `rule`, `span`, `offset`,
+  `offset_rev`, `occurrence`, `removed` and `reversible` from the edit. **Carry `removed` and
+  `reversible` even though they are not needed to locate the span**: `removed` is the text a restore
+  puts back verbatim, and `reversible` is what lets a reader check the irreversible rule was honoured
+  without re-opening the upstream record;
 - restore-level fields this stream defines: `restored`, `citing`, `reason`.
 
 ```yaml
@@ -197,7 +199,10 @@ restores:
       rule: tier-1.3
       span: 01-the-relocation-argument/p03
       offset: 142
+      offset_rev: source                    # only offset_rev: source is reproducible downstream
       occurrence: 1
+      removed: "not a productivity setup, but a distributed system"
+      reversible: true
     restored: "not a productivity setup, but a distributed system"
     citing: "Move: thinks in contrast"
     reason: "the corpus uses this shape as a thinking move, not a flourish"
@@ -219,9 +224,18 @@ quotations.
 mechanics: no em-dashes, punctuation outside closing quotes, British spellings. They are the
 author's stated rules rather than editorial judgement.
 
-Resolve a restore by `span` plus `offset` plus `occurrence` against the record's `source_rev`, per
-`{skillsDir}/writing-editorial/edit-record.md`. **A restore that cannot resolve all four is
-reported unresolvable and skipped**, never applied to a guess.
+Resolving a restore depends on what the edit is anchored to, and the two cases are not the same:
+
+- **An ordinary span** resolves by `span` plus `offset` plus `occurrence` against the record's
+  `source_rev`. **A restore that cannot resolve all three against that snapshot is reported
+  unresolvable and skipped**, never applied to a guess. Where `offset_rev` is anything but
+  `source`, the offset is not reproducible downstream: treat it as advisory and resolve by
+  `occurrence` and `removed` alone.
+- **A `span: document` edit carries no `offset` at all.** It anchors to the reserved `document`
+  id, names the sections it touched in `sections:`, and **is restored by reading its `reason` and
+  the lineage**, per `{skillsDir}/writing-editorial/edit-record.md`. Demanding an offset here would
+  reject every cross-section tier-3 edit as unresolvable. Such an edit is written once, into the
+  first id in `sections:`, so a section reads its own record plus any `document` edit naming it.
 
 ### The four anti-slop techniques
 
@@ -254,6 +268,10 @@ After voicing, audit each section against `{skillDir}/audit.md`. Send that file 
 subagent **without this one**: an auditor holding the orchestration body inherits the frame of the
 stage it is meant to judge.
 
+The auditor also receives the profile, the spine, and **the preceding section in `running_order`**,
+which the metaphor row scores against. The first section has no predecessor: score its metaphor row
+on whether the metaphor is present and doing work, and say the comparison was unavailable.
+
 Flat fires one rework. A second flat result is **accepted and flagged**, naming the section and what
 it failed.
 
@@ -268,9 +286,9 @@ opening scene's character reappearing.
 "Furthermore" is banned at every stage; "she is still waiting on that runner" is the sanctioned way
 to connect two sections.
 
-**It must not regress the rhythm.** `{skillDir}/weights.md` warns that a merge can undo two
-calibrated drafts by taking the shorter option at each divergence; here the equivalent risk is
-smoothing section seams into uniformity.
+**It must not regress the rhythm.** The risk here is smoothing section seams into uniformity,
+flattening the spread the voicers just built. Check the stitched text against
+`{skillDir}/weights.md`.
 
 It also resolves duplicate coinages: where two sections independently reached for the same term
 outside any allocation, keep one and say which.

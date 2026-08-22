@@ -76,6 +76,13 @@ lineage, which key on `NN-slug`.
 | split `04-the-argument` | `04a-the-argument`, `04b-the-objection` | `op: split`, parent in `derives_from` | the parent's record, resolved by span |
 | cut `05-the-aside` | none | `05-the-aside` recorded `op: cut`, `edit_records: []` | none; restores against it are void |
 
+**A reshaping writes the section files it mints.** A merge concatenates its parents' text in the
+order the merge names; a split cuts the parent at a stated boundary. Write each new id to
+`sections/<new-id>.md`, carry the parents' `.source.md`, `.edits.yaml` and `.companion.md` across
+unchanged so offsets still resolve against the snapshot they were measured in, and leave a cut
+section's files on disk. **Stage 3 reads a file per id in `running_order`**, so an id minted here
+with no file behind it strands its voicer.
+
 **Reorder writes no lineage entry**, because no id changes and `derives_from` would be the id
 itself. It is listed here as the fourth thing the spine may do, not as a schema operation.
 

@@ -16,4 +16,4 @@ movement, which an excerpt loses.
 The length band names what these pieces ARE, not what they can be applied to. This pool supplies a
 voice, and a voice projects onto any length: rhythm, diction, and how a paragraph turns are the same
 whether the finished piece runs 200 words or 4000. The pipeline reads those from here and takes
-length, scope, and structure from the draft it was given.
+length, scope, and structure from the spine.
