@@ -37,7 +37,9 @@ that heading's, and a document title above it belongs to no section: it is carri
 unedited rather than filed under a `00` invented to hold it.
 
 **Ids.** Each section gets an id of the form `NN-slug`: `NN` is its ordinal at cut time,
-`slug` is a kebab-case reduction of its heading truncated to six words. A section with no
+`slug` is a kebab-case reduction of its heading truncated to six words. **`00` is reserved for the
+preamble**, so a draft that opens directly on a heading numbers its first section `01`. Numbering
+the first heading `00` reads as a preamble that is not there. A section with no
 heading takes the reserved slug `preamble`, so the headless case is `00-preamble` rather than
 a bare `00-`.
 
@@ -48,6 +50,15 @@ the id it joins on never moves. Ids are append-only: a later reshaping mints a n
 A draft with no headings is one section, `00-preamble`. **Do not invent headings to create
 sections.** A 2000-word unheaded essay is a legitimate single section, and cutting it on
 paragraph boundaries would produce subagents reasoning about fragments.
+
+The same judgement runs the other way. **Headings that label rather than divide are not cut
+points.** A commonplace book, a numbered post series and a collection of aphorisms carry headings
+that work as timestamps, and cutting on them yields dozens of sections a few sentences long. A
+section that short gives a subagent nothing to judge: tier-2's structural rules need a paragraph or
+more of runway, and a document cut this way spends its cost on fragments while inviting exactly the
+cross-section divergence this file exists to prevent. **Where the cut would produce many sections
+whose text runs shorter than a few paragraphs, say so and run whole-document instead**, at option 1
+or 2. Report the cut you declined and why, rather than fanning out silently.
 
 **Spans.** At cut time, split each section into paragraph-level spans, numbered in document
 order, giving span ids of the form `<section-id>/pNN`. Every edit anchors to one. The schema
