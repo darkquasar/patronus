@@ -31,7 +31,10 @@ section boundary, and the cut level is `h2`. Where headings appear at mixed leve
 cut level, only the cut level divides.
 
 A section is a heading at the cut level and everything under it up to the next heading at
-that level. Text before the first heading is section `00`.
+that level. Text before the first heading is section `00`. **Section `00` exists only when there
+is such text.** Where the draft opens directly on a heading at the cut level, the first section is
+that heading's, and a document title above it belongs to no section: it is carried through
+unedited rather than filed under a `00` invented to hold it.
 
 **Ids.** Each section gets an id of the form `NN-slug`: `NN` is its ordinal at cut time,
 `slug` is a kebab-case reduction of its heading truncated to six words. A section with no
