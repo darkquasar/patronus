@@ -96,3 +96,76 @@ both ends unless something counters it.
 
 **They are not a success criterion.** A run may match every number and still fail the liveness
 gate. **Never present distributional agreement as evidence the voice landed.**
+
+## What the corpus is for
+
+**The corpus supplies a voice, never a format.** This is the distinction the whole stage turns on,
+and getting it backwards produces the most common failure: a long draft chopped into the shape of
+the exemplars, so a design doc comes back reading like a thread of posts.
+
+Two things live in any exemplar, and they travel differently:
+
+| Read from the corpus | Fixed by the spine |
+|---|---|
+| sentence rhythm and the length spread within a paragraph | how long the finished piece is |
+| diction, register, and the words this author reaches for | what the piece has to cover |
+| how a paragraph opens, turns, and lands | how many paragraphs there are |
+| punctuation habits, contractions, spelling conventions | how many words it has to spend |
+| stance: hedged or blunt, first person or impersonal | which claims it has to land |
+| the moves, such as a concrete case before the claim | the evidence and citations it rests on |
+
+The left column is the voice and it projects onto any length. The right column is fixed by the
+claims manifest and the spine, not invented by a section's voicer.
+
+**A corpus of short pieces still teaches long-form voice.** Rhythm is a property of consecutive
+sentences, not of a word count, so it is fully present in a 120-word post and it scales without
+distortion. What a short corpus cannot teach is long-form architecture: how this author sustains an
+argument over ten paragraphs, when they summarize, how they hand off between sections. The spine supplies it, invented at
+spine time by an agent that has just read the corpus.
+
+## Measure the corpus; do not imagine it
+
+**Short-form pieces are not made of short sentences, and assuming they are is the failure mode this
+section exists to stop.** A corpus of posts routinely averages 17 words a sentence with a fifth of
+them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
+reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
+front of it.
+
+So measure the pool before voicing anything: its typical sentence length, its share of sentences past
+26 words, its longest, and its paragraph spread. Put those numbers in the profile's rates block and in every
+subagent's prompt,
+because a model cannot aim at a distribution it was never told.
+
+`{skillDir}/weights.md` carries what to do with them, and every subagent receives it. It also carries the
+second half of the problem, which no length target catches: sentences of varied length built to an
+identical shape still read monotonously.
+
+## Corpus resolution
+
+Resolve the pool for the target form. First hit wins:
+
+1. `$PATRONUS_VOICE_DIR/<genre>.md`, when the environment variable is set;
+2. `~/.claude/patronus/voice/<genre>.md`, the default user-owned location;
+3. the shipped stub, which contains no exemplars and triggers the empty-pool path.
+
+Create neither the directory nor the files. On a first run with no corpus, print the resolved path
+you looked for and what to put there, then continue in degraded mode. Corpus setup stays an explicit
+user act, and upgrades stay incapable of touching it.
+
+**The pool matching the target form wins whenever it has exemplars.** Long target with a populated
+`long-form.md` uses `long-form.md`, and the short pool is not consulted. The reason is evidentiary,
+not architectural: a matching pool shows how this author's sentences behave in sustained reasoning,
+which is the part of the voice a short pool can only be projected for. Architecture comes from the spine in every case. The other pool is used only when the
+matching one is empty, and then it is projected rather than copied.
+
+| Target | long-form.md | short-form.md | Behaviour |
+|---|---|---|---|
+| long | populated | either | **use `long-form.md`.** Matching form, so it shows the voice at the target length |
+| long | empty | populated | **use `short-form.md`, projected.** A supported path, not a degraded one, so it needs no permission. Voice from the corpus, length and structure from the spine |
+| short | either | populated | **use `short-form.md`** |
+| short | populated | empty | **use `long-form.md`, projected.** Same rule in reverse: take rhythm and diction, not the long piece's architecture |
+| any | empty | empty | skip the voice stage, run the editorial tiers only, and say the pipeline ran in editorial-only mode |
+| any | unreadable | unreadable | report the path and the error, treat as empty, do not fail the run |
+
+Say which pool was used either way. Where the pools differ in what they can teach, the reader should
+know which one shaped the output.

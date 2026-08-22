@@ -114,113 +114,148 @@ editorial-only.
 Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpoint checks, and
 **show it to the user for approval before any fan-out**.
 
-## Stage 2: the voice pass
+## Stage 3: the voice subagents
 
-Both models receive exactly the same six context items:
+**Spawn one subagent per section named in the spine's `running_order`, in parallel.** That list, not
+the directory listing, is what says which sections exist: the spine may have merged, split or cut
+sections at Stage 2, and a cut section has no voicer. A piece with one section gets one subagent.
 
-1. the cleaned draft from stage 1;
-2. the exemplar pool, and what to read from it versus take from the draft (below);
-3. `{skillDir}/weights.md`;
-4. the **PRESERVE list**;
-5. the **contrast ledger**;
-6. the **pre-editorial original**.
+Each receives exactly seven items:
 
-Neither receives the editorial tier files. The voice pass is not there to re-litigate decisions the
-editorial pass already made.
+1. its section text, `sections/NN-slug.md`, post-tier-3 and authoritative;
+2. its edit record, `sections/NN-slug.edits.yaml`, plus the `source.md` snapshot its offsets
+   resolve against;
+3. the voice profile;
+4. the spine, including its own `per_section_assignment` entry, the claims assigned to it, and any
+   `coinage_allocation` it holds;
+5. the anti-slop techniques below;
+6. its attractor slice, `sections/NN-slug.companion.md`, for the never-inject check. **Where that
+   file is empty, fall back to the whole attractor draft**;
+7. **its mode, compose or edit**, which decides how much licence it has over the prose.
 
-**Why the original matters.** The never-inject rule says add nothing the author did not write, and
-that is unenforceable without a fixed reference: a fresh model cannot tell an author's first-person
-aside from one an earlier pass introduced. With the original in context, the constraint is checkable.
-In voice-only mode there is no original, so the rule narrows to "add nothing not present in the draft
-you were given", which is weaker, and the output says so.
+Each subagent works on one section and returns its voiced text plus a restore log. It never sees
+another section's text, which is what makes the fan-out parallel, and what the stitching pass and
+the spine's assignments exist to compensate for.
 
-**PRESERVE is binding here too.** This is the one stage permitted to rewrite freely, which makes it
-the stage where a protected span is most at risk. A voice pass that flattens a coined term
-immediately after tier-2 protected it defeats the whole mechanism. Override an entry only with a
-stated reason, naming which entry and why.
+### With no section files: the unsectioned contract
 
-**The contrast ledger binds this stage as well**, and for the same reason it binds tier-3: a pass
-that writes new sentences is not given a fresh allowance. Applying a voice is where an antithesis is
-most tempting, because mirrored shapes read as punchy and voice work rewards punch. With
-`remaining: 0`, voice the draft in the positive. Displacing the retained correction is allowed with
-a stated reason; adding a second is not.
+Two paths arrive here with no `sections/` directory: voice-only mode, and a `writing-editorial`
+too old to honour `trail-root`. **Both still run**, on a reduced contract, and say which they are on.
 
-### What the corpus is for
-
-**The corpus supplies a voice, never a format.** This is the distinction the whole stage turns on,
-and getting it backwards produces the most common failure: a long draft chopped into the shape of
-the exemplars, so a design doc comes back reading like a thread of posts.
-
-Two things live in any exemplar, and they travel differently:
-
-| Read from the corpus | Take from the draft |
+| Item | Unsectioned form |
 |---|---|
-| sentence rhythm and the length spread within a paragraph | how long the finished piece is |
-| diction, register, and the words this author reaches for | what the piece has to cover |
-| how a paragraph opens, turns, and lands | how many paragraphs there are |
-| punctuation habits, contractions, spelling conventions | the section structure and headings |
-| stance: hedged or blunt, first person or impersonal | the order of the argument |
-| the moves, such as a concrete case before the claim | the scope of each section |
+| 1. section text | the whole draft, treated as one section, id `00-preamble` |
+| 2. edit record and snapshot | **absent.** No restore is possible, and the citation rule has nothing to act on |
+| 3. profile | unchanged |
+| 4. spine | unchanged: derived over the whole draft, with every claim assigned to `00-preamble` |
+| 5. anti-slop techniques | unchanged |
+| 6. attractor slice | the whole attractor draft, which is already the documented fallback |
+| 7. mode | unchanged |
 
-The left column is the voice and it projects onto any length. The right column belongs to the piece
-you were given, and the voice pass has no business changing it.
+**One subagent, no fan-out, and the audit runs once over the piece.** Stitching has nothing to
+join and adds nothing. The report says the run was unsectioned and that no restore was available,
+so a reader can tell a run that found nothing to restore from one that could not look.
 
-**A corpus of short pieces still teaches long-form voice.** Rhythm is a property of consecutive
-sentences, not of a word count, so it is fully present in a 120-word post and it scales without
-distortion. What a short corpus cannot teach is long-form architecture: how this author sustains an
-argument over ten paragraphs, when they summarize, how they hand off between sections. Take that
-from the draft and from tier-3's work, which already settled it.
+**Do not fabricate section files to satisfy the seven-item list.** An invented `edits.yaml` with no
+upstream `source_rev` would offer restores that resolve against nothing.
 
-### Measure the corpus; do not imagine it
+### Licence differs by mode, and that difference is the whole point of the attractor
 
-**Short-form pieces are not made of short sentences, and assuming they are is the failure mode this
-section exists to stop.** A corpus of posts routinely averages 17 words a sentence with a fifth of
-them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
-reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
-front of it.
+*In compose mode*, rewrite every sentence. The section's prose came from a model told to have no
+voice, so it carries no authority. What binds is the claims manifest: the ideas assigned to this
+section must still be made.
 
-So measure the pool before voicing anything: its typical sentence length, its share of sentences past
-26 words, its longest, and its paragraph spread. Put those numbers in the prompt you hand each model,
-because a model cannot aim at a distribution it was never told.
+*In edit mode*, the prose is the user's own and it does carry authority. Work on diction, rhythm
+and paragraph shape, and cut or reorder within the section, but **never** replace the author's
+sentences wholesale, and **never** introduce a claim they did not make. A voice pass that rewrites
+a user's draft from scratch has substituted its voice for theirs, which is the opposite of this
+skill's purpose.
 
-`{skillDir}/weights.md` carries what to do with them, and both models receive it. It also carries the
-second half of the problem, which no length target catches: sentences of varied length built to an
-identical shape still read monotonously.
+Every subagent is told which mode it is in. Where a rule below says "rewrite freely", read it as
+compose-mode licence.
 
-### Corpus resolution
+### Restoring tier edits: the citation rule
 
-Resolve the pool for the target form. First hit wins:
+A subagent may restore text the tiers removed, **but only by citing a named move in the profile. No
+citation, no restore.**
 
-1. `$PATRONUS_VOICE_DIR/<genre>.md`, when the environment variable is set;
-2. `~/.claude/patronus/voice/<genre>.md`, the default user-owned location;
-3. the shipped stub, which contains no exemplars and triggers the empty-pool path.
+The restore log is **this stream's own output, not an `editorial-edit-record/v1` document.** It has
+two halves, and keeping them apart is what makes it checkable:
 
-Create neither the directory nor the files. On a first run with no corpus, print the resolved path
-you looked for and what to put there, then continue in degraded mode. Corpus setup stays an explicit
-user act, and upgrades stay incapable of touching it.
+- an `edit:` block that **quotes the upstream record's own field names verbatim**, so a consumer can
+  join back to it: `section_id` and `source_rev` from the record, `id`, `rule`, `span`, `offset` and
+  `occurrence` from the edit;
+- restore-level fields this stream defines: `restored`, `citing`, `reason`.
 
-**The pool matching the target form wins whenever it has exemplars.** Long target with a populated
-`long-form.md` uses `long-form.md`, and the short pool is not consulted. The reason is evidentiary,
-not architectural: a matching pool shows how this author's sentences behave in sustained reasoning,
-which is the part of the voice a short pool can only be projected for. Architecture still comes from
-the draft in every case, exactly as the table above says. The other pool is used only when the
-matching one is empty, and then it is projected rather than copied.
+```yaml
+restores:
+  - edit:                                     # verbatim from editorial-edit-record/v1
+      section_id: 01-the-relocation-argument  # which record; a merged section carries two
+      source_rev: 3f9a1c                      # the snapshot; resolve by occurrence + removed,
+                                              # since only offset_rev: source offsets resolve
+      id: e01
+      rule: tier-1.3
+      span: 01-the-relocation-argument/p03
+      offset: 142
+      occurrence: 1
+    restored: "not a productivity setup, but a distributed system"
+    citing: "Move: thinks in contrast"
+    reason: "the corpus uses this shape as a thinking move, not a flourish"
+```
 
-| Target | long-form.md | short-form.md | Behaviour |
-|---|---|---|---|
-| long | populated | either | **use `long-form.md`.** Matching form, so it shows the voice at the target length |
-| long | empty | populated | **use `short-form.md`, projected.** A supported path, not a degraded one, so it needs no permission. Voice from the corpus, length and structure from the draft |
-| short | either | populated | **use `short-form.md`** |
-| short | populated | empty | **use `long-form.md`, projected.** Same rule in reverse: take rhythm and diction, not the long piece's architecture |
-| any | empty | empty | skip the voice stage, run the editorial tiers only, and say the pipeline ran in editorial-only mode |
-| any | unreadable | unreadable | report the path and the error, treat as empty, do not fail the run |
+**Do not rename an upstream field on the way in.** `section_id`, not `from_record`; `id`, not
+`edit_id`. A renamed field looks like a schema the upstream never defined, and the join silently
+stops resolving.
 
-Say which pool was used either way. Where the pools differ in what they can teach, the reader should
-know which one shaped the output.
+`section_id` matters after a reshaping: a merged section carries **both** parents' records and a
+split carries its parent's, so a restore that does not name which record it came from cannot resolve
+its offset against the right snapshot.
 
-### The Claude side
+The rule exists because the failure being guarded against is a voice stage rationalising its way
+back to comfortable prose. A citation is cheap to demand and hard to fake against a profile carrying
+quotations.
 
-A fresh subagent, with the six context items above.
+**Edits marked `reversible: false` are never restorable, whatever the citation.** Those are house
+mechanics: no em-dashes, punctuation outside closing quotes, British spellings. They are the
+author's stated rules rather than editorial judgement.
+
+Resolve a restore by `span` plus `offset` plus `occurrence` against the record's `source_rev`, per
+`{skillsDir}/writing-editorial/edit-record.md`. **A restore that cannot resolve all four is
+reported unresolvable and skipped**, never applied to a guess.
+
+### The four anti-slop techniques
+
+Each lands in two places: this prompt, and the audit. A rule that exists only as an instruction is a
+hope.
+
+| # | Technique | Floor | Instruction | Audit criterion |
+|---|---|---|---|---|
+| 1 | Low-perplexity diction | universal | concrete plain-spoken verbs over grand abstractions; "he grabbed the keys", not "he initiated his journey" | abstraction rate per section |
+| 2 | No logical signposts | corpus-checked | match the corpus signpost rate; no "furthermore", "moreover", "consequently" bridging paragraphs; let the reader connect | signpost count against the profile rate |
+| 3 | Asymmetric formatting | universal | vary paragraph shapes; an eight-sentence paragraph beside a one-sentence paragraph beside a fragment | paragraph sentence-count spread |
+| 4 | Internal monologue | corpus-checked | asides, self-correction, doubt shown mid-sentence | asides present where the spine assigned them |
+
+Techniques 1 and 3 are **universal floors**: no corpus is harmed by refusing uniform paragraph
+blocks or by preferring a concrete verb.
+
+Techniques 2 and 4 are **corpus-checked**, because they are stance choices that vary by author and
+register. A flat ban on signposts misfires on a corpus that uses "however" and opens sentences with
+"But" freely. The corpus rate is far below the machine default but is not zero.
+
+**Technique 4 is budgeted at the spine, not per section.** Three asides in one section is a tic;
+three across a 2000-word essay is voice. The subagent is told whether its section carries one.
+
+Technique 1's floor is supplemented by the profile, so the replacement for an abstraction is not
+generic concreteness but this author's: krakens and footbridges, not any old keys and doors.
+
+## Stage 4: the audit
+
+After voicing, audit each section against `{skillDir}/audit.md`. Send that file to the auditing
+subagent **without this one**: an auditor holding the orchestration body inherits the frame of the
+stage it is meant to judge.
+
+Flat fires one rework. A second flat result is **accepted and flagged**, naming the section and what
+it failed.
 
 ### The codex side
 
