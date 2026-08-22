@@ -1,44 +1,49 @@
 ---
 name: writing-like-me
 description: >
-  Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft (or
-  over a faceless base draft it composes), then a voice pass in which a Claude subagent and a second
-  model from a different family each apply your exemplar corpus independently, then merges the two
-  and shows you where they disagreed. Use WHENEVER the user asks to "make this sound like me", "write
-  this in my voice", "draft this the way I would", or hands over a draft and asks to have it voiced.
-  Ships with EMPTY exemplar files by design: it does nothing useful until you supply a corpus at
-  ~/.claude/patronus/voice/. Requires the writing-editorial skill, which its manifest pulls in
-  automatically.
+  Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft
+  (or over a faceless base draft it composes), derives a voice profile of named moves from your
+  exemplar corpus, then a spine that owns the piece's metaphor, opening scene, register and running
+  order, voices each section in parallel against both, audits every section for liveness, stitches
+  them with narrative continuity, and takes one advisory read from a second model. Use WHENEVER the
+  user asks to "make this sound like me", "write this in my voice", "draft this the way I would", or
+  hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by design: it does
+  nothing useful until you supply a corpus at ~/.claude/patronus/voice/. Requires the
+  writing-editorial skill, which its manifest pulls in automatically.
 ---
 
 # Write like me
 
-**Editorial controls first, personal voice second.** An editor works span by span; a composer may
-restructure. This pipeline puts every span-local pass ahead of the one pass allowed to rewrite
-freely, so the voice pass works on prose whose surface problems are already gone.
+**Voice lives in conception, not in varnish.** Which scene opens the piece, which metaphor spans
+it, where the author lets themselves be wry: a voice pass confined to diction and rhythm can only
+polish an arrangement someone else already fixed. So this pipeline derives a spine before it writes
+a sentence, and gives that spine authority over structure.
 
 ```
-  [1] writing-editorial          all four tiers, per its dispatch choice
-       |                         (skipped with a warning if not installed)
-       v  clean, de-slopped draft + PRESERVE list
-       |
-  [2] +------------------------+        +--------------------------+
-      | Claude subagent        |        | codex over MCP           |
-      | fresh context          |        | sandbox: read-only       |
-      | exemplars: voice only  |        | same context             |
-      | + weights.md           |        | codex-reply to refine    |
-      | + PRESERVE + ledger    |        |                          |
-      | + original             |        |                          |
-      +------------------------+        +--------------------------+
-       |                                 |
-       v  voiced draft A                 v  voiced draft B
-       |                                 |
-  [3] main agent merges <----------------+
-       |
-       v
-      1. merged draft
-      2. where the two disagreed, verbatim, both versions
-      3. 2-4 threadable variations
+  sections/ + edits.yaml            from writing-editorial, cut and anchored
+    |
+    v
+  profile: cached or fresh?          [ASK USER]
+    |
+    v  voice-profile.md
+  derive SPINE                       [CHECKPOINT]  main agent, whole-document
+    metaphor, scene, register  <- profile
+    claims manifest            <- attractor draft
+    running order, per-section assignments
+    |
+    v  spine + profile + section[i] + edit record[i]
+  [ s01 ][ s02 ][ sNN ]              voice subagents, parallel
+    |
+    v  voiced section[i] + restore log
+  audit each section                 flat -> rework once -> accept and flag
+    |
+    v
+  stitch                             main agent: narrative continuity, no signposts
+    |
+    v
+  codex advisory read                once, on the finished text
+    |
+    v  final draft + codex notes taken and declined
 ```
 
 ## Entry modes
@@ -46,41 +51,68 @@ freely, so the voice pass works on prose whose surface problems are already gone
 This skill is both an editor and a composer, so decide first which one you are. Choose from what the
 user supplies:
 
-| Mode | Input | Stage 1 |
+| Mode | Input | What the voice stage may do |
 |---|---|---|
-| **Edit** | an existing draft | run the editorial tiers over it, then voice |
-| **Compose** | a request, no draft | write a meaning-first base draft **with no corpus in context**, then the editorial tiers, then voice |
-| **Voice-only** | a draft the user says is already edited | skip the tiers, go straight to the voice stage, and say so |
+| **Edit** | an existing draft | the prose is the author's and carries authority: diction, rhythm, paragraph shape, cutting and reordering within a section. **Never** replace their sentences wholesale, and **never** inject a claim they did not make |
+| **Compose** | a request, no draft | write a faceless base draft **with no corpus in context**, run stage 0 over it, then voice: every sentence may be rewritten |
+| **Voice-only** | a draft the user says is already edited | skip stage 0, say so, and voice with no edit records or sections, so no restore is available |
 
-Voice-only and a missing sibling skill both skip tier-1, so no ledger is emitted. Do not treat that
-as an empty slot: an unexamined draft may already carry a live correction, and assuming `remaining:
-1` would license a second. Apply tier-1.3's detection to the incoming draft first, open the ledger
-from what you find, and say that its state was inferred rather than carried.
+## The attractor
 
-Compose mode's faceless first draft is the point. A draft written before any voice is in context
-reaches for different material than one written to sound like someone, and that difference is worth
-more than the head start.
+Compose mode still writes its base draft with **no corpus in context**. The reasoning holds: a
+model told to sound like someone chases the sound and neglects the thinking.
 
-## Stage 1: the editorial tiers
+What changes is its status. It is an **attractor and loose scaffolding**, not a text to be
+preserved. It fixes the ideas, the evidence and the citations. **Its sentences carry no authority
+at all**, and the voice stage is licensed to demolish and rebuild every one of them.
 
-Run all four tiers of the sibling `writing-editorial` skill, honoring its dispatch question. Carry
-two things forward, because everything downstream is bound by both: its **PRESERVE list** (from
-tier-2) and its **contrast ledger** (from tier-1.3).
+In edit mode the user's own draft plays this role, and **its sentences do carry authority**: the
+never-inject rule binds, and the voice stage may not introduce claims the author did not make.
 
-**The sibling resolves by path, not by name.** The tier files are at
-`{skillsDir}/writing-editorial/tier-0.md` through `tier-3.md`, with the router at
-`{skillsDir}/writing-editorial/SKILL.md`. `{skillsDir}` is substituted at install time to the
-directory holding every installed skill, so the path is correct on each agent's layout without this
-file knowing which one it is on. Where the host exposes a skill-invocation mechanism by name, using
-it is equivalent and preferred, because it honors the router's own dispatch question directly. Where
-it does not, read the router and the four tier files from those paths and apply them in order. Both
-routes reach the same files, which is what makes the absence check below meaningful.
+## Stage 0: the editorial pass
 
-**If the tier files are absent from that path**, this is corruption rather than a supported mode. The
-`requires:` edge means `writing-editorial` is present under every supported install path, so an
-absence means a manually deleted directory, a damaged install, or a hand-copied skill. Report the
-expected sibling location, state that stage 1 was skipped and the draft is unedited, and run stages 2
-and 3 anyway. Do not go hunting for the skill across agent layouts.
+Run the sibling `writing-editorial` skill over the draft, **supplying `trail-root`**, which is what
+makes it emit section files and span-anchored edit records. Supply the attractor draft as its
+`companion` input so each section's attractor slice is cut to the same ids.
+
+What comes back, and what every later stage joins on:
+
+| Artifact | Used by |
+|---|---|
+| `sections/NN-slug.md` | the voice subagent: post-tier-3 and authoritative |
+| `sections/NN-slug.source.md` | restore resolution: the snapshot offsets resolve against |
+| `sections/NN-slug.edits.yaml` | the citation rule, and PRESERVE, now advisory |
+| `sections/NN-slug.companion.md` | the never-inject check |
+| `sections/lineage.yaml` | the spine, when it reshapes |
+
+The two schemas are defined in `{skillsDir}/writing-editorial/edit-record.md`. **They are an
+interface, not an implementation detail**: read them there rather than inferring them from a file.
+
+**The sibling resolves by path, not by name.** Where the host exposes a skill-invocation mechanism
+by name, using it is equivalent and preferred, because it honours the router's own dispatch
+question. If the tier files are absent from `{skillsDir}/writing-editorial/`, this is corruption
+rather than a supported mode: the `requires:` edge means the skill is present under every supported
+install path. Report the expected location, state that stage 0 was skipped and the draft is
+unedited, and continue.
+
+**If the sibling runs but returns no section files**, it is an older version that does not know
+`trail-root`. Say so, naming the path that stayed empty, and continue on the whole draft as a
+single section with no edit records: no restore is available, and the citation rule has nothing to
+act on. Do not fabricate section files to keep the later stages tidy.
+
+## Stage 1: the profile
+
+Read `{skillDir}/voice-profile-schema.md` and follow it: ask cached or fresh, resolve the corpus,
+extract from every corpus file whatever its language, keep evidence in its source language, and take
+rhythm numbers from the English pool only.
+
+With no corpus at the resolved path, **degrade**: print the path, say what to put there, and run
+editorial-only.
+
+## Stage 2: the spine
+
+Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpoint checks, and
+**show it to the user for approval before any fan-out**.
 
 ## Stage 2: the voice pass
 
