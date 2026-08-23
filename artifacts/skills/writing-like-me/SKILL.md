@@ -259,6 +259,17 @@ register. A flat ban on signposts misfires on a corpus that uses "however" and o
 **Technique 4 is budgeted at the spine, not per section.** Three asides in one section is a tic;
 three across a 2000-word essay is voice. The subagent is told whether its section carries one.
 
+**The budget is set from a rate, not from taste.** The profile carries `hedge_rate_target`, and the
+spine allocates against it across the running order the way it allocates asides and frame-breaks:
+target rate times draft length, distributed over sections, recorded in the spine so each voicer
+knows what its section owes. Where the profile carries no target, fall back to `hedge_rate_corpus`.
+
+Doubt is a stance the corpus can be measured for, so it is allocated rather than left to the
+voicer's mood. **A draft with no visible doubt anywhere is the failure this budget exists to
+prevent**: prose that knows everything, states each claim as settled, and gives a reader no seam to
+think through. `hedge_rate_target` may sit deliberately above `hedge_rate_corpus`, because long-form
+has room for reconsideration that a short post does not.
+
 Technique 1's floor is supplemented by the profile, so the replacement for an abstraction is not
 generic concreteness but this author's: krakens and footbridges, not any old keys and doors.
 
@@ -289,6 +300,18 @@ to connect two sections.
 **It must not regress the rhythm.** The risk here is smoothing section seams into uniformity,
 flattening the spread the voicers just built. Check the stitched text against
 `{skillDir}/weights.md`.
+
+**Report runs of short sentences.** Count consecutive sentences of ten words or fewer in prose
+paragraphs, and report any run of three or more, naming the paragraph. Runs that straddle a section
+seam are only visible here, which is why the check sits at this stage rather than in the per-section
+audit.
+
+This is **reported, never blocking**, and it does not enter any score. A run of short sentences is a
+fact about a text rather than a defect: a deliberately clipped passage may be the best paragraph in
+the piece. Gating on it would teach the pipeline to pad sentences to clear a threshold, which is the
+gradient `{skillDir}/audit.md` refuses for the rhythm numbers and refuses here for the same reason.
+Exempt list items, headings and one-sentence paragraphs standing alone, none of which are the shape
+this is looking for.
 
 It also resolves duplicate coinages: where two sections independently reached for the same term
 outside any allocation, keep one and say which.

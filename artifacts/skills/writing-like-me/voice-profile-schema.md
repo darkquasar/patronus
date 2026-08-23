@@ -31,8 +31,11 @@ Evidence (en): footbridges and stairs and a table where the ocean comes into vie
 
 ## Rates measured from the corpus
 rhythm_source: english-pool
+rhythm_source_format: short-form        # what the corpus IS, not what the draft should be
 logical_signposts: 0.4 per paragraph
 asides_self_correction: 1 per 300 words
+hedge_rate_corpus: 2.2 per 1000 words   # measured
+hedge_rate_target: 3.0 per 1000 words   # author's choice for long-form; deliberately above corpus
 median_sentence: 16
 pct_past_26: 17
 longest: 73
@@ -96,6 +99,28 @@ both ends unless something counters it.
 
 **They are not a success criterion.** A run may match every number and still fail the liveness
 gate. **Never present distributional agreement as evidence the voice landed.**
+
+## Cadence does not cross a format boundary
+
+`rhythm_source_format` records what the corpus is. **When the draft's format differs from it, the
+rhythm numbers are context rather than targets**, and reproducing them is a failure rather than a
+success.
+
+A corpus of short-form posts is the common case, and it carries a cadence that does not transfer.
+Aphoristic writing runs on short sentences: a clipped run of five or seven is the shape of the
+form, and it lands. In long-form prose the same run reads as assertion without argument, hammering
+a reader who was never given room to doubt.
+
+**From a short-form corpus, expect long-form to run longer**: a higher median, and fewer
+consecutive short sentences than the corpus shows. Take diction, moves and stance from the corpus.
+Do not take its cadence.
+
+No conversion factor is given, and none should be invented. Deriving one would need a long-form
+corpus by the same author, and where that does not exist a computed target would be a fabricated
+number scored against real prose. State the direction, and let the voicer judge the magnitude.
+
+This is the same rule as **the corpus supplies a voice, never a format**, arriving by way of the
+numbers rather than the layout.
 
 ## What the corpus is for
 

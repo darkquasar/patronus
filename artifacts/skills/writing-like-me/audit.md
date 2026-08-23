@@ -15,7 +15,7 @@ All read from the profile and the spine rather than invented. Each scores 0, 1 o
 
 | Criterion | 0 | 1 | 2 |
 |---|---|---|---|
-| Named moves present | none of the profile's moves appear | one appears | two or more appear, quoted |
+| Named moves, earning their use | none appear, **or** those present are ornamental | one appears and is load-bearing | two or more appear, quoted, each doing work the plain sentence could not |
 | Governing metaphor | absent | mentioned once, decoratively | touched and carried further than the previous section did |
 | Concreteness | abstractions dominate; no image | some concrete nouns and verbs | the section's abstract point lands on a specific image |
 | Paragraph spread | every paragraph within one sentence of the same length | some variation | a long paragraph and a short one or a fragment |
@@ -26,9 +26,30 @@ All read from the profile and the spine rather than invented. Each scores 0, 1 o
 A section carrying a metaphor the spine did not assign **fails the metaphor row regardless of
 how well it is written**. Compliance is a criterion, not just quality.
 
+**A move reproduced past its meaning scores 0 on the moves row regardless of how well it is
+written.** Presence is not the test. Test each instance by rewriting it flat and reading what
+changes: if the flat version loses nothing, the move was ornament and scores 0.
+
+Frequency is not the test either, and a counter would get this backwards. The corpus carries three
+consecutive contrasts that each name a different distinction, which is the strongest passage in it:
+
+> Hunting is more about calculated disruption of adversarial tactics than it is about thinking our
+> detection efforts will find adversaries were we expect them to be. Hunting is more about
+> understanding and shaping attacker behaviour and less about waiting for attacker behaviour to
+> make itself evident.
+
+A single contrast naming no distinction still fails:
+
+> Give that stack to one engineer and it is a productivity setup. Give it to twelve engineers and
+> you have a distributed system.
+
+The second is a scale change wearing the clothes of an opposition. Rewritten flat ("a stack that is
+fine for one engineer becomes a distributed system at twelve") it loses nothing, so the parallelism
+was doing rhetorical work the content did not earn. Three instances can pass where one fails.
+
 ## Flat is a score, not an impression
 
-A section is **flat** when it scores 0 on "named moves present", **or** when its total is 4 or
+A section is **flat** when it scores 0 on "named moves, earning their use", **or** when its total is 4 or
 below out of 14. Either condition fires one rework.
 
 Sections not assigned a frame-break or aside score that row at **the mean of the other six rows,
