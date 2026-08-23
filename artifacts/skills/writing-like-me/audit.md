@@ -15,7 +15,7 @@ All read from the profile and the spine rather than invented. Each scores 0, 1 o
 
 | Criterion | 0 | 1 | 2 |
 |---|---|---|---|
-| Named moves present | none of the profile's moves appear | one appears | two or more appear, quoted |
+| Named moves, earning their use | none appear, **or** those present are ornamental | one appears and is load-bearing | two or more appear, quoted, each doing work the plain sentence could not |
 | Governing metaphor | absent | mentioned once, decoratively | touched and carried further than the previous section did |
 | Concreteness | abstractions dominate; no image | some concrete nouns and verbs | the section's abstract point lands on a specific image |
 | Paragraph spread | every paragraph within one sentence of the same length | some variation | a long paragraph and a short one or a fragment |
@@ -26,9 +26,39 @@ All read from the profile and the spine rather than invented. Each scores 0, 1 o
 A section carrying a metaphor the spine did not assign **fails the metaphor row regardless of
 how well it is written**. Compliance is a criterion, not just quality.
 
+**A move reproduced past its meaning scores 0 on the moves row regardless of how well it is
+written.** Presence is not the test. Test each instance by rewriting it flat, in the plainest
+sentence carrying the same information, and asking what the flat version no longer does.
+
+**What counts as loss.** The move is load-bearing where the flat rewrite drops one of these:
+
+| Loss | The move was carrying |
+|---|---|
+| a distinction | the two halves name genuinely different things, and flattening merges them |
+| a claim | the shape asserts something the plain sentence does not say |
+| an image the argument later uses | a later passage refers back to it |
+| the reader's position | it turns to address, question or implicate the reader, and flat prose does not |
+| a stance | hedging or bluntness the plain version neutralises |
+
+Where the flat rewrite loses **only** rhythm, emphasis or symmetry, the move was ornament and
+scores 0. Sounding better is not carrying something.
+
+**Frequency is not the test either, and a counter would get this backwards.** A move may recur
+several times in one paragraph, each instance passing the test above on its own, and that passage
+can be the strongest in the section. One instance that passes none of it still fails: two clauses
+set in opposition where the second only adds a fact, or restates the first at another scale, is
+parallelism doing rhetorical work the content did not earn.
+
+**Three instances can pass where one fails**, so score the instance rather than the tally.
+
+Where `~/.claude/patronus/voice/examples.md` exists, read its
+`## The moves row: earned against ornamental` heading for a passing and a failing instance in this
+author's own register. **It illustrates and never governs**: the criteria and thresholds here hold,
+and an example that appears to contradict one is being misread.
+
 ## Flat is a score, not an impression
 
-A section is **flat** when it scores 0 on "named moves present", **or** when its total is 4 or
+A section is **flat** when it scores 0 on "named moves, earning their use", **or** when its total is 4 or
 below out of 14. Either condition fires one rework.
 
 Sections not assigned a frame-break or aside score that row at **the mean of the other six rows,

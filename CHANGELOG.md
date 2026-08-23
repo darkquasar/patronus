@@ -5,6 +5,34 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ## Unreleased
 
+### writing-like-me 2.1.0
+
+Closes the gap a review pass found in the 2.0.0 audit: it scored whether a named move was
+**present**, never whether the move was earning its place. A draft that reproduced the author's
+contrast habit until it meant nothing scored well, so over-baked prose passed while dead prose was
+caught.
+
+The moves row now reads "named moves, earning their use", and a move reproduced past its meaning
+scores 0 whatever its polish. The auditor is given the procedure rather than a count: rewrite the
+instance flat, and if nothing is lost the move was ornament. Frequency is explicitly not the test,
+since three consecutive contrasts that each name a distinction pass where one naming none fails.
+Because the row is the existing one, an ornamental section now fires the same flat trigger as an
+empty one, and the thresholds are unchanged.
+
+The profile records `rhythm_source_format`. Rhythm numbers taken from a short-form corpus are
+context rather than targets when the draft is long-form: aphoristic cadence lands in a post and
+reads as hammering in an essay. The direction of the correction is stated, the magnitude is left to
+judgement, and no conversion factor is invented, because deriving one would need a long-form corpus
+by the same author.
+
+Stitching reports runs of three or more consecutive short sentences, naming the paragraph. It is
+reported and never blocking, for the same reason the rhythm numbers never enter a score: a gate
+teaches the pipeline to pad sentences to clear it.
+
+Visible doubt is now budgeted from a rate. The profile carries `hedge_rate_corpus` beside
+`hedge_rate_target`, and the spine allocates against the target the way it allocates asides. A
+target may sit above the measured corpus rate where long-form has room a short post does not.
+
 ### writing-like-me 2.0.0 (breaking)
 
 The voice stage is rebuilt around conception rather than diction. A voice profile of named moves,

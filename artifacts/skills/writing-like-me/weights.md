@@ -2,18 +2,22 @@
 
 Read this before rewriting, and check the finished draft against it. Applying a voice flattens rhythm on its own, and this file is the counterweight. It is shipped content, not your corpus.
 
+**It carries the failure model, never an author's numbers.** Figures appearing below are worked arithmetic illustrating a rule, and none is a target. Every value you aim at comes from the profile, measured from your own corpus at extraction. A shipped number describing somebody else's rhythm would read as calibration while being a stranger's habit.
+
+**Why this is its own file.** Every voice subagent receives it; `{skillDir}/voice-profile-schema.md` goes to extraction instead, and carries corpus resolution, caching and the rules for deriving a profile, none of which a voicer needs. The two divide by audience: the schema says what the numbers *are* and when they stop being targets, and this file says what to *do* while writing. Where they touch, the schema defers here rather than restating.
+
 Two things go wrong, and only the first is about length.
 
 ## 1. The tails get clipped
 
 Voice work rewards punch, so a pass reaches for compression: it splits qualifications into separate sentences and simplifies clauses. There are many natural prompts to break a sentence and almost none to join two, so the spread narrows from both ends and every sentence drifts toward the middle.
 
-**The corpus's centre is a target. Its extremes are permission, not a quota.** A corpus of 284 sentences has a longest that a 16-sentence draft will not contain, and should not manufacture: that sentence is a one-in-284 event, and demanding it produces a conspicuous long sentence the thought never earned. What the maximum tells you is that sentences of that length are *allowed* in this voice.
+**The corpus's centre is a target. Its extremes are permission, not a quota.** A corpus of several hundred sentences has a longest that a sixteen-sentence draft will not contain, and should not manufacture: that sentence is a one-in-several-hundred event, and demanding it produces a conspicuous long sentence the thought never earned. What the maximum tells you is that sentences of that length are *allowed* in this voice.
 
 What to aim at:
 
 - Keep the corpus's typical sentence length, and do not drift below it.
-- Carry its share of long sentences. If roughly a fifth run past 26 words, a 16-sentence draft wants around three of them.
+- Carry its share of long sentences, in proportion. Take the corpus's own share of sentences past its long threshold and apply it to the draft's sentence count; a share of a fifth over sixteen sentences asks for around three.
 - Keep the genuinely short sentences too, because clipping the bottom tail flattens as surely as clipping the top.
 - Let one sentence reach the corpus's upper range, near its 90th percentile rather than its maximum.
 
@@ -29,9 +33,9 @@ Long sentences come from a small set of moves, so reach for the move rather than
 
 **Varied lengths with identical architecture still reads monotonous.** This is the failure a length-only check passes clean. Consider:
 
-> It is idempotent. Running reconciliation twice changes nothing the second time, because the second pass finds no diff. This is what makes "redeploy everything" stop being frightening. A deploy-on-merge pipeline has no such guarantee, which is why teams that run one end up afraid of their own tooling and start hand-scoping deploys to the rules they touched.
+> The map was wrong. The surveyor had walked the ridge in summer, because the pass was open then and the work could be done in a day. This is why the road bends north. The county rebuilt it twice on the same line, which is why every winter closure since has followed a route chosen for one clear afternoon in July.
 
-Lengths of 3, 15, 9, and 30 words: an excellent spread that satisfies every rule above. It still plods, because all four sentences are built the same way. Each opens on its subject and runs subject, verb, object, and both long ones append their reasoning as a trailing `because` or `which is why` clause. The variance is in the lengths and nowhere else.
+Lengths of 4, 23, 7, and 27 words: an excellent spread that satisfies every rule above. It still plods, because all four sentences are built the same way. Each opens on its subject and runs subject, verb, object, and both long ones append their reasoning as a trailing `because` or `which is why` clause. The variance is in the lengths and nowhere else.
 
 Scan consecutive sentences for these, and vary whichever has gone uniform:
 

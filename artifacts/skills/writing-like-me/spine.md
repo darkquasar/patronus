@@ -14,41 +14,39 @@ lets themselves be wry. A spine derived after the prose is fixed can only varnis
 
 ```yaml
 governing_metaphor: >
-  The pipeline as a house you keep the deeds to. The agentic turn builds a second house and
-  moves half the furniture across, so there are two sets of deeds to keep honest. Each
-  section touches this at least once, and it gains depth rather than repeating.
+  <one image the whole piece runs on, and how it is meant to develop. State what it is, and
+  state that each section touches it at least once and deepens it rather than restating it.>
 
 opening_scene: >
-  The Tuesday afternoon: a four-line rule, ninety seconds to write, ninety minutes waiting on
-  a runner image whose credential lives in a vault she cannot reach. Later sections may call
-  back to her.
+  <a specific moment, with a person in it, that the piece opens on. Name what later sections
+  may call back to.>
 
 register: >
-  Wry, occasionally mythic. First person present and unhedged where the author has a view.
-  Breaks frame to address the reader twice across the piece.
+  <the stance: hedged or blunt, first person or impersonal, wry or plain, and how often the
+  piece turns to address the reader.>
 
 claims_manifest:
   - id: c1
-    claim: "The repository is a state-management system, not an authoring workflow"
+    claim: "<a claim the piece must land, in one sentence>"
     assigned_to: ["00-preamble"]
   - id: c2
-    claim: "The centralised surface does not shrink, it splits in two"
-    assigned_to: ["02-the-second-house", "04-the-argument"]   # may land in more than one
+    claim: "<another>"
+    assigned_to: ["02-the-turn", "04-the-case"]   # may land in more than one
 
 # Full section ids throughout, never the bare ordinal: these join to the upstream
 # edit records and lineage, which key on NN-slug.
 running_order:
   - 00-preamble
-  - 02-the-second-house
-  - 01-the-relocation-argument
-  - 04-the-argument
+  - 02-the-turn
+  - 01-the-opening
+  - 04-the-case
 
 per_section_assignment:
-  "02-the-second-house": "carries the metaphor's deepening: this is where the second house gets furnished"
-  "04-the-argument": "frame-break lands here, plus one aside per the monologue budget"
+  "02-the-turn": "carries the metaphor's deepening: where the governing image is extended, not restated"
+  "04-the-case": "frame-break lands here, plus one aside per the monologue budget"
 
 coinage_allocation:
-  "02-the-second-house": ["second house"]      # only this section may introduce this term
+  "02-the-turn": ["<the coined term>"]      # only this section may introduce this term
 ```
 
 ## The spine may reshape the piece
@@ -72,8 +70,8 @@ lineage, which key on `NN-slug`.
 | Operation | New id | Lineage entry | Edit records that apply |
 |---|---|---|---|
 | reorder | unchanged | none; only `running_order` moves | unchanged |
-| merge `02-the-second-house` + `03-what-it-costs` | `02+03-the-second-house` | `op: merged`, both parents in `derives_from` | both parents' records |
-| split `04-the-argument` | `04a-the-argument`, `04b-the-objection` | `op: split`, parent in `derives_from` | the parent's record, resolved by span |
+| merge `02-the-turn` + `03-the-cost` | `02+03-the-turn` | `op: merged`, both parents in `derives_from` | both parents' records |
+| split `04-the-case` | `04a-the-case`, `04b-the-objection` | `op: split`, parent in `derives_from` | the parent's record, resolved by span |
 | cut `05-the-aside` | none | `05-the-aside` recorded `op: cut`, `edit_records: []` | none; restores against it are void |
 
 **A reshaping writes the section files it mints.** A merge concatenates its parents' text in the

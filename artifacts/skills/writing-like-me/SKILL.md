@@ -192,20 +192,20 @@ two halves, and keeping them apart is what makes it checkable:
 ```yaml
 restores:
   - edit:                                     # verbatim from editorial-edit-record/v1
-      section_id: 01-the-relocation-argument  # which record; a merged section carries two
+      section_id: 01-the-opening  # which record; a merged section carries two
       source_rev: 3f9a1c                      # the snapshot; resolve by occurrence + removed,
                                               # since only offset_rev: source offsets resolve
       id: e01
       rule: tier-1.3
-      span: 01-the-relocation-argument/p03
+      span: 01-the-opening/p03
       offset: 142
       offset_rev: source                    # only offset_rev: source is reproducible downstream
       occurrence: 1
-      removed: "not a productivity setup, but a distributed system"
+      removed: "<the span the tier removed, verbatim>"
       reversible: true
-    restored: "not a productivity setup, but a distributed system"
-    citing: "Move: thinks in contrast"
-    reason: "the corpus uses this shape as a thinking move, not a flourish"
+    restored: "<the same span, put back>"
+    citing: "Move: <the profile move that licenses it>"
+    reason: "<why the corpus licenses this shape here>"
 ```
 
 **Do not rename an upstream field on the way in.** `section_id`, not `from_record`; `id`, not
@@ -259,8 +259,20 @@ register. A flat ban on signposts misfires on a corpus that uses "however" and o
 **Technique 4 is budgeted at the spine, not per section.** Three asides in one section is a tic;
 three across a 2000-word essay is voice. The subagent is told whether its section carries one.
 
+**The budget is set from a rate, not from taste.** The profile carries `hedge_rate_target`, and the
+spine allocates against it across the running order the way it allocates asides and frame-breaks:
+target rate times draft length, distributed over sections, recorded in the spine so each voicer
+knows what its section owes. Where the profile carries no target, fall back to `hedge_rate_corpus`.
+
+Doubt is a stance the corpus can be measured for, so it is allocated rather than left to the
+voicer's mood. **A draft with no visible doubt anywhere is the failure this budget exists to
+prevent**: prose that knows everything, states each claim as settled, and gives a reader no seam to
+think through. `hedge_rate_target` may sit deliberately above `hedge_rate_corpus`, because long-form
+has room for reconsideration that a short post does not.
+
 Technique 1's floor is supplemented by the profile, so the replacement for an abstraction is not
-generic concreteness but this author's: krakens and footbridges, not any old keys and doors.
+generic concreteness but this author's, drawn from the images their own corpus reaches for rather
+than from the first plain noun to hand.
 
 ## Stage 4: the audit
 
@@ -289,6 +301,18 @@ to connect two sections.
 **It must not regress the rhythm.** The risk here is smoothing section seams into uniformity,
 flattening the spread the voicers just built. Check the stitched text against
 `{skillDir}/weights.md`.
+
+**Report runs of short sentences.** Count consecutive sentences of ten words or fewer in prose
+paragraphs, and report any run of three or more, naming the paragraph. Runs that straddle a section
+seam are only visible here, which is why the check sits at this stage rather than in the per-section
+audit.
+
+This is **reported, never blocking**, and it does not enter any score. A run of short sentences is a
+fact about a text rather than a defect: a deliberately clipped passage may be the best paragraph in
+the piece. Gating on it would teach the pipeline to pad sentences to clear a threshold, which is the
+gradient `{skillDir}/audit.md` refuses for the rhythm numbers and refuses here for the same reason.
+Exempt list items, headings and one-sentence paragraphs standing alone, none of which are the shape
+this is looking for.
 
 It also resolves duplicate coinages: where two sections independently reached for the same term
 outside any allocation, keep one and say which.
@@ -407,7 +431,7 @@ voice:
   rhythm_source: english-pool      # or: unavailable
   spine_approved: true
   sections_voiced: 6
-  sections_reworked: [03-what-it-costs]
+  sections_reworked: [03-the-cost]
   sections_flagged_flat: []
   claims_unmade: []
   restores: 2
@@ -439,10 +463,11 @@ exemplar count are knowable; the attribution is a claim.
   reliably the voice transfers, not about which lengths are allowed: a short corpus projecting onto
   a long piece is the supported path, and the constraint is that casual registers are harder to
   imitate at all.
-- A short corpus teaches rhythm and diction but not architecture. Sentence rhythm scales from a
-  120-word post to a 4000-word essay, but how this author sustains an argument across ten
-  paragraphs is not in the corpus to learn. The spine invents a running order the corpus cannot
-  evidence, so a thin corpus produces a thin spine.
+- A short corpus teaches sentence construction and diction but not architecture. How a sentence is
+  built scales from a 120-word post to a 4000-word essay; how densely short sentences are packed
+  does not, per the format rule in `{skillDir}/voice-profile-schema.md`. Beyond both, how this
+  author sustains an argument across ten paragraphs is not in the corpus to learn. The spine
+  invents a running order the corpus cannot evidence, so a thin corpus produces a thin spine.
 - Style strength and content preservation trade off against each other. They are competing
   objectives, not a tuning failure. This pipeline picks a point on that curve by putting
   content-shaping first and voice second.
