@@ -57,6 +57,6 @@ The repairs are structural. Front a subordinate clause so a sentence opens on it
 
 ## Report what you found
 
-Say, in a line: the corpus's typical length and long-sentence share, the same two for your output, your longest sentence, and any shape dimension you had to vary. That makes a narrowed draft visible to the merge instead of leaving it to be noticed later by a reader.
+Say, in a line: the corpus's typical length and long-sentence share, the same two for your output, your longest sentence, and any shape dimension you had to vary. That makes a narrowed draft visible to the audit instead of leaving it to be noticed later by a reader.
 
 Structural regularity is a stronger signal than vocabulary. A draft in the author's words with the rhythm flattened still reads as machine-made.

@@ -5,6 +5,27 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ## Unreleased
 
+### writing-like-me 2.0.0 (breaking)
+
+The voice stage is rebuilt around conception rather than diction. A voice profile of named moves,
+each carrying corpus evidence, replaces distributional targets as the success criterion. A spine
+derived once per run owns the piece's governing metaphor, opening scene, register and running
+order, and may reorder, merge, split or cut sections under a claims manifest that guarantees every
+claim survives. Sections are voiced in parallel against both, each audited for liveness with one
+rework and then accept-and-flag, and stitched with narrative continuity rather than logical
+signposts.
+
+Codex moves from co-author to critic: one advisory read over the finished text, with no veto, and
+the run reports what it took and what it declined.
+
+Breaking: the two-author merge is gone, and with it the "both drafts, then merge" output. Reporting
+now leads with what the piece failed at, and rhythm numbers are labelled as guard rails rather than
+presented as success.
+
+Requires `writing-editorial` 2.2.0 or later, whose section files and span-anchored edit records
+this stage consumes. Existing corpora at `~/.claude/patronus/voice/` keep working untouched;
+`voice-profile.md` is new, so a first run extracts one.
+
 ### writing-editorial 2.2.0
 
 Long drafts can now be cut into sections and edited in parallel. Tiers 0 through 2 fan out one
