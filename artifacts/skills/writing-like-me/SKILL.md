@@ -271,7 +271,8 @@ think through. `hedge_rate_target` may sit deliberately above `hedge_rate_corpus
 has room for reconsideration that a short post does not.
 
 Technique 1's floor is supplemented by the profile, so the replacement for an abstraction is not
-generic concreteness but this author's: krakens and footbridges, not any old keys and doors.
+generic concreteness but this author's, drawn from the images their own corpus reaches for rather
+than from the first plain noun to hand.
 
 ## Stage 4: the audit
 

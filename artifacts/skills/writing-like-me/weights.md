@@ -2,6 +2,8 @@
 
 Read this before rewriting, and check the finished draft against it. Applying a voice flattens rhythm on its own, and this file is the counterweight. It is shipped content, not your corpus.
 
+**It carries the failure model, never an author's numbers.** Figures appearing below are worked arithmetic illustrating a rule, and none is a target. Every value you aim at comes from the profile, measured from your own corpus at extraction. A shipped number describing somebody else's rhythm would read as calibration while being a stranger's habit.
+
 Two things go wrong, and only the first is about length.
 
 ## 1. The tails get clipped

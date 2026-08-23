@@ -10,36 +10,34 @@ and audited.
 ## Shape
 
 ```markdown
-## Move: coins a term, then uses it as established
-Evidence (en): "structural lag", "DAIKII", "delusion of progress",
-"The Inevitable Kraken of Doom"
-Frequency: ~1 per 400 words
+## Move: <what the author does, as a verb phrase>
+Evidence (en): "<quotation>", "<quotation>", "<quotation>"
+Frequency: ~1 per <n> words
 
-## Move: thinks in contrast
-Evidence (en): "Hunting is more about X than it is about Y" (x4 in one paragraph);
-shortcuts/longcuts; signal/noise
-Note: a cognitive habit, not a tic. Tier-1.3's ban does not apply to it.
-
-## Move: mythic register on professional matter
-Evidence (en): "dark magic", "archmages", "automaton-golems"
-
-## Move: breaks frame to address the reader
-Evidence (en): "Wait a second bro, are you saying...", "But is it?"
-
-## Move: concrete image carrying an abstract point
-Evidence (en): footbridges and stairs and a table where the ocean comes into view
+## Move: <another>
+Evidence (en): "<quotation>", "<quotation>"
+Note: <where a move needs a caveat, such as an editorial rule it is exempt from>
 
 ## Rates measured from the corpus
 rhythm_source: english-pool
-rhythm_source_format: short-form        # what the corpus IS, not what the draft should be
-logical_signposts: 0.4 per paragraph
-asides_self_correction: 1 per 300 words
-hedge_rate_corpus: 2.2 per 1000 words   # measured
-hedge_rate_target: 3.0 per 1000 words   # author's choice for long-form; deliberately above corpus
-median_sentence: 16
-pct_past_26: 17
-longest: 73
+rhythm_source_format: <short-form | long-form | mixed>
+logical_signposts: <measured> per paragraph
+asides_self_correction: 1 per <measured> words
+hedge_rate_corpus: <measured> per 1000 words
+hedge_rate_target: <the author's choice, where they set one; else omit>
+median_sentence: <measured>
+pct_past_26: <measured>
+longest: <measured>
 ```
+
+**The values are placeholders and the field names are not.** Every rate is measured from the
+corpus at extraction, or in `hedge_rate_target`'s case chosen by the author. None of them has a
+shipped default, and a number carried in from another author's corpus would be
+config-shaped misinformation: it would read as calibration while describing somebody else.
+
+**Where `~/.claude/patronus/voice/examples.md` exists, prefer its worked examples over the generic shapes
+above.** An example in the author's own register teaches the form better than an invented one.
+The file is optional, is never shipped, and the schema works without it.
 
 The `## Move:` heading form is what the audit joins on. A profile entry without evidence is
 not a move; drop it rather than shipping an adjective.
@@ -54,11 +52,10 @@ The pool may hold Spanish material alongside English, in parallel files:
   short-form-es.md   long-form-es.md     Spanish
 ```
 
-The named moves are ways of thinking rather than artefacts of a language: reaching for mythic
-imagery when describing institutional decay, coining a term and then using it as established,
-breaking frame to address the reader, landing an abstract point on a concrete image. These
-transfer, and an author's less professionally guarded writing is often where the voice is
-clearest.
+The named moves are ways of thinking rather than artefacts of a language: how this author reaches
+for an image, whether they name a thing and then treat it as established, whether they turn and
+address the reader, where an abstract point comes to rest. These transfer, and an author's less
+professionally guarded writing is often where the voice is clearest.
 
 Two constraints on how they are used:
 
@@ -155,6 +152,11 @@ section exists to stop.** A corpus of posts routinely averages 17 words a senten
 them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
 reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
 front of it.
+
+This is the companion to the format rule above, not a contradiction of it. Measure the corpus rather
+than imagining it, and then carry the measurement across a format boundary as context rather than as
+a target. The stereotype and the transplant are two ways of arriving at the same wrong cadence, one
+by guessing and one by copying.
 
 So measure the pool before voicing anything: its typical sentence length, its share of sentences past
 26 words, its longest, and its paragraph spread. Put those numbers in the profile's rates block and in every
