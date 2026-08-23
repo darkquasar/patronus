@@ -39,8 +39,10 @@ earn. Rewritten flat it loses nothing.
 
 **Three instances can pass where one fails**, so score the instance rather than the tally.
 
-Where `~/.claude/patronus/voice/examples.md` exists, read its worked pass and fail examples in this
-author's own register and prefer them to the description above.
+Where `~/.claude/patronus/voice/examples.md` exists, read its
+`## The moves row: earned against ornamental` heading for a passing and a failing instance in this
+author's own register. **It illustrates and never governs**: the criteria and thresholds here hold,
+and an example that appears to contradict one is being misread.
 
 ## Flat is a score, not an impression
 

@@ -192,20 +192,20 @@ two halves, and keeping them apart is what makes it checkable:
 ```yaml
 restores:
   - edit:                                     # verbatim from editorial-edit-record/v1
-      section_id: 01-the-relocation-argument  # which record; a merged section carries two
+      section_id: 01-the-opening  # which record; a merged section carries two
       source_rev: 3f9a1c                      # the snapshot; resolve by occurrence + removed,
                                               # since only offset_rev: source offsets resolve
       id: e01
       rule: tier-1.3
-      span: 01-the-relocation-argument/p03
+      span: 01-the-opening/p03
       offset: 142
       offset_rev: source                    # only offset_rev: source is reproducible downstream
       occurrence: 1
-      removed: "not a productivity setup, but a distributed system"
+      removed: "<the span the tier removed, verbatim>"
       reversible: true
-    restored: "not a productivity setup, but a distributed system"
-    citing: "Move: thinks in contrast"
-    reason: "the corpus uses this shape as a thinking move, not a flourish"
+    restored: "<the same span, put back>"
+    citing: "Move: <the profile move that licenses it>"
+    reason: "<why the corpus licenses this shape here>"
 ```
 
 **Do not rename an upstream field on the way in.** `section_id`, not `from_record`; `id`, not
@@ -431,7 +431,7 @@ voice:
   rhythm_source: english-pool      # or: unavailable
   spine_approved: true
   sections_voiced: 6
-  sections_reworked: [03-what-it-costs]
+  sections_reworked: [03-the-cost]
   sections_flagged_flat: []
   claims_unmade: []
   restores: 2
