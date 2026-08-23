@@ -463,10 +463,11 @@ exemplar count are knowable; the attribution is a claim.
   reliably the voice transfers, not about which lengths are allowed: a short corpus projecting onto
   a long piece is the supported path, and the constraint is that casual registers are harder to
   imitate at all.
-- A short corpus teaches rhythm and diction but not architecture. Sentence rhythm scales from a
-  120-word post to a 4000-word essay, but how this author sustains an argument across ten
-  paragraphs is not in the corpus to learn. The spine invents a running order the corpus cannot
-  evidence, so a thin corpus produces a thin spine.
+- A short corpus teaches sentence construction and diction but not architecture. How a sentence is
+  built scales from a 120-word post to a 4000-word essay; how densely short sentences are packed
+  does not, per the format rule in `{skillDir}/voice-profile-schema.md`. Beyond both, how this
+  author sustains an argument across ten paragraphs is not in the corpus to learn. The spine
+  invents a running order the corpus cannot evidence, so a thin corpus produces a thin spine.
 - Style strength and content preservation trade off against each other. They are competing
   objectives, not a tuning failure. This pipeline picks a point on that curve by putting
   content-shaping first and voice second.

@@ -4,6 +4,8 @@ Read this before rewriting, and check the finished draft against it. Applying a 
 
 **It carries the failure model, never an author's numbers.** Figures appearing below are worked arithmetic illustrating a rule, and none is a target. Every value you aim at comes from the profile, measured from your own corpus at extraction. A shipped number describing somebody else's rhythm would read as calibration while being a stranger's habit.
 
+**Why this is its own file.** Every voice subagent receives it; `{skillDir}/voice-profile-schema.md` goes to extraction instead, and carries corpus resolution, caching and the rules for deriving a profile, none of which a voicer needs. The two divide by audience: the schema says what the numbers *are* and when they stop being targets, and this file says what to *do* while writing. Where they touch, the schema defers here rather than restating.
+
 Two things go wrong, and only the first is about length.
 
 ## 1. The tails get clipped

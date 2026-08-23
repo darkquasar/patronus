@@ -220,10 +220,10 @@ supplies it, invented at spine time by an agent that has just read the corpus.
 ## Measure the corpus; do not imagine it
 
 **Short-form pieces are not made of short sentences, and assuming they are is the failure mode this
-section exists to stop.** A corpus of posts routinely averages 17 words a sentence with a fifth of
-them past 26, which is an ordinary spread for any register. A voice pass that reads "short-form" and
-reaches for clipped, punchy sentences is applying a stereotype of the format rather than the voice in
-front of it.
+section exists to stop.** A corpus of posts commonly carries an ordinary spread for any register,
+its typical sentence nowhere near clipped and a substantial share running long. A voice pass that
+reads "short-form" and reaches for punchy sentences is applying a stereotype of the format rather
+than the voice in front of it. Measure before assuming, and let the measurement contradict you.
 
 This is the companion to the format rule above, not a contradiction of it. Measure the corpus rather
 than imagining it, and then carry the measurement across a format boundary as context rather than as
