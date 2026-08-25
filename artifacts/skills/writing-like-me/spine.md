@@ -10,6 +10,12 @@ fan-out**. Two inputs, and the split matters:
 Voice lives in conception: which scene opens, which metaphor spans the piece, where the author
 lets themselves be wry. A spine derived after the prose is fixed can only varnish it.
 
+**The profile's `## Construction` block passes through untouched.** The spine allocates moves,
+which appear in particular places and can be spent. Construction is the wiring under every
+sentence, so there is nowhere to allocate it to, and a spine that assigns it to three sections has
+turned it into ornament. Do not name it in `per_section_assignment`, do not cite it in a
+`signature_set`, and do not paraphrase it: the writer receives the block as extraction wrote it.
+
 ## Shape
 
 ```yaml

@@ -20,6 +20,17 @@ Evidence (en): "<quotation>", "<quotation>"
 Effects: <...>
 Note: <where a move needs a caveat, such as an editorial rule it is exempt from>
 
+## Construction
+### <the joint or the junction, named as what the author does with it>
+Evidence (en): "<quotation>", "<quotation>"
+Support: corpus-recurrent | corpus-thin | absent-in-corpus
+Reach for it: <the sentence-level instruction a writer can act on>
+
+### <another>
+Evidence (en): "<quotation>"
+Support: <...>
+Reach for it: <...>
+
 ## Long-form hypotheses
 <optional; non-scoring. See "Hypotheses are not moves" below.>
 
@@ -119,6 +130,62 @@ in the next sentence, the evidence shows a rhetorical setup and the effect is no
 **Effects describe the corpus. They never set what a piece owes.** Extraction reports; the spine
 decides which effects this particular essay needs and names the moves eligible to produce them.
 A technical argument is not obliged to carry an occult image because the corpus has one.
+
+### Construction: how the sentences are wired
+
+A move is an act the author performs. Construction is the wiring underneath it: which joints carry
+the weight, what gets subordinated rather than separated, and what happens at the moment two
+propositions meet. It steers every sentence rather than showing up in particular ones, which is why
+it is not a move and why an entry cannot be evidenced by pointing at where the author "does" it.
+
+The block carries **two to four entries**, and the range is narrow on purpose. Below two, the
+extraction has not looked at joints. Above four, the entries stop being wiring and start being moves
+with the label changed. At least one entry names **what this author does at a contrast**, since that
+is the junction the pipeline gets wrong most often.
+
+Each entry needs:
+
+| Field | What it holds |
+|---|---|
+| heading | the junction, named as what the author does with it, not as a punctuation mark |
+| `Evidence (en):` | quotations showing the wiring, in the source language, labelled like a move's |
+| `Support:` | `corpus-recurrent`, `corpus-thin` or `absent-in-corpus` |
+| `Reach for it:` | one instruction a writer can act on mid-sentence |
+
+`Reach for it:` is the load-bearing field and the easiest to get wrong. It describes the *shape of
+the join*, never a phrase to use. "Concede inside the sentence before the turn arrives" is an
+instruction. "Use 'but this is a little convoluted'" is a template, and a template supplied here
+comes back verbatim in the draft, every time, at every contrast in the piece.
+
+**Thin evidence is reported as thin, not padded to fill the block.** `Support: corpus-thin` marks a
+wiring habit the corpus shows once or twice: real enough to record, too sparse to insist on. A
+writer reads a thin entry as available and a recurrent one as characteristic. Manufacturing a
+fourth entry to reach the top of the range is the failure this field exists to make unnecessary,
+and two well-evidenced entries beat four where half are inferred.
+
+**An absence is a finding only where the corpus demonstrates it.** `Support: absent-in-corpus` is
+available, and it is the most easily abused value here. A profile listing what the author does is
+silent about everything else, so absence needs the same evidence any other entry needs: a junction
+that recurs often enough for the author to have had the option, taken a different way every time.
+Where the corpus offers a handful of instances, that is a small sample and not a prohibition, and
+the entry says so in `Reach for it:` rather than banning a shape. Extraction may write no absence
+entries at all, and usually should.
+
+**Construction never derives or weakens a default.** The prohibitions elsewhere in the pipeline
+hold whatever this block says, per the cadence section below. What construction supplies is the
+positive counterpart: the thing a writer reaches for instead.
+
+#### Reader recruitment
+
+Separately from reader-address, which the moves already record in three places, record **how this
+author brings the reader into a shared judgement**: the supposition the reader is invited to stand
+inside, the "we" that includes them in a position, the question posed as if agreement were being
+sought rather than an answer performed. Address turns toward the reader; recruitment puts the reader
+on the same side of the argument as the author.
+
+It goes in `## Construction` as an ordinary entry under the same rules, and it takes `Support:`
+honestly. Where the corpus supports it thinly, say so. A manufactured recruitment finding is worse
+than none, because a writer told this is characteristic will reach for it at every turn.
 
 ### Hypotheses are not moves
 
@@ -258,8 +325,21 @@ opposition row in `{skillDir}/audit.md`. Extraction neither derives that default
 What extraction owes here is the **positive** finding: **record how this author joins two
 propositions, and what they do at a contrast**, with quoted evidence. That is what gives a writer
 something to reach for in place of the prohibited shape. It is a construction finding rather than a
-move, so it needs its own place in the profile rather than a note hanging off one move, and a
-finding no stage is instructed to read is decoration.
+move, so it goes in `## Construction`, and one entry there must name what this author does at a
+contrast.
+
+**Who reads it.** A finding no stage is instructed to read is decoration, which is how this one
+failed for three runs while sitting in a `Note:`. Two stages read `## Construction` by name:
+
+| Stage | Reads it for |
+|---|---|
+| the writer, `{skillDir}/SKILL.md` stage 3 | the wiring it reaches for sentence by sentence, and what to do at a contrast instead of the prohibited shape |
+| the spine, `{skillDir}/spine.md` | passing it through to the writer intact; the spine allocates moves, and it does not allocate construction |
+
+Construction is **not allocated**. A spine that hands construction to particular sections has turned
+wiring into ornament, which is the failure the moves row was rebuilt to catch. It applies to every
+sentence in the piece or it is not construction. The audit does not score the block directly either;
+what it scores is the opposition row, which the block exists to give the writer an answer to.
 
 **The default is overridden only by evidence at length.** Where the corpus shows the author running
 on apposition **in long-form prose**, record it as a move with its quotations and say the shape is

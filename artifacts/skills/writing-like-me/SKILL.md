@@ -127,6 +127,13 @@ Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpo
 **A fresh subagent writes the entire essay in one pass**, holding the governing pressure, the
 opening scene, the running order, the profile and the draft. It does not hold the claims manifest.
 
+**The profile's `## Construction` block is handed over as its own item, not left to be found.** It
+holds how this author wires two propositions together and what he does where they oppose, and it
+applies to every sentence rather than to allocated places. Where the writer is about to set two
+poles against each other, that block is what it reaches for; where the block is absent or marked
+`Support: corpus-thin`, the writer states the relation in its own words and does not treat the
+thinness as licence for the prohibited shape.
+
 Two things forced the change, and both were measured on real runs rather than reasoned about.
 
 **Fan-out removes the essay-level thought.** A voicer holding one section cannot decide that an idea
@@ -265,7 +272,8 @@ Each receives exactly seven items:
 1. its section text, `sections/NN-slug.md`, post-tier-3 and authoritative;
 2. its edit record, `sections/NN-slug.edits.yaml`, plus the `source.md` snapshot its offsets
    resolve against;
-3. the voice profile;
+3. the voice profile, **including its `## Construction` block**, which is passed through whole and
+   never allocated per section;
 4. the spine, including its own `per_section_assignment` entry (its route: what the reader enters
    with, what turns, what they leave with, its `register_job`, its assigned `moves` and any `required_specifics`), the
    claims assigned to it **with their `evidence_bounds`**, the `governing_pressure` and this section's
@@ -288,7 +296,7 @@ too old to honour `trail-root`. **Both still run**, on a reduced contract, and s
 |---|---|
 | 1. section text | the whole draft, treated as one section, id `00-preamble` |
 | 2. edit record and snapshot | **absent.** No restore is possible, and the citation rule has nothing to act on |
-| 3. profile | unchanged |
+| 3. profile | unchanged, `## Construction` included |
 | 4. spine | unchanged: derived over the whole draft, with every claim assigned to `00-preamble` |
 | 5. anti-slop techniques | unchanged |
 | 6. attractor slice | the whole attractor draft, which is already the documented fallback |
