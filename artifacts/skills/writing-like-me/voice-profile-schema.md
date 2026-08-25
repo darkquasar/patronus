@@ -13,22 +13,33 @@ and audited.
 ## Move: <what the author does, as a verb phrase>
 Evidence (en): "<quotation>", "<quotation>", "<quotation>"
 Frequency: ~1 per <n> words
+Effects: <comma-separated, from the closed list below; only those the evidence shows>
 
 ## Move: <another>
 Evidence (en): "<quotation>", "<quotation>"
+Effects: <...>
 Note: <where a move needs a caveat, such as an editorial rule it is exempt from>
+
+## Long-form hypotheses
+<optional; non-scoring. See "Hypotheses are not moves" below.>
 
 ## Rates measured from the corpus
 rhythm_source: english-pool
 rhythm_source_format: <short-form | long-form | mixed>
 logical_signposts: <measured> per paragraph
 asides_self_correction: 1 per <measured> words
-hedge_rate_corpus: <measured> per 1000 words
-hedge_rate_target: <the author's choice, where they set one; else omit>
+hedge_rate_corpus: <measured> per 1000 words          # reported only, never scored
+hedge_rate_target: <the author's choice; else omit>   # reported only, never scored
 median_sentence: <measured>
 pct_past_26: <measured>
 longest: <measured>
 ```
+
+**Both hedge fields are reported, never scored.** They describe the corpus and record the author's
+preference; no stage gates on them. What the pipeline allocates instead is `unresolved_seams`, in
+`{skillDir}/SKILL.md`, because a rate over adverbs is
+satisfiable without the prose leaving anything open. A run once met its hedge target exactly, with a
+target the author had chosen and approved, by inserting the identical phrase "I think" nine times.
 
 **The values are placeholders and the field names are not.** Every rate is measured from the
 corpus at extraction, or in `hedge_rate_target`'s case chosen by the author. None of them has a
@@ -81,8 +92,57 @@ The test is that a voicer can act on it and an auditor can quote it. **Pitch it 
 thought becomes visible in the prose**: broad enough to recur across pieces, narrow enough that you
 can point at an instance and say the move is here.
 
-Six to ten entries is the working range. Below that the profile is too coarse to steer a section;
-above it the moves start naming instances rather than habits.
+Six to twelve entries is the working range. Below that the profile is too coarse to steer a
+section; above it the moves start naming instances rather than habits. Where extraction lands
+above twelve, merge the entries that name the same habit at two scales rather than dropping the
+weakest: a profile that has genuinely found twelve distinct habits is not a defect, and the count
+is a smell to check rather than a cap to enforce.
+
+### Effects: what the move does to the argument
+
+A move name says what the author does. `Effects:` says what it **achieves**, and the audit checks
+achievement rather than appearance. The vocabulary is closed, and a move carries only the effects
+its own evidence demonstrates:
+
+| Effect | The move leaves the reader with |
+|---|---|
+| `epistemic_openness` | something genuinely unresolved: a question not answered, a reconsideration not retracted, a limit stated and not repaired |
+| `reader_turn` | a direct address, question or implication of the reader |
+| `stance_disruption` | a break in the register the piece established: an undercut, an aside, a change of altitude |
+| `figurative_grounding` | an abstraction come to rest on an image |
+| `architectural` | a consequence for how the piece opens or is arranged, not a local effect |
+
+A move may carry several. `interrogates the accepted definition` is `epistemic_openness` **only
+where the corpus leaves the interrogation standing**; where the author answers their own question
+in the next sentence, the evidence shows a rhetorical setup and the effect is not claimed.
+
+**Effects describe the corpus. They never set what a piece owes.** Extraction reports; the spine
+decides which effects this particular essay needs and names the moves eligible to produce them.
+A technical argument is not obliged to carry an occult image because the corpus has one.
+
+### Hypotheses are not moves
+
+A move needs corpus evidence, and an entry without it is dropped. That rule holds, and it creates
+a gap: a reader may correctly identify a habit the corpus **cannot evidence**, because the pool is
+short-form and the habit only appears at argument length.
+
+Such an observation goes under `## Long-form hypotheses`, never under `## Move:`:
+
+```markdown
+## Long-form hypotheses
+- <the habit, as a verb phrase>
+  Source: reader-identified | author-stated       # never "corpus"
+  Status: unevidenced
+  Note: <why the corpus cannot show it>
+```
+
+The block is **non-scoring**. The audit does not read it, no allocation may cite it, and no stage
+treats its absence as a defect. It is a standing hypothesis: material to look for when the pool
+grows a long-form file, and a prompt to the author, who may know whether it is true of them.
+
+**Promotion needs evidence.** A hypothesis becomes a `## Move:` when the corpus can quote it, at
+which point it takes ordinary evidence and effects. Until then a voicer may read it and a
+reader may recognise it, and neither the spine nor the audit may hold anything to it.
 
 ### The `Note:` field, and what it may exempt
 
@@ -129,6 +189,27 @@ Two constraints on how they are used:
 
 Cross-lingual voice transfer is real but weaker than same-language transfer. Where both pools
 are substantial, the matching-language pool leads and the other supplements.
+
+## Migrating a profile written before `Effects:`
+
+A cached profile from an earlier schema has moves and evidence but no `Effects:` lines. The spine's
+`signature_set` names moves eligible for an effect, and the checkpoint rejects a citation the
+profile does not support, so a cached profile with no effects anywhere either blocks the checkpoint
+or invites the spine to infer effects silently. Both are worse than migrating.
+
+**Migrate, do not re-extract.** Re-extraction changes the move set as well as the schema, which
+destroys the reproducibility that cached mode exists for.
+
+1. Detect the missing field and say so, naming the profile.
+2. Derive proposed `Effects:` for each move **from the evidence already in the entry**, adding
+   nothing else. The evidence is what an effect must be shown by, and it is already there.
+3. Show the additions, move by move, as a diff.
+4. **Ask before writing.** The profile is the user's file.
+5. Write the migrated profile only on approval, and leave the original beside it.
+
+Where a move's own evidence does not show any effect in the closed list, **claim none**. An entry
+with no effects is still a move: it steers a voicer and scores on the moves row. It is only
+ineligible to be cited in a `signature_set`.
 
 ## Cached or fresh
 

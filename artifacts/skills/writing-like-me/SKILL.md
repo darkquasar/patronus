@@ -4,12 +4,14 @@ description: >
   Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft
   (or over a faceless base draft it composes), derives a voice profile of named moves from your
   exemplar corpus, then a spine that owns the piece's metaphor, opening scene, register and running
-  order, voices each section in parallel against both, audits every section for liveness, stitches
-  them with narrative continuity, and takes one advisory read from a second model. Use WHENEVER the
-  user asks to "make this sound like me", "write this in my voice", "draft this the way I would", or
-  hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by design: it does
-  nothing useful until you supply a corpus at ~/.claude/patronus/voice/. Requires the
-  writing-editorial skill, which its manifest pulls in automatically.
+  order. One writer then drafts the whole piece against that spine, holding the pressure and the
+  scene but not the claims manifest, which is checked afterwards as a fidelity ledger and repaired
+  by reconceiving rather than by patching. An audit scores the result for liveness, section
+  subagents refine only where it flags something, and a second model gives one advisory read. Use
+  WHENEVER the user asks to "make this sound like me", "write this in my voice", "draft this the way
+  I would", or hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by
+  design: it does nothing useful until you supply a corpus at ~/.claude/patronus/voice/. Requires
+  the writing-editorial skill, which its manifest pulls in automatically.
 ---
 
 # Write like me
@@ -31,14 +33,20 @@ a sentence, and gives that spine authority over structure.
     claims manifest            <- attractor draft
     running order, per-section assignments
     |
-    v  spine + profile + section[i] + edit record[i]
-  [ s01 ][ s02 ][ sNN ]              voice subagents, parallel
+    v  pressure + scene + running order + profile + draft   (NO claims manifest)
+  ONE WRITER, whole piece            fresh subagent, licensed to wander
     |
-    v  voiced section[i] + restore log
-  audit each section                 flat -> rework once -> accept and flag
+    v  finished draft
+  fidelity check                     manifest as ledger; material omissions only
+    |                                -> back to the same writer, reconceived
+    v
+  audit                              per passage; flat -> rework once
     |
     v
-  stitch                             main agent: narrative continuity, no signposts
+  [ s01 ][ sNN ]  (optional)         refinement subagents, only where needed
+    |
+    v
+  stitch                             only if the refinement pass ran
     |
     v
   codex advisory read                once, on the finished text
@@ -114,10 +122,89 @@ editorial-only.
 Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpoint checks, and
 **show it to the user for approval before any fan-out**.
 
-## Stage 3: the voice subagents
+## Stage 3: one writer owns the whole piece
 
-**Spawn one subagent per section named in the spine's `running_order`, in parallel.** That list, not
-the directory listing, is what says which sections exist: the spine may have merged, split or cut
+**A fresh subagent writes the entire essay in one pass**, holding the governing pressure, the
+opening scene, the running order, the profile and the draft. It does not hold the claims manifest.
+
+Two things forced the change, and both were measured on real runs rather than reasoned about.
+
+**Fan-out removes the essay-level thought.** A voicer holding one section cannot decide that an idea
+should germinate here, go doubtful two sections later, disappear for a page and return altered. The
+pipeline permitted an assertion to open in one place and land in another on paper, but no agent
+owned that movement, and the stitching pass could not supply it afterwards because it may not
+rewrite inside a section. What came back was locally complete paragraphs: each one finished, each
+one proving its own obligations, none of them thinking across a boundary.
+
+**A visible checklist produces prose that proves rather than thinks.** Given a claim to land and a
+row that checks the claim landed, a writer takes the shortest path, and the shortest path is
+assertion. Three shapes recur because each is the cheapest available proof: a list performs
+completeness, a mirrored opposition performs precision, a flat declarative performs confidence.
+Prohibiting the shapes does not touch what generates them, which three runs of prohibition
+demonstrated.
+
+So the manifest becomes **a fidelity ledger checked afterwards, never a brief handed over in
+advance**. What the writer receives instead is the pressure, the sources, the material and the
+licence below.
+
+### The licence
+
+The prohibitions in this skill exist to catch known failures, and they are not a description of
+how to write. This stage grants, explicitly, and these override any inference from the constraints
+elsewhere:
+
+- **Wander.** Take a strange route to a claim. Spend three sentences going somewhere before saying
+  why, and trust the reader to follow.
+- **Discover images the plan never named.** Local imagery belongs to the writer and needs no
+  allocation. Only a second image competing to *govern* the whole piece is reserved.
+- **Reconceive paragraph architecture.** Merge, split, reorder, subordinate, cut. The source's
+  arrangement carries no authority beyond its claims and its specifics.
+- **Arrive indirectly.** A claim may be approached, circled, doubted and reached late. It may land
+  as a consequence of something else rather than as a stated proposition.
+- **Let the writing change the plan.** Where a section finds something better than its assigned
+  route, take it and say so. **The spine is a hypothesis about the piece, and the writer is the
+  first agent in a position to test it.** Returning a spine as over-constraining is a legitimate and
+  expected outcome, not a failure to comply.
+- **Leave a section plain.** A section carrying the argument cleanly with no named move in it is
+  finished. Manufacturing a move to have one is the ornamental compliance the audit exists to catch.
+
+**Write it as one developing act of thought, not as a demonstration of coverage.**
+
+### What binds regardless
+
+The house mechanics (no em-dashes, punctuation outside closing quotes, British spellings), the
+author's specifics in edit mode (a number, a name, a quotation, a citation), and the never-inject
+rule: no claim the author did not make.
+
+### Fidelity comes after, and repairs by reconception
+
+Once the draft exists, a **separate** fidelity auditor maps it against the manifest and returns
+**only material omissions and distortions**: an idea the piece needed and does not carry, or one it
+now carries wrongly. An absent *formulation* is not an omission.
+
+**Findings go back to the same writer**, who repairs by reconceiving the passage around the gap.
+Inserting a sentence to discharge a missing claim reintroduces the proof surface this stage was
+built to remove, and a coverage patch is visible in the prose as exactly what it is.
+
+### Where the fan-out still earns its place
+
+Section subagents remain available as a **refinement** pass over an existing whole-piece draft: a
+named section that came back weak, a passage the audit flagged, a piece long enough that one context
+cannot hold it. When used that way each subagent receives the seven items below **plus the finished
+neighbouring prose**, so it can see the developing thought rather than only its own packet. It may
+still reconceive paragraphs.
+
+**The unsectioned contract below is now the default path, not the degraded one.**
+
+## Stage 3b: the section refinement pass (optional)
+
+
+
+**Only where the refinement pass is warranted**, spawn a subagent for the named sections, in
+parallel. **The default is that it does not run**: a whole-piece draft that the audit did not flag
+needs no refinement, and running it by habit reintroduces the section-compliance model this stage
+was demoted to escape. Where it does run, the spine's `running_order` is what says which sections
+exist, not the directory listing: the spine may have merged, split or cut
 sections at Stage 2, and a cut section has no voicer. A piece with one section gets one subagent.
 
 Each receives exactly seven items:
@@ -126,8 +213,10 @@ Each receives exactly seven items:
 2. its edit record, `sections/NN-slug.edits.yaml`, plus the `source.md` snapshot its offsets
    resolve against;
 3. the voice profile;
-4. the spine, including its own `per_section_assignment` entry, the claims assigned to it, and any
-   `coinage_allocation` it holds;
+4. the spine, including its own `per_section_assignment` entry (its route: what the reader enters
+   with, what turns, what they leave with, its `register_job`, its assigned `moves` and any `required_specifics`), the
+   claims assigned to it **with their `evidence_bounds`**, the `governing_pressure` and this section's
+   entry in its `progression`, and any `coinage_allocation` it holds;
 5. the anti-slop techniques below;
 6. its attractor slice, `sections/NN-slug.companion.md`, for the never-inject check. **Where that
    file is empty, fall back to the whole attractor draft**;
@@ -170,6 +259,55 @@ and paragraph shape, and cut or reorder within the section, but **never** replac
 sentences wholesale, and **never** introduce a claim they did not make. A voice pass that rewrites
 a user's draft from scratch has substituted its voice for theirs, which is the opposite of this
 skill's purpose.
+
+**"Carries authority" is not "is finished".** The licence protects the author's *claims* and their
+*specifics*, not the shape of every sentence that happens to carry one. A section left materially as
+found, on the grounds that the input was already the author's, has done nothing: the input is a
+draft the author brought **because** it does not yet sound like them.
+
+So the licence in edit mode is this, and the distinction is the whole stage:
+
+| May be rewritten freely | May not |
+|---|---|
+| how a claim is phrased, at any length | which claims the piece makes |
+| the mood of a sentence: declarative into interrogative or concessive, subject to the landing rule | a claim's `type` obligation |
+| paragraph architecture: merging, splitting, reordering, subordinating a minor point | a `type: evidence` specific: a number, a name, a quotation, a citation |
+| an enumeration turned into prose, or a list's items chosen and the rest cut | the house mechanics, which bind every stage |
+| a transition, a topic sentence, a summarising close | the author's conclusion, reached by another route or not |
+
+**A sentence carrying a claim is not thereby protected.** Given the claim *"the questions that arise
+are ordinary ones"*, the source sentence "The questions come up straight away, and they are not
+exotic" is one rendering of it and the voicer owes the author a better one, in their voice. Passing
+it through unchanged because it was already there is the decay this stage exists to catch.
+
+### Render inside the claim's bound
+
+Where a claim carries `evidence_bounds`, the rendering stays inside it. This is **scope**, and it is
+not doubt: a scoped assertion is still an assertion, and the reader is told where it holds rather than
+being asked to wonder whether it does.
+
+**The claim is made, whatever its bound.** A bound states the claim's domain; it never turns the claim
+into something the piece declines to assert. Where a bound would require you to say less than the
+claim, that is a manifest defect rather than a rendering problem, and it goes back to the spine.
+
+| The claim | Overstated | Scoped |
+|---|---|---|
+| approval is the usual seam, not the only one | "The seam between them is approval." | "The seam between them is usually approval." |
+| a category error rather than a risk | "Not a risk, exactly. A category error." | "Not a risk, exactly, more like a category error." |
+| the boundary has consequences | "So the boundary is real." | "So the boundary matters." |
+
+Three different operations, and only the shape they share is worth naming: **each shows the reader a
+range and places the author on it**, rather than handing down a point. "Usually" limits scope; "more
+like" reclassifies; "matters" trades an ontological verdict for a consequence.
+
+**This is not a quota and there is no target rate.** A claim whose evidence supports a universal is
+rendered as a universal, and softening it produces vagueness, which is the opposite defect. What the
+audit checks is whether a rendering asserts more than its claim and bound license, never whether
+qualifiers are present.
+
+**Where a section comes back materially unchanged, say so and say why.** "The author's phrasing
+already carries the move" is a legitimate answer once or twice; it is not a legitimate answer for a
+whole section, and the audit reports the section as inherited rather than voiced.
 
 Every subagent is told which mode it is in, and every licence below is read against it.
 
@@ -256,19 +394,40 @@ Techniques 2 and 4 are **corpus-checked**, because they are stance choices that 
 register. A flat ban on signposts misfires on a corpus that uses "however" and opens sentences with
 "But" freely. The corpus rate is far below the machine default but is not zero.
 
-**Technique 4 is budgeted at the spine, not per section.** Three asides in one section is a tic;
-three across a 2000-word essay is voice. The subagent is told whether its section carries one.
+**Technique 4 is a disposition, not a budget.** Three asides in one paragraph is a tic; a few
+across an essay is voice. One writer holding the whole piece can see the difference, which is what
+the per-section allocation existed to compensate for.
 
-**The budget is set from a rate, not from taste.** The profile carries `hedge_rate_target`, and the
-spine allocates against it across the running order the way it allocates asides and frame-breaks:
-target rate times draft length, distributed over sections, recorded in the spine so each voicer
-knows what its section owes. Where the profile carries no target, fall back to `hedge_rate_corpus`.
+**Doubt is a disposition, not a rate and not a quota.** `hedge_rate_corpus` and `hedge_rate_target`
+are **reported numbers and never scored**, joining the rhythm numbers in
+`{skillDir}/audit.md` that are guard rails rather than
+criteria. The spine names `unresolved_seams`, the places the piece **does not resolve**, as
+**questions the piece is genuinely carrying rather than positions to fill**. They are not pinned to
+sections: a seam assigned to one produces a set-piece paragraph about doubt, where a seam the writer
+is actually holding surfaces wherever the argument touches it. **What the audit checks is that the
+piece does not resolve everything it raised**, not that N seams appeared in N places.
 
-Doubt is a stance the corpus can be measured for, so it is allocated rather than left to the
-voicer's mood. **A draft with no visible doubt anywhere is the failure this budget exists to
-prevent**: prose that knows everything, states each claim as settled, and gives a reader no seam to
-think through. `hedge_rate_target` may sit deliberately above `hedge_rate_corpus`, because long-form
-has room for reconsideration that a short post does not.
+| Seam kind | The piece leaves standing |
+|---|---|
+| `question-declined` | a question it raises and does not answer |
+| `reconsideration-kept` | a change of mind shown, and not retracted into a tidy conclusion |
+| `limit-unrepaired` | a limit of its own argument, stated and not repaired |
+
+**An adverbial hedge does not discharge a seam.** "probably", "I think" and "perhaps" bolted onto a
+declarative frame leave the frame declarative and the claim settled. Neither does a question the
+next sentence answers, which is a rhetorical setup, nor a concession the paragraph immediately
+reclassifies, which can read as more authoritative rather than less. **The test is whether something
+is left standing open at the end of the piece**, not what shape it took on the page.
+
+**A draft with no visible doubt anywhere is the failure this exists to prevent**: prose that knows
+everything, states each claim as settled, and gives a reader no seam to think through. A rate cannot
+catch it. One run met a target of 4.57 against 4.5, with the target chosen deliberately above the
+corpus rate and approved by the author, and returned nine instances of the identical phrase "I
+think", one per section. Cutting four improved the piece and put the rate below target. The
+instrument was well-calibrated and correctly enforced, and it measured the wrong thing.
+
+`type: hypothesis` and `type: question` claims are where seams live most naturally: the manifest has
+already said this one may stay open, so leaving it open is conforming rather than a weakened claim.
 
 Technique 1's floor is supplemented by the profile, so the replacement for an abstraction is not
 generic concreteness but this author's, drawn from the images their own corpus reaches for rather
@@ -276,9 +435,41 @@ than from the first plain noun to hand.
 
 ## Stage 4: the audit
 
-After voicing, audit each section against `{skillDir}/audit.md`. Send that file to the auditing
-subagent **without this one**: an auditor holding the orchestration body inherits the frame of the
-stage it is meant to judge.
+After writing, audit against `{skillDir}/audit.md`. Send
+that file to the auditing subagent **without this one**: an auditor holding the orchestration body
+inherits the frame of the stage it is meant to judge.
+
+### Every auditor writes its findings to a file, and that file is the deliverable
+
+**Name the output path in the auditor's opening instruction, at the run's own drop point beside the
+drafts**, and say the file is the deliverable rather than the reply:
+
+| Auditor | Writes |
+|---|---|
+| liveness | `<trail-root>/<slug>/AUDIT.md` |
+| fidelity | `<trail-root>/<slug>/FIDELITY.md` |
+
+Tell it to **write the file even where the analysis is incomplete**, immediately, and to prefer a
+partial file over a fuller reply. A findings file at eighty per cent is worth more than a perfect
+report that never arrives.
+
+**A returned report is a convenience; the file is the record.** A subagent's reply reaches the
+orchestrator only as its final text, so an agent that spends its last turn on a tool call emits
+nothing, and the caller receives a bare idle notification: the analysis happened and died with the
+turn. A file is written mid-turn and survives however the agent ends. Instructing an auditor to
+answer in reply text rather than write a file removes the durable path and leaves only the fragile
+one.
+
+**Read the file rather than waiting on the reply.** Where it is absent after the auditor goes idle,
+re-dispatch a fresh auditor naming the path again. Where no file arrives across attempts, **report
+that the audit did not run**, and never present the orchestrator's own checks as an audit: the stage
+whose work is being judged cannot supply the judgement.
+
+**The audit runs over the whole piece by default**, since one writer produced it and the section
+boundaries are now the piece's own rather than the pipeline's. Score section by section only where
+the refinement pass ran. **A per-section score is a diagnosis of where to look, never a set of
+obligations the writer owed**, and reading it the second way is what turned every section into a
+deliverable that had to prove itself.
 
 The auditor also receives the profile, the spine, and **the preceding section in `running_order`**,
 which the metaphor row scores against. The first section has no predecessor: score its metaphor row
@@ -289,10 +480,46 @@ it failed.
 
 ## Stage 5: stitching
 
-The main agent joins the voiced sections in the spine's `running_order` and adds continuity.
+**This stage runs only where the refinement pass ran.** A whole-piece draft has no seams to join,
+and its continuity is the writer's. Where refinement did run, the main agent reintegrates the
+refined sections in the spine's `running_order`. **Continuity is a licence here, not an objective.** A seam between two sections is a legitimate finished state, and this stage
+adds a connection only where its absence would lose the reader, never to make the piece feel whole.
 
-**What it may add:** a callback, a returning image, the metaphor deepening across a boundary, the
-opening scene's character reappearing.
+**What it may add:** a callback, a returning image, the metaphor deepening across a boundary at a
+`metaphor_locations` seam, the opening scene's character reappearing.
+
+**Every addition is reported**, listing the bridge, callback or transition and the seam it sits on.
+Stitching **may not rewrite sentences inside a section** to improve flow; a section's prose is the
+voicer's, and a smoothing pass over it is an unreported second voice stage.
+
+**Apply the removal test to everything this stage adds**, callbacks and returning images included,
+not transitions alone. Delete it and ask what is lost. Where the only loss is smoothness, leave it
+deleted. A piece where every seam is bridged reads as engineered, and
+"too well threaded" is a failure mode of this stage specifically: three pressures compound here,
+since the spine assigns the metaphor, the audit rewards carrying it, and stitching then reaches for
+continuity on top of both.
+
+**Hard cuts, unannounced pivots and changes of register are permitted output.** They are jitter, and
+jitter is a property of writing by a person. Do not smooth them out, and do not report them as
+defects.
+
+**Check every deictic opener for a recoverable antecedent.** "Which...", "That...", "So..." and any
+back-reference must point at something the reader still holds, and the relationship must be
+necessary. Where the reference is to a frame the reader lost paragraphs ago (a title, an earlier
+section's framing, "the argument above"), it fails: the reader cannot recover it, and the sentence is
+performing continuity rather than supplying it. **Delete an opener that only performs coolness.**
+Removing it is usually the whole fix, since the paragraph beneath it stands.
+
+**Report paragraph-opener convergence.** Count the first word of every prose paragraph across the
+finished piece. One word opening more than a quarter of them, or more than a third of paragraphs
+opening on a back-reference to the one before, is a tic. Each instance is locally defensible, which is
+why no voicer can see it and why the signposts row scores full marks throughout: the row counts
+machine connectives, and "Which is why" performs the identical service while passing it. **A piece
+where nothing starts cold has no joints a reader can feel**, which is what "too well threaded" is.
+
+**Report repeated section architecture.** Where most sections share one shape, such as premise, then
+enumeration, then categorical conclusion, name it. That regularity is what a reader registers as
+machinistic, and no per-section audit can see it.
 
 **What it may not add: logical signposts.** Technique 2 binds this pass as it binds the subagents.
 "Furthermore" is banned at every stage; "she is still waiting on that runner" is the sanctioned way
@@ -317,8 +544,17 @@ this is looking for.
 It also resolves duplicate coinages: where two sections independently reached for the same term
 outside any allocation, keep one and say which.
 
-**Then verify claims coverage across the finished piece**, not only per section. A claim assigned to
-a section that was later cut, and never reassigned, surfaces here rather than silently vanishing.
+**Then run the piece-level pass** in `{skillDir}/audit.md`
+over the stitched text. It checks the spine's `signature_set` effects, the frame-break,
+reader-address, aside and seam allocations, **the pressure progression, overstatement against
+`evidence_bounds`, performed sameness, unallocated inventories and post-voice compliance** (all
+blocking), and reports route concentration, register modulation, paragraph-opener convergence, hedge
+convergence, repeated section architecture and claims coverage across the finished piece. A claim assigned to a section that was later cut, and never reassigned,
+surfaces there rather than silently vanishing, as does an `assertion` a voicer opened as a question
+and no section ever landed.
+
+A failure in that pass belongs to the spine or to this stage rather than to one section, so it does
+not fire a per-section rework. Report it, naming the sections that could carry what is missing.
 
 ## Stage 6: one advisory codex read
 
@@ -342,6 +578,27 @@ happened, naming the error. Where the host allows a per-call timeout, allow arou
 - **PRESERVE is advisory to this stage.** It travels in the edit record marked
   `binding: advisory`, as tier-2's opinion. A subagent may override an entry, **reporting which
   entry and why**.
+- **Override where transformation requires it, and disclose.** Tier-2 writes PRESERVE without ever
+  reading the voice profile, so it protects spans on editorial grounds with no knowledge of whose
+  voice the piece is meant to be in. Its own contract says a preserved span "can become wrong once
+  the surrounding argument is restructured". Treat an entry as tier-2's opinion, formed before this
+  stage existed. **Disclosure is the part that binds**, not the entry: say which entry, and what the
+  override achieved.
+- **Do not route the voiced draft back through the editorial tiers.** A tier pass cannot read the
+  profile, so it would lawfully remove a corpus-backed move this stage lawfully introduced, and the
+  piece would answer to two authorities over its own voice. What guards against reintroducing what
+  the tiers removed is the regression check in the piece-level pass, which **reports to this stage
+  and never rewrites**.
+- **Advisory means the override path is expected to be used.** A run treating every entry as
+  binding has silently converted tier-2's opinion into law, and the cost is concrete: one run left
+  its closing entirely inherited because the passage was PRESERVE-protected, and a cold reader named
+  that closing the least characteristic writing in the piece. Six long enumerations survived the
+  same way. **Report per section which entries were overridden and what the override achieved**,
+  naming the substantive operation from the transformation table in
+  `{skillDir}/audit.md`. A raw count is provenance and not
+  evidence of voicing: overriding one harmless entry to change a connective satisfies a counter
+  while six cataloguing paragraphs survive intact. Zero overrides is a legitimate outcome, and a
+  wholly inherited passage with zero overrides is reported as inherited.
 - **The claims manifest protects ideas**, which are what must survive, rather than spans, which are
   what should be rewritten.
 - **The contrast ledger is reconciled at the editorial merge and reported**, not enforced against
@@ -355,14 +612,27 @@ Report in **this order**:
 
 1. the finished draft;
 2. sections flagged as flat after rework, named;
-3. claims from the manifest that no section made, if any;
-4. tier restores, with their citations;
-5. PRESERVE overrides, with reasons;
-6. codex notes taken and declined;
-7. rhythm guard rails, **labelled as guard rails**.
+3. **piece-level failures accepted after a second attempt**, named by check;
+4. **the pressure progression**, section by section, naming any section that changed nothing;
+5. **routes declared but not performed**, with the three surfaces that were missing;
+6. **sections reported as inherited**: scored 0 or 1 on transformation, named, with what the voicer
+   did and did not do to each;
+7. claims from the manifest that no section made, if any, **including an `assertion` opened as a
+   question and never landed**, and any rendering that overstated its `evidence_bounds`;
+8. **the spine's counterfactual answer**, quoted, and what the spine reshaped;
+9. **stitching additions**, each with the seam it sits on, and any that the removal test deleted;
+10. **repeated section architecture and paragraph-opener convergence**, where the piece-level pass
+    found them;
+11. **regression findings** returned to the voicer, and what came back;
+12. tier restores, with their citations;
+13. PRESERVE overrides, with what each achieved;
+14. codex notes taken and declined;
+15. rhythm guard rails **and the hedge rates**, all **labelled as reported, never scored**.
 
 **The ordering is the point: what the piece failed at comes before what it measured.** Never
-present item 7 as evidence the voice landed.
+present item 15 as evidence the voice landed. Items 3, 4, 5, 6 and 10 are the ones a passing audit
+used to hide, so they are named even where everything else is clean: a run that reports nothing at 4 has
+either done real editorial work everywhere or has not looked.
 
 ## The run trail
 
@@ -399,9 +669,16 @@ edit is indistinguishable from one that made none.
   manifest.yaml         always
   EDITS.md              always, per stage
   PRESERVE.md           always
+  AUDIT.md              always, written by the liveness auditor itself
+  FIDELITY.md           always, written by the fidelity auditor itself
+  CODEX-NOTES.md        when the advisory read completes
   draft-00-original.md  when drafts are kept
   draft-0N-<stage>.md   when drafts are kept
 ```
+
+**The auditors write their own files.** The orchestrator names the path and reads what lands; it
+never transcribes an auditor's reply into the trail, because a transcription is the orchestrator's
+account of the judgement rather than the judgement.
 
 `manifest.yaml` records what each stage did and what it carried:
 
@@ -455,6 +732,36 @@ that proves nothing.
 And **`model_reported_influences` is labelled as self-reported**, because a model cannot reliably say
 afterwards which exemplar shaped a structure it synthesized across a dozen. The corpus path and the
 exemplar count are knowable; the attribution is a claim.
+
+## The unresolved architecture question
+
+**Whole-piece authorship is a bet, not a settled answer.** It trades one failure mode for another,
+and the trade has not yet been tested against a reader.
+
+| | gives | risks |
+|---|---|---|
+| fan-out | per-section density, parallel speed, every section forced to carry something | proof-shaped prose; no agent owns movement across sections; parallel writers converging on the same tic |
+| whole-piece | continuity, an argument that develops, no per-section proof obligations | voice decay: a live opening and a dead fifth section |
+
+**The candidate that stops choosing between them**, and the next thing to try where whole-piece
+authorship disappoints:
+
+1. Keep the fan-out, and **add a whole-piece writer as one more agent in the same parallel batch**,
+   holding the same spine. Two complete drafts, produced independently.
+2. **Change what the final stage is.** Not a joiner forbidden from rewriting inside a section, but
+   an **editor holding both drafts with licence to rewrite anything**, blending them for aliveness
+   and for the whole.
+3. Report which draft each surviving passage came from, so the next run has evidence about which
+   arm actually writes better rather than an argument about which should.
+
+The reasoning: **the two drafts fail in different places.** Where the fan-out version is
+proof-shaped, the free version reads more loosely; where the free version has decayed, the fan-out
+version still has a live section. An editor holding both can see which is which. An editor holding
+one can only guess at what it is missing, which is the position every stage of this pipeline has
+been in so far.
+
+Note what this would require changing: stage 5 currently forbids rewriting inside a section, which
+was right for a joiner and is wrong for an editor. That prohibition is the load-bearing one.
 
 ## Known limits, stated rather than hidden
 
