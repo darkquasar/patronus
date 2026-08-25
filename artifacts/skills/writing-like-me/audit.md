@@ -71,6 +71,35 @@ still an inventory: the reader receives the same accumulation of nouns, and the 
 identical. Scoring the typographic conversion is what teaches a pipeline to produce paragraphs that
 could be pasted back into bullets without loss. The test is whether anything was **chosen**.
 
+**Neither is breaking it across full stops, nor across invented head propositions.** "Schema
+conformance. Identifier uniqueness. Query compilation, artifact signing, deployment ordering,
+rollback, drift detection." is one inventory wearing four sentences. Splitting the same nouns under
+three labels ("The repository settles X, Y and Z. The release path handles A, B and C.") is the
+same inventory wearing three propositions. **An enumeration is bounded by what it is doing, not by
+its punctuation**: consecutive material serving one argumentative job is one list however it is
+divided.
+
+**The presumption is against the enumeration**, and this is the author's standing instruction rather
+than a preference to be balanced against others: "get rid of lists for good". So the question the
+row answers is not whether a list may stay. It is **whether this one was dismantled, and the finding
+names how it should have been**: by the principle that generates the items, by naming the axis and
+giving one instance, by subordinating the minor items, or by cutting to the one that carries the
+argument.
+
+**Ask of each item what it is doing that its neighbours are not**, and delete items singly and in
+plausible subsets, naming for each what is lost: scope, an inference, credibility, a consequence, or
+a later dependency that breaks. An item whose deletion loses nothing was accumulation. Do not delete
+down to a fixed number, which just relocates the gate: a two-item summary can survive the loss of
+examples that were carrying real scope.
+
+**Length is evidence, never the finding.** A short run can be dead and a longer one can be worked,
+so the passage is always what gets reported. What does not survive is the run that passes only
+because each item was retrospectively justified: **a defence assembled item by item is what an
+inventory looks like when it is being argued for**, and the enumeration goes back regardless.
+
+The exceptions are decided before drafting and nowhere else: an enumeration the spine named in
+`required_specifics`, and the author's own inventories that PRESERVE protects.
+
 **A rewritten sentence is not by itself an operation.** Rephrasing every sentence while preserving
 the input's mood, architecture and route is the failure this row exists to catch: it is what "the
 voice stage left the source paragraphs untouched" looks like from the inside, and it can score well
@@ -161,6 +190,21 @@ counterfactual, and require the auditor to name evidence rather than to feel a d
   conclusion with reversed polarity? Do not require a scale: some real distinctions are categorical
   ("authenticated but not authorised" has no useful continuum), and demanding a gradient there
   produces vagueness.
+- **Opposition, who supplies the relation**: a full stop between two poles **asks the reader to
+  infer** how they relate; a connective **states** it. This author states it. So where a contrast
+  lands as two clipped sentences in apposition, ask what relation the reader is being asked to
+  supply, and whether the passage anywhere supplies it.
+
+  "It buys real speed. It costs real governance." leaves the reader to work out whether that is a
+  trade, a contradiction, a ranking or a concession. The author's own repair names it: *"It does buy
+  real speed though, but on the flipside, it costs real governance"*, where "does buy" concedes
+  before turning and "though" marks the concession as one.
+
+  **This is not a template.** Reaching for "though, but on the flipside" every time reproduces the
+  tic in connective clothing, and a piece where every contrast is bridged by the same phrase is
+  worse than the clipped version. **What the row scores is whether the relation between the poles is
+  stated or left as homework**, by whatever means the sentence finds. A clipped pair is fine where
+  the following prose does the stating; it fails where nothing does.
 - **Enumeration**: does the selection, ordering or interpretation of the items change the reader's
   model? Examples can carry scope, credibility or consequence without changing the headline
   proposition, so semantic redundancy alone does not condemn a list. What condemns it is items
@@ -189,6 +233,71 @@ So where a passage reads as overclaimed, **test for an absent mechanism before p
 Overclaiming has other sources too: missing scope, unacknowledged counterevidence, causal confusion,
 or plain unsupported certainty. Diagnose which before returning it. Returning any of them for a
 qualifier produces vagueness, which is the worse defect.
+
+### The halves of a sentence must actually connect
+
+**Wherever the prose asserts that one thing follows from, causes, explains or is explained by
+another, check that it does.** A voice pass reaching for cadence will assemble a sentence whose
+shape is an insight and whose content is a non-sequitur, and it passes every other row here, since
+it is concrete, unhedged, carries no signpost and wears a named move's clothes.
+
+**Find these by the relation, never by a word list.** "and that is what makes", "which is why",
+"because", "so", "therefore", a colon, a semicolon, a bare full stop between two sentences where the
+second explains the first: any of them can carry an unearned relation, and a list of triggers only
+teaches the writer to reach for the connective that is not on it. **Ask of every adjacent pair of
+propositions what relation the reader is meant to take away**, and check that one.
+
+> "Not one of those is exotic, and that is what makes them awkward."
+
+Nothing about a question being ordinary makes it awkward. The two halves are yoked by rhythm and
+nothing else, and the reader who stops to check finds no connection to recover. The sentence sounds
+like it knows something.
+
+**Name the relation the sentence asserts, then verify it against the passage itself.** The standard
+is what a reader holds at that point in the piece: the mechanism is stated here, or earlier, or it
+follows from something the piece established. Not the auditor's world knowledge, and not what the
+sentence could mean if read generously. Where the relation cannot be traced to something the reader
+was given, **the passage goes back for reconception**, never for a hedge. This is the strongest form
+of the vagueness rule above: an unearned relation is unearned certainty about causation.
+
+Watch particularly for a **decorative adjective carrying the joint**: "exotic", "strange",
+"quiet", "patient". Where the sentence would collapse if the adjective were replaced by a plain one,
+the adjective is the argument, and the argument is thin.
+
+### The imperative opener, and the dry-assertive register it produces
+
+**The defect is conducting the reader through a demonstration, and its usual surface is a sentence
+opening on a bare active verb.** "Catalogue it, and nothing about the lamp changes." "Take the saved
+search that changed on a Thursday." "Give that stack to twelve engineers." "Strip the structure and
+the agent is imperative." It reads as dry and falsely confident: the author is not thinking, he is
+staging.
+
+**The verb is the tell, not the offence.** "Suppose the catalogue is already correct" and "Consider
+what happens when the owner leaves" open on verbs and invite rather than march, and killing them
+makes the prose poorer. What marks the defect is that the reader is walked through steps to reach a
+conclusion the author already holds. Score the function; use the verb to find candidates.
+
+This author writes the same move as a shared supposition, and the difference is the whole register:
+
+| Imperative, dry | Shared, and the author's |
+|---|---|
+| "Catalogue it, and nothing about the lamp changes." | "If you catalogue it, we can both agree that nothing about the lamp changes right?" |
+| "Which raises the thing I cannot get past." | "This raises something that is hard to get past." |
+
+Two operations there, and they are separate. The first **puts the reader inside the supposition
+rather than under an instruction**: an "if" clause, a "we", sometimes a tag question inviting
+agreement. The second **drops the possessive framing of the difficulty**: "the thing I cannot get
+past" makes the author the measure of it, where "something that is hard to get past" leaves the
+difficulty standing on its own and the reader free to find it hard too.
+
+**Test any sentence opening on a verb by asking who is being told what to do.** Where the answer is
+the reader, rewrite it as a supposition they are invited into. Where a genuine instruction is
+intended, the piece is issuing advice and should say so plainly rather than dramatising.
+
+**Fake-assertive is a register, not a claim strength.** It is the clipped declarative delivered as
+though the sentence's confidence were itself the argument. Scoring it is not the closure test above,
+which asks whether the reasoning earns the certainty; this asks whether a person would say it aloud
+that way. Report every instance as a passage.
 
 ### Merit-announcements and intensifiers
 
@@ -272,8 +381,12 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | **Pressure progression** | a section leaves the governing pressure unchanged: it restates, supports or adds another reason | **blocks** |
 | **Overstatement** | a rendering asserts more than its claim and that claim's `evidence_bounds` license | **blocks** |
 | **Performed sameness** | sections share one route **and** perform it identically: the same entry/turn/exit mechanics, the same section shape, or flat-replacement equivalence | **blocks** |
-| **Unallocated inventories** | an inventory of five or more items that no section's `required_specifics` names | **blocks** |
+| **Unallocated inventories** | consecutive material serving one argumentative job, in which items arrive unchosen and uninterpreted, that no section's `required_specifics` names. Bounded by the job, not by punctuation or by an invented head proposition | **blocks** |
 | **Post-voice compliance** | an em-dash or punctuation inside a closing quote (absolute, no comparison needed); a machine signpost or a second mirrored construction **that the upstream edit records show the tiers removed** | **blocks** |
+| **Staged demonstration** | the reader is walked through steps toward a conclusion the author already holds. Usually surfaces as a verb-first opener, though "Suppose" and "Consider" invite rather than march | reported, with passages: the invite/march line is a register judgement and two auditors will draw it differently |
+| **Unstated opposition** | two poles set side by side with the relation left for the reader to infer, and nothing in the passage supplies it. A bare label ("that is the trade") does not supply it: what is supplied must distinguish the kind or the consequence of the opposition | **blocks** |
+| **Unearned relations** | one thing asserted to follow from, cause or explain another, by any connective or none, where the relation cannot be traced to a mechanism, premise or evidence the reader was given. **Earlier material restating the same conclusion is not warrant**, and citing it is circular | **blocks** |
+| **Structural reconception** | across the piece's boundaries, the reader arrives at each holding materially what the source architecture would have given them. One altered boundary does not clear the row: the test is pervasive source equivalence, not total | **blocks**, and it is the spine's failure |
 | Route concentration | more than half the sections share one route | reported |
 | Register modulation | adjacent sections do detectably the same reader-work throughout, or a `device` never returns to its `grounding` | reported |
 | Paragraph openers | one opener word in more than a quarter of paragraphs, or more than a third of paragraphs opening on a back-reference to the one before | reported |

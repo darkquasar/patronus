@@ -323,7 +323,10 @@ What binds for `assertion`:
 
 - the question may open or destabilise the claim anywhere in the piece;
 - **the claim still lands declaratively somewhere**, and the landing may be qualified, reframed or
-  conceded and reclassified;
+  conceded and reclassified. **Declarative is a grammatical mood, not a register**: it does not
+  license the clipped verb-first delivery, and a landing phrased as something the reader is invited
+  to agree with is still a landing. "This raises something that is hard to get past" lands; so does
+  "we can both agree the lamp has not changed, right?";
 - the voicer records `question_surface` and `landing_surface` against the claim id;
 - **the whole-piece coverage pass evaluates the landing**, never the declaration.
 
@@ -461,8 +464,32 @@ completeness and identifier hygiene, and a plan can pass all of them while propo
 source's architecture exactly where it found it, decorated. The spine holds the power to merge,
 split, cut and reorder precisely so it can answer no.
 
-A spine that exercised none of that power over a long draft is not necessarily wrong, and it must
-say why the source order is the right one rather than leaving the question unasked.
+**"The sections changed function" is not an answer.** A spine that returns the source's section
+count, in the source's order, under new titles has varnished, whatever it claims about what the
+sections now *do*. Function is a statement of intent and nothing downstream can check it, so it is
+the escape hatch this question exists to close: one run answered the counterfactual with "the order,
+yes, the granularity, no" and shipped seven sections in, seven out, in identical sequence.
+
+**No operation is required, because a required operation is satisfied by a cosmetic one.** Splitting
+a section at a paragraph break it already had, or merging two and keeping every paragraph in order,
+clears any quota and reconceives nothing. That is the same trap the necessity test above refuses,
+arriving one level up.
+
+**What is required is the reversal test, applied to whatever the spine did or did not do:**
+
+> For each architectural choice, **undo it** and ask what changes. Where pressure, dependency, claim
+> hierarchy and the reader's state at each boundary all survive the undo materially unchanged, the
+> choice was cosmetic.
+
+Applied to an operation performed, it asks whether the merge or cut did any work. Applied to an
+order retained, it is stronger: **name the reorder, merge and cut that were tested, and what broke
+in each.** "The source order is right" is a finding only where something was tried and failed; left
+untested it is the question going unasked.
+
+The check that catches varnishing is downstream of this and is about the reader, not the operation:
+**at each section boundary, name what the reader knows, expects or doubts that they would not under
+the source architecture.** A spine that cannot answer that at any boundary has re-titled the source,
+whatever operations it performed or declined.
 
 **A claim dropped at spine time is invisible to every later stage**, because the per-section audit
 checks only claims that were assigned and the final coverage pass checks only the manifest. This

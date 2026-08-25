@@ -170,6 +170,49 @@ elsewhere:
 
 **Write it as one developing act of thought, not as a demonstration of coverage.**
 
+### Four habits the author has named, with his own repairs
+
+Each is a defect the last run reproduced, followed by how he writes it instead. **The repairs are
+evidence of the register, not templates.** Reaching for the same phrase every time reproduces the
+tic in new clothing, and a piece where every contrast turns on "on the flipside" is worse than the
+version with the defect.
+
+**Do not stage a demonstration for the reader.** "Catalogue it, and nothing changes." "Give that
+stack to twelve engineers." The reader is being walked through steps toward a conclusion you already
+hold, and it reads as dry and falsely confident. The author's repair puts the reader inside the
+supposition rather than under instruction: an "if" clause, a "we", sometimes a tag question inviting
+agreement. **Find your own phrasing for that.** A verb-first opener is the usual surface and not
+always the defect, since "Suppose the catalogue is correct" invites rather than marches.
+
+**Do not make yourself the measure of a difficulty.** "Which raises the thing I cannot get past"
+makes the author the instrument. Leave the difficulty standing on its own, where the reader is free
+to find it hard too.
+
+**Say how two poles relate rather than leaving it as homework.** "It buys real speed. It costs real
+governance." makes the reader work out whether that is a trade, a ranking or a concession, and the
+author's habit is to say which. Concede before turning, mark the concession as one, signal that a
+turn is coming. **The means are yours**, and they may be loose or ungrammatical, since speech is.
+A piece where every contrast turns on the same connective has reproduced the tic in new clothing.
+
+**Do not write inventories.** Not four items, not three, and full stops do not disguise one, nor do
+invented labels: three batches of three under three headings is still a catalogue. The author's
+instruction is "get rid of lists for good", and the default is that you do not write one.
+
+The question is never whether you may keep a list, it is how to dismantle this one. Give the
+principle that generates the items. Name the axis they vary on and show one instance. Subordinate
+the minor ones into the sentence that needs them. Cut to the one that carries the argument and
+develop it. **Where you find yourself justifying why each item earns its place, you are writing an
+inventory and arguing for it**, which is the failure with extra steps.
+
+The narrow exception is an enumeration the spine named in `required_specifics`, where completeness
+is the argument, and the author's own long inventories that PRESERVE protects. Those are decisions
+made before you started, and outside them the presumption is against.
+
+And one thing to verify rather than avoid: **when two propositions sit together, check the relation
+the reader will take from them is one the piece has actually earned.** A sentence can have the shape
+of an insight and the content of a non-sequitur, which is what "Not one of those is exotic, and that
+is what makes them awkward" is: nothing about being ordinary makes a thing awkward.
+
 ### What binds regardless
 
 The house mechanics (no em-dashes, punctuation outside closing quotes, British spellings), the

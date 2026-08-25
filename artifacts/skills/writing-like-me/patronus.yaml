@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: writing-like-me
 description: "Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft (or over a faceless base draft it composes), derives a voice profile of named moves from your exemplar corpus, then a spine that owns the piece's metaphor, opening scene, register and running order. One writer then drafts the whole piece against that spine, holding the pressure and the scene but not the claims manifest, which is checked afterwards as a fidelity ledger and repaired by reconceiving rather than by patching. An audit scores the result for liveness, section subagents refine only where it flags something, and a second model gives one advisory read. Use WHENEVER the user asks to 'make this sound like me', 'write this in my voice', 'draft this the way I would', or hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by design: it does nothing useful until you supply a corpus at ~/.claude/patronus/voice/. Requires the writing-editorial skill, which its manifest pulls in automatically."
-version: 3.0.0
+version: 3.2.0
 entry: SKILL.md
 files: [short-form.md, long-form.md, weights.md, voice-profile-schema.md, spine.md, audit.md]
 targets: [claude]   # Claude-flavoured: orchestrates subagents and calls codex over MCP (`codex mcp-server`). Codex/opencode parity is a separate stream, following the research-team precedent.
