@@ -250,6 +250,23 @@ Aphoristic writing runs on short sentences: a clipped run of five or seven is th
 form, and it lands. In long-form prose the same run reads as assertion without argument, hammering
 a reader who was never given room to doubt.
 
+**Contrast-by-adjacency is the specific case, and the pipeline prohibits it by default.** Two short
+declaratives set side by side with the opposition carried by the full stop between them ("It buys
+real speed. It costs real governance.") is prohibited in long-form output for every author, per the
+opposition row in `{skillDir}/audit.md`. Extraction neither derives that default nor weakens it.
+
+What extraction owes here is the **positive** finding: **record how this author joins two
+propositions, and what they do at a contrast**, with quoted evidence. That is what gives a writer
+something to reach for in place of the prohibited shape. It is a construction finding rather than a
+move, so it needs its own place in the profile rather than a note hanging off one move, and a
+finding no stage is instructed to read is decoration.
+
+**The default is overridden only by evidence at length.** Where the corpus shows the author running
+on apposition **in long-form prose**, record it as a move with its quotations and say the shape is
+licensed for this author. Short-form evidence does not override it, since the point of this section
+is that the cadence does not transfer. A note observing the shape is *disfavoured* is not an
+override and never was: it agrees with the default.
+
 **From a short-form corpus, expect long-form to run longer**: a higher median, and fewer
 consecutive short sentences than the corpus shows. Take diction, moves and stance from the corpus.
 Do not take its cadence.

@@ -189,10 +189,20 @@ makes the author the instrument. Leave the difficulty standing on its own, where
 to find it hard too.
 
 **Say how two poles relate rather than leaving it as homework.** "It buys real speed. It costs real
-governance." makes the reader work out whether that is a trade, a ranking or a concession, and the
-author's habit is to say which. Concede before turning, mark the concession as one, signal that a
-turn is coming. **The means are yours**, and they may be loose or ungrammatical, since speech is.
-A piece where every contrast turns on the same connective has reproduced the tic in new clothing.
+governance." makes the reader work out whether that is a trade, a ranking or a concession. Concede
+before turning, mark the concession as one, signal that a turn is coming. **The means are yours**,
+and they may be loose or ungrammatical, since speech is. A piece where every contrast turns on the
+same connective has reproduced the tic in new clothing.
+
+**Do not set two poles side by side and let the full stop carry the opposition.** In long-form prose
+this holds whatever the profile says, unless the profile names the shape as a move with long-form
+corpus evidence. It is the defect this pipeline has produced most persistently, and it survives every rule
+written against it because each instance looks locally fine. The exemption is that the prose
+**travels** after the stop instead of landing: "An unmapped forest is not empty. It is just not
+answerable, and a place becomes answerable at the moment somebody writes down enough about it that a
+stranger can ask where something is and be told." The test the audit applies is whether a later
+sentence can be **quoted** as supplying the relation. Where the sentence after the stop delivers a
+verdict instead, rewrite it.
 
 **Do not write inventories.** Not four items, not three, and full stops do not disguise one, nor do
 invented labels: three batches of three under three headings is still a catalogue. The author's
@@ -645,7 +655,11 @@ happened, naming the error. Where the host allows a per-call timeout, allow arou
 - **The claims manifest protects ideas**, which are what must survive, rather than spans, which are
   what should be rewritten.
 - **The contrast ledger is reconciled at the editorial merge and reported**, not enforced against
-  this stage. Where contrast is a named move in the profile, it is allowed.
+  this stage. Where contrast is a named move in the profile, contrast **as a habit of thought** is
+  allowed, and the ledger does not constrain it. **This does not license contrast-by-adjacency**,
+  which is prohibited by default whatever the profile names, on the terms above: the prose travels
+  after the stop, or the profile evidences the shape in long-form. A move licenses the author's
+  oppositions; it does not license one surface realisation of them.
 - **Irreversible house mechanics remain binding on every stage**: no em-dashes, punctuation outside
   closing quotes, British spellings. Those are the author's stated rules.
 

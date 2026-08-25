@@ -182,6 +182,16 @@ syntax is identical and the function is opposite:
 catches both instances equally, which is why three runs of prohibition changed nothing. Test by
 counterfactual, and require the auditor to name evidence rather than to feel a difference:
 
+**One exception to that doctrine, deliberately made, and worth stating plainly.**
+Contrast-by-adjacency carries a default prohibition in long-form prose, below. It is a presumption
+against one surface realisation rather than a replacement for the functional tests here, and the two
+compose in one order. **The functional test runs first**: an opposition that fails it is dead
+whatever its punctuation. **The presumption applies only to survivors**, and is discharged by
+quoting the sentence that supplies the relation. It exists because this shape is the one defect that
+outlived four rounds of function-only rules, and because a model writing long-form argument reaches
+for it far more often than any corpus licenses. A house constraint knowingly accepted, not a claim
+that the shape is bad.
+
 - **Negation**: replace it with its positive proposition, or delete it. **Does the passage still
   introduce the same distinction, mechanism or consequence, with the same force?** If yes, it was
   emphasis. If no, name the distinction the negation creates and **point to where the piece later
@@ -191,20 +201,37 @@ counterfactual, and require the auditor to name evidence rather than to feel a d
   ("authenticated but not authorised" has no useful continuum), and demanding a gradient there
   produces vagueness.
 - **Opposition, who supplies the relation**: a full stop between two poles **asks the reader to
-  infer** how they relate; a connective **states** it. This author states it. So where a contrast
-  lands as two clipped sentences in apposition, ask what relation the reader is being asked to
-  supply, and whether the passage anywhere supplies it.
+  infer** how they relate; a connective **states** it.
+
+  **Contrast-by-adjacency is prohibited by default in long-form prose, for every author.** Two short
+  declaratives set side by side, with the opposition carried by the full stop between them, is the
+  single most persistent defect this skill has produced: it survived three consecutive runs and four
+  rounds of rules written against it. It is prohibited as a default rather than derived per corpus,
+  because a model generating long-form argument reaches for it far more often than any corpus
+  licenses, and a rule that waits for corpus evidence arrives too late to stop it.
 
   "It buys real speed. It costs real governance." leaves the reader to work out whether that is a
-  trade, a contradiction, a ranking or a concession. The author's own repair names it: *"It does buy
-  real speed though, but on the flipside, it costs real governance"*, where "does buy" concedes
-  before turning and "though" marks the concession as one.
+  trade, a contradiction, a ranking or a concession. One repair states it: *"It does buy real speed
+  though, but on the flipside, it costs real governance"*, where "does buy" concedes before turning
+  and "though" marks the concession as one.
 
   **This is not a template.** Reaching for "though, but on the flipside" every time reproduces the
   tic in connective clothing, and a piece where every contrast is bridged by the same phrase is
   worse than the clipped version. **What the row scores is whether the relation between the poles is
-  stated or left as homework**, by whatever means the sentence finds. A clipped pair is fine where
-  the following prose does the stating; it fails where nothing does.
+  stated or left as homework**, by whatever means the sentence finds.
+
+  **Two exemptions, and only these two, both discharged by quotation rather than by impression.**
+  A clipped pair passes where **the following prose does the stating**, and the auditor must quote
+  the sentence that states it and name the relation it supplies. "The prose travels rather than
+  lands" is the same judgement described from the reader's side; it is not a separate, looser test,
+  and where no quotable sentence supplies the relation, the pair fails however alive it feels. This
+  is the earned case: "An unmapped forest is not empty. It is just not answerable,
+  and a place becomes answerable at the moment somebody writes down enough about it that a stranger
+  can ask where something is and be told." The prose travels after the stop rather than landing.
+  And it passes where **the profile names the shape as a move with corpus evidence for it at this
+  length**, which is how an author whose writing genuinely runs on apposition overrides the default.
+  A profile note that the shape is *disfavoured* is not such evidence, and neither is a corpus of
+  short-form posts, where the same shape reads as thought and at length reads as assertion-stacking.
 - **Enumeration**: does the selection, ordering or interpretation of the items change the reader's
   model? Examples can carry scope, credibility or consequence without changing the headline
   proposition, so semantic redundancy alone does not condemn a list. What condemns it is items
@@ -384,7 +411,7 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | **Unallocated inventories** | consecutive material serving one argumentative job, in which items arrive unchosen and uninterpreted, that no section's `required_specifics` names. Bounded by the job, not by punctuation or by an invented head proposition | **blocks** |
 | **Post-voice compliance** | an em-dash or punctuation inside a closing quote (absolute, no comparison needed); a machine signpost or a second mirrored construction **that the upstream edit records show the tiers removed** | **blocks** |
 | **Staged demonstration** | the reader is walked through steps toward a conclusion the author already holds. Usually surfaces as a verb-first opener, though "Suppose" and "Consider" invite rather than march | reported, with passages: the invite/march line is a register judgement and two auditors will draw it differently |
-| **Unstated opposition** | two poles set side by side with the relation left for the reader to infer, and nothing in the passage supplies it. A bare label ("that is the trade") does not supply it: what is supplied must distinguish the kind or the consequence of the opposition | **blocks** |
+| **Unstated opposition** | two poles set side by side with the relation left for the reader to infer, and nothing in the passage supplies it. A bare label ("that is the trade") does not supply it: what is supplied must distinguish the kind or the consequence of the opposition. **Contrast-by-adjacency is prohibited by default in long-form prose, for every author**, exempt only where the following prose states the relation and distinguishes its kind or consequence, or where the profile names the shape as a move with long-form corpus evidence | **blocks** |
 | **Unearned relations** | one thing asserted to follow from, cause or explain another, by any connective or none, where the relation cannot be traced to a mechanism, premise or evidence the reader was given. **Earlier material restating the same conclusion is not warrant**, and citing it is circular | **blocks** |
 | **Structural reconception** | across the piece's boundaries, the reader arrives at each holding materially what the source architecture would have given them. One altered boundary does not clear the row: the test is pervasive source equivalence, not total | **blocks**, and it is the spine's failure |
 | Route concentration | more than half the sections share one route | reported |
