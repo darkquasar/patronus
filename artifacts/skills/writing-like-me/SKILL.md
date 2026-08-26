@@ -174,19 +174,19 @@ must be reconceived. It writes `SYNTHESIS.md` beside the final draft, naming whi
 surviving passage, which passages were newly written, and every source-order block it deliberately
 broke. This provenance is a checkable account, not proof; the drafts remain the evidence.
 
-Before saving the final draft, scan every prose sentence that opens with `Imagine`, `Consider`,
-`Suppose`, `Follow`, `Copy`, `Put`, `Give` or `Catalogue`. Record one of three findings in
+Before saving the final draft, scan every prose sentence that opens with `Imagine`, `Picture`,
+`Consider`, `Suppose`, `Follow`, `Copy`, `Put`, `Give` or `Catalogue`. Record one of three findings in
 `SYNTHESIS.md`:
 
 1. **genuine advice** whose purpose is for the reader to perform the action;
-2. **doubt-bearing invitation**, where `Suppose` or `Imagine` opens a possibility whose outcome the
+2. **doubt-bearing invitation**, where `Suppose`, `Imagine` or `Picture` opens a possibility whose outcome the
    prose has not fixed and the thought experiment may change the author's position;
 3. **staged proof**, where the action merely walks the reader to a conclusion already held.
 
 The first two survive. **Rewrite every staged instance** as a condition shared by author and reader,
-or begin on the concrete object itself. This is a functional preflight, not a lexical ban: `Imagine
-that the cheaper tool changes what we can afford to ask` may open inquiry, while `Imagine twelve
-laptops; now you have a distributed system` performs a verdict.
+or begin on the concrete object itself. This is a functional preflight, not a lexical ban:
+`Picture that the cheaper tool changes what we can afford to ask` may open inquiry, while
+`Imagine twelve laptops; now you have a distributed system` performs a verdict.
 
 ### Profile-backed philosophical and mythic turns
 
@@ -296,7 +296,7 @@ imperative that asks the reader to execute the author's proof is prohibited: `Fo
 reader (`if we follow...`, `if the tool is copied...`) or begin with the concrete case itself. A
 genuine instruction remains available in a passage whose actual job is to advise action; the test
 is whether obeying the verb is the recommendation or merely a staged route to a conclusion already
-held. `Suppose` and `Imagine` also remain available where they create real doubt: the author does
+held. `Suppose`, `Imagine` and `Picture` also remain available where they create real doubt: the author does
 not know what the thought experiment will reveal in advance, or risks changing position as it runs.
 
 **Do not make yourself the measure of a difficulty.** "Which raises the thing I cannot get past"
