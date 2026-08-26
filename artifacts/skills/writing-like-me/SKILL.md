@@ -4,9 +4,10 @@ description: >
   Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft
   (or over a faceless base draft it composes), derives a voice profile of named moves from your
   exemplar corpus, then a spine that owns the piece's metaphor, opening scene, register and running
-  order. One writer then drafts the whole piece against that spine, holding the pressure and the
-  scene but not the claims manifest, which is checked afterwards as a fidelity ledger and repaired
-  by reconceiving rather than by patching. An audit scores the result for liveness, section
+  order. Two independent writers produce complete drafts—a faithful arm and a route-blind variance
+  arm—then a third fresh editor synthesizes them with licence to rewrite and reorder anything while
+  preserving the author's claims. The claims manifest is checked afterwards as a fidelity ledger
+  and repaired by reconceiving rather than by patching. An audit scores the result for liveness, section
   subagents refine only where it flags something, and a second model gives one advisory read. Use
   WHENEVER the user asks to "make this sound like me", "write this in my voice", "draft this the way
   I would", or hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by
@@ -34,9 +35,12 @@ a sentence, and gives that spine authority over structure.
     running order, per-section assignments
     |
     v  pressure + scene + running order + profile + draft   (NO claims manifest)
-  ONE WRITER, whole piece            fresh subagent, licensed to wander
+  TWO WHOLE-PIECE WRITERS            fresh, independent contexts
+    |                                faithful arm + variance arm
+    v  two complete drafts
+  SYNTHESIS EDITOR                   third fresh context, rewrite-anything licence
     |
-    v  finished draft
+    v  finished draft + passage provenance
   fidelity check                     manifest as ledger; material omissions only
     |                                -> back to the same writer, reconceived
     v
@@ -61,7 +65,7 @@ user supplies:
 
 | Mode | Input | What the voice stage may do |
 |---|---|---|
-| **Edit** | an existing draft | the prose is the author's and carries authority: diction, rhythm, paragraph shape, cutting and reordering within a section. **Never** replace their sentences wholesale, and **never** inject a claim they did not make |
+| **Edit** | an existing draft | the author's claims and specifics carry authority; the source's sentence order, paragraph boundaries and section order do not. Rewrite and reorder freely where the argument improves, but **never** change a claim or inject one the author did not make |
 | **Compose** | a request, no draft | write a faceless base draft **with no corpus in context**, run stage 0 over it, then voice: every sentence may be rewritten |
 | **Voice-only** | a draft the user says is already edited | skip stage 0, say so, and voice with no edit records or sections, so no restore is available |
 
@@ -74,8 +78,10 @@ What changes is its status. It is an **attractor and loose scaffolding**, not a 
 preserved. It fixes the ideas, the evidence and the citations. **Its sentences carry no authority
 at all**, and the voice stage is licensed to demolish and rebuild every one of them.
 
-In edit mode the user's own draft plays this role, and **its sentences do carry authority**: the
-never-inject rule binds, and the voice stage may not introduce claims the author did not make.
+In edit mode the user's own draft plays this role. **Its claims and specifics carry authority; its
+sentences and arrangement do not.** The never-inject rule binds, while the drafting arms and the
+synthesis editor may replace, merge, split and reorder paragraphs to reach the same commitments by
+a better route.
 
 ## Stage 0: the editorial pass
 
@@ -122,12 +128,87 @@ editorial-only.
 Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpoint checks, and
 **show it to the user for approval before any fan-out**.
 
-## Stage 3: one writer owns the whole piece
+## Stage 3: two independent whole-piece drafts, then synthesis
 
-**A fresh subagent writes the entire essay in one pass**, holding the governing pressure, the
-opening scene, the running order, the profile and the draft. It does not hold the claims manifest.
+One fresh writer improved continuity and still preserved the source's paragraph atoms. Permission
+to change a plan was not enough while the same writer held a fixed `running_order`, section turns
+and the source in front of it. The default is now **two complete drafts in parallel, followed by a
+third fresh editor with licence to rewrite anything**.
 
-**The profile's `## Construction` block is handed over as its own item, not left to be found.** It
+### Stage 3a: the faithful arm
+
+The faithful arm receives the governing pressure, opening scene, reference `running_order`, profile,
+source draft and the licence below. It does not receive the claims manifest. It writes one complete
+essay, and may depart from the reference route where the writing discovers a better one.
+
+### Stage 3b: the variance arm
+
+The variance arm receives the source, profile, governing pressure, register, unresolved seams,
+citations and binding specifics. **It does not receive `running_order`, `per_section_assignment`,
+`metaphor_locations`, section titles or the faithful draft.** Those fields are useful to the
+faithful arm and poisonous to independent variation.
+
+Before drafting, it privately tests materially different orders and granularities, then chooses the
+one in which each boundary changes what the reader knows, expects or doubts. It writes a complete
+essay, not an outline and not alternate paragraphs. Its job is not novelty for its own sake: every
+source claim survives, but source paragraphs are raw material rather than units to preserve.
+
+The variance arm may do **side research for expression**: physical processes, historical objects,
+etymologies, spatial arrangements or other conceptual material that could make an abstraction
+visible. Research supplies an image or analogy, never a new claim about the subject. A factual
+statement not already in the source is omitted unless it is independently verified and cited, and
+an analogy is discarded where explaining it costs more than it reveals.
+
+### Stage 3c: the synthesis editor
+
+A third fresh subagent receives both complete drafts, the source, profile, governing pressure and
+the writer-safe spine without the claims manifest. It is **not a stitcher**. It may rewrite every
+sentence, move any paragraph, discard either draft's opening, and invent a third arrangement. It
+selects by function: which passage makes the claim concrete, which route keeps pressure alive, which
+image changes the reader's understanding, and which plain sentence is stronger than both attempts.
+
+The editor must not choose one draft wholesale and polish it. For each source section, it runs the
+reversal test: if restoring that source section's paragraph sequence leaves pressure, dependencies
+and reader state materially unchanged, the synthesis has preserved the source architecture and
+must be reconceived. It writes `SYNTHESIS.md` beside the final draft, naming which arm supplied each
+surviving passage, which passages were newly written, and every source-order block it deliberately
+broke. This provenance is a checkable account, not proof; the drafts remain the evidence.
+
+Before saving the final draft, scan every prose sentence that opens with `Imagine`, `Consider`,
+`Suppose`, `Follow`, `Copy`, `Put`, `Give` or `Catalogue`. Record one of three findings in
+`SYNTHESIS.md`:
+
+1. **genuine advice** whose purpose is for the reader to perform the action;
+2. **doubt-bearing invitation**, where `Suppose` or `Imagine` opens a possibility whose outcome the
+   prose has not fixed and the thought experiment may change the author's position;
+3. **staged proof**, where the action merely walks the reader to a conclusion already held.
+
+The first two survive. **Rewrite every staged instance** as a condition shared by author and reader,
+or begin on the concrete object itself. This is a functional preflight, not a lexical ban: `Imagine
+that the cheaper tool changes what we can afford to ask` may open inquiry, while `Imagine twelve
+laptops; now you have a distributed system` performs a verdict.
+
+### Profile-backed philosophical and mythic turns
+
+When the profile evidences philosophical excursions, concept definition, coinage, mythic or occult
+imagery, playful creatures, or a D&D-like register, treating the essay as literal technical
+exposition is voice decay. The variance arm must explore at least one route outside the immediate
+technical frame: a paradox, a philosophical concept, an older object or practice, a mythic figure,
+or another strange-but-related idea. It returns only if the excursion changes how the technical
+mechanism is understood.
+
+The synthesis editor reports every explored excursion in `SYNTHESIS.md` and says why it took or
+declined it. An earned turn may define a concept and then use it as working equipment, or leave the
+technical frame and return with a new distinction. A named concept found through research, such as
+Jevons paradox in an argument about AI efficiency and demand, is a subject-matter claim: verify it,
+cite it, and show the mechanism. A kraken, archmage, amulet or trickster invoked only to satisfy the
+register is costume and fails the removal test.
+
+All three agents write to named files. The faithful and variance drafts are durable artifacts even
+where synthesis uses none of a passage.
+
+**The profile's `## Construction` block is handed to both writers and the editor as its own item,
+not left to be found.** It
 holds how this author wires two propositions together and what he does where they oppose, and it
 applies to every sentence rather than to allocated places. Where the writer is about to set two
 poles against each other, that block is what it reaches for; where the block is absent or marked
@@ -177,6 +258,27 @@ elsewhere:
 
 **Write it as one developing act of thought, not as a demonstration of coverage.**
 
+### Concrete first, and either image or plainness
+
+Where a section introduces an abstract rule, prefer to let the reader encounter the concrete case
+that makes the rule necessary before naming it. A required-status check bound to a commit can earn
+the abstraction that a verifier must not answer to what it verifies; leading with the abstraction
+makes the reader decode the rule before they have anything to attach it to.
+
+An abstraction gets one of two treatments: **make it visible, or say it plainly**. A gate may become
+a passage into another space where that image changes how enforcement is understood. If no image
+does real work, write `the central repository still exists`. Phrases such as `the thing nobody
+proposes deleting` merely hide a plain noun and fail the removal test: they add effort without
+adding a picture, mechanism or distinction.
+
+### Keep coined referents recoverable
+
+A coined shorthand saves repetition only while the reader can still recover what it denotes. After
+a section boundary or a substantial excursion, re-expand it in apposition on first return: the
+second surface, meaning the distributed agent capability across the workstation fleet. Do this when
+needed for recovery, not on a cadence. A label whose referent lives only in an earlier heading or
+paragraph has become private vocabulary.
+
 ### Four habits the author has named, with his own repairs
 
 Each is a defect the last run reproduced, followed by how he writes it instead. **The repairs are
@@ -188,8 +290,14 @@ version with the defect.
 stack to twelve engineers." The reader is being walked through steps toward a conclusion you already
 hold, and it reads as dry and falsely confident. The author's repair puts the reader inside the
 supposition rather than under instruction: an "if" clause, a "we", sometimes a tag question inviting
-agreement. **Find your own phrasing for that.** A verb-first opener is the usual surface and not
-always the defect, since "Suppose the catalogue is correct" invites rather than marches.
+agreement. **Find your own phrasing for that.** In argumentative or explanatory prose, a bare
+imperative that asks the reader to execute the author's proof is prohibited: `Follow the design`,
+`Copy the workbench`, `Put one on every laptop`, `Catalogue it`. Put the condition around author and
+reader (`if we follow...`, `if the tool is copied...`) or begin with the concrete case itself. A
+genuine instruction remains available in a passage whose actual job is to advise action; the test
+is whether obeying the verb is the recommendation or merely a staged route to a conclusion already
+held. `Suppose` and `Imagine` also remain available where they create real doubt: the author does
+not know what the thought experiment will reveal in advance, or risks changing position as it runs.
 
 **Do not make yourself the measure of a difficulty.** "Which raises the thing I cannot get past"
 makes the author the instrument. Leave the difficulty standing on its own, where the reader is free
@@ -256,7 +364,7 @@ still reconceive paragraphs.
 
 **The unsectioned contract below is now the default path, not the degraded one.**
 
-## Stage 3b: the section refinement pass (optional)
+## Stage 3d: the section refinement pass (optional)
 
 
 
@@ -309,17 +417,20 @@ so a reader can tell a run that found nothing to restore from one that could not
 **Do not fabricate section files to satisfy the seven-item list.** An invented `edits.yaml` with no
 upstream `source_rev` would offer restores that resolve against nothing.
 
-### Licence differs by mode, and that difference is the whole point of the attractor
+### Optional section-refinement licence by mode
+
+This subsection governs Stage 3d refinement only. It does not narrow the whole-piece drafting or
+synthesis licence above.
 
 *In compose mode*, rewrite every sentence. The section's prose came from a model told to have no
 voice, so it carries no authority. What binds is the claims manifest: the ideas assigned to this
 section must still be made.
 
-*In edit mode*, the prose is the user's own and it does carry authority. Work on diction, rhythm
-and paragraph shape, and cut or reorder within the section, but **never** replace the author's
-sentences wholesale, and **never** introduce a claim they did not make. A voice pass that rewrites
-a user's draft from scratch has substituted its voice for theirs, which is the opposite of this
-skill's purpose.
+*In edit mode*, the user's claims and specifics carry authority. A refiner may replace sentences,
+merge or split paragraphs and reorder material inside its assigned section, while it must never
+change a claim or introduce one the author did not make. Protecting source sentences wholesale
+would turn refinement back into varnish; replacing the author's commitments would substitute the
+model's argument for theirs.
 
 **"Carries authority" is not "is finished".** The licence protects the author's *claims* and their
 *specifics*, not the shape of every sentence that happens to carry one. A section left materially as
@@ -526,8 +637,8 @@ re-dispatch a fresh auditor naming the path again. Where no file arrives across 
 that the audit did not run**, and never present the orchestrator's own checks as an audit: the stage
 whose work is being judged cannot supply the judgement.
 
-**The audit runs over the whole piece by default**, since one writer produced it and the section
-boundaries are now the piece's own rather than the pipeline's. Score section by section only where
+**The audit runs over the whole piece by default**, since the synthesis editor produced one piece
+and the section boundaries are now the piece's own rather than the source's. Score section by section only where
 the refinement pass ran. **A per-section score is a diagnosis of where to look, never a set of
 obligations the writer owed**, and reading it the second way is what turned every section into a
 deliverable that had to prove itself.
@@ -619,7 +730,7 @@ not fire a per-section rework. Report it, naming the sections that could carry w
 
 ## Stage 6: one advisory codex read
 
-Codex runs **once**, over the finished stitched text, via the MCP server (`codex mcp-server`,
+Codex runs **once**, over the finished text, via the MCP server (`codex mcp-server`,
 registered as `codex`). Call its `codex` tool with `sandbox: "read-only"` and a prompt naming the
 paths of the text, the profile and the spine. It returns notes: where the piece reads flat, where a
 move is absent, where the voice slipped.
@@ -737,7 +848,10 @@ edit is indistinguishable from one that made none.
   AUDIT.md              always, written by the liveness auditor itself
   FIDELITY.md           always, written by the fidelity auditor itself
   CODEX-NOTES.md        when the advisory read completes
+  SYNTHESIS.md          always; passage provenance and source-order blocks deliberately broken
   draft-00-original.md  when drafts are kept
+  draft-05-faithful.md  when drafts are kept
+  draft-05-variance.md  when drafts are kept
   draft-0N-<stage>.md   when drafts are kept
 ```
 
@@ -772,7 +886,11 @@ voice:
   corpus_files: [short-form.md, long-form.md]
   rhythm_source: english-pool      # or: unavailable
   spine_approved: true
-  sections_voiced: 6
+  drafting_arms:
+    faithful: draft-05-faithful.md
+    variance: draft-05-variance.md
+  synthesis: SYNTHESIS.md
+  synthesized_sections: 6
   sections_reworked: [03-the-cost]
   sections_flagged_flat: []
   claims_unmade: []
@@ -798,35 +916,19 @@ And **`model_reported_influences` is labelled as self-reported**, because a mode
 afterwards which exemplar shaped a structure it synthesized across a dozen. The corpus path and the
 exemplar count are knowable; the attribution is a claim.
 
-## The unresolved architecture question
+## Why the two drafting arms are different
 
-**Whole-piece authorship is a bet, not a settled answer.** It trades one failure mode for another,
-and the trade has not yet been tested against a reader.
+Two writers given the same spine are one experiment repeated twice. Independence comes from an
+asymmetric brief: the faithful arm tests whether the approved conception can be written alive; the
+variance arm tests whether the source's paragraph order was hiding a better conception. The
+synthesis editor then has alternatives that fail in different places and explicit authority to
+write a third answer rather than joining them at their seams.
 
-| | gives | risks |
-|---|---|---|
-| fan-out | per-section density, parallel speed, every section forced to carry something | proof-shaped prose; no agent owns movement across sections; parallel writers converging on the same tic |
-| whole-piece | continuity, an argument that develops, no per-section proof obligations | voice decay: a live opening and a dead fifth section |
-
-**The candidate that stops choosing between them**, and the next thing to try where whole-piece
-authorship disappoints:
-
-1. Keep the fan-out, and **add a whole-piece writer as one more agent in the same parallel batch**,
-   holding the same spine. Two complete drafts, produced independently.
-2. **Change what the final stage is.** Not a joiner forbidden from rewriting inside a section, but
-   an **editor holding both drafts with licence to rewrite anything**, blending them for aliveness
-   and for the whole.
-3. Report which draft each surviving passage came from, so the next run has evidence about which
-   arm actually writes better rather than an argument about which should.
-
-The reasoning: **the two drafts fail in different places.** Where the fan-out version is
-proof-shaped, the free version reads more loosely; where the free version has decayed, the fan-out
-version still has a live section. An editor holding both can see which is which. An editor holding
-one can only guess at what it is missing, which is the position every stage of this pipeline has
-been in so far.
-
-Note what this would require changing: stage 5 currently forbids rewriting inside a section, which
-was right for a joiner and is wrong for an editor. That prohibition is the load-bearing one.
+The final stage's provenance is diagnostic. If nearly every surviving passage comes from the
+faithful arm, the variance brief did not create useful alternatives. If nearly every passage comes
+from the variance arm, the spine is over-specifying prose. If the editor rewrites most of both, the
+two arms exposed useful material but neither found the piece. None of these distributions is a
+target; each is evidence for the next iteration.
 
 ## Known limits, stated rather than hidden
 
@@ -845,6 +947,5 @@ was right for a joiner and is wrong for an editor. That prohibition is the load-
   content-shaping first and voice second.
 - Scrubbing a widely circulated word list is itself becoming detectable, which is a reason the
   editorial tiers lean on structural rules rather than on lexical substitution alone.
-- Parallel subagents may converge on the same unallocated image. Each holds the same profile and
-  none sees another's text, so two sections can independently reach for the same figure. Only
-  stitching sees both, which is where the duplicate is caught rather than prevented.
+- Parallel drafting arms may converge on the same unallocated image. Neither sees the other's text,
+  so the synthesis editor is where a duplicate governing image is caught rather than prevented.

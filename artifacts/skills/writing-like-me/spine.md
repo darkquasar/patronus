@@ -103,6 +103,19 @@ running_order:
   - 02-the-turn
   - 01-the-opening
   - 04-the-case
+  # Reference route for the faithful arm and audit. The variance arm does not receive this field.
+
+variance_brief:
+  pressure: "<the governing question and stakes, without the reference route>"
+  invariants: ["<claims, specifics and citations that cannot be lost>"]
+  live_seams: ["<questions or limits that must remain genuinely unresolved>"]
+  research_scope: >
+    Expression only: images, physical processes, objects, histories or etymologies that could make
+    the argument visible. No new subject-matter claim without independent verification and citation.
+  profile_backed_excursions: ["<philosophical concept, paradox, mythic register or playful frame the profile supports and this topic could earn>"]
+  prohibited_carryover: >
+    Source section order, source paragraph blocks, planned section titles, per-section assignments,
+    metaphor locations and the faithful arm's governing image.
 
 # Each section declares WHAT CHANGES for the reader, not only which moves land in it. A section
 # that states a true claim well and leaves the reader's model exactly as it found it is exposition.
@@ -218,7 +231,9 @@ nothing.
 
 ## Sections travel, they do not simply contain
 
-`per_section_assignment` says what each section does to a reader, not only which moves land in it.
+`per_section_assignment` says what each reference-route section does to a reader, not only which
+moves land in it. The faithful arm receives it. The variance arm does not, and the synthesis editor
+may replace the route where the alternative changes pressure more effectively.
 
 **`reader_enters_with` is the model or question the reader actually holds on arrival**, given
 everything before it. It is not invented so the section can defeat it: a straw belief the reader
@@ -367,6 +382,10 @@ before the audit runs. Three rules make it checkable:
 highest-leverage artifact in the pipeline: a bad governing metaphor poisons every section, and
 it is cheap to fix here and expensive later.
 
+An explicit request to run the complete pipeline or smoke test unattended counts as approval to
+continue after writing and recording the checkpoint; it does not waive any checkpoint check. In
+ordinary interactive use, silence is not approval and the pipeline pauses here.
+
 Check before showing it, and report any that fire:
 
 - **a claim the attractor draft makes that the manifest does not carry.** Re-read the attractor
@@ -411,6 +430,15 @@ Check before showing it, and report any that fire:
 - **`required_specifics` naming an inventory whose completeness is not the argument.** Report the
   total across the piece: several individually-defensible inventories compose into a catalogue, and
   the count is only visible here.
+- **a `variance_brief` that leaks the reference architecture.** It may carry pressure, invariants,
+  seams and research bounds. It must not carry `running_order`, section titles, per-section turns,
+  metaphor locations or prose copied from those fields, since a second writer with the same plan is
+  not an independent structural alternative.
+- **a profile-backed strange register silently declined.** Where the profile recurrently evidences
+  philosophical excursions, concept definition, mythic/occult imagery or playful creatures, the
+  spine either selects the relevant effect and gives the variance arm open research territory, or
+  records why this piece should remain plain. It never prescribes the destination or names a creature
+  to insert. Silence defaults to literal exposition and is not a decision.
 
 ### The freedom check: does this plan leave room to write?
 
@@ -453,6 +481,11 @@ visible**, so run these before showing the plan:
   phrased as a mirrored contrast ("X does not shrink; it produces a second one") licenses one
   rendering, and it is the rendering this pipeline keeps being asked to stop producing. This subsumes
   the sentence-altitude check above: apply it once, here.
+- **Concrete-before-abstract test.** Where a section's load is an abstract governance rule, name the
+  concrete mechanism or evidence the reader encounters before the abstraction, or state why the rule
+  must lead. `register_job.grounding` cannot merely repeat the abstraction. This is not a universal
+  anecdote requirement: a plain technical section may begin plainly, but it may not make the reader
+  decode a high-level rule before supplying the object that makes the rule intelligible.
 
 **Density measures what must be SAID; the necessity test measures what must be PERFORMED.** Report
 both, and let only the necessity test block: a piece can carry many claims and still read as writing,
@@ -500,6 +533,13 @@ whatever operations it performed or declined.
 **A claim dropped at spine time is invisible to every later stage**, because the per-section audit
 checks only claims that were assigned and the final coverage pass checks only the manifest. This
 check is the one place it can be caught.
+
+Run the same reversal test one level lower. Map source paragraphs to the reference route. If most
+survive as contiguous blocks, in the same internal order, the plan has changed containers while
+preserving the source's atoms. A merge of two headings does not reconceive anything when every
+paragraph underneath them remains adjacent and ordered. Record which source blocks the faithful
+route deliberately breaks; the variance arm receives none of this mapping, and synthesis reports
+what actually survived.
 
 ## How the spine's authority is enforced
 
