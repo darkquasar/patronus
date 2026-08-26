@@ -162,6 +162,12 @@ ornamental moves. An assertiveness threshold teaches lexical fog, where the verd
 never counts**, and return them for reconception rather than repair. Hedging a declarative, merging
 a list or softening an opposition preserves the non-thinking underneath.
 
+The author's explicit prose-inventory guard is separate from that diagnostic principle. It is a
+surface invariant, not a quality score: no comma-delimited or semantically equivalent run over three
+objects; no more than two runs in a section; and at least two ordinary paragraphs between them.
+`Etc.` may mark a genuinely open class after the third item, but cannot stand in for missing evidence.
+Tables, diagrams and explicit structured lists may carry completeness when completeness matters.
+
 ### The shape is not the defect. Test the function.
 
 The construct this pipeline has banned for three runs appears, unaltered, in the passage the author
@@ -326,6 +332,50 @@ though the sentence's confidence were itself the argument. Scoring it is not the
 which asks whether the reasoning earns the certainty; this asks whether a person would say it aloud
 that way. Report every instance as a passage.
 
+### Axiomatic accumulation
+
+Read paragraph by paragraph and name how each central proposition arrives: discovered through a
+case, situated as the author's judgement, shared with the reader, qualified by a real condition or
+concession, left genuinely open, or pronounced as a context-free law. **Block a run of three
+paragraphs whose main movement lands as axiomatic closure**, and block a whole piece where that is
+the default across most sections even if no local run reaches three. A few terminal propositions
+may anchor the argument; recurrence is the defect.
+
+Do not accept lexical hedging as repair. Quote the mechanism that makes the new modality honest:
+scope, condition, evidence, ownership, reader inference or an unresolved limit. If the only change
+is `is` to `tends to`, the axiom is wearing mist.
+
+### Section entrances
+
+Inspect the first prose paragraph after every heading. It fails when it opens with two short
+assertive verdicts, when it gestures to an image or term whose referent has gone cold, or when it
+merely restates the heading or thesis. A passing entrance establishes movement through a concrete
+occasion, live question, condition, tension, or developed and recoverable image. Name what the
+reader is doing besides receiving a conclusion.
+
+### Demonstrative and callback recovery
+
+At every paragraph and section boundary, resolve demonstratives, positional references and coined
+labels to exact antecedents. `That sentence`, `this distinction`, `the former`, `above`, or a returning
+metaphor fails when the named unit is absent, ambiguous, the wrong grammatical size, or recoverable
+only by rereading several paragraphs. Quote both pointer and antecedent. A vague backward gesture is
+not continuity.
+
+### Intellectual fugues and literary depth
+
+Where the profile supports philosophical, mythic, conceptual or playful travel, the whole piece
+must contain at least one **developed** excursion. Naming a thinker, paradox or mythic object does
+not pass. The auditor identifies entry, development, turn and return, then states what distinction
+the technical argument now has that literal exposition did not supply. Verify attributed concepts
+and material mythic details; an uncited factual dependency fails fidelity, while a familiar image
+used without factual load may remain analogy.
+
+Also test whether the piece stops at the threshold of its best image. A thread mentioned only to
+mean retraceability may be functional yet underdeveloped when the surrounding argument could use the
+labyrinth's builder, inherited danger, forgotten purpose or creature to complicate governance.
+Expansion is warranted only if the added detail returns with argumentative work; costume still
+fails.
+
 ### Merit-announcements and intensifiers
 
 Two lexical habits substitute a claim *about* the material for the material:
@@ -409,6 +459,7 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | **Overstatement** | a rendering asserts more than its claim and that claim's `evidence_bounds` license | **blocks** |
 | **Performed sameness** | sections share one route **and** perform it identically: the same entry/turn/exit mechanics, the same section shape, or flat-replacement equivalence | **blocks** |
 | **Unallocated inventories** | consecutive material serving one argumentative job, in which items arrive unchosen and uninterpreted, that no section's `required_specifics` names. Bounded by the job, not by punctuation or by an invented head proposition | **blocks** |
+| **Inventory surface guard** | a prose inventory exceeds three objects; a section contains more than two; or two are separated by fewer than two ordinary paragraphs. Equivalent semicolon, parenthetical and multi-sentence batches count | **blocks** |
 | **Post-voice compliance** | an em-dash or punctuation inside a closing quote (absolute, no comparison needed); a machine signpost or a second mirrored construction **that the upstream edit records show the tiers removed** | **blocks** |
 | **Staged demonstration** | the reader is walked through steps toward a conclusion the author already holds. Bare proof-imperatives such as `Follow`, `Copy`, `Put`, `Give` or `Catalogue` fail. `Suppose`, `Imagine` and `Picture` pass only where they open a possibility whose result is genuinely unsettled; they fail where the next steps merely reveal the author's existing verdict. Genuine advice in a prescriptive passage also passes | **blocks**; classify each candidate as advice, doubt-bearing invitation or staged proof |
 | **Unstated opposition** | two poles set side by side with the relation left for the reader to infer, and nothing in the passage supplies it. A bare label ("that is the trade") does not supply it: what is supplied must distinguish the kind or the consequence of the opposition. **Contrast-by-adjacency is prohibited by default in long-form prose, for every author**, exempt only where the following prose states the relation and distinguishes its kind or consequence, or where the profile names the shape as a move with long-form corpus evidence | **blocks** |
@@ -419,12 +470,16 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | **Structural reconception** | across the piece's boundaries, the reader arrives at each holding materially what the source architecture would have given them. One altered boundary does not clear the row: the test is pervasive source equivalence, not total | **blocks**, and it is the spine's failure |
 | **Paragraph-block inheritance** | most source paragraphs survive as contiguous blocks in the same internal order, even where headings were merged, renamed or reordered. The synthesis changed containers while preserving the source's argumentative atoms | **blocks**, and returns to synthesis once |
 | **Profile-backed strangeness** | the profile and spine select philosophical excursion, concept definition, mythic/occult imagery or playful register, yet the piece remains literal technical exposition; or an excursion appears but returns with no new distinction | **blocks when selected in `signature_set`; otherwise reported** |
+| **Intellectual fugue depth** | a selected philosophical, literary or mythic territory is merely named, winked at, or abandoned before entry, development, turn and return make it intelligible and useful | **blocks where the profile supports the register** |
+| **Axiomatic accumulation** | three consecutive paragraphs land as context-free laws, or axiomatic closure is the default across most sections; lexical hedges do not clear it | **blocks** |
+| **Section entrances** | a section opens with two short verdicts, an unrecovered image or term, or a thesis restatement rather than motion, inquiry, condition, tension or developed image | **blocks** |
+| **Callback recovery** | a demonstrative, positional reference, coinage or returning image at a paragraph/section boundary has no exact, nearby and grammatically compatible antecedent | **blocks** |
 | Route concentration | more than half the sections share one route | reported |
 | Register modulation | adjacent sections do detectably the same reader-work throughout, or a `device` never returns to its `grounding` | reported |
 | Paragraph openers | one opener word in more than a quarter of paragraphs, or more than a third of paragraphs opening on a back-reference to the one before | reported |
 | Hedge convergence | one hedge lexeme in more than a third of sections | reported |
 | Section architecture | the same shape repeated across most sections | reported |
-| **Wandering** | the piece never leaves its own frame: no passage departs to a concept outside the argument and returns changed | **reported, never blocking** |
+| **Wandering** | the piece never leaves its own frame: no passage departs to a concept outside the argument and returns changed | **blocks where the profile supports this register; otherwise reported** |
 
 **Effects are not counted.** `signature_set` names what the piece should carry, not how many times.
 A counter tells a writer to manufacture instances, and manufactured instances are what the removal

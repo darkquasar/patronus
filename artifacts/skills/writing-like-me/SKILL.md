@@ -1,18 +1,12 @@
 ---
 name: writing-like-me
 description: >
-  Write in your own voice, editorially clean first. Runs the writing-editorial tiers over a draft
-  (or over a faceless base draft it composes), derives a voice profile of named moves from your
-  exemplar corpus, then a spine that owns the piece's metaphor, opening scene, register and running
-  order. Two independent writers produce complete drafts—a faithful arm and a route-blind variance
-  arm—then a third fresh editor synthesizes them with licence to rewrite and reorder anything while
-  preserving the author's claims. The claims manifest is checked afterwards as a fidelity ledger
-  and repaired by reconceiving rather than by patching. An audit scores the result for liveness, section
-  subagents refine only where it flags something, and a second model gives one advisory read. Use
-  WHENEVER the user asks to "make this sound like me", "write this in my voice", "draft this the way
-  I would", or hands over a draft and asks to have it voiced. Ships with EMPTY exemplar files by
-  design: it does nothing useful until you supply a corpus at ~/.claude/patronus/voice/. Requires
-  the writing-editorial skill, which its manifest pulls in automatically.
+  Write or edit in the user's own voice from an exemplar corpus. Builds a voice profile and
+  structural spine, generates independent faithful and route-blind drafts, synthesizes a third
+  architecture, then runs a fresh developmental pass for intellectual fugues, literary depth,
+  anti-axiomatic prose, inventories, entrances and continuity before fidelity and liveness audits.
+  Use whenever the user asks to make prose sound like them or supplies a draft to voice. Requires
+  writing-editorial and a populated ~/.claude/patronus/voice/ corpus.
 ---
 
 # Write like me
@@ -40,7 +34,10 @@ a sentence, and gives that spine authority over structure.
     v  two complete drafts
   SYNTHESIS EDITOR                   third fresh context, rewrite-anything licence
     |
-    v  finished draft + passage provenance
+    v  synthesis draft + passage provenance
+  JOURNEY EDITOR                     fourth fresh context, whole-piece developmental pass
+    |                                fugues, literary depth, entrances, continuity, anti-axiom
+    v  finished draft + development record
   fidelity check                     manifest as ledger; material omissions only
     |                                -> back to the same writer, reconceived
     v
@@ -81,7 +78,9 @@ at all**, and the voice stage is licensed to demolish and rebuild every one of t
 In edit mode the user's own draft plays this role. **Its claims and specifics carry authority; its
 sentences and arrangement do not.** The never-inject rule binds, while the drafting arms and the
 synthesis editor may replace, merge, split and reorder paragraphs to reach the same commitments by
-a better route.
+a better route. A fourth whole-piece developmental editor then deepens earned intellectual fugues,
+removes axiomatic accumulation and list-heavy prose, and repairs entrances and callbacks before
+fidelity and liveness audits freeze the result.
 
 ## Stage 0: the editorial pass
 
@@ -204,8 +203,23 @@ Jevons paradox in an argument about AI efficiency and demand, is a subject-matte
 cite it, and show the mechanism. A kraken, archmage, amulet or trickster invoked only to satisfy the
 register is costume and fails the removal test.
 
-All three agents write to named files. The faithful and variance drafts are durable artifacts even
-where synthesis uses none of a passage.
+**An allusion is not yet an excursion.** Naming Ariadne without entering the labyrinth, or adding
+`Deleuze would enjoy this` in parentheses, spends the cultural reference without giving the reader
+its thought. Where the connection is taken, give it enough room to become intelligible to a reader
+who does not already know it: explain the adjacent idea, allow it to disturb or illuminate the
+technical frame, then return carrying a usable distinction. Chesterton's Fence can turn encoded
+policy into inherited reasoning whose original problem may have vanished from view; Ariadne's thread
+can make retraceability visible before the Minotaur tests what retraceability cannot guarantee.
+These are examples of depth, never destinations to insert.
+
+Mythic detail follows the same rule. Verify the named figure, object's history, paradox or
+philosophical idea before use, and cite it where the passage relies on a factual account or
+attributed principle. Research may widen the expressive territory; it may not smuggle in a new
+claim about the essay's subject. A playful wink may remain brief, but it must be understandable
+without prestige name-dropping and must alter the sentence it inhabits.
+
+All drafting and developmental agents write to named files. The faithful and variance drafts are
+durable artifacts even where synthesis uses none of a passage.
 
 **The profile's `## Construction` block is handed to both writers and the editor as its own item,
 not left to be found.** It
@@ -329,9 +343,17 @@ the minor ones into the sentence that needs them. Cut to the one that carries th
 develop it. **Where you find yourself justifying why each item earns its place, you are writing an
 inventory and arguing for it**, which is the failure with extra steps.
 
-The narrow exception is an enumeration the spine named in `required_specifics`, where completeness
-is the argument, and the author's own long inventories that PRESERVE protects. Those are decisions
-made before you started, and outside them the presumption is against.
+The prose surface has a hard guard even where examples are useful: **a comma-delimited example run
+stops after three objects and then says `etc.` only where the open remainder is genuinely meant.**
+A section contains at most two such runs, and two runs need at least two ordinary paragraphs between
+them. Semicolons, parenthetical batches and several short sentences do not evade the rule: count the
+semantic inventory. `Etc.` is not a way to imply evidence the source never supplied.
+
+An enumeration the spine named in `required_specifics`, or an inventory PRESERVE protects, no longer
+earns a long prose string automatically. Where completeness really is the argument, move the full
+set into a table, diagram or explicit structured list, or distribute interpreted instances far
+enough apart that the reader encounters an argument rather than storage. Record the PRESERVE
+override. Exact wording remains binding only where the protected item's function depends on it.
 
 And one thing to verify rather than avoid: **when two propositions sit together, check the relation
 the reader will take from them is one the piece has actually earned.** A sentence can have the shape
@@ -343,6 +365,70 @@ is what makes them awkward" is: nothing about being ordinary makes a thing awkwa
 The house mechanics (no em-dashes, punctuation outside closing quotes, British spellings), the
 author's specifics in edit mode (a number, a name, a quotation, a citation), and the never-inject
 rule: no claim the author did not make.
+
+### Do not write like axioms
+
+The most damaging remaining voice decay is not merely overclaiming. It is **axiomatic delivery**:
+paragraph after paragraph resolves into a compact general law, spoken from nowhere, with the rhythm
+of a textbook proposition. `As capability approaches action, authorisation narrows` may be defensible
+and still exhaust the reader because it announces a law instead of letting a situated author and
+reader reason towards a design judgement.
+
+Do not repair this by sprinkling `perhaps`, `arguably` or `tends to` over unchanged verdicts. Choose
+the operation the reasoning earns: locate the proposition in a case, scale or condition; state it as
+the case for a design choice rather than a law of nature; let the author own it as a present reading
+or wager; recruit the reader into a shared inference; carry a real concession inside the sentence;
+or open uncertainty that the mechanism genuinely resolves or leaves standing.
+
+`The closer a capability comes to being exercised, the stronger the case for tighter authorisation,
+durable evidence and checks that are difficult to bypass` is gentler because it argues for a design,
+not because it contains softer vocabulary. A few earned axiomatic landings may anchor an essay. A
+run of them makes the prose a lecture, and the whole-piece audit blocks it.
+
+### Section entrances and recoverable continuity
+
+A heading resets the reader's working memory. The first paragraph must establish motion and recover
+whatever it inherits; it cannot assume that a remote image, label or grammatical pointer remains
+loaded. **Two short assertions at a section entrance are prohibited**: they deliver conclusions
+before the reader has re-entered the thought. Begin with a scene in motion, a real question, a
+condition, a tension, a developed image whose referent is re-established, or a sentence spacious
+enough to carry the relation it asserts. These are available routes, not a rotation to satisfy.
+
+Audit every `this`, `that`, `these`, `those`, `the former`, `the latter`, `above`, `below`, `here`,
+`there`, `that sentence`, `this distinction` and coined label at paragraph and section boundaries.
+The noun or proposition it denotes must be recoverable without rereading. `Completeness matters in
+that sentence` fails when the preceding unit is a paragraph or when no sentence has been identified;
+name the inventory, mechanism or proposition instead.
+
+## Stage 3d: the journey and resonance pass
+
+After synthesis and before the draft is frozen, a **fourth fresh whole-piece editor** receives the
+synthesis draft, source, profile, both writer-safe briefs, `SYNTHESIS.md`, and the licence above. It
+does not receive the claims manifest. This is a developmental pass, not copy-editing and not a
+coverage repair. It may rewrite and reorder anything while preserving the source commitments.
+
+The editor first maps the essay's conceptual hinges: a technical idea that could be seen differently
+through philosophy, myth, literature, history, etymology, a physical process or playful theory. It
+tests several adjacent territories privately and takes only those that return with explanatory
+equipment. When the profile supports this register, **at least one taken fugue must be developed,
+not merely named**, and a synthesis that already contains one is tested for whether it stopped just
+as the useful story began. The pass may deepen an existing governing image, but it may not silently
+replace the spine's governing image; a replacement is recorded as a proposed spine departure and
+must survive the removal and competition tests.
+
+Then it reads the whole piece for five failures that architectural synthesis can miss:
+
+1. inventories exceeding the three-object/two-per-section/separation guard;
+2. section entrances that begin with stacked verdicts or unrecovered imagery;
+3. dangling demonstratives, coined terms and callbacks whose referents went cold;
+4. successive paragraphs that land as axioms rather than a developing journey; and
+5. an allusion that names an intellectual territory without entering and returning from it.
+
+It writes the finished draft and `DEVELOPMENT.md`. The record names candidate fugues taken and
+declined, sources used to verify attributed ideas or mythic detail, inventories dismantled or moved
+out of prose, every section entrance reconceived, every recovered referent, and each axiomatic run
+reworked with the operation used. The pre-development synthesis remains durable evidence. Fidelity
+and liveness audit only the developed draft.
 
 ### Fidelity comes after, and repairs by reconception
 
@@ -364,7 +450,7 @@ still reconceive paragraphs.
 
 **The unsectioned contract below is now the default path, not the degraded one.**
 
-## Stage 3d: the section refinement pass (optional)
+## Stage 3e: the section refinement pass (optional)
 
 
 
@@ -419,7 +505,7 @@ upstream `source_rev` would offer restores that resolve against nothing.
 
 ### Optional section-refinement licence by mode
 
-This subsection governs Stage 3d refinement only. It does not narrow the whole-piece drafting or
+This subsection governs Stage 3e refinement only. It does not narrow the whole-piece drafting or
 synthesis licence above.
 
 *In compose mode*, rewrite every sentence. The section's prose came from a model told to have no
@@ -719,7 +805,8 @@ outside any allocation, keep one and say which.
 **Then run the piece-level pass** in `{skillDir}/audit.md`
 over the stitched text. It checks the spine's `signature_set` effects, the frame-break,
 reader-address, aside and seam allocations, **the pressure progression, overstatement against
-`evidence_bounds`, performed sameness, unallocated inventories and post-voice compliance** (all
+`evidence_bounds`, performed sameness, inventory guards, axiomatic accumulation, section entrances,
+callback recovery, intellectual-fugue depth and post-voice compliance** (all
 blocking), and reports route concentration, register modulation, paragraph-opener convergence, hedge
 convergence, repeated section architecture and claims coverage across the finished piece. A claim assigned to a section that was later cut, and never reassigned,
 surfaces there rather than silently vanishing, as does an `assertion` a voicer opened as a question
@@ -787,26 +874,27 @@ happened, naming the error. Where the host allows a per-call timeout, allow arou
 Report in **this order**:
 
 1. the finished draft;
-2. sections flagged as flat after rework, named;
-3. **piece-level failures accepted after a second attempt**, named by check;
-4. **the pressure progression**, section by section, naming any section that changed nothing;
-5. **routes declared but not performed**, with the three surfaces that were missing;
-6. **sections reported as inherited**: scored 0 or 1 on transformation, named, with what the voicer
+2. the pre-development synthesis and `DEVELOPMENT.md`, including fugues taken and declined;
+3. sections flagged as flat after rework, named;
+4. **piece-level failures accepted after a second attempt**, named by check;
+5. **the pressure progression**, section by section, naming any section that changed nothing;
+6. **routes declared but not performed**, with the three surfaces that were missing;
+7. **sections reported as inherited**: scored 0 or 1 on transformation, named, with what the voicer
    did and did not do to each;
-7. claims from the manifest that no section made, if any, **including an `assertion` opened as a
+8. claims from the manifest that no section made, if any, **including an `assertion` opened as a
    question and never landed**, and any rendering that overstated its `evidence_bounds`;
-8. **the spine's counterfactual answer**, quoted, and what the spine reshaped;
-9. **stitching additions**, each with the seam it sits on, and any that the removal test deleted;
-10. **repeated section architecture and paragraph-opener convergence**, where the piece-level pass
+9. **the spine's counterfactual answer**, quoted, and what the spine reshaped;
+10. **stitching additions**, each with the seam it sits on, and any that the removal test deleted;
+11. **repeated section architecture and paragraph-opener convergence**, where the piece-level pass
     found them;
-11. **regression findings** returned to the voicer, and what came back;
-12. tier restores, with their citations;
-13. PRESERVE overrides, with what each achieved;
-14. codex notes taken and declined;
-15. rhythm guard rails **and the hedge rates**, all **labelled as reported, never scored**.
+12. **regression findings** returned to the voicer, and what came back;
+13. tier restores, with their citations;
+14. PRESERVE overrides, with what each achieved;
+15. codex notes taken and declined;
+16. rhythm guard rails **and the hedge rates**, all **labelled as reported, never scored**.
 
 **The ordering is the point: what the piece failed at comes before what it measured.** Never
-present item 15 as evidence the voice landed. Items 3, 4, 5, 6 and 10 are the ones a passing audit
+present item 16 as evidence the voice landed. Items 4, 5, 6, 7 and 11 are the ones a passing audit
 used to hide, so they are named even where everything else is clean: a run that reports nothing at 4 has
 either done real editorial work everywhere or has not looked.
 

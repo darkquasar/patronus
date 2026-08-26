@@ -33,6 +33,11 @@ opening_scene: >
 register: >
   <the stance: hedged or blunt, first person or impersonal, wry or plain.>
 
+intellectual_hinges:
+  - pressure: "<technical idea whose frame may be profitably escaped>"
+    adjacent_territory: "<open territory: inherited rules, repetition, entropy, mythic navigation; not a prescribed name to insert>"
+    return_test: "<the distinction or question the essay must carry back>"
+
 # The effects this piece should CARRY, chosen for THIS essay. Each names the profile moves eligible
 # to produce it. These are eligibility, NOT quotas: a count tells a writer to manufacture instances,
 # which is how the moves row filled with ornament. The audit asks whether the effect is present and
@@ -439,6 +444,13 @@ Check before showing it, and report any that fire:
   spine either selects the relevant effect and gives the variance arm open research territory, or
   records why this piece should remain plain. It never prescribes the destination or names a creature
   to insert. Silence defaults to literal exposition and is not a decision.
+- **no intellectual hinge map where the profile supports philosophical or mythic travel.** Name
+  two or more technical pressures with adjacent territory left open and a return test. A named
+  destination such as `insert Chesterton's Fence here` has written the fugue in advance and blocks;
+  `what inherited policy remembers after its reason is forgotten` leaves room to discover it.
+- **a section entrance planned as a thesis restatement or two clipped verdicts.** The reader must
+  enter through motion, inquiry, condition, tension or a recovered/developed image, not receive the
+  section's conclusion before the section has begun.
 
 ### The freedom check: does this plan leave room to write?
 
