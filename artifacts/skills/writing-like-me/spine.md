@@ -1,7 +1,12 @@
 # The spine
 
-Derived once, by the main agent, after reading the cleansed draft and the profile, **before any
-fan-out**. Two inputs, and the split matters:
+Derived by the main agent after reading one candidate source and the profile, **before any
+drafting fan-out**. When the orchestrator requests a comparative pair, run this derivation twice in
+independent contexts and preserve both outputs. The rough-source derivation must not see the
+comparison draft; the comparison derivation must not see the rough source or first spine. A third
+comparison record may inspect both outputs but must not silently merge them or choose a winner.
+
+Within each derivation, two inputs matter:
 
 - **from the attractor draft**: the claims manifest, and nothing else;
 - **from the profile**: metaphor, opening scene, register and frame-breaks, all *invented* at

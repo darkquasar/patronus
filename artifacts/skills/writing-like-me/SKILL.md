@@ -4,7 +4,9 @@ description: >
   Write or edit in the user's own voice from an exemplar corpus. Builds a voice profile and
   structural spine, generates independent faithful and route-blind drafts, synthesizes a third
   architecture, then runs a fresh developmental pass for intellectual fugues, literary depth,
-  anti-axiomatic prose, inventories, entrances and continuity before fidelity and liveness audits.
+  anti-axiomatic prose, inventories and entrances, then separates conceptual-coherence findings
+  from fresh voice-owned repairs before fidelity and liveness audits. Routes post-final human
+  feedback into a new immutable run at the earliest affected stage.
   Use whenever the user asks to make prose sound like them or supplies a draft to voice. Requires
   writing-editorial and a populated ~/.claude/patronus/voice/ corpus.
 ---
@@ -23,10 +25,10 @@ a sentence, and gives that spine authority over structure.
   profile: cached or fresh?          [ASK USER]
     |
     v  voice-profile.md
-  derive SPINE                       [CHECKPOINT]  main agent, whole-document
-    metaphor, scene, register  <- profile
-    claims manifest            <- attractor draft
-    running order, per-section assignments
+  derive TWO SPINES                  [CHECKPOINT]  independent whole-document derivations
+    SPINE-ROUGH.md             <- original rough draft + profile
+    SPINE-COMPARATIVE.md       <- user-named comparison draft + profile
+    SPINE-COMPARISON.md        <- differences, risks, no silent merge
     |
     v  pressure + scene + running order + profile + draft   (NO claims manifest)
   TWO WHOLE-PIECE WRITERS            fresh, independent contexts
@@ -37,7 +39,13 @@ a sentence, and gives that spine authority over structure.
     v  synthesis draft + passage provenance
   JOURNEY EDITOR                     fourth fresh context, whole-piece developmental pass
     |                                fugues, literary depth, entrances, continuity, anti-axiom
-    v  finished draft + development record
+    v  candidate draft + development record
+  CONCEPT/COHERENCE AUDITOR          fifth fresh context, concepts only; no voice profile
+    |
+    v  COHERENCE.md findings only
+  VOICE RESPONSE EDITOR              sixth fresh context, expression owner
+    |
+    v  revised candidate + COHERENCE-RESPONSE.md
   fidelity check                     manifest as ledger; material omissions only
     |                                -> back to the same writer, reconceived
     v
@@ -52,7 +60,10 @@ a sentence, and gives that spine authority over structure.
     v
   codex advisory read                once, on the finished text
     |
-    v  final draft + codex notes taken and declined
+    v  immutable final draft + codex notes taken and declined
+  HUMAN FEEDBACK                     classify earliest changed authority
+    |
+    v  new run; rerun that stage and every dependent stage
 ```
 
 ## Entry modes
@@ -124,8 +135,18 @@ editorial-only.
 
 ## Stage 2: the spine
 
-Read `{skillDir}/spine.md` and follow it. Derive the spine once, run its checkpoint checks, and
-**show it to the user for approval before any fan-out**.
+Read `{skillDir}/spine.md` and follow it. When the user supplies a comparison draft, derive two
+spines independently: `SPINE-ROUGH.md` from the original rough draft and `SPINE-COMPARATIVE.md`
+from the named comparison draft. Use the same profile and spine schema, but do not let either
+derivation see the other source or output. The comparison draft is authorised as conception
+evidence for this stage only; it is not silently promoted to source evidence or writer input.
+
+Write `SPINE-COMPARISON.md` after both exist. Compare governing pressure, opening scene, metaphor,
+argument order, definitions, ontology, evidence bounds and unresolved seams. Name source-derived
+strengths, inherited defects and any claims present in only one input. Do not merge the spines or
+choose a winner. Run checkpoint checks on each and **show all three files to the user for an
+explicit governing-spine choice before any drafting fan-out**. Record the choice and whether any
+elements were deliberately combined. Without a comparison draft, derive the usual single spine.
 
 ## Stage 3: two independent whole-piece drafts, then synthesis
 
@@ -424,11 +445,30 @@ Then it reads the whole piece for five failures that architectural synthesis can
 4. successive paragraphs that land as axioms rather than a developing journey; and
 5. an allusion that names an intellectual territory without entering and returning from it.
 
-It writes the finished draft and `DEVELOPMENT.md`. The record names candidate fugues taken and
+It writes the developed candidate and `DEVELOPMENT.md`. The record names candidate fugues taken and
 declined, sources used to verify attributed ideas or mythic detail, inventories dismantled or moved
 out of prose, every section entrance reconceived, every recovered referent, and each axiomatic run
-reworked with the operation used. The pre-development synthesis remains durable evidence. Fidelity
-and liveness audit only the developed draft.
+reworked with the operation used. The pre-development synthesis remains durable evidence. The
+developed candidate next receives the conceptual coherence stage; it is not yet frozen.
+
+## Stage 3e: conceptual coherence and fresh voice response
+
+Read `{skillDir}/coherence.md` and send it to a **fresh auditor without this orchestration file,
+the voice profile or the liveness rubric**. Give it the raw source claims and evidence bounds,
+citations, approved spine and definitions, and the whole developed candidate. Its sole deliverable
+is `COHERENCE.md`: a short prioritised finding set about ideas and connections, never revised prose.
+
+A different fresh voice-owning editor receives the candidate, source bounds, profile and only the
+prioritised findings. It corrects accepted ideas and joins while preserving claims, citations and
+profile-backed voice, and writes both a new named candidate and `COHERENCE-RESPONSE.md`. The response
+maps every finding to an edit or a reasoned decline. The auditor never repairs its own finding. If
+a finding changes the spine, manifest or synthesis authority, return there and rerun every
+dependent stage.
+
+Run fresh fidelity and liveness audits only after this response. A conceptual pass is not folded
+into liveness: cadence, diction, register and voice remain outside `COHERENCE.md`, while domain
+truth, definition, recoverable reader state, narrative situatedness and perceptual possibility
+remain outside the voice score.
 
 ### Fidelity comes after, and repairs by reconception
 
@@ -450,7 +490,7 @@ still reconceive paragraphs.
 
 **The unsectioned contract below is now the default path, not the degraded one.**
 
-## Stage 3e: the section refinement pass (optional)
+## Stage 3f: the section refinement pass (optional)
 
 
 
@@ -505,7 +545,7 @@ upstream `source_rev` would offer restores that resolve against nothing.
 
 ### Optional section-refinement licence by mode
 
-This subsection governs Stage 3e refinement only. It does not narrow the whole-piece drafting or
+This subsection governs Stage 3f refinement only. It does not narrow the whole-piece drafting or
 synthesis licence above.
 
 *In compose mode*, rewrite every sentence. The section's prose came from a model told to have no
@@ -704,6 +744,7 @@ drafts**, and say the file is the deliverable rather than the reply:
 
 | Auditor | Writes |
 |---|---|
+| conceptual coherence | `<trail-root>/<slug>/COHERENCE.md` |
 | liveness | `<trail-root>/<slug>/AUDIT.md` |
 | fidelity | `<trail-root>/<slug>/FIDELITY.md` |
 
@@ -832,6 +873,27 @@ generic prose, so a foreign model earns more as a critic than as a co-author.
 **Degrade, never block.** If codex is unregistered, errors or times out, continue and say which
 happened, naming the error. Where the host allows a per-call timeout, allow around three minutes.
 
+## Post-final human review and re-entry
+
+Every accepted final is immutable. Human feedback creates a new run that references the prior
+freeze and records the feedback verbatim, its classification, the chosen re-entry point, and why no
+earlier stage was rerun. Never revise the prior final, its audits or its evidence files in place.
+
+Classify by the earliest authority the feedback changes:
+
+| Feedback changes | Re-enter at | Rerun downstream |
+|---|---|---|
+| claim, evidence or technical ontology | spine/manifest | both drafting arms when governing conception changes; otherwise synthesis, journey, coherence response and both audits |
+| governing pressure, metaphor or argument logic | spine | both arms, synthesis, journey, coherence response and both audits |
+| section order or argument placement | synthesis | journey, coherence response and both audits |
+| opening depth, excursion, entrance or whole-piece resonance | journey | coherence response and both audits |
+| conceptual join, definition, deictic, perspective or domain correction | conceptual coherence | fresh voice response editor and both audits |
+| local voice or rhythm with no conceptual dependency | targeted fresh voice editor | both audits |
+
+An auditor never silently fixes its own finding. Every prose edit belongs to a fresh editor with
+the relevant voice authority. Preserve earlier freezes even when feedback proves them wrong: they
+are evidence of what the previous pipeline accepted.
+
 ## What PRESERVE and the ledger bind now
 
 - **PRESERVE is advisory to this stage.** It travels in the edit record marked
@@ -933,6 +995,11 @@ edit is indistinguishable from one that made none.
   manifest.yaml         always
   EDITS.md              always, per stage
   PRESERVE.md           always
+  SPINE-ROUGH.md         when a rough/comparative spine pair is requested
+  SPINE-COMPARATIVE.md   when a comparison draft is supplied
+  SPINE-COMPARISON.md    when two spines are derived; no silent merge or winner
+  COHERENCE.md           always, written by the concept/coherence auditor itself
+  COHERENCE-RESPONSE.md  always; every finding taken or declined
   AUDIT.md              always, written by the liveness auditor itself
   FIDELITY.md           always, written by the fidelity auditor itself
   CODEX-NOTES.md        when the advisory read completes
