@@ -102,6 +102,21 @@ governing_pressure:
     # EVERY section in running_order appears. A section that changes nothing is a polished object,
     # and the checkpoint says so.
 
+# HOW THE READER IS TAUGHT, not another summary of what each section claims. Every section names
+# the story, mechanism or example through which its difficult idea becomes intelligible, the
+# relation the prose must make explicit, and what the reader can now reason about as a result.
+teaching_progression:
+  - section: 00-preamble
+    encounter: "<the person, action, event, object, scene, mechanism or example the reader meets>"
+    relation_made_explicit: "<how its parts connect, and why that connection matters here>"
+    reader_can_now: "<an inference, distinction or question newly available to the reader>"
+  - section: 02-the-turn
+    encounter: "<a different teaching movement, not the section claim restated concretely>"
+    relation_made_explicit: "<what the prose explains rather than merely asserts again>"
+    reader_can_now: "<what later reasoning this prepares>"
+  # EVERY section in running_order appears. A polished assertion followed by its paraphrase is not
+  # teaching; the reader must be carried through a relation and leave able to do new reasoning.
+
 # Places the piece does NOT resolve. Allocated, not left to a voicer's mood. See SKILL.md stage 3.
 unresolved_seams:
   - section: 01-the-relocation-argument
@@ -262,6 +277,33 @@ If they can, the section changed nothing and its entry is retrospective labellin
 `partially releases` entry, the inverse: **name the exact uncertainty it retires**, and show no later
 section depends on that uncertainty still being open. A release nothing was waiting on released
 nothing.
+
+## Teaching progression makes the relations legible
+
+Pressure explains why the reader keeps moving. Teaching progression explains how the reader becomes
+able to move. The two are not substitutes: a section can intensify the governing problem while still
+delivering six polished assertions whose connections and significance the reader has to infer.
+
+For every section, `teaching_progression` names three things. `encounter` is the story, mechanism or
+example through which the reader meets the difficult idea. `relation_made_explicit` says which
+connection the prose must actually explain and why it matters here. `reader_can_now` names the new
+inference, distinction or live question that later prose may rely on. This is not a demand for a
+beginner's aside, a recap or a generic signpost. It is permission to spend enough prose on the
+movement from case to mechanism to significance that an informed reader does not have to invent the
+missing joints.
+
+**Explanation is not restatement.** Repeating a claim in plainer words, adding `which matters
+because` before its consequence, or following an abstraction with an analogy that encodes the same
+verdict does not teach it. Remove the second formulation. If the reader can infer exactly as much
+from the first alone, the second was a paraphrase. A real explanation supplies a mechanism, causal
+or logical relation, discriminating example, consequence, limit or counter-pressure that was not
+already available, and later prose depends on what it supplied.
+
+The spine fixes the teaching need, not the paragraph choreography. It must not prescribe sentence
+count, generic transitions, periodic summaries, or an instruction to ask `does that make sense?`.
+Writers remain free to teach through narrative, worked mechanism, inquiry, contrast, physical
+movement or a deliberately plain example. The checkpoint blocks only when that freedom has been
+replaced by an assertion list or when the alleged explanation merely says the claim again.
 
 ## Sections travel, they do not simply contain
 
@@ -451,6 +493,12 @@ Check before showing it, and report any that fire:
   cited for an effect its evidence does not show;
 - **a section missing from `governing_pressure.progression`**, or one whose `changes` reads as
   "restates", "supports", "reinforces" or "adds another reason": a polished object, named;
+- **missing or incomplete `teaching_progression`.** Every section must name an encounter, the
+  relation the prose needs to make explicit, and what the reader can newly reason about. An entry
+  that paraphrases the assigned claim, prescribes generic signposting or demands a recap blocks;
+- **a teaching entry whose explanation is only restatement.** Apply the removal test: if deleting
+  the alleged explanation loses no mechanism, relation, consequence, limit, discriminating example
+  or later dependency, it taught nothing and must be reconceived before fan-out;
 - **a pressure a reader could stop caring about after section 2**, or one released so early the rest
   of the piece has nothing to do;
 - **a `reader_enters_with` naming a belief the reader was never given.** Say where they picked it up.

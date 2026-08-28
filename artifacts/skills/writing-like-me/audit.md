@@ -456,6 +456,7 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | Claims coverage | a claim no section made as its type requires, including an `assertion` opened as a question and never landed | **blocks** |
 | Inherited sections | a section scored 0 on transformation | **blocks** |
 | **Pressure progression** | a section leaves the governing pressure unchanged: it restates, supports or adds another reason | **blocks** |
+| **Teaching progression** | a difficult section arrives as an assertion flurry: relations and significance remain implicit; its story, mechanism or example does not carry the reader to a new inference; or its alleged explanation merely restates the claim | **blocks** |
 | **Overstatement** | a rendering asserts more than its claim and that claim's `evidence_bounds` license | **blocks** |
 | **Performed sameness** | sections share one route **and** perform it identically: the same entry/turn/exit mechanics, the same section shape, or flat-replacement equivalence | **blocks** |
 | **Unallocated inventories** | consecutive material serving one argumentative job, in which items arrive unchosen and uninterpreted, that no section's `required_specifics` names. Bounded by the job, not by punctuation or by an invented head proposition | **blocks** |
@@ -526,6 +527,20 @@ in `governing_pressure.progression`, and each entry says what became harder, str
 consequential. A section that intensifies nothing, complicates nothing and releases nothing is a
 polished object: true, well made, and skippable. Ask directly whether a reader could stop after each
 section and feel finished. Where they could, the piece stopped pressing there.
+
+**The teaching check is what separates explanation from polished delivery.** For every section in
+`running_order`, map the draft back to `teaching_progression`: quote the encounter, quote where the
+named relation becomes explicit, and state what the reader can infer afterwards that the assertion
+alone did not provide. Block a run of locally elegant or grounded assertions when the reader must
+supply their causal, logical or practical joints. Grounding is necessary but not sufficient: a scene
+followed by a verdict can still leave the teaching step absent.
+
+Apply a restatement test to every claimed explanation. Remove it and compare reader state. If no
+mechanism, relation, consequence, limit, discriminating example or later dependency disappears, it
+was paraphrase, emphasis or summary rather than explanation. Conversely, do not demand remedial
+definitions, repetitive recaps, generic transitions, comprehension checks or a fixed amount of
+explanation. A compact passage passes when it gives this piece's intended reader the missing joint;
+a long passage fails when it circles the proposition without adding one.
 
 **Overstatement is not measured by counting qualifiers.** Do not hunt for "usually" or "more like":
 compare each rendered assertion against its claim and that claim's `evidence_bounds`. A claim may be

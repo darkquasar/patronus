@@ -334,6 +334,26 @@ decoration; a technical noun with no actor or event is still abstraction. Do not
 that adds a subject-matter claim the source did not make. Expression research may supply a verified
 illustration under the existing evidence rules.
 
+### Teach the relation, not only the claim
+
+Carry the spine's `teaching_progression` through the whole essay. A sequence of individually strong,
+grounded sentences can still fail when it leaves their relationship implicit: the reader sees the
+scene, hears the verdict and is expected to build the mechanism between them. Slow down at the hard
+hinge. Let the story, mechanism or example develop; state the connection it reveals; then show why
+that connection changes the question or prepares the next piece of reasoning.
+
+Do not confuse explanation with a second formulation of the claim. If a sentence merely translates,
+summarises or intensifies the sentence before it, remove it and supply the missing mechanism,
+consequence, limit or discriminating case. Nor should teaching become hand-holding: no compulsory
+recaps, `in other words` cadence, comprehension checks, generic signposts or explanations of basics
+the profile's reader already knows. The test is whether the reader can now make an inference the
+assertion alone did not earn.
+
+After each difficult movement, ask privately: what did the reader encounter, which relation did the
+prose make explicit, and what can they reason about now? If those answers collapse to the same claim
+three times, reconceive the passage. Questions may check or reshape understanding only when they open
+a real premise or consequence; a cosmetic `right?` is neither teaching nor Socratic inquiry.
+
 ### Keep coined referents recoverable
 
 A coined shorthand saves repetition only while the reader can still recover what it denotes. After
@@ -873,8 +893,8 @@ outside any allocation, keep one and say which.
 
 **Then run the piece-level pass** in `{skillDir}/audit.md`
 over the stitched text. It checks the spine's `signature_set` effects, the frame-break,
-reader-address, aside and seam allocations, **the pressure progression, overstatement against
-`evidence_bounds`, performed sameness, inventory guards, axiomatic accumulation, section entrances,
+reader-address, aside and seam allocations, **the pressure progression, teaching progression,
+overstatement against `evidence_bounds`, performed sameness, inventory guards, axiomatic accumulation, section entrances,
 callback recovery, intellectual-fugue depth and post-voice compliance** (all
 blocking), and reports route concentration, register modulation, paragraph-opener convergence, hedge
 convergence, repeated section architecture and claims coverage across the finished piece. A claim assigned to a section that was later cut, and never reassigned,
