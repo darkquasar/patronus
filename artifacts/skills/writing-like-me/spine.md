@@ -44,7 +44,7 @@ register: >
 
 socratic_inquiry:
   corpus_ratio: "<numerator>/<all authorial prose sentences> (<percentage>)"
-  target_band: "<profile target or a corpus-derived band for this piece>"
+  target_band: "<profile target; default 11%-15% of total authorial prose sentences>"
   functions:
     - pressure: "<the premise or habitual practice the reader should question>"
       earns: "<the later distinction or claim this inquiry makes necessary>"

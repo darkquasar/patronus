@@ -42,7 +42,7 @@ asides_self_correction: 1 per <measured> words
 hedge_rate_corpus: <measured> per 1000 words          # reported only, never scored
 hedge_rate_target: <the author's choice; else omit>   # reported only, never scored
 socratic_question_ratio_corpus: <measured percentage of authorial prose sentences>
-socratic_question_ratio_target: <the author's choice; else corpus-derived band>
+socratic_question_ratio_target: <the author's choice; default 11%-15%>
 grounded_paragraph_ratio_corpus: <measured percentage of substantive prose paragraphs>
 median_sentence: <measured>
 pct_past_26: <measured>
@@ -69,12 +69,12 @@ questions, headings, FAQ labels, interview prompts and questions whose only job 
 decoration. Record the numerator, denominator and percentage in the extraction notes.
 
 Unlike hedge rate, this ratio is compositional evidence: it tells a long-form spine how often the
-author makes the reader participate in arriving at a point. Where the user supplies a target, use
-`socratic_question_ratio_target`; otherwise give the spine a band around the measured corpus ratio
-rather than demanding exact equality. The default band is 75%-125% of the measured ratio, retaining
-the corpus numerator and denominator beside it so rounding stays inspectable. This is tolerance
-around this author's evidence, not a shipped question target. A writer must still earn every
-question. Repeating `but why?` to hit the band is a failure even when the arithmetic passes.
+author makes the reader participate in arriving at a point. Where the user supplies a different
+target, record it in `socratic_question_ratio_target`; otherwise the long-form target band is
+**11%-15% of total authorial prose sentences**. Retain the corpus numerator, denominator and ratio
+beside the target so any difference between observed evidence and the chosen long-form direction is
+visible rather than laundered into extraction. A writer must still earn every question. Repeating
+`but why?` to hit the band is a failure even when the arithmetic passes.
 
 Measure `grounded_paragraph_ratio_corpus` over substantive prose paragraphs. A paragraph is grounded
 when a specific person, action, event, object, scene or illustrative case participates in its
