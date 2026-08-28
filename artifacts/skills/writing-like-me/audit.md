@@ -467,6 +467,8 @@ rows, which localise a failed *execution*; this catches a failed *allocation*.
 | **Ornamental abstraction** | a phrase makes a plain referent harder to recover without supplying a vivid image, mechanism or distinction. Replace it mentally with the noun: if nothing is lost, the ornament fails (`the thing nobody proposes deleting` for `the central repository`) | **blocks** |
 | **Lost coined referent** | a shorthand returns after a section boundary or substantial excursion and the reader must recover its meaning from an old heading or paragraph. The first return neither re-expands it nor makes the referent unmistakable in context | **blocks** |
 | **Abstraction before evidence** | an abstract governance rule is stated before the concrete mechanism, cited example or object that makes it intelligible, and the reversal would let the reader derive rather than decode the abstraction | **blocks** where the abstract-first order materially increases decoding work |
+| **Socratic inquiry ratio** | earned authorial questions fall outside the profile/spine target band across total prose sentences, or the arithmetic passes only through decorative, repeated or immediately foreclosed questions | **blocks**; report numerator, denominator, ratio and the function of every counted question |
+| **Dry abstraction chain** | an inference-bearing paragraph runs through three or more abstract sentences without a specific person, action, event, object, scene or illustrative case participating in the reasoning; or two adjacent abstract paragraphs never return to grounded experience | **blocks**; quote the chain and name the conceptual hinge that needs a concrete return |
 | **Structural reconception** | across the piece's boundaries, the reader arrives at each holding materially what the source architecture would have given them. One altered boundary does not clear the row: the test is pervasive source equivalence, not total | **blocks**, and it is the spine's failure |
 | **Paragraph-block inheritance** | most source paragraphs survive as contiguous blocks in the same internal order, even where headings were merged, renamed or reordered. The synthesis changed containers while preserving the source's argumentative atoms | **blocks**, and returns to synthesis once |
 | **Profile-backed strangeness** | the profile and spine select philosophical excursion, concept definition, mythic/occult imagery or playful register, yet the piece remains literal technical exposition; or an excursion appears but returns with no new distinction | **blocks when selected in `signature_set`; otherwise reported** |
@@ -488,6 +490,17 @@ test below then scores as ornament. Ask whether the effect is present and earned
 **Every signature instance takes the removal test**, the same one the moves row uses: delete it and
 ask what the piece no longer does. A reader-directed "Think about that" claiming `reader_turn`, or a
 stray image claiming `figurative_grounding`, fails it. Ornament satisfies no allocation.
+
+The Socratic ratio is the exception because the author explicitly treats questioning density as a
+whole-piece voice property. Count only load-bearing questions: removing one must lose reader
+implication, expose less of a premise, or make a later distinction arrive less intelligibly.
+Questions quoted from sources and questions used as headings do not enter either side of the ratio.
+Arithmetic never rescues ornamental questioning.
+
+For the dry-abstraction check, `Git`, `CI/CD`, `metadata` and `pull request` are not automatically
+concrete. Ask whether somebody does something, something observable happens, or an example changes
+what the reader can infer. A paragraph may explain plainly after a grounded paragraph and need no
+new image; the failure is sustained conceptual motion with no recoverable human or material world.
 
 **Seams must be distinct.** Two allocations discharged by two phrasings of the same open question
 count once. Uniqueness is judged on the `undecided` proposition, not on the wording.

@@ -21,6 +21,10 @@ sentence, so there is nowhere to allocate it to, and a spine that assigns it to 
 turned it into ornament. Do not name it in `per_section_assignment`, do not cite it in a
 `signature_set`, and do not paraphrase it: the writer receives the block as extraction wrote it.
 
+The spine does allocate the profile's measured Socratic and grounding tendencies. Every generated
+spine contains `socratic_inquiry` and `grounding_plan`; omitting either fails the spine checkpoint.
+They govern whole-piece composition, not section-level ornament.
+
 ## Shape
 
 ```yaml
@@ -37,6 +41,26 @@ opening_scene: >
 
 register: >
   <the stance: hedged or blunt, first person or impersonal, wry or plain.>
+
+socratic_inquiry:
+  corpus_ratio: "<numerator>/<all authorial prose sentences> (<percentage>)"
+  target_band: "<profile target or a corpus-derived band for this piece>"
+  functions:
+    - pressure: "<the premise or habitual practice the reader should question>"
+      earns: "<the later distinction or claim this inquiry makes necessary>"
+    - pressure: "<another real hinge, not a restatement in question form>"
+      earns: "<what the reader becomes ready to see>"
+  # Functions are distributed across the developing argument by the whole-piece writer. Do not
+  # prewrite questions or pin one to every section; the final audit checks ratio and purpose.
+
+grounding_plan:
+  corpus_ratio: "<grounded substantive paragraphs / all substantive paragraphs>"
+  abstract_hinges:
+    - abstraction: "<an inference likely to become a chain of institutional or conceptual nouns>"
+      concrete_return: "<a source-backed person, action, event, object or illustrative case>"
+      reader_work: "<what the example lets the reader infer rather than merely decorating>"
+  # Cover every high-risk abstract hinge. One image may develop across several paragraphs; this is
+  # not a demand for one metaphor or anecdote per paragraph.
 
 intellectual_hinges:
   - pressure: "<technical idea whose frame may be profitably escaped>"
@@ -434,6 +458,12 @@ Check before showing it, and report any that fire:
 - **a `turn` that only restates its assigned claim**, which is exposition wearing a route's label;
 - **one route used by more than half the sections.** Eight sections sharing a route is the regularity
   a reader feels as a system meeting a spec, and no single section can see it;
+- **missing or unmeasured `socratic_inquiry`.** Record the profile numerator, denominator and ratio,
+  derive the piece's target band, and name at least two different inquiry functions. A list of
+  prewritten questions or one question allocated mechanically to every section blocks;
+- **an incomplete `grounding_plan`.** Every high-risk abstract hinge in the claims/progression must
+  name a concrete return and the inference it earns. A technical noun without an actor, event or
+  observable change is not grounding;
 - **a `register_job` with a `device` and no `grounding`**: a departure with nothing to return to;
 - **every section carrying a `device`**, which is not modulation but a uniform register, and is how a
   piece becomes mysterious throughout and therefore mysterious nowhere;

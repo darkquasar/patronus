@@ -41,6 +41,9 @@ logical_signposts: <measured> per paragraph
 asides_self_correction: 1 per <measured> words
 hedge_rate_corpus: <measured> per 1000 words          # reported only, never scored
 hedge_rate_target: <the author's choice; else omit>   # reported only, never scored
+socratic_question_ratio_corpus: <measured percentage of authorial prose sentences>
+socratic_question_ratio_target: <the author's choice; else corpus-derived band>
+grounded_paragraph_ratio_corpus: <measured percentage of substantive prose paragraphs>
 median_sentence: <measured>
 pct_past_26: <measured>
 longest: <measured>
@@ -56,6 +59,32 @@ target the author had chosen and approved, by inserting the identical phrase "I 
 corpus at extraction, or in `hedge_rate_target`'s case chosen by the author. None of them has a
 shipped default, and a number carried in from another author's corpus would be
 config-shaped misinformation: it would read as calibration while describing somebody else.
+
+### Socratic questioning and concrete returns
+
+Measure `socratic_question_ratio_corpus` over the total authorial prose sentence count. The
+numerator includes questions that implicate the reader, expose a hidden premise, introduce the
+reason a later claim becomes necessary, or reopen an apparently settled answer. Exclude quoted
+questions, headings, FAQ labels, interview prompts and questions whose only job is conversational
+decoration. Record the numerator, denominator and percentage in the extraction notes.
+
+Unlike hedge rate, this ratio is compositional evidence: it tells a long-form spine how often the
+author makes the reader participate in arriving at a point. Where the user supplies a target, use
+`socratic_question_ratio_target`; otherwise give the spine a band around the measured corpus ratio
+rather than demanding exact equality. The default band is 75%-125% of the measured ratio, retaining
+the corpus numerator and denominator beside it so rounding stays inspectable. This is tolerance
+around this author's evidence, not a shipped question target. A writer must still earn every
+question. Repeating `but why?` to hit the band is a failure even when the arithmetic passes.
+
+Measure `grounded_paragraph_ratio_corpus` over substantive prose paragraphs. A paragraph is grounded
+when a specific person, action, event, object, scene or illustrative case participates in its
+reasoning. Merely naming a technical noun does not qualify, and neither does an ornamental image
+that can be deleted without changing the inference. Record representative grounded and ungrounded
+paragraph spans in the extraction notes.
+
+These fields are required for newly extracted profiles. When a cached profile predates them,
+perform an additive extraction from the existing corpus before deriving a new spine; do not silently
+treat a missing field as zero and do not discard the rest of the cached profile.
 
 ### Worked examples, where the author supplies them
 

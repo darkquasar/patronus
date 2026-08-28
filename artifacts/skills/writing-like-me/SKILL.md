@@ -306,6 +306,34 @@ does real work, write `the central repository still exists`. Phrases such as `th
 proposes deleting` merely hide a plain noun and fail the removal test: they add effort without
 adding a picture, mechanism or distinction.
 
+### Questions make the reader participate
+
+Carry the spine's `socratic_inquiry` across the whole essay. A Socratic question is not punctuation
+variety and not uncertainty theatre. It asks the reader to inspect a familiar practice, hidden
+premise or concrete situation, then makes a later distinction possible: why do we ask for peer
+review after the code already runs; what is a colleague asking us to lend when they request
+approval; what problem does a thread solve before it becomes a metaphor for memory? These are
+illustrative functions, not sentences to copy.
+
+Use the profile-derived ratio against the total prose sentence count and stay within its target
+band. Questions may cluster where inquiry genuinely develops and disappear where the prose needs
+to explain plainly. Do not place one in every section, turn declarative claims into cosmetic
+questions, or immediately answer each question with the verdict the reader was marched toward.
+
+### Break dry abstraction chains
+
+Voice does not rescue prose that remains entirely conceptual. A paragraph about authority,
+tentativeness, reversibility, evaluation, truth and surfaces can be rhythmic and vivid while still
+giving the reader nothing they can see happening. When an inference begins accumulating abstract
+nouns, return to the spine's `grounding_plan`: a colleague requesting review, a pull request whose
+approval enables a new button, a failed deployment attached to a commit, an analyst meeting an
+alert, or another source-bounded case that lets the reader derive the abstraction.
+
+The concrete material must participate in the reasoning. An image appended after the conclusion is
+decoration; a technical noun with no actor or event is still abstraction. Do not manufacture a case
+that adds a subject-matter claim the source did not make. Expression research may supply a verified
+illustration under the existing evidence rules.
+
 ### Keep coined referents recoverable
 
 A coined shorthand saves repetition only while the reader can still recover what it denotes. After
@@ -680,7 +708,7 @@ hope.
 
 | # | Technique | Floor | Instruction | Audit criterion |
 |---|---|---|---|---|
-| 1 | Low-perplexity diction | universal | concrete plain-spoken verbs over grand abstractions; "he grabbed the keys", not "he initiated his journey" | abstraction rate per section |
+| 1 | Grounded reasoning | universal | concrete people, actions, events and cases must periodically carry the inference, not merely decorate it | dry-abstraction chains and grounded returns |
 | 2 | No logical signposts | corpus-checked | match the corpus signpost rate; no "furthermore", "moreover", "consequently" bridging paragraphs; let the reader connect | signpost count against the profile rate |
 | 3 | Asymmetric formatting | universal | vary paragraph shapes; an eight-sentence paragraph beside a one-sentence paragraph beside a fragment | paragraph sentence-count spread |
 | 4 | Internal monologue | corpus-checked | asides, self-correction, doubt shown mid-sentence | asides present where the spine assigned them |
@@ -953,7 +981,9 @@ Report in **this order**:
 13. tier restores, with their citations;
 14. PRESERVE overrides, with what each achieved;
 15. codex notes taken and declined;
-16. rhythm guard rails **and the hedge rates**, all **labelled as reported, never scored**.
+16. rhythm guard rails **and the hedge rates**, all **labelled as reported, never scored**;
+17. the earned Socratic-question numerator, prose-sentence denominator, ratio and target band, plus
+    every dry-abstraction chain returned for grounding.
 
 **The ordering is the point: what the piece failed at comes before what it measured.** Never
 present item 16 as evidence the voice landed. Items 4, 5, 6, 7 and 11 are the ones a passing audit
