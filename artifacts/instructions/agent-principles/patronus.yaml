@@ -7,7 +7,7 @@ pointer:
   summary: >-
     Ambient house rules — mindset, workflow, and core working principles. Always on: lessons
     from earlier corrections live in `docs/lessons/`; read them before your first edit on a
-    project, and write a new one there after any correction.
+    project, and capture or update one there after any correction.
 role: instruction
 name: agent-principles
 description: "Ambient house rules for how an AI coding agent should think and work — mindset, workflow, task management, a self-improvement loop that records lessons to `docs/lessons/`, and core principles. Appended into CLAUDE.md/AGENTS.md."
