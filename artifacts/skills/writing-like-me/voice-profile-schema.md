@@ -13,27 +13,78 @@ and audited.
 ## Move: <what the author does, as a verb phrase>
 Evidence (en): "<quotation>", "<quotation>", "<quotation>"
 Frequency: ~1 per <n> words
+Effects: <comma-separated, from the closed list below; only those the evidence shows>
 
 ## Move: <another>
 Evidence (en): "<quotation>", "<quotation>"
+Effects: <...>
 Note: <where a move needs a caveat, such as an editorial rule it is exempt from>
+
+## Construction
+### <the joint or the junction, named as what the author does with it>
+Evidence (en): "<quotation>", "<quotation>"
+Support: corpus-recurrent | corpus-thin | absent-in-corpus
+Reach for it: <the sentence-level instruction a writer can act on>
+
+### <another>
+Evidence (en): "<quotation>"
+Support: <...>
+Reach for it: <...>
+
+## Long-form hypotheses
+<optional; non-scoring. See "Hypotheses are not moves" below.>
 
 ## Rates measured from the corpus
 rhythm_source: english-pool
 rhythm_source_format: <short-form | long-form | mixed>
 logical_signposts: <measured> per paragraph
 asides_self_correction: 1 per <measured> words
-hedge_rate_corpus: <measured> per 1000 words
-hedge_rate_target: <the author's choice, where they set one; else omit>
+hedge_rate_corpus: <measured> per 1000 words          # reported only, never scored
+hedge_rate_target: <the author's choice; else omit>   # reported only, never scored
+socratic_question_ratio_corpus: <measured percentage of authorial prose sentences>
+socratic_question_ratio_target: <the author's choice; default 11%-15%>
+grounded_paragraph_ratio_corpus: <measured percentage of substantive prose paragraphs>
 median_sentence: <measured>
 pct_past_26: <measured>
 longest: <measured>
 ```
 
+**Both hedge fields are reported, never scored.** They describe the corpus and record the author's
+preference; no stage gates on them. What the pipeline allocates instead is `unresolved_seams`, in
+`{skillDir}/SKILL.md`, because a rate over adverbs is
+satisfiable without the prose leaving anything open. A run once met its hedge target exactly, with a
+target the author had chosen and approved, by inserting the identical phrase "I think" nine times.
+
 **The values are placeholders and the field names are not.** Every rate is measured from the
 corpus at extraction, or in `hedge_rate_target`'s case chosen by the author. None of them has a
 shipped default, and a number carried in from another author's corpus would be
 config-shaped misinformation: it would read as calibration while describing somebody else.
+
+### Socratic questioning and concrete returns
+
+Measure `socratic_question_ratio_corpus` over the total authorial prose sentence count. The
+numerator includes questions that implicate the reader, expose a hidden premise, introduce the
+reason a later claim becomes necessary, or reopen an apparently settled answer. Exclude quoted
+questions, headings, FAQ labels, interview prompts and questions whose only job is conversational
+decoration. Record the numerator, denominator and percentage in the extraction notes.
+
+Unlike hedge rate, this ratio is compositional evidence: it tells a long-form spine how often the
+author makes the reader participate in arriving at a point. Where the user supplies a different
+target, record it in `socratic_question_ratio_target`; otherwise the long-form target band is
+**11%-15% of total authorial prose sentences**. Retain the corpus numerator, denominator and ratio
+beside the target so any difference between observed evidence and the chosen long-form direction is
+visible rather than laundered into extraction. A writer must still earn every question. Repeating
+`but why?` to hit the band is a failure even when the arithmetic passes.
+
+Measure `grounded_paragraph_ratio_corpus` over substantive prose paragraphs. A paragraph is grounded
+when a specific person, action, event, object, scene or illustrative case participates in its
+reasoning. Merely naming a technical noun does not qualify, and neither does an ornamental image
+that can be deleted without changing the inference. Record representative grounded and ungrounded
+paragraph spans in the extraction notes.
+
+These fields are required for newly extracted profiles. When a cached profile predates them,
+perform an additive extraction from the existing corpus before deriving a new spine; do not silently
+treat a missing field as zero and do not discard the rest of the cached profile.
 
 ### Worked examples, where the author supplies them
 
@@ -81,8 +132,113 @@ The test is that a voicer can act on it and an auditor can quote it. **Pitch it 
 thought becomes visible in the prose**: broad enough to recur across pieces, narrow enough that you
 can point at an instance and say the move is here.
 
-Six to ten entries is the working range. Below that the profile is too coarse to steer a section;
-above it the moves start naming instances rather than habits.
+Six to twelve entries is the working range. Below that the profile is too coarse to steer a
+section; above it the moves start naming instances rather than habits. Where extraction lands
+above twelve, merge the entries that name the same habit at two scales rather than dropping the
+weakest: a profile that has genuinely found twelve distinct habits is not a defect, and the count
+is a smell to check rather than a cap to enforce.
+
+### Effects: what the move does to the argument
+
+A move name says what the author does. `Effects:` says what it **achieves**, and the audit checks
+achievement rather than appearance. The vocabulary is closed, and a move carries only the effects
+its own evidence demonstrates:
+
+| Effect | The move leaves the reader with |
+|---|---|
+| `epistemic_openness` | something genuinely unresolved: a question not answered, a reconsideration not retracted, a limit stated and not repaired |
+| `reader_turn` | a direct address, question or implication of the reader |
+| `stance_disruption` | a break in the register the piece established: an undercut, an aside, a change of altitude |
+| `figurative_grounding` | an abstraction come to rest on an image |
+| `architectural` | a consequence for how the piece opens or is arranged, not a local effect |
+
+A move may carry several. `interrogates the accepted definition` is `epistemic_openness` **only
+where the corpus leaves the interrogation standing**; where the author answers their own question
+in the next sentence, the evidence shows a rhetorical setup and the effect is not claimed.
+
+**Effects describe the corpus. They never set what a piece owes.** Extraction reports; the spine
+decides which effects this particular essay needs and names the moves eligible to produce them.
+A technical argument is not obliged to carry an occult image because the corpus has one.
+
+### Construction: how the sentences are wired
+
+A move is an act the author performs. Construction is the wiring underneath it: which joints carry
+the weight, what gets subordinated rather than separated, and what happens at the moment two
+propositions meet. It steers every sentence rather than showing up in particular ones, which is why
+it is not a move and why an entry cannot be evidenced by pointing at where the author "does" it.
+
+The block carries **two to four entries**, and the range is narrow on purpose. Below two, the
+extraction has not looked at joints. Above four, the entries stop being wiring and start being moves
+with the label changed. At least one entry names **what this author does at a contrast**, since that
+is the junction the pipeline gets wrong most often.
+
+Each entry needs:
+
+| Field | What it holds |
+|---|---|
+| heading | the junction, named as what the author does with it, not as a punctuation mark |
+| `Evidence (en):` | quotations showing the wiring, in the source language, labelled like a move's |
+| `Support:` | `corpus-recurrent`, `corpus-thin` or `absent-in-corpus` |
+| `Reach for it:` | one instruction a writer can act on mid-sentence |
+
+`Reach for it:` is the load-bearing field and the easiest to get wrong. It describes the *shape of
+the join*, never a phrase to use. "Concede inside the sentence before the turn arrives" is an
+instruction. "Use 'but this is a little convoluted'" is a template, and a template supplied here
+comes back verbatim in the draft, every time, at every contrast in the piece.
+
+**Thin evidence is reported as thin, not padded to fill the block.** `Support: corpus-thin` marks a
+wiring habit the corpus shows once or twice: real enough to record, too sparse to insist on. A
+writer reads a thin entry as available and a recurrent one as characteristic. Manufacturing a
+fourth entry to reach the top of the range is the failure this field exists to make unnecessary,
+and two well-evidenced entries beat four where half are inferred.
+
+**An absence is a finding only where the corpus demonstrates it.** `Support: absent-in-corpus` is
+available, and it is the most easily abused value here. A profile listing what the author does is
+silent about everything else, so absence needs the same evidence any other entry needs: a junction
+that recurs often enough for the author to have had the option, taken a different way every time.
+Where the corpus offers a handful of instances, that is a small sample and not a prohibition, and
+the entry says so in `Reach for it:` rather than banning a shape. Extraction may write no absence
+entries at all, and usually should.
+
+**Construction never derives or weakens a default.** The prohibitions elsewhere in the pipeline
+hold whatever this block says, per the cadence section below. What construction supplies is the
+positive counterpart: the thing a writer reaches for instead.
+
+#### Reader recruitment
+
+Separately from reader-address, which the moves already record in three places, record **how this
+author brings the reader into a shared judgement**: the supposition the reader is invited to stand
+inside, the "we" that includes them in a position, the question posed as if agreement were being
+sought rather than an answer performed. Address turns toward the reader; recruitment puts the reader
+on the same side of the argument as the author.
+
+It goes in `## Construction` as an ordinary entry under the same rules, and it takes `Support:`
+honestly. Where the corpus supports it thinly, say so. A manufactured recruitment finding is worse
+than none, because a writer told this is characteristic will reach for it at every turn.
+
+### Hypotheses are not moves
+
+A move needs corpus evidence, and an entry without it is dropped. That rule holds, and it creates
+a gap: a reader may correctly identify a habit the corpus **cannot evidence**, because the pool is
+short-form and the habit only appears at argument length.
+
+Such an observation goes under `## Long-form hypotheses`, never under `## Move:`:
+
+```markdown
+## Long-form hypotheses
+- <the habit, as a verb phrase>
+  Source: reader-identified | author-stated       # never "corpus"
+  Status: unevidenced
+  Note: <why the corpus cannot show it>
+```
+
+The block is **non-scoring**. The audit does not read it, no allocation may cite it, and no stage
+treats its absence as a defect. It is a standing hypothesis: material to look for when the pool
+grows a long-form file, and a prompt to the author, who may know whether it is true of them.
+
+**Promotion needs evidence.** A hypothesis becomes a `## Move:` when the corpus can quote it, at
+which point it takes ordinary evidence and effects. Until then a voicer may read it and a
+reader may recognise it, and neither the spine nor the audit may hold anything to it.
 
 ### The `Note:` field, and what it may exempt
 
@@ -130,6 +286,27 @@ Two constraints on how they are used:
 Cross-lingual voice transfer is real but weaker than same-language transfer. Where both pools
 are substantial, the matching-language pool leads and the other supplements.
 
+## Migrating a profile written before `Effects:`
+
+A cached profile from an earlier schema has moves and evidence but no `Effects:` lines. The spine's
+`signature_set` names moves eligible for an effect, and the checkpoint rejects a citation the
+profile does not support, so a cached profile with no effects anywhere either blocks the checkpoint
+or invites the spine to infer effects silently. Both are worse than migrating.
+
+**Migrate, do not re-extract.** Re-extraction changes the move set as well as the schema, which
+destroys the reproducibility that cached mode exists for.
+
+1. Detect the missing field and say so, naming the profile.
+2. Derive proposed `Effects:` for each move **from the evidence already in the entry**, adding
+   nothing else. The evidence is what an effect must be shown by, and it is already there.
+3. Show the additions, move by move, as a diff.
+4. **Ask before writing.** The profile is the user's file.
+5. Write the migrated profile only on approval, and leave the original beside it.
+
+Where a move's own evidence does not show any effect in the closed list, **claim none**. An entry
+with no effects is still a move: it steers a voicer and scores on the moves row. It is only
+ineligible to be cited in a `signature_set`.
+
 ## Cached or fresh
 
 At run start, ask:
@@ -168,6 +345,36 @@ A corpus of short-form posts is the common case, and it carries a cadence that d
 Aphoristic writing runs on short sentences: a clipped run of five or seven is the shape of the
 form, and it lands. In long-form prose the same run reads as assertion without argument, hammering
 a reader who was never given room to doubt.
+
+**Contrast-by-adjacency is the specific case, and the pipeline prohibits it by default.** Two short
+declaratives set side by side with the opposition carried by the full stop between them ("It buys
+real speed. It costs real governance.") is prohibited in long-form output for every author, per the
+opposition row in `{skillDir}/audit.md`. Extraction neither derives that default nor weakens it.
+
+What extraction owes here is the **positive** finding: **record how this author joins two
+propositions, and what they do at a contrast**, with quoted evidence. That is what gives a writer
+something to reach for in place of the prohibited shape. It is a construction finding rather than a
+move, so it goes in `## Construction`, and one entry there must name what this author does at a
+contrast.
+
+**Who reads it.** A finding no stage is instructed to read is decoration, which is how this one
+failed for three runs while sitting in a `Note:`. Two stages read `## Construction` by name:
+
+| Stage | Reads it for |
+|---|---|
+| the writer, `{skillDir}/SKILL.md` stage 3 | the wiring it reaches for sentence by sentence, and what to do at a contrast instead of the prohibited shape |
+| the spine, `{skillDir}/spine.md` | passing it through to the writer intact; the spine allocates moves, and it does not allocate construction |
+
+Construction is **not allocated**. A spine that hands construction to particular sections has turned
+wiring into ornament, which is the failure the moves row was rebuilt to catch. It applies to every
+sentence in the piece or it is not construction. The audit does not score the block directly either;
+what it scores is the opposition row, which the block exists to give the writer an answer to.
+
+**The default is overridden only by evidence at length.** Where the corpus shows the author running
+on apposition **in long-form prose**, record it as a move with its quotations and say the shape is
+licensed for this author. Short-form evidence does not override it, since the point of this section
+is that the cadence does not transfer. A note observing the shape is *disfavoured* is not an
+override and never was: it agrees with the default.
 
 **From a short-form corpus, expect long-form to run longer**: a higher median, and fewer
 consecutive short sentences than the corpus shows. Take diction, moves and stance from the corpus.
