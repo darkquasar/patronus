@@ -2,6 +2,13 @@
 
 House rules for how an AI coding agent should think and work on this project. These are ambient guiding principles — always in effect, not invoked on demand.
 
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+- **Be Succinct**: Say it in the fewest words that still land. Explain to the depth the question needs and stop; do not restate the problem before answering it, and do not pad an explanation to look thorough.
+
 ## Cognitive Framework & Mindset
 
 ### Before starting
@@ -54,12 +61,6 @@ service/
 
 ## Workflow Execution
 
-### Plan Mode Default
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions).
-- If something goes sideways, STOP and re-plan immediately — don't keep pushing.
-- Use plan mode for verification steps, not just building.
-- Write detailed specs upfront to reduce ambiguity.
-
 ### Verification Before Done
 - Never mark a task complete without proving it works.
 - Diff behavior between the baseline and your changes when relevant.
@@ -81,9 +82,14 @@ service/
 ### Self-Improvement Loop
 Lessons live in `docs/lessons/`, one file per lesson, alongside `docs/specs/` and `docs/plans/`. They are committed, so the next session (and the next agent) inherits them.
 
-- After ANY correction from the user, write the pattern to `docs/lessons/<short-kebab-slug>.md`. Record what made the wrong answer feel correct, not just the fix.
-- State the lesson as a rule you can follow next time, specific enough to change a decision.
-- When a correction sharpens a lesson that already exists, edit that file rather than adding a near-duplicate.
+Every lesson is read at the start of work, so they compete for the same context the work needs. A bloated lessons directory defeats itself. Keep each one short enough that reading all of them stays cheap: a dozen lines is plenty, and three sections is the whole shape.
+
+- After ANY correction from the user, write the pattern to `docs/lessons/<short-kebab-slug>.md` with three parts, in this order:
+  1. **The principle** — the rule as one sentence you can follow next time.
+  2. **Why it is here** — the concrete case that earned it. Name what made the wrong answer feel correct, not just the fix; that is what makes the rule recognizable next time.
+  3. **What to do** — the check, command, or question that catches it, in a line or two.
+- Cut everything else. No narrative of the session, no restating the principle in the other two sections.
+- When a correction sharpens a lesson that already exists, edit that file rather than adding a near-duplicate. Prefer a sharper existing lesson over a second similar one.
 - Read `docs/lessons/` at the start of work on a project, before the first edit.
 
 ## Task Management
@@ -94,9 +100,3 @@ Lessons live in `docs/lessons/`, one file per lesson, alongside `docs/specs/` an
 4. **Explain Changes**: High-level summary at each step.
 5. **Dependencies**: Express ordering constraints between tasks explicitly.
 6. **Capture Lessons**: Write durable lessons to `docs/lessons/` after corrections from the user.
-
-## Core Principles
-
-- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
-- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
