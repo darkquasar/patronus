@@ -79,10 +79,12 @@ service/
 - Go fix failing CI tests without being told how.
 
 ### Self-Improvement Loop
-- After ANY correction from the user: capture the pattern as a durable lesson.
-- Write rules for yourself that prevent the same mistake.
-- Ruthlessly iterate on these lessons until the mistake rate drops.
-- Review lessons at session start for the relevant project.
+Lessons live in `docs/lessons/`, one file per lesson, alongside `docs/specs/` and `docs/plans/`. They are committed, so the next session (and the next agent) inherits them.
+
+- After ANY correction from the user, write the pattern to `docs/lessons/<short-kebab-slug>.md`. Record what made the wrong answer feel correct, not just the fix.
+- State the lesson as a rule you can follow next time, specific enough to change a decision.
+- When a correction sharpens a lesson that already exists, edit that file rather than adding a near-duplicate.
+- Read `docs/lessons/` at the start of work on a project, before the first edit.
 
 ## Task Management
 
@@ -91,7 +93,7 @@ service/
 3. **Track Progress**: Mark items `in_progress` → `completed` as you go; review overall status regularly.
 4. **Explain Changes**: High-level summary at each step.
 5. **Dependencies**: Express ordering constraints between tasks explicitly.
-6. **Capture Lessons**: Record durable lessons after corrections from the user.
+6. **Capture Lessons**: Write durable lessons to `docs/lessons/` after corrections from the user.
 
 ## Core Principles
 
