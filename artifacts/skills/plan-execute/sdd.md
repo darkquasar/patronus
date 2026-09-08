@@ -40,6 +40,12 @@ dispute the fix loop could not settle, or all tasks complete.
    nothing. **Every part of this is optional.** No `meta.yaml`, no matching entry, no
    `tasks:` field, or no `tk` on `PATH` each mean this plan was not mirrored: carry on
    silently. It is never an error, and never a reason to stop.
+
+   **This holds for every `tk` command in this file, not just this lookup.** The ticket
+   is a copy of a status the ledger already holds, so a failing `tk start` or `tk close`
+   — a missing binary, an id that no longer resolves, any nonzero exit — is noted and
+   stepped over. Never retry it, never surface it as a blocker, and never let it stop a
+   run whose actual work succeeded.
 5. Check for a progress ledger: `cat "<workspace>/progress.md" 2>/dev/null`, using the
    workspace path step 3 printed. On a first run the file does not exist and the command
    prints nothing: that is the normal starting state, not a blocker. Create the ledger
@@ -107,10 +113,15 @@ dispute the fix loop could not settle, or all tasks complete.
 
    **Ledger first, ticket second.** The ledger is the resume authority and the ticket is
    the externally visible status, so write the authority before the copy: a crash between
-   the two leaves a finished task recorded as finished. On resume, a ticket whose status
-   disagrees with the ledger is reconciled to the ledger — close the stragglers and
-   proceed. Closing is also what unblocks the next `tk ready`, so a mirrored plan whose
-   tickets are never closed leaves its whole tree open behind you.
+   the two leaves a finished task recorded as finished.
+
+   On resume, reconcile every ticket whose status disagrees with the ledger, in whichever
+   direction it disagrees. The ledger wins both ways: a task the ledger marks complete
+   gets `tk close <id>`, and a task the ledger does not mark complete gets `tk start <id>`
+   whatever the ticket currently says — including a ticket already closed, which is a
+   close that landed before the work was really done. Closing is what unblocks the next
+   `tk ready`, so a mirrored plan whose tickets are never closed leaves its whole tree
+   open behind you.
 
 ## Resolving the reviewer's unverifiable items
 

@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: spec-brainstorming
 description: "Pre-implementation discipline — before any creative work (a feature, a component, new functionality, a behavior change), explore user intent, requirements, and design first, then author the spec. Reads an existing research.md when present and scales its dialogue to it."
-version: 5.1.0
+version: 5.1.1
 entry: SKILL.md
 files: [spec-document-reviewer-prompt.md]
 targets: [claude, codex, opencode]

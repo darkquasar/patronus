@@ -202,6 +202,7 @@ explicitly declines a spec, record the decision instead of leaving an absence:
     spec_declined: "User opted to plan directly (2026-07-12) — scope judged too small for a spec."
     plan: quick-fix-plan.md
     epic: null
+    tasks: []
 ```
 
 **The manifest must be checkable, not believable. Two invariants:**
