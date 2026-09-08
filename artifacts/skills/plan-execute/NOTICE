@@ -13,8 +13,14 @@ Vendored (upstream paths, unchanged apart from path references):
         from skills/subagent-driven-development/implementer-prompt.md
   - task-reviewer-prompt.md
         from skills/subagent-driven-development/task-reviewer-prompt.md
+
+Vendored and adapted:
   - scripts/{task-brief,review-package,sdd-workspace}
         from skills/subagent-driven-development/scripts/
+        The workspace is resolved from the plan's own path, as
+        <plan-dir>/.sdd/<plan-stem>/, so run state lives beside the plan it
+        belongs to rather than in a central directory at the repository root.
+        sdd-workspace and review-package take the plan file as an argument.
 
 Upstream forks these two skills on subagent CAPABILITY: executing-plans is the
 no-subagent fallback, subagent-driven-development the intended path where

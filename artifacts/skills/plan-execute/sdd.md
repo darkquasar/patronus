@@ -22,14 +22,17 @@ dispute the fix loop could not settle, or all tasks complete.
    plan text that mandates it, asking which governs. If the scan is clean, proceed
    without comment.
 2. Record the branch's merge base: `git merge-base main HEAD`. The final review needs it.
-3. Check for a progress ledger:
-   `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md" 2>/dev/null`. On a
-   first run the file does not exist and the command prints nothing: that is the normal
-   starting state, not a blocker. Create the ledger when you record task 1. If it does
-   exist, tasks marked complete there are done. Do not re-dispatch them; resume at the
-   first task not marked complete. Conversation memory does not survive compaction, and a
-   controller that lost its place re-dispatching a finished sequence is the most expensive
-   failure this mode has.
+3. Resolve the workspace once and keep the path for the whole run:
+   `scripts/sdd-workspace PLAN_FILE` from this skill's directory. It prints the run's
+   directory, `<plan-dir>/.sdd/<plan-stem>/`, and creates it. Every brief, report, review
+   package, and the ledger live there, beside the plan they belong to.
+4. Check for a progress ledger: `cat "<workspace>/progress.md" 2>/dev/null`, using the
+   path step 3 printed. On a first run the file does not exist and the command prints
+   nothing: that is the normal starting state, not a blocker. Create the ledger when you
+   record task 1. If it does exist, tasks marked complete there are done. Do not
+   re-dispatch them; resume at the first task not marked complete. Conversation memory
+   does not survive compaction, and a controller that lost its place re-dispatching a
+   finished sequence is the most expensive failure this mode has.
 
 ## Per task
 
@@ -52,9 +55,9 @@ dispute the fix loop could not settle, or all tasks complete.
    Do not paste accumulated prior-task summaries. Carry forward contracts, not history.
 
 4. Handle the implementer's status:
-   - **DONE:** run `scripts/review-package BASE HEAD` with the BASE from step 1 (never
-     `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then
-     dispatch the reviewer with the printed path.
+   - **DONE:** run `scripts/review-package PLAN_FILE BASE HEAD` with the BASE from step 1
+     (never `HEAD~1`, which silently drops all but the last commit of a multi-commit
+     task), then dispatch the reviewer with the printed path.
    - **DONE_WITH_CONCERNS:** read the concerns first. Correctness or scope concerns get
      addressed before review; observations get noted and the review proceeds.
    - **NEEDS_CONTEXT:** supply what is missing and re-dispatch.
@@ -120,7 +123,7 @@ an omitted model inherits your session's, usually the most expensive one.
 
 ## Finishing
 
-1. Run `scripts/review-package MERGE_BASE HEAD` with the merge base you recorded.
+1. Run `scripts/review-package PLAN_FILE MERGE_BASE HEAD` with the merge base you recorded.
 2. Dispatch the final whole-branch review with the `requesting-code-review` skill's
    [code-reviewer.md](../requesting-code-review/code-reviewer.md), on the most capable
    model, including the package path and the ledger's accumulated Minor findings so it
