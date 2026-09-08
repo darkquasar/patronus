@@ -52,7 +52,7 @@ func planRepo(t *testing.T) string {
 		{"add", "-A"},
 		{"commit", "-qm", "seed"},
 	} {
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(t.Context(), "git", args...)
 		cmd.Dir = root
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
@@ -63,7 +63,7 @@ func planRepo(t *testing.T) string {
 
 func runScript(t *testing.T, dir, script string, args ...string) (string, error) {
 	t.Helper()
-	cmd := exec.Command(script, args...)
+	cmd := exec.CommandContext(t.Context(), script, args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
