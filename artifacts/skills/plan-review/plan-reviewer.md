@@ -87,6 +87,11 @@ State which lenses you skipped and why.
 If a severity band is empty, say so explicitly ("No critical findings") rather than omitting the
 heading — an absent section is ambiguous between "clean" and "not checked".
 
+If you are one of two reviewers reading this plan, review it as though you were the only one. Do
+not hedge toward what another reader might say, and do not soften a severity to look reasonable
+next to a second opinion — the merge step needs your independent read, and a disagreement between
+reviewers is a signal, not a failure.
+
 End with exactly this line:
 
 > Advisory only — you decide whether to proceed to implementation.

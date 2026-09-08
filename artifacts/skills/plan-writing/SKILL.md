@@ -291,19 +291,19 @@ which one you are using, so the next session knows where to look.
 
 ## Execution Handoff
 
-After saving the plan, hand off to the **plan-execute** skill to implement it task-by-task.
-plan-execute assesses the plan and chooses its own execution mode: a sequential single-context run,
-or a fresh implementer subagent per task with an independent reviewer after each. It states which
-mode it picked and why, citing the plan sections that drove the choice, then proceeds. Both modes
-end with an independent whole-branch review.
+After saving the plan, run the **plan-review** skill. That is the next step: a fresh reviewer reads
+what each step *says*, where you know what each step *meant*. It applies the same coverage /
+placeholder / type-consistency checks the Self-Review above uses, plus engineering, design, DevEx,
+and strategy lenses, and it reaches for a second model where one is available, so the findings are
+not confined to one model family's blind spots.
 
-The Self-Review above is your own pass over the plan. For an independent one — a fresh reviewer who
-reads what the plan *says* rather than what you meant — run the **plan-review** skill before
-handing off. It applies the same coverage / placeholder / type-consistency checks plus engineering,
-design, DevEx, and strategy lenses, and it is advisory: it closes planning, it does not block it.
-plan-review also forks the build path, sending a plan whose tasks split into disjoint file-owning
-boundaries to a parallel team instead.
+It is advisory. It closes planning, it does not block it, and you decide what to act on.
 
-**Next:** the plan is written. Consider **`plan-review`** before building — a fresh subagent reads
-what each step *says*, where the author knows what each step *meant*. Then `plan-execute`.
-(Suggestion, not a gate.)
+Once the findings are addressed, plan-review forks the build path itself, sending a plan whose tasks
+split into disjoint file-owning boundaries to **plan-execute-parallel** and everything else to
+**plan-execute**. plan-execute then assesses the plan and chooses its own execution mode: a
+sequential single-context run, or a fresh implementer subagent per task with an independent reviewer
+after each. It states which mode it picked and why, citing the plan sections that drove the choice,
+then proceeds. Both modes end with an independent whole-branch review.
+
+**Next:** the plan is written. Run **`plan-review`**, then build from what it finds.
