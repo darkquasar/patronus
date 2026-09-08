@@ -3,20 +3,58 @@
 # artifacts: task briefs, implementer reports, review packages, and the
 # progress ledger. Print the directory's absolute path.
 #
-# The workspace lives in the working tree (not under .git/) because Claude Code
-# treats .git/ as a protected path and denies agent writes there — which blocks
-# an implementer subagent from writing its report file. A self-ignoring
-# .gitignore keeps the workspace out of `git status` and out of accidental
+# The workspace lives beside the plan it belongs to, under
+# <plan-dir>/.sdd/<plan-stem>/, so run state travels with the plan rather than
+# collecting in one central directory at the repository root. One spec folder
+# holds several streams (a spec and a plan each), and the <plan-stem>
+# component keeps their independent runs apart.
+#
+# It lives in the working tree (not under .git/) because Claude Code treats
+# .git/ as a protected path and denies agent writes there, which would block an
+# implementer subagent from writing its report file. A self-ignoring .gitignore
+# inside the workspace keeps it out of `git status` and out of accidental
 # commits without modifying any tracked file.
 #
 # Single source of truth for the workspace location, so task-brief and
 # review-package cannot drift to different directories.
 #
-# Usage: sdd-workspace
+# Usage: sdd-workspace PLAN_FILE
 set -euo pipefail
 
-root=$(git rev-parse --show-toplevel)
-dir="$root/.superpowers/sdd"
+if [ $# -ne 1 ]; then
+  echo "usage: sdd-workspace PLAN_FILE" >&2
+  exit 2
+fi
+
+plan=$1
+[ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+
+# Resolve the plan through any symlink first. Two spellings of one plan must land
+# on one workspace, or a resume that used the other spelling sees no ledger and
+# re-dispatches finished tasks.
+plan_dir=$(cd "$(dirname "$plan")" && pwd -P)
+plan_base=$(basename "$plan")
+hops=0
+while [ -L "$plan_dir/$plan_base" ]; do
+  hops=$((hops + 1))
+  if [ "$hops" -gt 32 ]; then
+    echo "too many symlink hops resolving plan: $plan" >&2
+    exit 2
+  fi
+  target=$(readlink "$plan_dir/$plan_base")
+  case $target in
+    /*) plan_dir=$(cd "$(dirname "$target")" && pwd -P) ;;
+    *)  plan_dir=$(cd "$plan_dir" && cd "$(dirname "$target")" && pwd -P) ;;
+  esac
+  plan_base=$(basename "$target")
+done
+
+# Strip one trailing extension, but never the whole name: a dotfile plan such as
+# `.hidden` must not reduce to an empty stem and collapse into the shared .sdd/.
+plan_stem=${plan_base%.*}
+[ -n "$plan_stem" ] || plan_stem=$plan_base
+
+dir="$plan_dir/.sdd/$plan_stem"
 mkdir -p "$dir"
 printf '*\n' > "$dir/.gitignore"
 cd "$dir" && pwd

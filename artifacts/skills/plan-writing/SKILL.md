@@ -199,7 +199,9 @@ EPIC=$(tk create "<Feature name> — implementation" -t epic -p 1 \
   --external-ref docs/specs/NN-slug/<stream>-plan.md)
 
 # ONE task per PLAN TASK (not per step — a task is the reviewable unit).
-tk create "<Task N's title>" \
+# Capture each id as you go: meta.yaml records them, and sdd mode resolves a plan
+# task to its ticket through that record.
+TASK_N=$(tk create "<Task N's title>" \
   -t task \
   -p <from the plan's build order; 0 = highest, and `tk ready` SORTS BY IT> \
   --parent "$EPIC" \
@@ -209,15 +211,33 @@ tk create "<Task N's title>" \
       NOTE: docs/specs/ is GITIGNORED — that path exists only in a working tree that has it.
       Files expected to change: path/a.go, path/b.go.
       <what to build, in a sentence>" \
-  --external-ref docs/specs/NN-slug/<stream>-plan.md
+  --external-ref docs/specs/NN-slug/<stream>-plan.md)
 
 # ORDER with edges, from the plan's build order. This — and ONLY this — is what
 # `tk ready` computes from.
 tk dep <task> <depends-on-task>
 ```
 
-Then record the epic's id in this stream's `meta.yaml` entry (`epic: pat-a1b2` — an id you can
-resolve, not a boolean you can only believe), bump `updated:`, and **commit `.tickets/`**.
+Then record the epic's id **and every task's id** in this stream's `meta.yaml` entry — ids you can
+resolve, not a boolean you can only believe — bump `updated:`, and **commit `.tickets/`**:
+
+```yaml
+streams:
+  - slug: <stream>
+    epic: pat-a1b2
+    tasks:
+      - {number: 1, id: pat-c3d4, name: extract-token-parser}
+      - {number: 2, id: pat-e5f6, name: wire-retry-backoff}
+```
+
+`number` is the plan's task number, `id` is what tk generated, and `name` is a short kebab-case
+reduction (roughly three to five words) of the task's title, so a reader can scan `meta.yaml`
+without running `tk show` on every row. **`id` is the sole lookup key.** `name` is descriptive
+only: a stale or hand-edited one must never break resolution.
+
+Record the ids because nothing else can. tk's ids are opaque and generated at creation, so a later
+skill that wants to close "the ticket for Task 3" has no way to compute the answer — `plan-execute`'s
+sdd mode reads exactly this field.
 
 **Epics group; only `tk dep` orders.** `tk ready` and `tk blocked` read **only `deps`**, never
 `parent`. Use `--parent`/`--tags` to group a plan's tasks; use `tk dep` to encode the build order.
