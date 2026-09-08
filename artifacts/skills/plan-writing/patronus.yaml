@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-writing
 description: "Write comprehensive, bite-sized implementation plans before touching code — exact file paths, complete code per step, TDD-shaped tasks, self-review against the spec. Use when you have a spec for a multi-step task."
-version: 3.1.0
+version: 3.2.0
 entry: SKILL.md
 files: []
 targets: [claude, codex, opencode]
