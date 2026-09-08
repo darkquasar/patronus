@@ -3,8 +3,8 @@ family: artifact
 type: hook
 role: capability
 name: work-state-reground
-description: "Resume/post-compaction re-grounding — a SessionStart hook (startup|clear|compact) that, at the moments the agent has lost the thread, tells it to reconcile with EXTERNALIZED state before continuing: the Ticket work-graph and ai-memory. Conditional — it only names a source that is actually present (a `.tickets/` directory for Ticket; the installed ai-memory skill/binary for memory), so it never points at a tool that isn't wired. Pairs with skills-dispatch-activate (which re-injects the skill keystone on the same event). Claude-only today; wire it flavoured as work-state-reground@claude."
-version: 1.1.1
+description: "Resume/post-compaction re-grounding — a SessionStart hook (startup|clear|compact) that, at the moments the agent has lost the thread, tells it to reconcile with EXTERNALIZED state before continuing: the Ticket work-graph and the project's lessons. Conditional — it only names a source that is actually present (a `.tickets/` directory for Ticket; a non-empty `docs/lessons/` for lessons), so it never points at a store that isn't there. The lessons cue is the session-start half of the agent-principles Self-Improvement Loop, which writes those files. Pairs with skills-dispatch-activate (which re-injects the skill keystone on the same event). Claude-only today; wire it flavoured as work-state-reground@claude."
+version: 1.2.0
 entry: ""
 files: [reground-work-state.sh]
 targets: [claude]

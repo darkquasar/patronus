@@ -7,8 +7,9 @@
 #
 # Re-injection keeps the RULE fresh but cannot restore lost FACTS; externalized
 # state can. This hook bridges the two: it points the agent at the Ticket
-# work-graph (what is unblocked / mid-flight) and ai-memory (prior context) — the
-# durable stores that survive a compaction the context window did not.
+# work-graph (what is unblocked / mid-flight) and the project's lessons
+# (docs/lessons — patterns learned from earlier corrections) — the durable stores
+# that survive a compaction the context window did not.
 #
 # Conditional by design (no-duplicate-native-capability / no dead instructions):
 # it only names a source that is actually present, so it never tells the agent to
@@ -27,10 +28,12 @@ if [ -d ".tickets" ]; then
   cues="${cues} Reconcile with the Ticket work-graph: run \`tk ready\` to see what is unblocked and what you left mid-flight, and \`tk blocked\` to see what is waiting — do not rely on memory of the plan that may have been compacted away."
 fi
 
-# --- ai-memory: the self-wiring memory recipe (skill body installed, or its binary).
-if [ -d "${HOME}/.claude/skills/memory-ai-memory" ] || \
-   [ -x "${HOME}/.patronus/bin/ai-memory" ] || command -v ai-memory >/dev/null 2>&1; then
-  cues="${cues} Recall ai-memory for context relevant to this work before acting — earlier decisions and facts may have been summarized out of the window."
+# --- Lessons: durable patterns captured after corrections (docs/lessons in cwd).
+# Cue it only when the directory holds something; an empty docs/lessons would send
+# the agent to read nothing. Pairs with the agent-principles Self-Improvement Loop,
+# which is what writes these files in the first place.
+if [ -d "docs/lessons" ] && [ -n "$(ls -A docs/lessons 2>/dev/null)" ]; then
+  cues="${cues} Read \`docs/lessons/\` before your first edit — it records patterns learned from earlier corrections on this project, including ones made in sessions you cannot see."
 fi
 
 if [ -n "$cues" ]; then

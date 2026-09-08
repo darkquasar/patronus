@@ -2,8 +2,8 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 1.1.1
-summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `ai-memory` (ambient memory), `quiet` (no diagrams)."
+version: 1.2.0
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `quiet` (no diagrams)."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
 # exists in-repo today and installs.
@@ -17,7 +17,7 @@ layers:
     - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
     - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
-    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + ai-memory (externalized state); Claude-only, conditional on what's wired
+    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + docs/lessons (externalized state); Claude-only, conditional on what's present
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
     - plan-writing                         # plan a multi-step task before touching code
     - plan-execute                         # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review])
@@ -41,12 +41,12 @@ layers:
     - pattern-mcp                          # in-repo context skill
   tools:
     - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
-  # No default memory recipe in core: ai-memory ships its full ambient integration
-  # via the opt-in `ai-memory` profile (it needs a running daemon + its lifecycle
-  # hooks fire on every action), and engram is the self-contained fallback. Add a
-  # memory layer by installing the `ai-memory` profile or the `memory-engram`
-  # recipe. The work-state-reground hook below stays — its ai-memory cue is
-  # conditional and simply no-ops when no memory layer is wired.
+  # No memory daemon in core. What core does ship is the durable, in-repo half:
+  # agent-principles writes lessons to `docs/lessons/` after a correction, and the
+  # work-state-reground hook reads them back at session start. Both are plain
+  # committed files — no daemon, no per-action hooks — so the loop survives a
+  # compaction and travels with the repo. A running memory layer stays opt-in via
+  # the `memory-engram` recipe.
   eval:
     # Test-first is TAUGHT here (the `tdd` skill above), not mechanically enforced.
     # The hard PreToolUse gate (tdd-guard recipe + tdd-guard-hook) is opt-in via the
