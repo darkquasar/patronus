@@ -78,5 +78,8 @@ streams:
     intent: "One line: what this stream is."
     spec: null                  # spec-brainstorming fills this in
     plan: null                  # plan-writing fills this in
-    epic: null                  # plan-execute-parallel fills this in with the tk epic id
+    epic: null                  # plan-writing or plan-execute-parallel fills this in
+                                # with the tk epic id, e.g. pat-a1b2
+    tasks: []                   # the same seeder fills this in: one entry per plan task,
+                                # {number, id, name}
 ```

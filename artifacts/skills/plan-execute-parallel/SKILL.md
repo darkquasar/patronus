@@ -56,20 +56,36 @@ EPIC=$(tk create "<Feature name>" -t epic -p 1 \
 # The POINTER MUST RESOLVE: --external-ref names the PLAN FILE (a folder holds many),
 # and -d names the task's SECTION HEADING verbatim, copied from
 # `grep -n '^## Task' <plan>` — never retyped.
-tk create "<Plan task N's title>" \
+# Capture each id as you go — meta.yaml records them, and nothing can recompute them later.
+TASK_N=$(tk create "<Plan task N's title>" \
   -t task -p 1 --parent "$EPIC" --tags <stream> \
   --acceptance "<the plan task's verification step — the ONE check that closes it>" \
   -d "PLAN: docs/specs/NN-slug/<stream>-plan.md → '<the task's section heading, VERBATIM>'.
       NOTE: docs/specs/ is GITIGNORED — that path exists only in a working tree that has it.
       Files expected to change: path/a.go, path/b.go." \
-  --external-ref docs/specs/NN-slug/<stream>-plan.md
+  --external-ref docs/specs/NN-slug/<stream>-plan.md)
 
 # Order with EDGES, never with prose or with the epic.
 tk dep <task> <depends-on-task>
 ```
 
-Then record this stream's epic id in **its** entry in `meta.yaml` — `epic: pat-a1b2` — and bump
-`updated:`.
+Then record this stream's epic id **and every task's id** in **its** entry in `meta.yaml`, and bump
+`updated:`:
+
+```yaml
+streams:
+  - slug: <stream>
+    epic: pat-a1b2
+    tasks:
+      - {number: 1, id: pat-c3d4, name: extract-token-parser}
+      - {number: 2, id: pat-e5f6, name: wire-retry-backoff}
+```
+
+`number` is the plan's task number, `id` is what tk generated, and `name` is a short kebab-case
+reduction (roughly three to five words) of the task's title, so `meta.yaml` is legible without a
+`tk show` per row. **`id` is the sole lookup key**; a stale `name` must never break resolution.
+Whichever skill seeds the graph writes both fields for the tree it created — `plan-writing` does the
+same when it mirrors a plan before execution.
 
 **Present the seeded graph** — `tk ls` + `tk ready` — **before spawning teammates.** Do not spawn
 until the user approves the breakdown.

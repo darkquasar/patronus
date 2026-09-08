@@ -26,10 +26,24 @@ dispute the fix loop could not settle, or all tasks complete.
    `scripts/sdd-workspace PLAN_FILE` from this skill's directory. It prints the run's
    directory, `<plan-dir>/.sdd/<plan-stem>/`, and creates it. Every brief, report, review
    package, and the ledger live there, beside the plan they belong to.
-4. Check for a progress ledger: `cat "<workspace>/progress.md" 2>/dev/null`, using the
-   path step 3 printed. On a first run the file does not exist and the command prints
-   nothing: that is the normal starting state, not a blocker. Create the ledger when you
-   record task 1. If it does exist, tasks marked complete there are done. Do not
+4. Resolve the plan's tk tickets, if it has any. Read the stream's `meta.yaml` entry —
+   the one whose `plan:` names the plan file you were given, matched on the resolved
+   path, never on a guessed stream name — and take its `tasks:` list:
+
+   ```yaml
+   tasks:
+     - {number: 1, id: pat-c3d4, name: extract-token-parser}
+   ```
+
+   `number` is the plan's task number and `id` is the ticket to flip. `name` is for the
+   human reading `meta.yaml`; never resolve on it, so a stale or hand-edited one costs
+   nothing. **Every part of this is optional.** No `meta.yaml`, no matching entry, no
+   `tasks:` field, or no `tk` on `PATH` each mean this plan was not mirrored: carry on
+   silently. It is never an error, and never a reason to stop.
+5. Check for a progress ledger: `cat "<workspace>/progress.md" 2>/dev/null`, using the
+   workspace path step 3 printed. On a first run the file does not exist and the command
+   prints nothing: that is the normal starting state, not a blocker. Create the ledger
+   when you record task 1. If it does exist, tasks marked complete there are done. Do not
    re-dispatch them; resume at the first task not marked complete. Conversation memory
    does not survive compaction, and a controller that lost its place re-dispatching a
    finished sequence is the most expensive failure this mode has.
@@ -39,7 +53,8 @@ dispute the fix loop could not settle, or all tasks complete.
 1. Record the current commit as BASE, before dispatching anything.
 2. Run `scripts/task-brief PLAN_FILE N` from this skill's directory. It writes the task's
    full text to a uniquely named file and prints the path.
-3. Dispatch the implementer with [implementer-prompt.md](implementer-prompt.md). The
+3. If this task has a mirrored ticket, mark it started: `tk start <id>`.
+4. Dispatch the implementer with [implementer-prompt.md](implementer-prompt.md). The
    dispatch carries, and carries only:
    - one line on where this task fits in the project
    - the brief path, introduced as "read this first, it is your requirements, with the
@@ -54,7 +69,7 @@ dispute the fix loop could not settle, or all tasks complete.
 
    Do not paste accumulated prior-task summaries. Carry forward contracts, not history.
 
-4. Handle the implementer's status:
+5. Handle the implementer's status:
    - **DONE:** run `scripts/review-package PLAN_FILE BASE HEAD` with the BASE from step 1
      (never `HEAD~1`, which silently drops all but the last commit of a multi-commit
      task), then dispatch the reviewer with the printed path.
@@ -66,7 +81,7 @@ dispute the fix loop could not settle, or all tasks complete.
      plan gets escalated to your human partner. Never force the same model to retry
      unchanged.
 
-5. Dispatch the task reviewer with [task-reviewer-prompt.md](task-reviewer-prompt.md).
+6. Dispatch the task reviewer with [task-reviewer-prompt.md](task-reviewer-prompt.md).
    Build its context from **the task contract, the diff, the tests, and the relevant
    files, never from the implementer's transcript.** The transcript contains the
    implementer's reasoning about what it meant to build, which is exactly the thing a
@@ -76,7 +91,7 @@ dispute the fix loop could not settle, or all tasks complete.
    Never tell a reviewer what not to flag, and never pre-rate a finding's severity. If
    you believe a finding will be a false positive, let it be raised and adjudicate it.
 
-6. Run the fix loop on Critical and Important findings. One fix subagent per round,
+7. Run the fix loop on Critical and Important findings. One fix subagent per round,
    carrying the complete findings list, and every fix dispatch re-runs the tests covering
    its change and reports the command and output. Re-review after each round.
 
@@ -86,8 +101,16 @@ dispute the fix loop could not settle, or all tasks complete.
    that bears on it. Three rounds without convergence means the disagreement is about the
    requirement, not the code, and a fourth round will not settle it.
 
-7. Record Minor findings in the ledger. When the review comes back clean, append one line
-   to the ledger: `Task N: complete (commits <base7>..<head7>, review clean)`.
+8. Record Minor findings in the ledger. When the review comes back clean, append one line
+   to the ledger: `Task N: complete (commits <base7>..<head7>, review clean)`, then close
+   the mirrored ticket: `tk close <id>`.
+
+   **Ledger first, ticket second.** The ledger is the resume authority and the ticket is
+   the externally visible status, so write the authority before the copy: a crash between
+   the two leaves a finished task recorded as finished. On resume, a ticket whose status
+   disagrees with the ledger is reconciled to the ledger — close the stragglers and
+   proceed. Closing is also what unblocks the next `tk ready`, so a mirrored plan whose
+   tickets are never closed leaves its whole tree open behind you.
 
 ## Resolving the reviewer's unverifiable items
 

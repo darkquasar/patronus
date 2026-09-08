@@ -12,7 +12,7 @@ The single deliverable is:
 1. **one `<slug>-research.md`** — raw findings, evidence, constraints, trade-offs, shared by every stream
 2. **the folder `meta.yaml`** — one `research:` entry plus a `streams:` skeleton with `spec: null`/`plan: null` per stream you identified
 
-You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `plan-writing`' job. You do NOT seed the tk work-graph — that's `/plan-execute-parallel`'s job. Each downstream skill fills the field it owns: `spec-brainstorming` fills `spec:`, `plan-writing` fills `plan:`, `plan-execute-parallel` fills `epic:`.
+You do NOT author `<stream>-spec.md` — that is `spec-brainstorming`'s job (it reads this research and specifies the known). You do NOT write `<stream>-plan.md` — that is `plan-writing`' job. You do NOT seed the tk work-graph — that is the job of whichever skill executes the plan: `plan-writing` seeds it when it mirrors a plan, and `/plan-execute-parallel` seeds it when the plan reaches it unmirrored. Each downstream skill fills the fields it owns: `spec-brainstorming` fills `spec:`, `plan-writing` fills `plan:`, and the seeder fills `epic:` and `tasks:`.
 
 **You are the Team Lead.** Your job is to orchestrate, not to do the investigation yourself: you plan the streams, spawn parallel researchers, coordinate them, and synthesize their findings. The full protocol is in the [Coordination Protocol](#coordination-protocol) section at the end of this skill — read it before Phase 3.
 
@@ -122,7 +122,10 @@ When all researchers' tasks are complete (you're notified as each background age
        intent: "One line: what this stream is."
        spec: null                  # spec-brainstorming fills this in
        plan: null                  # plan-writing fills this in
-       epic: null                  # plan-execute-parallel fills this in with the tk epic id
+       epic: null                  # the tk seeder (plan-writing or plan-execute-parallel)
+                                   # fills this in with the tk epic id
+       tasks: []                   # the same seeder fills this in: one entry per plan
+                                   # task, {number, id, name}
    ```
 
    **One stream = one spec + one plan.** If the research forks into pieces that are independently
