@@ -25,6 +25,7 @@ type Transaction struct {
 	SchemaVersion int      `json:"schemaVersion"`
 	Recipe        string   `json:"recipe"`
 	Root          string   `json:"root"`
+	RootExisted   bool     `json:"rootExisted"`
 	Stage         string   `json:"stage"`
 	Backup        string   `json:"backup"`
 	Phase         Phase    `json:"phase"`
@@ -78,6 +79,9 @@ func validateTransaction(home, recipe, root string, tx *Transaction) error {
 	allowed, ok := intents[tx.Operation]
 	if !ok || tx.Intent != "" && !slices.Contains(allowed, tx.Intent) {
 		return errors.New("invalid transaction operation/intent")
+	}
+	if tx.Operation == "replace" && tx.RootExisted && tx.Previous == nil {
+		return errors.New("existing replacement root requires previous receipt")
 	}
 	if tx.Operation == "replace" && (tx.Stage == "" || tx.Backup == "" || tx.Stage == tx.Backup) {
 		return errors.New("replacement requires distinct stage and backup paths")
