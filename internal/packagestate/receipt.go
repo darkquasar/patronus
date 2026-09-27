@@ -94,8 +94,12 @@ func safeRecipe(recipe string) error {
 }
 
 // directory walks from canonical home without traversing symlinks. Missing
-// ancestors are allowed during reads. Newly created directory entries are synced.
+// ancestors are allowed during reads. Mutation syncs every ancestor link, even
+// when it exists: a previous creation may have failed before its parent synced.
 func directory(home, rel string, create bool) (string, error) {
+	return (storage{}).directory(home, rel, create)
+}
+func (s storage) directory(home, rel string, create bool) (string, error) {
 	current := home
 	for _, part := range strings.Split(rel, string(filepath.Separator)) {
 		parent := current
@@ -107,9 +111,6 @@ func directory(home, rel string, create bool) (string, error) {
 			}
 			if err = os.Mkdir(current, 0700); err != nil && !os.IsExist(err) {
 				return "", err
-			}
-			if err = syncDirectory(parent); err != nil {
-				return "", &DurabilityError{Path: current, Stage: "create-parent-sync", MayBeVisible: true, Err: err}
 			}
 			info, err = os.Lstat(current)
 		}
@@ -128,6 +129,11 @@ func directory(home, rel string, create bool) (string, error) {
 			}
 			if err := syncDirectory(current); err != nil {
 				return "", err
+			}
+		}
+		if create {
+			if err := s.ancestorSync(current, parent); err != nil {
+				return "", &DurabilityError{Path: current, Stage: "create-parent-sync", MayBeVisible: true, Err: err}
 			}
 		}
 	}
@@ -317,14 +323,14 @@ func (s storage) save(home string, r *Receipt) error {
 	if r == nil {
 		return errors.New("nil receipt")
 	}
-	_, root, path, err := paths(home, r.Recipe, false)
+	h, root, path, err := paths(home, r.Recipe, false)
 	if err != nil {
 		return err
 	}
 	if err := validateReceipt(r, r.Recipe, root); err != nil {
 		return err
 	}
-	if _, _, _, err := paths(home, r.Recipe, true); err != nil {
+	if _, err := s.directory(h, filepath.Join(".patronus", "package-state"), true); err != nil {
 		return err
 	}
 	return s.writeJSON(path, r)
@@ -480,4 +486,14 @@ func (s storage) remove(path string) error {
 		return &DurabilityError{Path: path, Stage: "parent-sync", MayBeVisible: true, Err: err}
 	}
 	return nil
+}
+
+func (s storage) ancestorSync(path, parent string) error {
+	if err := s.check("before-ancestor-sync", path); err != nil {
+		return err
+	}
+	if err := syncDirectory(parent); err != nil {
+		return err
+	}
+	return s.check("after-ancestor-sync", path)
 }
