@@ -244,3 +244,70 @@ func TestTransactionCandidateDoesNotReplaceReceipt(t *testing.T) {
 		t.Fatalf("committed receipt changed: %#v %v", got, err)
 	}
 }
+
+func TestTransactionRejectsCompoundIntents(t *testing.T) {
+	for _, tc := range []struct{ operation, intent string }{
+		{"replace", "move-old promote-new"},
+		{"replace", "commit cleanup"},
+		{"metadata", "save-receipt commit"},
+		{"remove", "commit cleanup"},
+	} {
+		t.Run(tc.operation+"/"+tc.intent, func(t *testing.T) {
+			home := t.TempDir()
+			tx := transactionFixture(t, home)
+			tx.Operation, tx.Intent = tc.operation, tc.intent
+			if err := WriteTransaction(home, tx); err == nil {
+				t.Fatal("accepted compound intent")
+			}
+		})
+	}
+}
+
+func TestTransactionRetryRepairsAncestorDurability(t *testing.T) {
+	for _, rel := range []string{".patronus", ".patronus/package-state", ".patronus/package-state/transactions", ".patronus/package-state/transactions/pi-sandbox"} {
+		t.Run(rel, func(t *testing.T) {
+			home := t.TempDir()
+			tx := transactionFixture(t, home)
+			ancestor := filepath.Join(home, rel)
+			injected := errors.New("ancestor sync failed")
+			s := storage{fault: func(point, path string) error {
+				if point == "before-ancestor-sync" && path == ancestor {
+					return injected
+				}
+				return nil
+			}}
+			for attempt := 0; attempt < 2; attempt++ {
+				err := s.writeTransaction(home, tx)
+				var de *DurabilityError
+				if !errors.Is(err, injected) || !errors.As(err, &de) || !de.MayBeVisible {
+					t.Fatalf("attempt %d: expected uncertain ancestor durability, got %v", attempt, err)
+				}
+				if info, err := os.Lstat(ancestor); err != nil || !info.IsDir() {
+					t.Fatalf("ancestor not visible: %v", err)
+				}
+				if got, err := ReadTransaction(home, tx.Recipe); err != nil || got != nil {
+					t.Fatalf("journal written before ancestor repair: %#v %v", got, err)
+				}
+			}
+			repaired := false
+			s.fault = func(point, path string) error {
+				if point == "after-ancestor-sync" && path == ancestor {
+					repaired = true
+				}
+				if point == "before-rename" && !repaired {
+					t.Fatal("journal published before ancestor repair")
+				}
+				return nil
+			}
+			if err := s.writeTransaction(home, tx); err != nil {
+				t.Fatal(err)
+			}
+			if !repaired {
+				t.Fatal("retry skipped existing ancestor link")
+			}
+			if got, err := ReadTransaction(home, tx.Recipe); err != nil || !reflect.DeepEqual(got, tx) {
+				t.Fatalf("retry journal: %#v %v", got, err)
+			}
+		})
+	}
+}

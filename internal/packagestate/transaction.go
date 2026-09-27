@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
+	"slices"
 
 	"github.com/darkquasar/patronus/internal/packagebundle"
 )
@@ -70,9 +70,13 @@ func validateTransaction(home, recipe, root string, tx *Transaction) error {
 	} else if !validPhase(tx.Phase) || tx.ResumePhase != "" {
 		return errors.New("invalid transaction phase")
 	}
-	intents := map[string]string{"replace": " move-old promote-new save-receipt commit cleanup ", "metadata": " save-receipt commit ", "remove": " unlink save-receipt delete-receipt drop-reference commit cleanup "}
+	intents := map[string][]string{
+		"replace":  {"move-old", "promote-new", "save-receipt", "commit", "cleanup"},
+		"metadata": {"save-receipt", "commit"},
+		"remove":   {"unlink", "save-receipt", "delete-receipt", "drop-reference", "commit", "cleanup"},
+	}
 	allowed, ok := intents[tx.Operation]
-	if !ok || tx.Intent != "" && !strings.Contains(allowed, " "+tx.Intent+" ") {
+	if !ok || tx.Intent != "" && !slices.Contains(allowed, tx.Intent) {
 		return errors.New("invalid transaction operation/intent")
 	}
 	if tx.Operation == "replace" && (tx.Stage == "" || tx.Backup == "" || tx.Stage == tx.Backup) {
@@ -160,7 +164,7 @@ func (s storage) writeTransaction(home string, tx *Transaction) error {
 	if err := validateTransaction(h, tx.Recipe, root, tx); err != nil {
 		return err
 	}
-	if _, _, _, err := transactionPath(h, tx.Recipe, true); err != nil {
+	if _, err := s.directory(h, filepath.Join(".patronus", "package-state", "transactions", tx.Recipe), true); err != nil {
 		return err
 	}
 	return s.writeJSON(path, tx)
