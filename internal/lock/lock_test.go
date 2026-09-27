@@ -350,7 +350,7 @@ func TestDirectoryLockCopiesResolvedDelivery(t *testing.T) {
 }
 
 func TestRecipeVersionLegacyDeliveryOmitted(t *testing.T) {
-	r := &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "legacy", Version: "1.0.0"}, Delivery: &manifest.Delivery{Via: manifest.ViaFetch}}
+	r := &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "legacy", Version: "1.0.0"}, Delivery: &manifest.Delivery{Via: manifest.ViaFetch, Unpack: "file"}}
 	cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: r}}}
 	resolved := &profile.Resolved{Profile: &manifest.Profile{}, Items: []profile.ResolvedItem{{Name: "legacy", Family: manifest.FamilyRecipe}}}
 	l, err := FromResolved(cat, resolved, "")
