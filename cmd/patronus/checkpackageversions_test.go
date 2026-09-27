@@ -22,6 +22,23 @@ func packageGitFixture(t *testing.T) string {
 	packageGit(t, root, "branch", "base")
 	return root
 }
+
+func TestPackageVersionSixteenComponentPayload(t *testing.T) {
+	root := packageFixture(t)
+	path := strings.Repeat("dir/", 15) + "spec.yaml"
+	packageWrite(t, root, "packages/kit/package.yaml", strings.ReplaceAll(testPackageDescriptor, "spec.yaml", path))
+	packageWrite(t, root, "packages/kit/"+path, "deep payload")
+	packageGit(t, root, "add", ".")
+	packageGit(t, root, "commit", "-m", "deep payload")
+	packageGit(t, root, "branch", "base")
+	if err := checkPackageVersions(context.Background(), root, "base"); err != nil {
+		t.Fatal(err)
+	}
+	packageWrite(t, root, "packages/kit/"+path, "changed payload")
+	if err := checkPackageVersions(context.Background(), root, "base"); err == nil || !strings.Contains(err.Error(), "without changing version") {
+		t.Fatalf("expected version violation, got %v", err)
+	}
+}
 func TestPackageVersionChangedInputs(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

@@ -88,11 +88,15 @@ func decodePackageDescriptor(data []byte, name string) (packageDescriptor, error
 
 // readPackageFile rejects links at every source component and bounds allocation.
 func readPackageFile(root, relative string, limit int64) ([]byte, error) {
-	if _, err := packagebundle.ValidatePath(relative, false); err != nil {
-		return nil, err
+	parts := strings.Split(relative, "/")
+	// Descriptor validation limits payload-relative paths. Validate source
+	// components separately so packages/<name>/ does not consume that budget.
+	for _, part := range parts {
+		if _, err := packagebundle.ValidatePath(part, false); err != nil {
+			return nil, err
+		}
 	}
 	current := root
-	parts := strings.Split(relative, "/")
 	for i, part := range parts {
 		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
