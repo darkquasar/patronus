@@ -235,9 +235,19 @@ func (s *Service) Replace(ctx context.Context, req Request, force bool) (Result,
 		return Result{}, errors.Join(errors.New("receipt changed during preparation"), s.discardStage(tx))
 	}
 	if in.Receipt != nil {
+		if err := s.fault("before-final-scan"); err != nil {
+			return Result{}, errors.Join(err, s.discardStage(tx))
+		}
 		scan, scanErr := scanTree(ctx, req.Root, in.Receipt.Files, in.Receipt.Directories)
 		if scanErr != nil {
 			return Result{}, errors.Join(scanErr, s.discardStage(tx))
+		}
+		if len(scan.types) > 0 {
+			return Result{}, errors.Join(&ConflictError{Recipe: req.Recipe, Kind: "path-type", Paths: scan.types}, s.discardStage(tx))
+		}
+		final := Inspection{Receipt: in.Receipt, Changed: scan.changed, Missing: scan.missing, Unknown: scan.unknown}
+		if err := inspectionConflict(req.Recipe, final, force); err != nil {
+			return Result{}, errors.Join(err, s.discardStage(tx))
 		}
 		tx.Observed = scan.entries
 		tx.RootExisted = scan.exists

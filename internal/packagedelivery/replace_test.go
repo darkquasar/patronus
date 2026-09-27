@@ -163,3 +163,155 @@ func TestReplacementRemovesObsoleteFile(t *testing.T) {
 		t.Fatal(info.Mode())
 	}
 }
+
+func TestReplaceRejectsLateOwnedDrift(t *testing.T) {
+	for _, kind := range []string{"bytes", "mode"} {
+		t.Run(kind, func(t *testing.T) {
+			s, req := installed(t)
+			previous, err := packagestate.Load(s.Home, req.Recipe)
+			must(t, err)
+			req, s.Fetcher = fixture(t, s.Home, "2.0.0")
+			path := filepath.Join(req.Root, "dir/tool")
+			injected := false
+			s.Fault = func(point string) error {
+				if point == "before-final-scan" {
+					editLateOwnedFile(t, path, kind)
+					injected = true
+				}
+				return nil
+			}
+			result, err := s.Replace(context.Background(), req, false)
+			var conflict *ConflictError
+			if !injected || !errors.As(err, &conflict) || conflict.Kind != "owned-drift" || len(conflict.Paths) != 1 || conflict.Paths[0] != "dir/tool" {
+				t.Fatalf("late %s drift: injected=%v, result=%+v, error=%v", kind, injected, result, err)
+			}
+			if result.Mutated {
+				t.Fatal("conflicting replacement reported mutation")
+			}
+			assertLateOwnedFile(t, path, kind)
+			assertReplacementUncommitted(t, s, previous)
+		})
+	}
+}
+
+func TestReplaceForcedLateOwnedDriftRollback(t *testing.T) {
+	for _, kind := range []string{"bytes", "mode"} {
+		t.Run(kind, func(t *testing.T) {
+			s, req := installed(t)
+			previous, err := packagestate.Load(s.Home, req.Recipe)
+			must(t, err)
+			req, s.Fetcher = fixture(t, s.Home, "2.0.0")
+			path := filepath.Join(req.Root, "dir/tool")
+			stop := errors.New("stop after promotion")
+			injected, promoted := false, false
+			s.Fault = func(point string) error {
+				switch point {
+				case "before-final-scan":
+					editLateOwnedFile(t, path, kind)
+					injected = true
+				case "after-stage-rename":
+					promoted = true
+					return stop
+				}
+				return nil
+			}
+			result, err := s.Replace(context.Background(), req, true)
+			if !injected || !promoted || !errors.Is(err, stop) || errors.Is(err, ErrRecoveryRequired) || result.Mutated {
+				t.Fatalf("forced late %s rollback: injected=%v, promoted=%v, result=%+v, error=%v", kind, injected, promoted, result, err)
+			}
+			assertLateOwnedFile(t, path, kind)
+			assertReplacementUncommitted(t, s, previous)
+		})
+	}
+}
+
+func editLateOwnedFile(t *testing.T, path, kind string) {
+	t.Helper()
+	if kind == "bytes" {
+		must(t, os.WriteFile(path, []byte("late edit"), 0755))
+		return
+	}
+	must(t, os.Chmod(path, 0644))
+}
+
+func assertLateOwnedFile(t *testing.T, path, kind string) {
+	t.Helper()
+	wantBytes, wantMode := "1.0.0", os.FileMode(0644)
+	if kind == "bytes" {
+		wantBytes, wantMode = "late edit", 0755
+	}
+	data, err := os.ReadFile(path)
+	must(t, err)
+	info, err := os.Stat(path)
+	must(t, err)
+	if string(data) != wantBytes || info.Mode().Perm() != wantMode {
+		t.Fatalf("late edit lost: bytes=%q, mode=%o; want bytes=%q, mode=%o", data, info.Mode().Perm(), wantBytes, wantMode)
+	}
+}
+
+func assertReplacementUncommitted(t *testing.T, s *Service, previous *packagestate.Receipt) {
+	t.Helper()
+	receipt, err := packagestate.Load(s.Home, previous.Recipe)
+	must(t, err)
+	if !receiptsEqual(receipt, previous) {
+		t.Fatal("previous receipt changed")
+	}
+	tx, err := packagestate.ReadTransaction(s.Home, previous.Recipe)
+	must(t, err)
+	if tx != nil {
+		t.Fatalf("transaction retained: %+v", tx)
+	}
+	entries, err := os.ReadDir(filepath.Join(s.Home, ".patronus", "packages", ".txn", previous.Recipe))
+	must(t, err)
+	if len(entries) != 0 {
+		t.Fatalf("staging or backup retained: %v", entries)
+	}
+}
+
+func TestReplaceRejectsLateUnknownAndTypeChanges(t *testing.T) {
+	for _, force := range []bool{false, true} {
+		for _, kind := range []string{"unknown-content", "path-type"} {
+			t.Run(fmt.Sprintf("%s/force=%v", kind, force), func(t *testing.T) {
+				s, req := installed(t)
+				previous, err := packagestate.Load(s.Home, req.Recipe)
+				must(t, err)
+				req, s.Fetcher = fixture(t, s.Home, "2.0.0")
+				prepared := false
+				s.Fault = func(point string) error {
+					if point == "after-prepared" {
+						prepared = true
+					}
+					if point == "before-final-scan" {
+						if kind == "unknown-content" {
+							must(t, os.WriteFile(filepath.Join(req.Root, "extra"), []byte("user file"), 0644))
+						} else {
+							path := filepath.Join(req.Root, "dir/tool")
+							must(t, os.Remove(path))
+							must(t, os.Mkdir(path, 0755))
+						}
+					}
+					return nil
+				}
+				_, err = s.Replace(context.Background(), req, force)
+				var conflict *ConflictError
+				if prepared || !errors.As(err, &conflict) || conflict.Kind != kind {
+					t.Fatalf("late conflict: prepared=%v, error=%v", prepared, err)
+				}
+				if kind == "unknown-content" {
+					data, err := os.ReadFile(filepath.Join(req.Root, "extra"))
+					must(t, err)
+					if string(data) != "user file" {
+						t.Fatalf("unknown file changed: %q", data)
+					}
+				} else {
+					info, err := os.Stat(filepath.Join(req.Root, "dir/tool"))
+					must(t, err)
+					if !info.IsDir() {
+						t.Fatal("changed type was replaced")
+					}
+				}
+				assertReplacementUncommitted(t, s, previous)
+			})
+		}
+	}
+}
