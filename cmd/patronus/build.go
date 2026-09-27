@@ -65,6 +65,7 @@ func newBuildCmd() *cobra.Command {
 			}
 
 			ix := &registry.Index{
+				// Keep the emitted schema independent of the reader maximum.
 				SchemaVersion: registry.IndexSchemaVersion,
 				Generated:     time.Now().UTC().Format(time.RFC3339),
 			}

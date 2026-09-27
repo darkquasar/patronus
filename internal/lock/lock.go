@@ -14,10 +14,14 @@
 package lock
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/manifest"
 )
 
 // Version is the lock schema version, bumped when the on-disk shape changes.
@@ -57,6 +61,9 @@ type Entry struct {
 	Slot          string `json:"slot,omitempty"`          // §1A layer it filled (informational)
 	Kind          string `json:"kind,omitempty"`          // "artifact" | "recipe" | "plugin"
 
+	// Delivery pins directory payloads; legacy entries omit it.
+	Delivery *manifest.Delivery `json:"delivery,omitempty"`
+
 	// Status applies to plugin entries only (Kind=="plugin"): the reconciliation
 	// state between declared intent and installed reality. verified = found
 	// installed at last scan; unverified = declared but not yet/cannot confirm;
@@ -79,6 +86,28 @@ func Load(path string) (*Lock, error) {
 	}
 	if l.Version == 0 {
 		l.Version = Version
+	}
+	if l.Version < 1 || l.Version > Version {
+		return nil, fmt.Errorf("unsupported lock schema v%d; upgrade patronus", l.Version)
+	}
+	for _, e := range l.Entries {
+		if e.Delivery == nil {
+			continue
+		}
+		if e.Kind != "recipe" || e.Delivery.Unpack != "directory" {
+			return nil, fmt.Errorf("lock entry %q: pinned delivery requires a directory recipe", e.Name)
+		}
+		r := &manifest.Recipe{Meta: manifest.Meta{APIVersion: "patronus/v3", Family: manifest.FamilyRecipe, Role: manifest.RoleSandbox, Name: e.Name, Version: e.Version}, Delivery: e.Delivery}
+		if err := manifest.ValidateRecipe(r); err != nil {
+			return nil, fmt.Errorf("lock entry %q: %w", e.Name, err)
+		}
+		digest := strings.TrimPrefix(e.SHA256, "sha256:")
+		if len(digest) != 64 {
+			return nil, fmt.Errorf("lock entry %q: invalid manifest SHA-256", e.Name)
+		}
+		if _, err := hex.DecodeString(digest); err != nil {
+			return nil, fmt.Errorf("lock entry %q: invalid manifest SHA-256: %w", e.Name, err)
+		}
 	}
 	return &l, nil
 }

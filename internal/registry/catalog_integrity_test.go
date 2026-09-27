@@ -177,8 +177,18 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		if m.Role != want.role {
 			t.Errorf("%s: role = %q, want %q", m.Name, m.Role, want.role)
 		}
-		if m.APIVersion != manifest.APIVersion {
-			t.Errorf("%s: apiVersion = %q, want %q", m.Name, m.APIVersion, manifest.APIVersion)
+		if !manifest.SupportsAPIVersion(m.APIVersion) {
+			t.Errorf("%s: unsupported apiVersion %q", m.Name, m.APIVersion)
+		}
+	}
+
+	for _, entry := range cat.Recipes {
+		r := entry.Manifest
+		if !manifest.SupportsAPIVersion(r.APIVersion) {
+			t.Errorf("%s: unsupported apiVersion %q", r.Name, r.APIVersion)
+		}
+		if r.Delivery != nil && r.Delivery.Unpack == "directory" && r.APIVersion != "patronus/v3" {
+			t.Errorf("%s: directory recipe requires v3", r.Name)
 		}
 	}
 

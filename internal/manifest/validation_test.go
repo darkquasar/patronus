@@ -356,3 +356,13 @@ func TestValidateFetchDelivery(t *testing.T) {
 		})
 	}
 }
+
+func TestAPIVersionV3RejectedOutsideRecipes(t *testing.T) {
+	for _, family := range []Family{FamilyArtifact, FamilyProfile, FamilyPlugin, FamilyAdapter} {
+		t.Run(string(family), func(t *testing.T) {
+			if err := validateMeta(Meta{APIVersion: "patronus/v3", Family: family, Name: "x", Version: "1.0.0"}, family); err == nil {
+				t.Fatal("v3 accepted for non-recipe")
+			}
+		})
+	}
+}
