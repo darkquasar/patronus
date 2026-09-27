@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/packagestate"
@@ -107,6 +106,10 @@ func TestCrashHelper(t *testing.T) {
 			os.Exit(97)
 		}
 		return nil
+	}
+	if os.Getenv("PATRONUS_REMOVE") == "1" {
+		_, err := s.Remove(context.Background(), "kit", true)
+		t.Fatalf("removal crash hook missed: %v", err)
 	}
 	if os.Getenv("PATRONUS_METADATA") == "1" {
 		old, oldData := fixture(t, home, "1.0.0")
@@ -378,7 +381,7 @@ func TestRecoveryDoesNotDispatchRemovalAsReplacement(t *testing.T) {
 	tx := &packagestate.Transaction{SchemaVersion: 1, Recipe: "kit", Root: req.Root, Phase: packagestate.Prepared, Operation: "remove", Previous: r}
 	must(t, packagestate.WriteTransaction(s.Home, tx))
 	err = s.Recover(context.Background(), "kit")
-	if !errors.Is(err, ErrRecoveryRequired) || !strings.Contains(err.Error(), "removal") {
+	if err != nil {
 		t.Fatal(err)
 	}
 	assertVersion(t, s.Home, "1.0.0")

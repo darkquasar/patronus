@@ -155,8 +155,8 @@ func newUpdateCmd() *cobra.Command {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
 				if scope == "global" {
-					for i := range receipts {
-						state.Merge(s, []state.Item{directoryStateItem(&receipts[i])})
+					if err := mergeDirectoryDiscovery(home, s); err != nil {
+						return err
 					}
 				}
 				for _, it := range s.Items {
@@ -164,16 +164,28 @@ func newUpdateCmd() *cobra.Command {
 					if !all && !want[it.Artifact] {
 						continue
 					}
+					if it.PackageReceipt != "" && (it.Artifact != it.PackageReceipt || scope != "global") {
+						return fmt.Errorf("package %s: invalid discovery reference %q in %s scope", it.Artifact, it.PackageReceipt, scope)
+					}
 					if it.PackageReceipt != "" && receiptByName[it.PackageReceipt] == nil {
-						return fmt.Errorf("package %s: discovery reference has no receipt; restore the authoritative receipt before updating", it.Artifact)
+						tx, err := packagestate.ReadTransaction(home, it.PackageReceipt)
+						if err != nil {
+							return err
+						}
+						if tx == nil {
+							return fmt.Errorf("package %s: discovery reference has no receipt; restore the authoritative receipt before updating", it.Artifact)
+						}
+						it.ItemVersion = ""
+					}
+					if it.PackageReceipt != "" {
+						rec := findRecipe(cat, it.Artifact)
+						if rec != nil && (rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory") {
+							return fmt.Errorf("package %s: selected catalog no longer provides directory delivery", it.Artifact)
+						}
 					}
 					if receipt := receiptByName[it.Artifact]; receipt != nil {
 						if scope != "global" || it.Tool != recipe.TargetAgnostic {
 							continue
-						}
-						rec := findRecipe(cat, it.Artifact)
-						if rec != nil && (rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory") {
-							return fmt.Errorf("package %s: selected catalog no longer provides directory delivery", it.Artifact)
 						}
 						it.ItemVersion = receipt.RecipeVersion
 					}
