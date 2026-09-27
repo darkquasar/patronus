@@ -240,3 +240,27 @@ func TestStateMergeRemovePlugin(t *testing.T) {
 		t.Errorf("items after remove = %d, want 0", len(s.Items))
 	}
 }
+
+func TestPackageReceiptReferenceRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	item := Item{Artifact: "pi-sandbox", ItemVersion: "1.0.0", Type: "install-only", Tool: "agnostic", Scope: "global", PackageReceipt: "pi-sandbox"}
+	original := &State{Version: Version, Items: []Item{item}}
+	if err := Save(path, original); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := got.Find("pi-sandbox", "agnostic", "global")
+	if len(found) != 1 || found[0].PackageReceipt != "pi-sandbox" || found[0].Files != nil || found[0].SelfWired {
+		t.Fatalf("reference lost: %#v", found)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte(`"packageReceipt": "pi-sandbox"`)) {
+		t.Fatalf("JSON tag missing: %s", data)
+	}
+}
