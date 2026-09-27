@@ -27,6 +27,10 @@ type PackageStatus struct {
 // Packages discovers receipts and pending first installs independently of tools.
 // It never repairs references, resumes transactions, or creates state directories.
 func Packages(home string) ([]PackageStatus, error) {
+	return packagesWithTransactionReader(home, packagestate.ReadTransaction)
+}
+
+func packagesWithTransactionReader(home string, readTransaction func(string, string) (*packagestate.Transaction, error)) ([]PackageStatus, error) {
 	receipts, err := packagestate.List(home)
 	if err != nil {
 		return nil, err
@@ -61,7 +65,7 @@ func Packages(home string) ([]PackageStatus, error) {
 			return nil, err
 		}
 		for _, entry := range entries {
-			tx, err := packagestate.ReadTransaction(canonical, entry.Name())
+			tx, err := readTransaction(canonical, entry.Name())
 			if err != nil {
 				return nil, err
 			}
@@ -78,11 +82,16 @@ func Packages(home string) ([]PackageStatus, error) {
 	var result []PackageStatus
 	service := packagedelivery.Service{Home: canonical}
 	for _, name := range ordered {
-		tx, err := packagestate.ReadTransaction(canonical, name)
+		tx, err := readTransaction(canonical, name)
 		if err != nil {
 			return nil, err
 		}
 		receipt := byName[name]
+		if receipt == nil && tx == nil {
+			// An unlocked scan may observe removal acknowledgement between
+			// enumerating a journal-only identity and reading its status.
+			continue
+		}
 		status := PackageStatus{Recipe: name, Root: filepath.Join(canonical, ".patronus", "packages", name), Status: "installed"}
 		if receipt != nil {
 			status.Version = receipt.RecipeVersion

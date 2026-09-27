@@ -130,3 +130,38 @@ func TestPackagesReducedReceiptWithMetadataIsIncomplete(t *testing.T) {
 		t.Fatalf("partial ownership reported complete: %+v", packages)
 	}
 }
+
+func TestPackagesSkipsRemovalAcknowledgedDuringDiscovery(t *testing.T) {
+	home, receipt := packageReceipt(t)
+	if err := packagestate.DeleteReceipt(home, receipt.Recipe); err != nil {
+		t.Fatal(err)
+	}
+	tx := &packagestate.Transaction{
+		SchemaVersion: 1, Recipe: receipt.Recipe, Root: receipt.Root,
+		Operation: "remove", Phase: packagestate.Committed, Previous: receipt,
+	}
+	if err := packagestate.WriteTransaction(home, tx); err != nil {
+		t.Fatal(err)
+	}
+	reads := 0
+	packages, err := packagesWithTransactionReader(home, func(home, recipe string) (*packagestate.Transaction, error) {
+		reads++
+		if reads == 2 {
+			// Discovery has recorded the journal-only identity. Acknowledge
+			// removal before the status pass reads that journal again.
+			if err := packagestate.ClearTransaction(home, recipe); err != nil {
+				return nil, err
+			}
+		}
+		return packagestate.ReadTransaction(home, recipe)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reads != 2 {
+		t.Fatalf("transaction reads = %d, want 2", reads)
+	}
+	if len(packages) != 0 {
+		t.Fatalf("acknowledged removal remains discoverable: %+v", packages)
+	}
+}
