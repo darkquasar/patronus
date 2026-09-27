@@ -55,7 +55,14 @@ jobs:
       - name: Build registry (R2-layout catalog/ tree)
         run: go run ./cmd/patronus build --out registry/
 
+      - name: Check catalog publication activation
+        id: guard
+        env:
+          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
+        run: bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
+
       - name: Publish item tarballs (immutable; check-before-put)
+        if: steps.guard.outputs.publish == 'true'
         run: |
           set -euo pipefail
           cd registry
@@ -88,6 +95,7 @@ jobs:
           done
 
       - name: Publish discovery index (mutable; no-cache)
+        if: steps.guard.outputs.publish == 'true'
         run: |
           set -euo pipefail
           cd registry

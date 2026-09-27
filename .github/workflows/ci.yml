@@ -43,6 +43,8 @@ jobs:
           fi
       - name: go vet
         run: go vet ./...
+      - name: check catalog publication guard
+        run: bash scripts/tests/check-catalog-publication-test.sh
       - name: test
         run: go test -race ./...
       # Substitution leaves unknown braces alone by design, so a typo like

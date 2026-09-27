@@ -273,3 +273,23 @@ func TestNoRealCatalogTestCanFetchABinary(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildLegacyCatalogUsesSchemaOne(t *testing.T) {
+	root := fixtureCatalog(t)
+	t.Chdir(root)
+	out := t.TempDir()
+	if _, err := runBuild(t, "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, "catalog", "index.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix, err := registry.LoadIndex(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ix.SchemaVersion != 1 {
+		t.Fatalf("legacy writer schema = %d, want 1", ix.SchemaVersion)
+	}
+}
