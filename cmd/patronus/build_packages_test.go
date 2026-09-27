@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/archive"
+	"github.com/darkquasar/patronus/internal/packagebundle"
 	"github.com/darkquasar/patronus/internal/registry"
 )
 
@@ -56,6 +57,29 @@ func TestBuildPackageBootstrap(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(out, "catalog/index.json")); !os.IsNotExist(err) {
 		t.Fatalf("selected build wrote index: %v", err)
+	}
+}
+
+func TestBuildPackageSixteenComponentPayload(t *testing.T) {
+	root := packageFixture(t)
+	path := strings.Repeat("dir/", 15) + "spec.yaml"
+	packageWrite(t, root, "packages/kit/package.yaml", strings.ReplaceAll(testPackageDescriptor, "spec.yaml", path))
+	packageWrite(t, root, "packages/kit/"+path, "deep payload")
+	t.Chdir(root)
+	out := t.TempDir()
+	if _, err := runBuild(t, "--package", "kit", "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, "packages/kit/1.0.0/kit-1.0.0-darwin-arm64.tar.gz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := packagebundle.Decode(bytes.NewReader(data), packagebundle.Identity{Name: "kit", Version: "1.0.0", OS: "darwin", Arch: "arm64"}, packagebundle.DefaultLimits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bundle.Files) != 2 || bundle.Files[0].Path != "package.json" || bundle.Files[1].Path != path || string(bundle.Files[1].Data) != "deep payload" {
+		t.Fatalf("unexpected payload: %+v", bundle.Files)
 	}
 }
 
