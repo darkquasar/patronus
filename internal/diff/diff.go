@@ -116,6 +116,9 @@ type FileDiff struct {
 	// in the change set). Excluded from JSON; Note carries the display label.
 	Fetch *FetchSpec `json:"-"`
 
+	// Directory is static package intent, handled outside the file applier.
+	Directory *DirectorySpec `json:"directory,omitempty"`
+
 	// Exec, when set, describes a self-wiring recipe's post-install command.
 	// It lives only on Action==Exec diffs, which are display-only in the change
 	// set: install.Applier skips them, and the cmd layer (runDeploy) runs them
@@ -127,6 +130,19 @@ type FileDiff struct {
 	// was adapted or dropped (e.g. a gate matcher token with no OpenCode permission
 	// key). The cmd layer surfaces it; it is never persisted to state.
 	Warning string `json:"-"`
+}
+
+// DirectorySpec describes a pinned static package without importing its service.
+type DirectorySpec struct {
+	Recipe         string `json:"recipe"`
+	RecipeVersion  string `json:"recipeVersion"`
+	URL            string `json:"url"`
+	SHA256         string `json:"sha256"`
+	Root           string `json:"root"`
+	PackageName    string `json:"packageName"`
+	PackageVersion string `json:"packageVersion"`
+	OS             string `json:"os"`
+	Arch           string `json:"arch"`
 }
 
 // FetchSpec is the input to a FETCH apply: download URL, expected sha256, the

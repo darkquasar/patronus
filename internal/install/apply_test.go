@@ -309,3 +309,18 @@ func TestApplyRecordsOnDiskBytes(t *testing.T) {
 		t.Fatal("the recorded op's After does not match the bytes on disk")
 	}
 }
+
+func TestApplyRejectsDirectoryPackage(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "kit")
+	a := &Applier{Force: true}
+	result, err := a.Apply(cs(diff.FileDiff{Path: path, Action: diff.Fetch, Artifact: "kit", Directory: &diff.DirectorySpec{Recipe: "kit"}}))
+	if err == nil || !strings.Contains(err.Error(), "package delivery service") {
+		t.Fatalf("error = %v", err)
+	}
+	if len(result.Applied) != 0 || result.Failed == nil {
+		t.Fatalf("result = %#v", result)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("directory applier wrote: %v", err)
+	}
+}

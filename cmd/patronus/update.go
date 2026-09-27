@@ -3,13 +3,18 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
+	"github.com/darkquasar/patronus/internal/render"
+	"github.com/darkquasar/patronus/internal/requires"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -34,6 +39,7 @@ func newUpdateCmd() *cobra.Command {
 		deploy bool
 		dryRun bool
 		all    bool
+		force  bool
 	)
 
 	cmd := &cobra.Command{
@@ -134,16 +140,42 @@ func newUpdateCmd() *cobra.Command {
 			recipeAgg := map[recipeKey]*recipeAggEntry{}
 			var recipeOrder []recipeKey // insertion order, for deterministic output
 
+			receipts, err := packagestate.List(home)
+			if err != nil {
+				return fmt.Errorf("read package receipts: %w", err)
+			}
+			receiptByName := make(map[string]*packagestate.Receipt, len(receipts))
+			for i := range receipts {
+				receiptByName[receipts[i].Recipe] = &receipts[i]
+			}
 			for _, scope := range []string{"global", "local"} {
 				sp := removeStatePath(scope, home, wd)
 				s, err := state.Load(sp)
 				if err != nil {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
+				if scope == "global" {
+					for i := range receipts {
+						state.Merge(s, []state.Item{directoryStateItem(&receipts[i])})
+					}
+				}
 				for _, it := range s.Items {
 					anyInstalled = true
 					if !all && !want[it.Artifact] {
 						continue
+					}
+					if it.PackageReceipt != "" && receiptByName[it.PackageReceipt] == nil {
+						return fmt.Errorf("package %s: discovery reference has no receipt; restore the authoritative receipt before updating", it.Artifact)
+					}
+					if receipt := receiptByName[it.Artifact]; receipt != nil {
+						if scope != "global" || it.Tool != recipe.TargetAgnostic {
+							continue
+						}
+						rec := findRecipe(cat, it.Artifact)
+						if rec != nil && (rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory") {
+							return fmt.Errorf("package %s: selected catalog no longer provides directory delivery", it.Artifact)
+						}
+						it.ItemVersion = receipt.RecipeVersion
 					}
 					if catalogHasRecipe(cat, it.Artifact) {
 						k := recipeKey{it.Artifact, it.Scope}
@@ -199,29 +231,128 @@ func newUpdateCmd() *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
-			updated := 0
+			var selected []candidate
+			batch := &diff.ChangeSet{}
 			for _, c := range candidates {
+				rec := findRecipe(cat, c.name)
+				directory := rec != nil && rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory"
 				switch {
 				case c.latest == "":
 					fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", c.name)
-				case c.installed == "":
-					// We never recorded a version (a pre-versioning install). Both
-					// artifacts and recipes record their version now (ADR-0004), so this
-					// only fires for state written before that.
-					fmt.Fprintf(out, "%s: installed version unknown — refreshing to %s\n", c.name, c.latest)
-					if err := reinstall(cmd, c.name, c.tool, c.scope, deploy); err != nil {
-						return err
+				case c.installed == c.latest && !(directory && force):
+					if directory {
+						tx, err := packagestate.ReadTransaction(home, c.name)
+						if err != nil {
+							return err
+						}
+						if tx != nil {
+							fmt.Fprintf(out, "%s: pending recovery (%s); retry install %s --deploy\n", c.name, tx.Phase, c.name)
+							continue
+						}
 					}
-					updated++
-				case c.installed == c.latest:
 					fmt.Fprintf(out, "%s: up to date (%s)\n", c.name, c.installed)
 				default:
-					fmt.Fprintf(out, "%s: %s -> %s\n", c.name, c.installed, c.latest)
-					if err := reinstall(cmd, c.name, c.tool, c.scope, deploy); err != nil {
+					if c.installed == "" {
+						fmt.Fprintf(out, "%s: installed version unknown — refreshing to %s\n", c.name, c.latest)
+					} else {
+						fmt.Fprintf(out, "%s: %s -> %s\n", c.name, c.installed, c.latest)
+					}
+					selected = append(selected, c)
+				}
+			}
+			// A directory anywhere in the selected dependency closure adds a batch
+			// barrier. Legacy-only updates retain planning immediately before apply.
+			hasDirectory := false
+			for _, c := range selected {
+				for _, name := range requires.Expand([]string{c.name}, cat.Deps) {
+					rec := findRecipe(cat, name)
+					if rec != nil && rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory" {
+						hasDirectory = true
+					}
+				}
+			}
+			planCandidate := func(c candidate) (plannedInstall, error) {
+				tool := c.tool
+				if tool == recipe.TargetAgnostic {
+					tool = ""
+				}
+				return planInstall(cmd, installPlanRequest{Names: []string{c.name}, Tool: tool, Scope: c.scope, Home: home, ProjectDir: wd, Registry: regSel, Catalog: cat})
+			}
+			var planned []plannedInstall
+			if hasDirectory {
+				for _, c := range selected {
+					p, err := planCandidate(c)
+					if err != nil {
 						return err
 					}
-					updated++
+					planned = append(planned, p)
+					batch.Diffs = append(batch.Diffs, p.Changes.Diffs...)
 				}
+				if deploy && !jsonOutput {
+					if err := preflightDirectories(home, batch, force); err != nil {
+						return err
+					}
+				}
+			}
+			// Deploy the selected directory batch under one lock, before handing
+			// any remaining file work to the legacy per-candidate applier.
+			if hasDirectory && deploy && !jsonOutput {
+				for _, p := range planned {
+					p.Changes.DryRun = false
+					render.PrintPlan(out, p.Changes, p.Resolver, false)
+					printReadiness(out, readinessReport(p.Changes, exec.LookPath))
+					printPathReadiness(out, pathReadiness(p.Changes, pathDirs(os.Getenv("PATH"))))
+				}
+				result, err := deployDirectories(cmd.Context(), home, batch, force)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(out, "Packages: %d committed, %d unchanged\n", result.Written, result.Skipped)
+				printDirectoryReadiness(out, batch)
+			}
+			updated := 0
+			for i, c := range selected {
+				var p plannedInstall
+				if hasDirectory && !deploy {
+					p = planned[i]
+				} else {
+					p, err = planCandidate(c)
+					if err != nil {
+						return err
+					}
+				}
+				p.Changes.DryRun = !deploy
+				for _, w := range planWarnings(p.Changes) {
+					warnf("%s", w)
+				}
+				if jsonOutput {
+					if err := render.JSON(out, p.Changes); err != nil {
+						return err
+					}
+					continue
+				}
+				if !hasDirectory || !deploy {
+					render.PrintPlan(out, p.Changes, p.Resolver, false)
+					printReadiness(out, readinessReport(p.Changes, exec.LookPath))
+					printPathReadiness(out, pathReadiness(p.Changes, pathDirs(os.Getenv("PATH"))))
+				}
+				if deploy {
+					if hasDirectory {
+						legacy := &diff.ChangeSet{DryRun: false}
+						for _, d := range p.Changes.Diffs {
+							if d.Directory == nil {
+								legacy.Diffs = append(legacy.Diffs, d)
+							}
+						}
+						p.Changes = legacy
+					}
+					// Legacy overwrites retain existing update semantics; directory
+					// force is exclusively the flag the user supplied.
+					if err := runDeploy(cmd, p.Changes, p.Resolver, deployOptions{force: true, home: home, projectDir: wd}); err != nil {
+						return err
+					}
+				}
+				updated++
 			}
 			if !deploy && updated > 0 {
 				fmt.Fprintln(out, "\n(dry run — pass --deploy to apply updates)")
@@ -233,6 +364,7 @@ func newUpdateCmd() *cobra.Command {
 	addRegistryFlags(cmd, &regSel) // --local-registry + --registry-url, same as list/install
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually re-install updated items (default: dry run only)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
+	cmd.Flags().BoolVar(&force, "force", false, "replace edited owned directory package files; legacy updates already overwrite their files")
 	cmd.Flags().BoolVar(&all, "all", false, "check every installed item for updates")
 	return cmd
 }
@@ -298,36 +430,4 @@ func catalogHasProfile(cat *registry.Catalog, name string) bool {
 		}
 	}
 	return false
-}
-
-// reinstall re-drives the install command for one item at its recorded tool/scope,
-// reusing the entire materialize → plan → deploy → state-record pipeline (so the
-// new version is recorded the same way a fresh install records it). Honors --deploy;
-// without it, install renders a dry-run plan.
-func reinstall(cmd *cobra.Command, name, tool, scope string, deploy bool) error {
-	args := []string{name}
-	// A real tool name selects exactly that runtime. The agnostic install row
-	// (a binary/package-only recipe) has no runtime to wire, so it omits --target
-	// entirely — the required-target gate returns false for it, so the bare install
-	// is allowed. An empty tool likewise means "no runtime wiring".
-	if tool != "" && tool != recipe.TargetAgnostic {
-		args = append(args, "--target", tool)
-	}
-	switch scope {
-	case "global":
-		args = append(args, "--global")
-	case "local":
-		args = append(args, "--local")
-	}
-	if deploy {
-		args = append(args, "--deploy", "--force") // an update intentionally overwrites the prior install
-	}
-
-	in := newInstallCmd()
-	in.SetArgs(args)
-	in.SetOut(cmd.OutOrStdout())
-	in.SetErr(cmd.ErrOrStderr())
-	in.SetIn(cmd.InOrStdin())
-	in.SetContext(cmd.Context())
-	return in.Execute()
 }
