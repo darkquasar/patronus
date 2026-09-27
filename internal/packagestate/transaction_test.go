@@ -311,3 +311,28 @@ func TestTransactionRetryRepairsAncestorDurability(t *testing.T) {
 		})
 	}
 }
+
+func TestTransactionRootPresence(t *testing.T) {
+	home := t.TempDir()
+	tx := transactionFixture(t, home)
+	tx.RootExisted = true
+	if err := WriteTransaction(home, tx); err == nil {
+		t.Fatal("existing unowned root accepted")
+	}
+	tx.Previous = tx.Candidate
+	if err := WriteTransaction(home, tx); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadTransaction(home, tx.Recipe)
+	if err != nil || !got.RootExisted {
+		t.Fatalf("root presence lost: %+v %v", got, err)
+	}
+	tx.RootExisted = false
+	if err := WriteTransaction(home, tx); err != nil {
+		t.Fatal(err)
+	}
+	got, err = ReadTransaction(home, tx.Recipe)
+	if err != nil || got.RootExisted {
+		t.Fatalf("receipt incorrectly implies root presence: %+v %v", got, err)
+	}
+}
