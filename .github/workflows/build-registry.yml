@@ -17,7 +17,17 @@ on:
       - "recipes/**"
       - "profiles/**"
       - "adapters/**" # adapters are embedded into the registry's transform path
-      - "cmd/patronus/build.go"
+      - "packages/**"
+      - "cmd/patronus/build*.go"
+      - "cmd/patronus/check*versions*.go"
+      - "internal/packagebundle/**"
+      - "internal/manifest/**"
+      - "internal/lock/**"
+      - "internal/archive/**"
+      - "internal/install/**"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/build-registry.yml"
       - "internal/registry/**"
   push:
     branches: [main]
@@ -26,7 +36,17 @@ on:
       - "recipes/**"
       - "profiles/**"
       - "adapters/**"
-      - "cmd/patronus/build.go"
+      - "packages/**"
+      - "cmd/patronus/build*.go"
+      - "cmd/patronus/check*versions*.go"
+      - "internal/packagebundle/**"
+      - "internal/manifest/**"
+      - "internal/lock/**"
+      - "internal/archive/**"
+      - "internal/install/**"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/build-registry.yml"
       - "internal/registry/**"
 
 permissions:
