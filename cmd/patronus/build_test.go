@@ -30,7 +30,7 @@ func runBuild(t *testing.T, args ...string) (string, error) {
 // and every artifact's tarball exists at its immutable name/version key.
 func TestBuildProducesLoadableIndex(t *testing.T) {
 	outDir := t.TempDir()
-	if _, err := runBuild(t, "--out", outDir, "--base-url", "https://registry.test"); err != nil {
+	if _, err := runBuild(t, "--out", outDir, "--base-url", registry.DefaultRegistryURL); err != nil {
 		t.Fatalf("build failed: %v", err)
 	}
 
@@ -55,7 +55,7 @@ func TestBuildProducesLoadableIndex(t *testing.T) {
 		if _, err := os.Stat(key); err != nil {
 			t.Errorf("tarball %s missing: %v", key, err)
 		}
-		wantURL := "https://registry.test/catalog/" + n + "/" + v + "/" + n + "-" + v + ".tar.gz"
+		wantURL := registry.DefaultRegistryURL + "/catalog/" + n + "/" + v + "/" + n + "-" + v + ".tar.gz"
 		if a.Tarball.URL != wantURL {
 			t.Errorf("%s: tarball URL = %q, want %q", n, a.Tarball.URL, wantURL)
 		}

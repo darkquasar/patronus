@@ -260,6 +260,7 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		// P7.5.5 L6 sandbox: srt (install-only npm, @opencode) + microsandbox (wire-only MCP, hard-isolation).
 		"sandbox-runtime": {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireNone, ""},
 		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
+		"pi-sandbox":      {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireNone, ""},
 		// P7.5.6 L8 eval: promptfoo CI gate (install-only npm) — the eval profile.
 		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireNone, ""},
 		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
