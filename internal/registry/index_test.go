@@ -124,3 +124,25 @@ func TestIndexMissingVersionRemainsLegacy(t *testing.T) {
 		t.Fatalf("legacy schema = %d", ix.SchemaVersion)
 	}
 }
+
+func TestIndexExplicitFileUnpack(t *testing.T) {
+	valid := `{"schemaVersion":1,"recipes":[{"manifest":{"apiVersion":"patronus/v2","family":"recipe","role":"sandbox","name":"Legacy","version":"legacy-version","deliver":{"via":"fetch","unpack":"file","url":"https://example.test/script","sha256":"legacy-pin"}}}]}`
+	for _, data := range []string{valid, strings.Replace(valid, `"schemaVersion":1,`, "", 1)} {
+		ix, err := LoadIndex([]byte(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ix.SchemaVersion != 1 || ix.Recipes[0].Manifest.Delivery.Unpack != "file" {
+			t.Fatal("legacy file delivery changed")
+		}
+	}
+	for _, data := range []string{
+		strings.Replace(valid, `"unpack":"file"`, `"unpack":"future"`, 1),
+		strings.Replace(valid, `"unpack":"file"`, `"unpack":"file","package":{"name":"kit","version":"1.0.0"}`, 1),
+		strings.Replace(valid, "patronus/v2", "patronus/v3", 1),
+	} {
+		if _, err := LoadIndex([]byte(data)); err == nil {
+			t.Fatal("invalid file recipe accepted")
+		}
+	}
+}

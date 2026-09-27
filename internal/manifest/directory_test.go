@@ -145,12 +145,14 @@ func TestAPIVersionVocabulary(t *testing.T) {
 
 func TestDirectoryLegacyFileDeliveriesUnchanged(t *testing.T) {
 	for _, delivery := range []string{
-		"deliver: {via: fetch, url: 'https://example.test/script', sha256: legacy-pin}\n",
-		"deliver:\n  via: fetch\n  assets: [{os: darwin, arch: arm64, url: 'https://example.test/binary', sha256: legacy-pin, archive: zip, binaryPath: bin/kit}]\n",
+		"deliver: {via: fetch, unpack: file, url: 'https://example.test/script', sha256: legacy-pin}\n",
+		"deliver:\n  via: fetch\n  unpack: file\n  assets: [{os: darwin, arch: arm64, url: 'https://example.test/binary', sha256: legacy-pin, archive: zip, binaryPath: bin/kit}]\n",
 	} {
 		data := "apiVersion: patronus/v2\nfamily: recipe\nrole: sandbox\nname: Legacy\nversion: legacy-version\n" + delivery
-		if _, err := DecodeRecipe([]byte(data)); err != nil {
-			t.Fatal(err)
+		for _, data := range []string{data, strings.ReplaceAll(strings.ReplaceAll(data, "unpack: file, ", ""), "  unpack: file\n", "")} {
+			if _, err := DecodeRecipe([]byte(data)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }
@@ -172,5 +174,18 @@ func TestDirectoryLoadRecipe(t *testing.T) {
 	}
 	if _, err := LoadRecipe(path); err == nil {
 		t.Fatal("local loader accepted malformed directory delivery")
+	}
+}
+
+func TestFileUnpackRejectsInvalidFields(t *testing.T) {
+	base := "apiVersion: patronus/v2\nfamily: recipe\nrole: sandbox\nname: legacy\nversion: 1.0.0\ndeliver: {via: fetch, unpack: file, url: 'https://example.test/script', sha256: legacy-pin}\n"
+	for _, data := range []string{
+		strings.Replace(base, "unpack: file", "unpack: future", 1),
+		strings.Replace(base, "unpack: file", "unpack: file, package: {name: kit, version: 1.0.0}", 1),
+		strings.Replace(base, "patronus/v2", "patronus/v3", 1),
+	} {
+		if _, err := DecodeRecipe([]byte(data)); err == nil {
+			t.Fatal("invalid file recipe accepted")
+		}
 	}
 }

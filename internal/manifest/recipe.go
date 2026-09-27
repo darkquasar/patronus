@@ -299,7 +299,7 @@ func validateRecipe(r *Recipe) error {
 	if r.APIVersion == "patronus/v3" && (r.Delivery == nil || r.Delivery.Unpack != "directory") {
 		return errors.New("apiVersion patronus/v3 requires directory delivery")
 	}
-	if r.Delivery != nil && (r.Delivery.Unpack != "" || r.Delivery.Package != nil) && r.APIVersion != "patronus/v3" {
+	if r.Delivery != nil && (r.Delivery.Unpack == "directory" || r.Delivery.Package != nil) && r.APIVersion != "patronus/v3" {
 		return errors.New("directory delivery fields require apiVersion patronus/v3")
 	}
 	if r.Delivery != nil && r.Delivery.Unpack == "directory" {
@@ -358,7 +358,7 @@ func validateRecipe(r *Recipe) error {
 // validateDelivery checks the mechanism-specific shape of a deliver block. The
 // via enum is closed; each mechanism then has its own required fields.
 func validateDelivery(d *Delivery) error {
-	if d.Unpack != "" && d.Unpack != "directory" {
+	if d.Unpack != "" && d.Unpack != "file" && d.Unpack != "directory" {
 		return fmt.Errorf("invalid deliver.unpack %q", d.Unpack)
 	}
 	if d.Package != nil && d.Unpack != "directory" {
