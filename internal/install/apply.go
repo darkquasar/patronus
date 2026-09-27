@@ -77,6 +77,10 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 	res := &Result{}
 	for i := range cs.Diffs {
 		d := cs.Diffs[i]
+		if d.Directory != nil {
+			res.Failed = &d
+			return res, fmt.Errorf("directory package %q requires the package delivery service", d.Artifact)
+		}
 		if d.IsDir {
 			continue // display-only summary row
 		}
