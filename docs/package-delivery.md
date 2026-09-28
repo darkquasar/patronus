@@ -175,3 +175,36 @@ build contains no package objects.
 For local publication verification, run
 `bash scripts/tests/publish-packages-test.sh`. Its AWS and Git commands are fakes;
 it uses no cloud credentials and makes no network requests.
+
+## Local release verification
+
+Run the repository quality gates, the lifecycle tests and both publication shell
+suites before preparing a release:
+
+```sh
+gofmt -l .
+go vet ./...
+golangci-lint run
+go test -race ./...
+go test -race ./cmd/patronus -run 'DirectoryLifecycle|DirectoryMultiRecipe' -count=1
+bash scripts/tests/publish-packages-test.sh
+bash scripts/tests/check-catalog-publication-test.sh
+go run ./cmd/patronus build --out /tmp/patronus-package-release
+go run ./cmd/patronus check-versions
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o /tmp/patronus-darwin-arm64 ./cmd/patronus
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/patronus-linux-amd64 ./cmd/patronus
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o /tmp/patronus-windows-amd64.exe ./cmd/patronus
+```
+
+Formatting must produce no output. The lifecycle tests use a temporary home,
+a local catalog and a TLS test server. Subprocess crashes leave real transaction
+journals for restart recovery; a fake command runner checks that installation,
+update and removal make no runtime calls. The Windows build checks compilation
+of the unsupported-platform lock fallback; directory mutation is supported on
+Darwin and Linux.
+
+Record the tested commit with the release evidence. The implementation currently
+has an unreleased supporting binary; this checklist does not establish a released
+version. Static packaging checks do not validate VM launch, authentication,
+model access or optional Herdr integration. The release operator must complete
+the binary release and catalog activation steps above separately.

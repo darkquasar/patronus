@@ -154,3 +154,12 @@ platform asset. Never use a rolling image tag or a guessed package checksum.
 See [package delivery](docs/package-delivery.md#authoring-a-package) for the
 descriptor, sidecars and version rules. Run the four repository quality gates
 before committing. Local builds do not upload package objects or launch sbx.
+
+For directory-delivery changes, also run the lifecycle tests, both publication
+shell suites and the three cross-builds in the
+[local release checklist](docs/package-delivery.md#local-release-verification).
+Keep cross-build outputs outside the checkout. Use `CGO_ENABLED=0` for those
+builds; the native race suite requires CGO enabled. Windows compilation checks
+the unsupported-platform fallback and does not establish directory mutation
+support there. Record the tested revision and any untested runtime behavior in
+the release handoff.
