@@ -1,0 +1,15 @@
+Pi sandbox kit
+
+Derived from Docker sbx-kits-contrib/pi at
+869c83997680a252ed2b35671b3fd0d9adc2d487.
+Copyright 2026 Docker, Inc.
+Licensed under the Apache License, Version 2.0; see LICENSE.
+
+Patronus modifications (2026-09-28): replace the rolling image reference
+and its rolling-update comments with an immutable image digest; provide
+package-specific documentation and explicit static payload inventory.
+Add a pinned pi-subagents 0.71.0 installation to sbx setup after npm proxy
+configuration. The upstream credential declarations remain unchanged.
+pi-subagents is separately downloaded inside the VM, not redistributed in
+this tarball; its upstream license is MIT:
+https://github.com/nicobailon/pi-subagents/blob/main/LICENSE

@@ -19,6 +19,7 @@ func PrintPlan(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver, verbose boo
 		return
 	}
 	PrintSummaryTable(w, cs, r)
+	printDirectoryDetails(w, cs)
 	fmt.Fprintln(w)
 	PrintChangeTree(w, cs, r)
 	if verbose {
@@ -424,4 +425,18 @@ func splitSegments(p string) []string {
 		return append([]string{"/" + rest[0]}, rest[1:]...)
 	}
 	return strings.Split(p, "/")
+}
+
+// printDirectoryDetails keeps package pins and ownership diagnostics visible without verbose output.
+func printDirectoryDetails(w io.Writer, cs *diff.ChangeSet) {
+	for _, d := range cs.Diffs {
+		p := d.Directory
+		if p == nil {
+			continue
+		}
+		fmt.Fprintf(w, "\nPackage: %s@%s (recipe %s@%s, %s/%s)\nURL: %s\nSHA-256: %s\nDestination: %s\n", p.PackageName, p.PackageVersion, p.Recipe, p.RecipeVersion, p.OS, p.Arch, p.URL, p.SHA256, p.Root)
+		if d.Note != "" {
+			fmt.Fprintln(w, d.Note)
+		}
+	}
 }

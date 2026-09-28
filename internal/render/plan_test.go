@@ -377,3 +377,27 @@ func TestPlanRendersEveryRemovedContributor(t *testing.T) {
 		t.Errorf("the footer must report 3 RESTORE (one per artifact removed), got:\n%s", out)
 	}
 }
+
+func TestDirectoryPlanDetailsInTableAndJSON(t *testing.T) {
+	for _, note := range []string{"unchanged; verify owned package", "owned-drift: README.md; retry --force", "pending recovery: committed"} {
+		t.Run(note, func(t *testing.T) {
+			p := &diff.DirectorySpec{Recipe: "kit", RecipeVersion: "1.2.0", URL: "https://example.test/kit.tar.gz", SHA256: "sha256:" + strings.Repeat("a", 64), Root: "/home/u/.patronus/packages/kit", PackageName: "payload", PackageVersion: "2.3.0", OS: "linux", Arch: "amd64"}
+			cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{{Path: p.Root, Action: diff.Fetch, Artifact: "kit", Directory: p, Note: note}}}
+			var table, encoded bytes.Buffer
+			PrintPlan(&table, cs, testResolver(), false)
+			if err := JSON(&encoded, cs); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{p.PackageName, p.PackageVersion, p.URL, p.SHA256, p.Root, note} {
+				if !strings.Contains(table.String(), want) || !strings.Contains(encoded.String(), want) {
+					t.Fatalf("missing %q\ntable:%s\njson:%s", want, table.String(), encoded.String())
+				}
+			}
+			for _, key := range []string{`"directory"`, `"recipeVersion"`, `"packageVersion"`, `"sha256"`} {
+				if !strings.Contains(encoded.String(), key) {
+					t.Fatalf("missing key %s", key)
+				}
+			}
+		})
+	}
+}

@@ -1,59 +1,121 @@
-# publish-catalog — publishes the catalog to the Cloudflare R2 registry.
-#
-# Runs on a push to main (or a tag) that touches catalog content, builds the
-# registry, and syncs it to R2 with an IMMUTABILITY GUARD: each item tarball lives
-# at a write-once key catalog/<name>/<version>/...; this job refuses to overwrite
-# an existing version with different bytes (that would break every lock pinning it).
-# The discovery index.json is the one mutable file — always overwritten, served
-# no-cache.
-#
-# Credentials come from the protected `production` GitHub environment (branch-
-# restricted to main + v*; fork PRs get no secrets), so only reviewed code on a
-# trusted ref can publish. The client read path is anonymous HTTPS — these write
-# credentials never ship in the binary.
+# Build without production credentials; publish verified immutable objects before discovery.
 name: publish-catalog
 
 on:
-  # Manual re-publish / re-sync. Safe by construction: workflow_dispatch can only
-  # be triggered by someone with write access to THIS repo (forks have their own
-  # Actions; PR authors cannot dispatch here), it runs the workflow from a ref you
-  # pick (default main), and the `production` environment's branch rules (main + v*)
-  # still gate the R2 secrets — so a dispatch is no more privileged than a push.
-  # Re-running with no catalog change is a no-op thanks to the immutability guard
-  # (every item key skips as already-published-identical).
   workflow_dispatch:
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "artifacts/**"
       - "recipes/**"
       - "profiles/**"
       - "adapters/**"
-      - "cmd/patronus/build.go"
-      - "internal/registry/**"
-    tags: ["v*"]
+      - "packages/**"
+      # The build command compiles the whole CLI and its transitive dependencies.
+      - "cmd/**"
+      - "internal/**"
+      - "go.mod"
+      - "go.sum"
+      - "scripts/**"
+      - ".golangci.yml"
+      - ".github/workflows/publish-catalog.yml"
 
 permissions:
   contents: read
 
+# One group across main, tags and manual runs. Never interrupt an active publication.
+concurrency:
+  group: publish-catalog-production
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    environment: production # branch-restricted (main + v*); holds the R2 secrets
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: auto
-      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-      BUCKET: patronus-registry
+    outputs:
+      publish: ${{ steps.guard.outputs.publish }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-
-      - name: Build registry (R2-layout catalog/ tree)
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+      - name: test
+        run: go test -race ./...
+      - name: Publication contract tests
+        run: |
+          bash scripts/tests/check-catalog-publication-test.sh
+          bash scripts/tests/publish-packages-test.sh
+      - name: Build registry
         run: go run ./cmd/patronus build --out registry/
+      - name: Check catalog publication activation
+        id: guard
+        env:
+          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
+        run: bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry
+          path: registry/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      AWS_PAGER: ""
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: patronus-registry
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: registry
+          path: registry/
+      - name: Install pinned AWS CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.31.0.zip -o /tmp/awscli.zip
+          unzip -q /tmp/awscli.zip -d /tmp/patronus-awscli
+          sudo /tmp/patronus-awscli/aws/install --update
+          aws --version | grep -E '^aws-cli/2\.31\.0 '
+      - name: Check current main after acquiring publication job
+        id: eligibility
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)" ]; then
+            echo 'index=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'index=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Stale ref: immutable objects may publish, but the discovery index is skipped.'
+          fi
+      - name: Recheck catalog activation before any upload
+        id: guard
+        env:
+          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
+        run: |
+          result=$(bash scripts/check-catalog-publication.sh registry)
+          echo "$result" >> "$GITHUB_OUTPUT"
+          [ "$result" = 'publish=true' ]
+      - name: Publish directory packages and sidecars
+        run: bash scripts/publish-packages.sh registry
 
       - name: Publish item tarballs (immutable; check-before-put)
         run: |
@@ -88,8 +150,15 @@ jobs:
           done
 
       - name: Publish discovery index (mutable; no-cache)
+        if: steps.eligibility.outputs.index == 'true'
         run: |
           set -euo pipefail
+          # Check again after all immutable uploads, immediately before mutable writes.
+          git fetch --no-tags origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then
+            echo '::notice::Stale ref: main advanced during publication; discovery index is skipped.'
+            exit 0
+          fi
           cd registry
           for f in catalog/index.json catalog/index.json.sha256; do
             ct="application/json"

@@ -54,6 +54,21 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 		}
 		e.SHA256 = sum
 		e.Version = version
+		if it.Family == manifest.FamilyRecipe {
+			r := findRecipe(cat, it.Name).Manifest
+			if r.Delivery != nil && r.Delivery.Unpack == "directory" {
+				if err := manifest.ValidateRecipe(r); err != nil {
+					return nil, fmt.Errorf("locking recipe %q: %w", it.Name, err)
+				}
+				delivery := *r.Delivery
+				identity := *delivery.Package
+				delivery.Package = &identity
+				delivery.Assets = append([]manifest.Asset(nil), delivery.Assets...)
+				delivery.Install = append([]manifest.InstallCandidate(nil), delivery.Install...)
+				delivery.Platforms = append([]string(nil), delivery.Platforms...)
+				e.Delivery = &delivery
+			}
+		}
 		// For an artifact resolved against the remote registry, the catalog entry
 		// carries the published tarball sha (Source.SHA256). Pin it so install can
 		// verify the exact bytes refetched from R2. Empty for local-checkout items.
@@ -83,9 +98,7 @@ func hashItem(cat *registry.Catalog, it profile.ResolvedItem) (sum, version stri
 			return "", "", fmt.Errorf("recipe not in catalog")
 		}
 		sum, err = hashRecipe(*entry)
-		// Recipes carry no version field today; the manifest (and its pinned asset
-		// SHAs) is the reproducibility anchor. Left empty, forward-compatible.
-		return sum, "", err
+		return sum, entry.Manifest.Version, err
 	default:
 		return "", "", fmt.Errorf("unknown item family %q", it.Family)
 	}

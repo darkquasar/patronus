@@ -34,6 +34,9 @@ type State struct {
 type Item struct {
 	Artifact    string `json:"artifact"`
 	ItemVersion string `json:"itemVersion,omitempty"` // the artifact's own version
+	// PackageReceipt references authoritative package ownership. Empty Files
+	// on a reference row does not mean package removal is complete.
+	PackageReceipt string `json:"packageReceipt,omitempty"`
 
 	// Type is the item's SHAPE (skill|agent|command|hook|instruction, or a
 	// recipe's computed Shape()). It is an ITEM-level property, which is why it

@@ -1,0 +1,19 @@
+apiVersion: patronus/v3
+kind: Recipe
+name: pi-sandbox
+version: 1.1.0
+family: recipe
+role: sandbox
+description: Static standalone Pi sbx kit; launch separately with sbx
+deliver:
+  via: fetch
+  unpack: directory
+  package:
+    name: pi-sandbox
+    version: 1.1.0
+  assets:
+    - os: darwin
+      arch: arm64
+      url: https://registry.patronus.quasarops.com/packages/pi-sandbox/1.1.0/pi-sandbox-1.1.0-darwin-arm64.tar.gz
+      sha256: cb96690c5abaeae8c7363fd542b0336daf466a5acc33f730992ccb679bcaf001
+      archive: tar.gz

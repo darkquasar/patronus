@@ -7,9 +7,11 @@ import (
 	"github.com/darkquasar/patronus/internal/manifest"
 )
 
-// IndexSchemaVersion is bumped when the published index shape changes so an older
-// binary can refuse a newer index rather than mis-parse it.
+// IndexSchemaVersion is the writer default for catalogs without directory recipes.
 const IndexSchemaVersion = 1
+
+// MaxIndexSchemaVersion is the newest index schema accepted by this reader.
+const MaxIndexSchemaVersion = 2
 
 // Index is the published, metadata-ONLY DISCOVERY catalog: "what items exist and
 // what is each one's latest version." It embeds each item's FULL manifest inline
@@ -75,10 +77,29 @@ func LoadIndex(data []byte) (*Index, error) {
 		return nil, fmt.Errorf("registry: parse index: %w", err)
 	}
 	if ix.SchemaVersion == 0 {
-		ix.SchemaVersion = IndexSchemaVersion
+		ix.SchemaVersion = 1
 	}
-	if ix.SchemaVersion > IndexSchemaVersion {
-		return nil, fmt.Errorf("registry: index schema v%d is newer than this binary supports (v%d); upgrade patronus", ix.SchemaVersion, IndexSchemaVersion)
+	if ix.SchemaVersion > MaxIndexSchemaVersion {
+		return nil, fmt.Errorf("registry: index schema v%d is newer than this binary supports (v%d); upgrade patronus", ix.SchemaVersion, MaxIndexSchemaVersion)
+	}
+	if ix.SchemaVersion < 1 {
+		return nil, fmt.Errorf("registry: unsupported index schema v%d", ix.SchemaVersion)
+	}
+	for _, entry := range ix.Recipes {
+		r := entry.Manifest
+		if r == nil {
+			return nil, fmt.Errorf("registry: missing recipe manifest")
+		}
+		// Legacy caches retain their existing validation behavior. New delivery
+		// fields and non-v2 versions must pass the YAML validator after JSON decode.
+		if (r.APIVersion != "" && r.APIVersion != manifest.APIVersion) || (r.Delivery != nil && (r.Delivery.Unpack != "" || r.Delivery.Package != nil)) {
+			if err := manifest.ValidateRecipe(r); err != nil {
+				return nil, fmt.Errorf("registry: recipe %q: %w", r.Name, err)
+			}
+			if r.Delivery != nil && r.Delivery.Unpack == "directory" && ix.SchemaVersion < 2 {
+				return nil, fmt.Errorf("registry: directory recipe %q requires index schema 2", r.Name)
+			}
+		}
 	}
 	return &ix, nil
 }

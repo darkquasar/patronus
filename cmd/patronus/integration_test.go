@@ -55,14 +55,16 @@ func (f *servingFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, er
 func builtRegistry(t *testing.T) *servingFetcher {
 	t.Helper()
 	outDir := t.TempDir()
-	if _, err := runBuild(t, "--out", outDir, "--base-url", testRegistryBase); err != nil {
+	// Real package recipes pin the official URL; the in-memory fetcher below
+	// still serves only local index/artifact bytes and rejects every other URL.
+	if _, err := runBuild(t, "--out", outDir, "--base-url", registry.DefaultRegistryURL); err != nil {
 		t.Fatalf("build registry: %v", err)
 	}
 	return serveTree(t, outDir)
 }
 
 // serveTree maps an on-disk R2-layout tree (<dir>/catalog/...) onto a fetcher
-// keyed by the testRegistryBase URLs the index points at.
+// with the index at testRegistryBase and artifacts at their indexed URLs.
 func serveTree(t *testing.T, outDir string) *servingFetcher {
 	t.Helper()
 	bodies := map[string][]byte{}

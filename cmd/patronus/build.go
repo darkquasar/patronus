@@ -26,8 +26,9 @@ import (
 // engine, so the registry stays small and tool-agnostic.
 func newBuildCmd() *cobra.Command {
 	var (
-		out     string
-		baseURL string
+		out         string
+		baseURL     string
+		packageName string
 	)
 
 	cmd := &cobra.Command{
@@ -54,8 +55,26 @@ func newBuildCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if packageName != "" {
+				built, err := buildPackage(root, packageName, out)
+				if err != nil {
+					return err
+				}
+				for _, p := range built {
+					fmt.Fprintf(cmd.OutOrStdout(), "%s %s %s/%s %s %s\n", p.Identity.Name, p.Identity.Version, p.Identity.OS, p.Identity.Arch, p.Key, p.SHA256)
+				}
+				return nil
+			}
 			cat, err := registry.NewLocalRegistry(root).Catalog(cmd.Context())
 			if err != nil {
+				return err
+			}
+
+			built, err := buildReferencedPackages(root, out, cat)
+			if err != nil {
+				return err
+			}
+			if err := verifyPackagePins(cat, built, baseURL); err != nil {
 				return err
 			}
 
@@ -65,8 +84,13 @@ func newBuildCmd() *cobra.Command {
 			}
 
 			ix := &registry.Index{
+				// Keep the emitted schema independent of the reader maximum.
 				SchemaVersion: registry.IndexSchemaVersion,
 				Generated:     time.Now().UTC().Format(time.RFC3339),
+			}
+
+			if len(built) > 0 {
+				ix.SchemaVersion = 2
 			}
 
 			for i := range cat.Artifacts {
@@ -106,12 +130,13 @@ func newBuildCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := install.WriteFileAtomic(filepath.Join(catalogDir, "index.json"), data, 0o644); err != nil {
-				return err
-			}
 			sum := sha256.Sum256(data)
 			shaLine := []byte("sha256:" + hex.EncodeToString(sum[:]) + "\n")
 			if err := install.WriteFileAtomic(filepath.Join(catalogDir, "index.json.sha256"), shaLine, 0o644); err != nil {
+				return err
+			}
+
+			if err := install.WriteFileAtomic(filepath.Join(catalogDir, "index.json"), data, 0o644); err != nil {
 				return err
 			}
 
@@ -121,6 +146,7 @@ func newBuildCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&packageName, "package", "", "build one package without loading the catalog, for pin preparation")
 	cmd.Flags().StringVar(&out, "out", "registry", "output directory for the built registry tree")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "public base URL for tarball links (default: the official R2 registry)")
 	return cmd

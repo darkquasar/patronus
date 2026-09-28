@@ -107,7 +107,7 @@ func pathReadiness(cs *diff.ChangeSet, pathDirs []string) []pathReadinessRow {
 	}
 	var rows []pathReadinessRow
 	for _, d := range cs.Diffs {
-		if d.Action != diff.Fetch {
+		if d.Action != diff.Fetch || d.Directory != nil {
 			continue
 		}
 		dir := filepath.Dir(d.Path)

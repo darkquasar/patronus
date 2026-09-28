@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../schemas/package-v1.schema.json
+schemaVersion: 1
+name: pi-sandbox
+version: 1.1.0
+platforms:
+  - os: darwin
+    arch: arm64
+payload:
+  - path: spec.yaml
+    executable: false
+  - path: README.md
+    executable: false
+  - path: LICENSE
+    executable: false
+  - path: NOTICE
+    executable: false
