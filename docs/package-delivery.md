@@ -129,3 +129,49 @@ the recipe. Package versions and recipe versions are independent. Change the
 package version when payload bytes change, rebuild and update its recipe pins.
 These authoring commands create local output only; publication is a separate
 operation through the existing catalog workflow.
+
+## Release and catalog activation
+
+The catalog workflow builds and tests the registry without production credentials.
+A separate job receives the built artifact and the protected `production`
+environment. It publishes in this order:
+
+```text
+build + checks -> activation guard -> packages + sidecars -> legacy artifacts
+                                                            |
+                                         current-main check -> index
+```
+
+Directory package tarballs, `.sha256` files and `.provenance.json` files use
+conditional creation at immutable keys. An existing tarball must have matching
+SHA-256 metadata. Checksum sidecars must match the build and their downloaded
+bytes must match their metadata. For identical package bytes, publication keeps
+the first valid provenance, even if a later build has a different repository
+commit or CI run. Missing metadata, conflicting bytes, failed verification and
+upload errors stop publication before the index changes. A conditional PUT race
+verifies the winner; it never retries with an unconditional overwrite.
+
+Publication runs share one concurrency group and do not cancel an active run.
+The protected job checks whether its commit is current main after it starts and
+again immediately before writing the index. A stale tag or manual run can publish
+immutable objects but skips the index with a notice. The workflow pins AWS CLI
+2.31.0 for conditional PUT support. Legacy artifact behavior, including skipping
+an existing artifact without checksum metadata, remains unchanged.
+
+To activate directory delivery:
+
+1. Release a Patronus binary that supports directory packages and index schema 2.
+2. Have the release operator set the repository Actions variable
+   `DIRECTORY_PACKAGES_ENABLED=true`.
+3. Run `publish-catalog` from current main and check its publication results.
+
+Activation is an explicit operator action. Implementation and tests do not enable
+it. Before activation, a schema-2 build skips the entire catalog publication,
+including unrelated catalog changes once a directory recipe has merged. The
+existing catalog remains available until activation; there is no parallel legacy
+catalog. The activation guard runs before any production upload, even when the
+build contains no package objects.
+
+For local publication verification, run
+`bash scripts/tests/publish-packages-test.sh`. Its AWS and Git commands are fakes;
+it uses no cloud credentials and makes no network requests.

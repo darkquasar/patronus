@@ -41,6 +41,17 @@ assert 'id: guard' in text
 assert 'bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"' in text
 uploads = [step for step in text.split('      - ') if 'aws s3api put-object' in step]
 assert uploads, 'no upload steps inspected'
-assert all("if: steps.guard.outputs.publish == 'true'" in step for step in uploads), 'unguarded upload'
+build, publish = text.split('  publish:\n', 1)
+assert "publish: ${{ steps.guard.outputs.publish }}" in build
+assert "needs: build" in publish
+assert "if: needs.build.outputs.publish == 'true'" in publish
+assert 'environment: production' in publish
+assert 'aws s3api put-object' not in build
+assert 'secrets.' not in build
+assert publish.index('bash scripts/check-catalog-publication.sh registry') < publish.index('bash scripts/publish-packages.sh registry')
+assert publish.index('bash scripts/publish-packages.sh registry') < publish.index('aws s3api put-object')
+index = publish.split('      - name: Publish discovery index', 1)[1]
+assert "if: steps.eligibility.outputs.index == 'true'" in index
+assert index.index('git fetch --no-tags origin main') < index.index('aws s3api put-object')
 PY
 printf 'catalog publication guard tests passed\n'
