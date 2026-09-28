@@ -20,8 +20,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// APIVersion is the only manifest schema version Patronus understands today.
+// APIVersion is the default schema for existing manifest families.
 const APIVersion = "patronus/v2"
+
+// SupportsAPIVersion reports the supported vocabulary; family-specific validation
+// still restricts v3 to directory recipes.
+func SupportsAPIVersion(v string) bool {
+	return v == APIVersion || v == "patronus/v3"
+}
 
 // Family is the dispatch discriminator: how an installable is delivered and
 // installed. It is the single field the loader switches on to pick the concrete
@@ -138,8 +144,11 @@ type Installable interface {
 // validateMeta checks the fields common to every installable: the schema
 // version, the expected family, and the universally-required identity fields.
 func validateMeta(m Meta, want Family) error {
-	if m.APIVersion != APIVersion {
+	if !SupportsAPIVersion(m.APIVersion) {
 		return fmt.Errorf("unexpected apiVersion %q (want %q)", m.APIVersion, APIVersion)
+	}
+	if m.APIVersion == "patronus/v3" && want != FamilyRecipe {
+		return fmt.Errorf("apiVersion patronus/v3 is only supported for directory recipes")
 	}
 	if m.Family != want {
 		return fmt.Errorf("expected family %q, got %q", want, m.Family)

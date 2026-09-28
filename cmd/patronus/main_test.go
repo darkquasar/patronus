@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 )
@@ -24,8 +25,9 @@ import (
 type deniedFetcher struct{}
 
 var (
-	_ recipe.Fetcher   = deniedFetcher{}
-	_ registry.Fetcher = deniedFetcher{}
+	_ packagedelivery.Fetcher = deniedFetcher{}
+	_ recipe.Fetcher          = deniedFetcher{}
+	_ registry.Fetcher        = deniedFetcher{}
 )
 
 func (deniedFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, error) {
@@ -34,11 +36,16 @@ func (deniedFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, error)
 		"\nNever fetch upstream bytes in a test.")
 }
 
+func (f deniedFetcher) Open(ctx context.Context, url string) (io.ReadCloser, error) {
+	return f.Fetch(ctx, url)
+}
+
 // TestMain denies every fetcher seam by default. A test that wants bytes must
 // explicitly install a servingFetcher.
 func TestMain(m *testing.M) {
 	fetcherForCommands = deniedFetcher{}
 	registryFetcher = deniedFetcher{}
 	fetcherForDeploy = deniedFetcher{}
+	directoryFetcherForDeploy = deniedFetcher{}
 	os.Exit(m.Run())
 }
