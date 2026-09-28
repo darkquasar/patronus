@@ -132,7 +132,26 @@ else: raise AssertionError(op)
         step = workflow.split('      - name: '+name+'\n', 1)[1].split('      - ', 1)[0]
         return '\n'.join(line[10:] for line in step.split('        run: |\n', 1)[1].splitlines())
     git = binpath/'git'
-    git.write_text("#!/bin/sh\ncase \"$*\" in\n  'fetch --no-tags origin main') exit 0;;\n  'rev-parse HEAD') echo built;;\n  'rev-parse FETCH_HEAD') echo \"${FAKE_MAIN:-built}\";;\n  *) exit 99;;\nesac\n")
+    # Each workflow fetch observes main afresh. Keep the counter outside the
+    # subprocess so the second eligibility check can see a newer revision.
+    git.write_text("""#!/bin/sh
+case "$*" in
+  'fetch --no-tags origin main')
+    count=0
+    [ ! -f "$FAKE_STORE/fetch-count" ] || count=$(cat "$FAKE_STORE/fetch-count")
+    echo $((count+1)) > "$FAKE_STORE/fetch-count";;
+  'rev-parse HEAD') echo built;;
+  'rev-parse FETCH_HEAD')
+    if [ "${FAKE_MAIN:-built}" = advances ] && [ "$(cat "$FAKE_STORE/fetch-count")" -gt 1 ]; then
+      echo newer
+    elif [ "${FAKE_MAIN:-built}" = advances ]; then
+      echo built
+    else
+      echo "${FAKE_MAIN:-built}"
+    fi;;
+  *) exit 99;;
+esac
+""")
     git.chmod(0o755)
     index = block('Publish discovery index (mutable; no-cache)')
     eligibility = block('Check current main after acquiring publication job')
@@ -164,11 +183,19 @@ else: raise AssertionError(op)
     store, result = workflow_run('stale-index', main='newer')
     assert result.returncode == 0 and '::notice::Stale ref' in result.stdout
     assert 'put-object catalog/' not in (store/'calls').read_text()
+    (base/'outputs').write_text('')
+    store, result = workflow_run('main-advances', main='advances')
+    assert result.returncode == 0 and '::notice::Stale ref' in result.stdout, (result.stdout, result.stderr)
+    assert 'index=true' in (base/'outputs').read_text(), 'first check was not eligible'
+    assert (store/'fetch-count').read_text().strip() == '2', 'both main checks must execute'
+    puts = [line for line in (store/'calls').read_text().splitlines() if line.startswith('put-object')]
+    assert puts == ['put-object '+key+s for s in ('', '.sha256', '.provenance.json')], puts
+    print('PASS main advances between eligibility checks; immutable packages retained, index not uploaded')
     store, result = workflow_run('inactive-schema', active='false')
     assert result.returncode == 0 and not (store/'calls').exists()
     assert "if: needs.build.outputs.publish == 'true'" in workflow
     assert 'cancel-in-progress: false' in workflow
     build_job = workflow.split('  build:',1)[1].split('  publish:',1)[0]
     assert 'secrets.' not in build_job and 'environment: production' not in build_job
-    print(str(count)+' publication contract cases and 6 workflow ordering/eligibility cases passed')
+    print(str(count)+' publication contract cases and 7 workflow ordering/eligibility cases passed')
 PY

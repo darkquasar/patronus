@@ -368,7 +368,7 @@ func TestDirectoryLifecycleCrashHelper(t *testing.T) {
 	runnerForCommands = &fakeRunner{}
 	directoryLookPath = func(string) (string, error) { return "/fixture/sbx", nil }
 	lifecycleFault(t, func(point string) error {
-		if operation == "replace" && point == "after-stage-rename" || operation == "remove" && point == "after-unlink" {
+		if operation == "replace" && point == "after-stage-rename" || operation == "remove" && point == "after-unlink" || operation == "update-receipt" && point == "after-receipt-save" {
 			if len(runnerForCommands.(*fakeRunner).ran) != 0 {
 				os.Exit(98)
 			}
@@ -377,9 +377,12 @@ func TestDirectoryLifecycleCrashHelper(t *testing.T) {
 		return nil
 	})
 	var err error
-	if operation == "remove" {
+	switch operation {
+	case "update-receipt":
+		_, _, err = runUpdate(t, "kit", "--deploy")
+	case "remove":
 		_, _, err = execRemove(t, "kit", "--deploy")
-	} else {
+	default:
 		_, _, err = runInstall(t, "kit", "--deploy")
 	}
 	t.Fatalf("crash hook missed: %v", err)
@@ -586,4 +589,47 @@ func TestDirectoryMultiRecipeInvalidPin(t *testing.T) {
 		t.Fatal("incomplete directory pin accepted")
 	}
 	lifecycleEqual(t, before, lifecycleSnapshot(t, filepath.Join(f.home, ".patronus")))
+}
+
+func TestDirectoryUpdateRecoversSameVersionAfterReceiptCrash(t *testing.T) {
+	f := newLifecycleFixture(t)
+	f.publish(t, "kit", "1.0.0", lifecycleFile("README.md", "old"))
+	if _, _, err := runInstall(t, "kit", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	rec := f.publish(t, "kit", "2.0.0", lifecycleFile("README.md", "new"))
+	f.crash(t, "update-receipt")
+	tx, err := packagestate.ReadTransaction(f.home, "kit")
+	if err != nil || tx == nil || tx.Phase != packagestate.PackagePlaced {
+		t.Fatalf("precommit journal: %+v %v", tx, err)
+	}
+	if got := lifecycleReceipt(t, f.home, "kit").RecipeVersion; got != "2.0.0" {
+		t.Fatalf("candidate receipt version = %s", got)
+	}
+	before := lifecycleSnapshot(t, filepath.Join(f.home, ".patronus"))
+	if out, _, err := runUpdate(t, "kit"); err != nil || !strings.Contains(out, "pending recovery") {
+		t.Fatalf("read-only update: %s %v", out, err)
+	}
+	lifecycleEqual(t, before, lifecycleSnapshot(t, filepath.Join(f.home, ".patronus")))
+	recovered := false
+	lifecycleFault(t, func(point string) error {
+		if point == "after-prepared" {
+			// A new replacement can only start after rollback restored the previous receipt/tree.
+			if got := lifecycleReceipt(t, f.home, "kit").RecipeVersion; got != "1.0.0" {
+				t.Fatalf("recovery did not restore old receipt: %s", got)
+			}
+			if got := string(mustRead(t, filepath.Join(f.home, ".patronus", "packages", "kit", "README.md"))); got != "old" {
+				t.Fatalf("recovery did not restore old tree: %s", got)
+			}
+			recovered = true
+		}
+		return nil
+	})
+	if _, _, err := runUpdate(t, "kit", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	if !recovered {
+		t.Fatal("same-version update skipped locked recovery and replacement")
+	}
+	f.assertPackage(t, rec, lifecycleFile("README.md", "new"))
 }

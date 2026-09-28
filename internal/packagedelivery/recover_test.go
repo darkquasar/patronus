@@ -3,6 +3,8 @@ package packagedelivery
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -834,4 +836,145 @@ func TestMatchingCollisionRootIsPreserved(t *testing.T) {
 	if string(bytes) != "2.0.0" {
 		t.Fatal("matching unknown root overwritten by rollback")
 	}
+}
+
+// Capture the relocated tree after substitution: the injection itself is allowed
+// to move it, but the service must not rename or unlink anything through the link.
+func deliveryTreeSnapshot(t *testing.T, root string) map[string]string {
+	t.Helper()
+	snapshot := make(map[string]string)
+	must(t, filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		value := fmt.Sprintf("%o", info.Mode())
+		if info.Mode().IsRegular() {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			value += " " + string(data)
+		}
+		snapshot[rel] = value
+		return nil
+	}))
+	return snapshot
+}
+
+func TestReplaceRejectsSubstitutedAncestor(t *testing.T) {
+	for _, point := range []string{"after-intent-move-old", "after-intent-promote-new", "during-backup-cleanup"} {
+		for _, ancestor := range []string{"packages", "transaction"} {
+			t.Run(point+"/"+ancestor, func(t *testing.T) {
+				s, _ := installed(t)
+				req, data := fixture(t, s.Home, "2.0.0")
+				s.Fetcher = data
+				packages := filepath.Dir(req.Root)
+				target := packages
+				if ancestor == "transaction" {
+					target = filepath.Join(packages, ".txn", req.Recipe)
+				}
+				relocated := filepath.Join(t.TempDir(), "relocated")
+				var before map[string]string
+				var journal []byte
+				journalPath := filepath.Join(s.Home, ".patronus", "package-state", "transactions", req.Recipe, "transaction.json")
+				s.Fault = func(p string) error {
+					if p == point {
+						var err error
+						journal, err = os.ReadFile(journalPath)
+						must(t, err)
+						must(t, os.Rename(target, relocated))
+						must(t, os.Symlink(relocated, target))
+						before = deliveryTreeSnapshot(t, relocated)
+					}
+					return nil
+				}
+				_, err := s.Replace(context.Background(), req, false)
+				if before == nil || !errors.Is(err, ErrRecoveryRequired) {
+					t.Fatalf("injection/recovery error: %v", err)
+				}
+				if after := deliveryTreeSnapshot(t, relocated); !reflect.DeepEqual(before, after) {
+					t.Errorf("service mutated substituted tree: before=%v after=%v", before, after)
+				}
+				currentJournal, err := os.ReadFile(journalPath)
+				must(t, err)
+				if string(currentJournal) != string(journal) {
+					t.Error("original recovery evidence changed through unsafe ancestry")
+				}
+				// Recovery must also refuse the substituted ancestor without mutations.
+				s.Fault = nil
+				if err := s.Recover(context.Background(), req.Recipe); !errors.Is(err, ErrRecoveryRequired) {
+					t.Fatalf("unsafe recovery: %v", err)
+				}
+				if after := deliveryTreeSnapshot(t, relocated); !reflect.DeepEqual(before, after) {
+					t.Error("recovery mutated substituted tree")
+				}
+				must(t, os.Remove(target))
+				must(t, os.Rename(relocated, target))
+				must(t, s.Recover(context.Background(), req.Recipe))
+				want := "1.0.0"
+				if point == "during-backup-cleanup" {
+					want = "2.0.0"
+				}
+				assertVersion(t, s.Home, want)
+				_, err = s.Replace(context.Background(), req, false)
+				must(t, err)
+				assertVersion(t, s.Home, "2.0.0")
+				tx, err := packagestate.ReadTransaction(s.Home, req.Recipe)
+				must(t, err)
+				if tx != nil {
+					t.Fatalf("retry left journal: %+v", tx)
+				}
+			})
+		}
+	}
+}
+
+func TestRecoveryRejectsLateSubstitutedBackupAncestor(t *testing.T) {
+	home := t.TempDir()
+	setupCrashBaseline(t, home, false)
+	runCrash(t, home, "after-stage-rename")
+	locked(t, home)
+	tx, err := packagestate.ReadTransaction(home, "kit")
+	must(t, err)
+	ancestor := filepath.Dir(tx.Backup)
+	relocated := filepath.Join(t.TempDir(), "relocated")
+	var before map[string]string
+	activeBefore := deliveryTreeSnapshot(t, tx.Root)
+	s := Service{Home: home, persistence: &persistence{stabilize: func(path string) error {
+		if filepath.Base(path) == "kit.json" {
+			must(t, os.Rename(ancestor, relocated))
+			must(t, os.Symlink(relocated, ancestor))
+			before = deliveryTreeSnapshot(t, relocated)
+		}
+		return nil
+	}}}
+	if err := s.Recover(context.Background(), "kit"); !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("unsafe recovery: %v", err)
+	}
+	if before == nil || !reflect.DeepEqual(before, deliveryTreeSnapshot(t, relocated)) {
+		t.Error("recovery mutated substituted backup tree")
+	}
+	if _, err := os.Stat(tx.Root); err != nil {
+		t.Errorf("recovery removed active candidate before validating backup ancestry: %v", err)
+	} else if !reflect.DeepEqual(activeBefore, deliveryTreeSnapshot(t, tx.Root)) {
+		t.Error("recovery changed active candidate")
+	}
+	must(t, os.Remove(ancestor))
+	must(t, os.Rename(relocated, ancestor))
+	pending, err := packagestate.ReadTransaction(home, "kit")
+	must(t, err)
+	if pending == nil {
+		t.Fatal("recovery evidence lost")
+	}
+	s.persistence = nil
+	must(t, s.Recover(context.Background(), "kit"))
+	assertVersion(t, home, "1.0.0")
 }

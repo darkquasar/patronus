@@ -248,20 +248,21 @@ func newUpdateCmd() *cobra.Command {
 			for _, c := range candidates {
 				rec := findRecipe(cat, c.name)
 				directory := rec != nil && rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory"
+				var pending *packagestate.Transaction
+				if directory {
+					var err error
+					pending, err = packagestate.ReadTransaction(home, c.name)
+					if err != nil {
+						return err
+					}
+				}
 				switch {
 				case c.latest == "":
 					fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", c.name)
+				case pending != nil:
+					fmt.Fprintf(out, "%s: pending recovery (%s); deploy retries recovery under the package lock\n", c.name, pending.Phase)
+					selected = append(selected, c)
 				case c.installed == c.latest && !(directory && force):
-					if directory {
-						tx, err := packagestate.ReadTransaction(home, c.name)
-						if err != nil {
-							return err
-						}
-						if tx != nil {
-							fmt.Fprintf(out, "%s: pending recovery (%s); retry install %s --deploy\n", c.name, tx.Phase, c.name)
-							continue
-						}
-					}
 					fmt.Fprintf(out, "%s: up to date (%s)\n", c.name, c.installed)
 				default:
 					if c.installed == "" {

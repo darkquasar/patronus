@@ -41,9 +41,12 @@ func scanConflict(recipe, root string, scan treeScan, requireAll bool) error {
 
 // removeTree removes only matching recorded files, then empty owned directories.
 // Validate the entire tree before unlinking so an initial conflict preserves it.
-func removeTree(ctx context.Context, recipe, root string, files []packagebundle.Entry, dirs []string) error {
+func removeTree(ctx context.Context, home, recipe, root string, files []packagebundle.Entry, dirs []string) error {
 	if root == "" {
 		return nil
+	}
+	if err := checkAncestry(home, root); err != nil {
+		return err
 	}
 	scan, err := scanTree(ctx, root, files, dirs)
 	if err != nil {
@@ -77,6 +80,9 @@ func removeTree(ctx context.Context, recipe, root string, files []packagebundle.
 		if hash != entry.SHA256 {
 			return &ConflictError{Recipe: recipe, Kind: "pending-recovery", Paths: []string{path}}
 		}
+		if err := checkAncestry(home, filepath.Dir(path)); err != nil {
+			return err
+		}
 		if err := os.Remove(path); err != nil {
 			return err
 		}
@@ -96,6 +102,9 @@ func removeTree(ctx context.Context, recipe, root string, files []packagebundle.
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			return &ConflictError{Recipe: recipe, Kind: "pending-recovery", Paths: []string{path}}
+		}
+		if err := checkAncestry(home, filepath.Dir(path)); err != nil {
+			return err
 		}
 		if err := os.Remove(path); err != nil {
 			return errors.Join(err, &ConflictError{Recipe: recipe, Kind: "pending-recovery", Paths: []string{path}})
@@ -192,6 +201,7 @@ func (s *Service) Recover(ctx context.Context, recipe string) error {
 	return nil
 }
 func (s *Service) rollback(ctx context.Context, tx *packagestate.Transaction) error {
+	home := filepath.Dir(filepath.Dir(filepath.Dir(tx.Root)))
 	current, err := packagestate.Load(s.Home, tx.Recipe)
 	if err != nil {
 		return err
@@ -201,6 +211,13 @@ func (s *Service) rollback(ctx context.Context, tx *packagestate.Transaction) er
 	}
 
 	if tx.Operation == "replace" {
+		// Validate every participant before removing a promoted candidate: an
+		// unsafe backup must not leave the active tree needlessly absent.
+		for _, path := range []string{tx.Root, tx.Stage, tx.Backup} {
+			if err := checkAncestry(home, path); err != nil {
+				return err
+			}
+		}
 		backup, err := exists(tx.Backup)
 		if err != nil {
 			return err
@@ -234,11 +251,11 @@ func (s *Service) rollback(ctx context.Context, tx *packagestate.Transaction) er
 				if stage {
 					return &ConflictError{Recipe: tx.Recipe, Kind: "pending-recovery", Paths: []string{tx.Root}}
 				}
-				if err := removeTree(ctx, tx.Recipe, tx.Root, tx.Candidate.Files, tx.Candidate.Directories); err != nil {
+				if err := removeTree(ctx, home, tx.Recipe, tx.Root, tx.Candidate.Files, tx.Candidate.Directories); err != nil {
 					return err
 				}
 			}
-			if err := durableRename(tx.Backup, tx.Root); err != nil {
+			if err := durableRename(home, tx.Backup, tx.Root); err != nil {
 				return err
 			}
 		} else if tx.RootExisted {
@@ -262,7 +279,7 @@ func (s *Service) rollback(ctx context.Context, tx *packagestate.Transaction) er
 			if stage {
 				return &ConflictError{Recipe: tx.Recipe, Kind: "pending-recovery", Paths: []string{tx.Root}}
 			}
-			if err := removeTree(ctx, tx.Recipe, tx.Root, tx.Candidate.Files, tx.Candidate.Directories); err != nil {
+			if err := removeTree(ctx, home, tx.Recipe, tx.Root, tx.Candidate.Files, tx.Candidate.Directories); err != nil {
 				return err
 			}
 		}
@@ -282,6 +299,7 @@ func (s *Service) rollback(ctx context.Context, tx *packagestate.Transaction) er
 	return s.clear(tx.Recipe)
 }
 func (s *Service) finishCommitted(ctx context.Context, tx *packagestate.Transaction) error {
+	home := filepath.Dir(filepath.Dir(filepath.Dir(tx.Root)))
 	// Never re-save a candidate over an unrelated receipt or modify the active tree.
 	current, err := packagestate.Load(s.Home, tx.Recipe)
 	if err != nil {
@@ -302,7 +320,7 @@ func (s *Service) finishCommitted(ctx context.Context, tx *packagestate.Transact
 		if tx.Previous != nil {
 			dirs = tx.Previous.Directories
 		}
-		if err := removeTree(ctx, tx.Recipe, tx.Backup, tx.Observed, dirs); err != nil {
+		if err := removeTree(ctx, home, tx.Recipe, tx.Backup, tx.Observed, dirs); err != nil {
 			return s.recoveryError(tx, err)
 		}
 		if err := s.discardStage(tx); err != nil {
@@ -345,8 +363,8 @@ func syncAncestors(home, path string) error {
 func newCleanupContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Minute)
 }
-func cleanupTree(recipe, root string, files []packagebundle.Entry, dirs []string) error {
+func cleanupTree(home, recipe, root string, files []packagebundle.Entry, dirs []string) error {
 	ctx, cancel := newCleanupContext()
 	defer cancel()
-	return removeTree(ctx, recipe, root, files, dirs)
+	return removeTree(ctx, home, recipe, root, files, dirs)
 }

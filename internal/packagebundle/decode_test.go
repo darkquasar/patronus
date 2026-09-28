@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -74,7 +75,7 @@ func TestDecodeVerifiedBytes(t *testing.T) {
 	}
 }
 func TestDecodeHostileMembers(t *testing.T) {
-	for _, m := range []member{{"link", 0777, tar.TypeSymlink, nil}, {"hard", 0644, tar.TypeLink, nil}, {"dev", 0644, tar.TypeChar, nil}, {"block", 0644, tar.TypeBlock, nil}, {"fifo", 0644, tar.TypeFifo, nil}, {"install.sh", 0755, tar.TypeReg, nil}, {"INSTALL.SH", 0644, tar.TypeReg, nil}, {"install.sh/x", 0644, tar.TypeReg, nil}, {"package.json", 0644, tar.TypeReg, nil}, {"a", 04755, tar.TypeReg, nil}, {"../x", 0644, tar.TypeReg, nil}, {"a//b", 0644, tar.TypeReg, nil}, {"extra", 0644, tar.TypeReg, nil}} {
+	for _, m := range []member{{"install.sh", 0755, tar.TypeReg, nil}, {"INSTALL.SH", 0644, tar.TypeReg, nil}, {"install.sh/x", 0644, tar.TypeReg, nil}, {"package.json", 0644, tar.TypeReg, nil}, {"../x", 0644, tar.TypeReg, nil}, {"a//b", 0644, tar.TypeReg, nil}, {"extra", 0644, tar.TypeReg, nil}} {
 		t.Run(fmt.Sprintf("%s-%d", m.name, m.kind), func(t *testing.T) {
 			members := append(fixture(t), m)
 			if _, err := Decode(bytes.NewReader(zipTar(t, rawTar(t, members))), testIdentity(), DefaultLimits); err == nil {
@@ -264,5 +265,67 @@ func TestDecodeValidPaddingAndExactBudgets(t *testing.T) {
 	}
 	if _, err := Decode(bytes.NewReader(zipTar(t, append(raw, make([]byte, 1024)...))), testIdentity(), DefaultLimits); err != nil {
 		t.Fatalf("zero padding rejected: %v", err)
+	}
+}
+
+func TestDecodeRejectsInventoriedHostileHeader(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		mode int64
+		kind byte
+		want string
+	}{
+		{name: "symlink", mode: 0755, kind: tar.TypeSymlink, want: "unsupported tar type"},
+		{name: "hardlink", mode: 0755, kind: tar.TypeLink, want: "unsupported tar type"},
+		{name: "character-device", mode: 0755, kind: tar.TypeChar, want: "unsupported tar type"},
+		{name: "block-device", mode: 0755, kind: tar.TypeBlock, want: "unsupported tar type"},
+		{name: "fifo", mode: 0755, kind: tar.TypeFifo, want: "unsupported tar type"},
+		{name: "setuid", mode: 04755, kind: tar.TypeReg, want: "invalid or privileged mode"},
+		{name: "setgid", mode: 02755, kind: tar.TypeReg, want: "invalid or privileged mode"},
+		{name: "sticky", mode: 01755, kind: tar.TypeReg, want: "invalid or privileged mode"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := rawTar(t, fixture(t))
+			// Mutate only the inventoried payload's header; keep its bytes and metadata
+			// intact so no missing inventory member or hash mismatch can mask rejection.
+			metadataBytes := len(fixture(t)[0].data)
+			offset := 512 + ((metadataBytes+511)/512)*512
+			header := raw[offset : offset+512]
+			copy(header[100:108], fmt.Sprintf("%07o\x00", tc.mode))
+			header[156] = tc.kind
+			checksumHeader(header)
+			_, err := Decode(bytes.NewReader(zipTar(t, raw)), testIdentity(), DefaultLimits)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestDecodeRejectsUnsortedInventory(t *testing.T) {
+	members := fixture(t)
+	var metadata Metadata
+	if err := json.Unmarshal(members[0].data, &metadata); err != nil {
+		t.Fatal(err)
+	}
+	extra := member{name: "z.txt", mode: 0644, kind: tar.TypeReg, data: []byte("second payload")}
+	members = append(members, extra)
+	metadata.Files = append(metadata.Files, Entry{Path: extra.name, Mode: uint32(extra.mode), SHA256: digest(extra.data)})
+	var err error
+	members[0].data, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(bytes.NewReader(zipTar(t, rawTar(t, members))), testIdentity(), DefaultLimits); err != nil {
+		t.Fatalf("valid two-file control: %v", err)
+	}
+	metadata.Files[0], metadata.Files[1] = metadata.Files[1], metadata.Files[0]
+	members[0].data, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Decode(bytes.NewReader(zipTar(t, rawTar(t, members))), testIdentity(), DefaultLimits)
+	if err == nil || !strings.Contains(err.Error(), "inventory must be sorted") {
+		t.Fatalf("unsorted inventory rejection: %v", err)
 	}
 }
