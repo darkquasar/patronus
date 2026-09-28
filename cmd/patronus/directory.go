@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -16,6 +17,7 @@ import (
 	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/recipe"
+	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -187,7 +189,72 @@ func recoverDirectory(ctx context.Context, service *packagedelivery.Service, nam
 			return errors.Join(recoveryErr, fmt.Errorf("package %s: repair recovered discovery reference: %w", name, err))
 		}
 	}
+	if recoveryErr == nil {
+		resolved, err := packagestate.ReadTransaction(service.Home, name)
+		if err != nil {
+			return err
+		}
+		if resolved != nil && resolved.Operation == "remove" && resolved.Phase == packagestate.Committed {
+			return acknowledgeDirectoryRemoval(service.Home, name, receipt)
+		}
+	}
 	return recoveryErr
+}
+
+// acknowledgeDirectoryRemoval runs only after service recovery proves the
+// reduced receipt committed. Keep evidence until discovery and its link are synced.
+func acknowledgeDirectoryRemoval(home, name string, receipt *packagestate.Receipt) error {
+	path := filepath.Join(home, ".patronus", "state.json")
+	if receipt != nil {
+		if err := repairDirectoryReference(home, receipt); err != nil {
+			return err
+		}
+	} else {
+		st, err := state.Load(path)
+		if err != nil {
+			return err
+		}
+		remaining := st.Items[:0]
+		for _, item := range st.Items {
+			if item.PackageReceipt == name {
+				continue
+			}
+			remaining = append(remaining, item)
+		}
+		if len(remaining) != len(st.Items) {
+			st.Items = remaining
+			if err := state.Save(path, st); err != nil {
+				return err
+			}
+		}
+	}
+	for _, target := range []string{path, filepath.Dir(path)} {
+		f, err := os.Open(target)
+		if os.IsNotExist(err) && target == path {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		syncErr := f.Sync()
+		closeErr := f.Close()
+		if err := errors.Join(syncErr, closeErr); err != nil {
+			return err
+		}
+	}
+	return packagestate.ClearTransaction(home, name)
+}
+
+// mergeDirectoryDiscovery adds receipt-only and journal-only identities in memory.
+func mergeDirectoryDiscovery(home string, st *state.State) error {
+	packages, err := scan.Packages(home)
+	if err != nil {
+		return err
+	}
+	for _, pkg := range packages {
+		state.Merge(st, []state.Item{{Artifact: pkg.Recipe, ItemVersion: pkg.Version, PackageReceipt: pkg.Recipe, Type: "install-only", Tool: recipe.TargetAgnostic, Scope: "global"}})
+	}
+	return nil
 }
 
 // repairDirectoryReference is called only for committed ownership under the package lock.

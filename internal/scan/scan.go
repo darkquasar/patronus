@@ -26,10 +26,11 @@ type Options struct {
 
 // Inventory is the structured result of a scan.
 type Inventory struct {
-	ProjectDir string       `json:"projectDir"`
-	Home       string       `json:"home"`
-	Tools      []ToolStatus `json:"tools"`
-	Env        EnvSnapshot  `json:"env"`
+	Packages   []PackageStatus `json:"packages"`
+	ProjectDir string          `json:"projectDir"`
+	Home       string          `json:"home"`
+	Tools      []ToolStatus    `json:"tools"`
+	Env        EnvSnapshot     `json:"env"`
 }
 
 // ToolStatus reports detection for one tool across both scopes.
@@ -81,6 +82,12 @@ func Scan(opts Options) (*Inventory, error) {
 		ProjectDir: projectDir,
 		Home:       home,
 		Env:        envSnapshot(env),
+	}
+
+	var err error
+	inv.Packages, err = Packages(home)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, ad := range opts.Adapters {

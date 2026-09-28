@@ -151,10 +151,6 @@ func (s *Service) Recover(ctx context.Context, recipe string) error {
 	if tx == nil {
 		return nil
 	}
-	// Removal has a different, retryable protocol; never dispatch it to rollback.
-	if tx.Operation == "remove" {
-		return errors.Join(ErrRecoveryRequired, &ConflictError{Recipe: recipe, Kind: "pending-recovery", Paths: []string{root}}, errors.New("removal recovery requires removal service"))
-	}
 	home := filepath.Dir(filepath.Dir(filepath.Dir(root)))
 	journal := filepath.Join(home, ".patronus", "package-state", "transactions", recipe, "transaction.json")
 	// Reopening validated records and syncing their links resolves MayBeVisible.
@@ -184,6 +180,9 @@ func (s *Service) Recover(ctx context.Context, recipe string) error {
 	}
 	cleanupCtx, cancel := newCleanupContext()
 	defer cancel()
+	if tx.Operation == "remove" {
+		return s.finishRemoval(cleanupCtx, tx)
+	}
 	if tx.Phase == packagestate.Committed {
 		return s.finishCommitted(cleanupCtx, tx)
 	}
