@@ -67,7 +67,17 @@ func syncPath(path string) error {
 	defer f.Close()
 	return f.Sync()
 }
-func durableRename(old, new string) error {
+
+// durableRename rechecks both directory paths after scans and fault boundaries.
+// As with other path-based operations, an external actor can still race the final
+// check and syscall; this does not provide descriptor-relative atomic isolation.
+func durableRename(home, old, new string) error {
+	if err := checkAncestry(home, old); err != nil {
+		return err
+	}
+	if err := checkAncestry(home, new); err != nil {
+		return err
+	}
 	if err := os.Rename(old, new); err != nil {
 		return err
 	}
@@ -130,7 +140,7 @@ func (s *Service) stage(ctx context.Context, req Request, bundle *packagebundle.
 	receipt := receiptFor(req, bundle.Files)
 	// The unique stage is not user-visible; even here cleanup checks recorded members.
 	fail := func(err error) (string, string, *packagestate.Receipt, error) {
-		return "", "", nil, errors.Join(err, cleanupTree(req.Recipe, stage, receipt.Files, receipt.Directories))
+		return "", "", nil, errors.Join(err, cleanupTree(home, req.Recipe, stage, receipt.Files, receipt.Directories))
 	}
 	if err := os.Chmod(stage, 0755); err != nil {
 		return fail(err)
@@ -291,9 +301,10 @@ func (s *Service) discardStage(tx *packagestate.Transaction) error {
 	if tx.Stage == "" {
 		return nil
 	}
-	return cleanupTree(tx.Recipe, tx.Stage, tx.Candidate.Files, tx.Candidate.Directories)
+	return cleanupTree(filepath.Dir(filepath.Dir(filepath.Dir(tx.Root))), tx.Recipe, tx.Stage, tx.Candidate.Files, tx.Candidate.Directories)
 }
 func (s *Service) transition(ctx context.Context, tx *packagestate.Transaction) error {
+	home := filepath.Dir(filepath.Dir(filepath.Dir(tx.Root)))
 	if err := s.fault("after-prepared"); err != nil {
 		return err
 	}
@@ -326,7 +337,7 @@ func (s *Service) transition(ctx context.Context, tx *packagestate.Transaction) 
 			if backup {
 				return &ConflictError{Recipe: tx.Recipe, Kind: "pending-recovery", Paths: []string{tx.Backup}}
 			}
-			if err := durableRename(tx.Root, tx.Backup); err != nil {
+			if err := durableRename(home, tx.Root, tx.Backup); err != nil {
 				return err
 			}
 		}
@@ -353,7 +364,7 @@ func (s *Service) transition(ctx context.Context, tx *packagestate.Transaction) 
 		if err := verifyCandidate(ctx, tx, tx.Stage); err != nil {
 			return err
 		}
-		if err := durableRename(tx.Stage, tx.Root); err != nil {
+		if err := durableRename(home, tx.Stage, tx.Root); err != nil {
 			return err
 		}
 		if err := s.fault("after-stage-rename"); err != nil {

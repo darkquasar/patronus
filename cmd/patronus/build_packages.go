@@ -212,7 +212,7 @@ func buildPackage(root, name, out string) ([]builtPackage, error) {
 		SchemaVersion    int    `json:"schemaVersion"`
 		RepositoryCommit string `json:"repositoryCommit"`
 		CIRun            string `json:"ciRun,omitempty"`
-	}{1, strings.TrimSpace(commit), os.Getenv("GITHUB_RUN_ID")})
+	}{SchemaVersion: 1, RepositoryCommit: strings.TrimSpace(commit), CIRun: os.Getenv("GITHUB_RUN_ID")})
 	if err != nil {
 		return nil, err
 	}
