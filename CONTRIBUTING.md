@@ -135,3 +135,22 @@ Run the catalog-integrity test after any manifest change:
 ```console
 go test ./internal/registry/ -run Catalog -count=1
 ```
+
+### Static directory package authoring
+
+Package source lives under `packages/<name>/`, with an explicit payload list
+in `package.yaml`. Build a selected package before writing its recipe pins,
+then run the full build to verify those pins:
+
+```sh
+go run ./cmd/patronus build --package pi-sandbox --out /tmp/patronus-pi-package
+go test ./packages/pi-sandbox/tests ./cmd/patronus -run 'PiPackage|Directory' -count=1
+go run ./cmd/patronus build --out /tmp/patronus-pi-registry
+go run ./cmd/patronus check-versions
+```
+
+Copy the emitted digest and actual registry object URL into the recipe's
+platform asset. Never use a rolling image tag or a guessed package checksum.
+See [package delivery](docs/package-delivery.md#authoring-a-package) for the
+descriptor, sidecars and version rules. Run the four repository quality gates
+before committing. Local builds do not upload package objects or launch sbx.

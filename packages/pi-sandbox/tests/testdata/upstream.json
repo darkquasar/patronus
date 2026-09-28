@@ -1,0 +1,22 @@
+{
+  "commit": "869c83997680a252ed2b35671b3fd0d9adc2d487",
+  "sourceURL": "https://github.com/docker/sbx-kits-contrib/blob/869c83997680a252ed2b35671b3fd0d9adc2d487/pi/spec.yaml",
+  "schemaURL": "https://github.com/docker/sbx-kits-contrib/blob/869c83997680a252ed2b35671b3fd0d9adc2d487/spec/SPEC-v2.md",
+  "schemaFormat": "normative Markdown; local tests constrain the reviewed kit, no upstream JSON schema",
+  "schemaSHA256": "sha256:e084a4277d8e6a7a88e597f49da443a540288ae6a7f66d46a80cb5acf12a36b2",
+  "specSHA256": "sha256:f1da1c7a30e0a342043d033f4ab6144c77c41157ece8591f0f5d1a70bb683352",
+  "license": "Apache-2.0",
+  "licenseURL": "https://github.com/docker/sbx-kits-contrib/blob/869c83997680a252ed2b35671b3fd0d9adc2d487/LICENSE",
+  "image": "docker.io/sbx/pi-image@sha256:a2c3ac953dcef579f89a1a4c20f993e3b9325d58633b7f672694f64b0a067a67",
+  "arm64Manifest": "sha256:0f09d1c977e08e64889fe345397171a963b4c63de01cc392bd20ecd00fa43603",
+  "piVersion": "0.87.1",
+  "piVersionEvidence": "SHA-verified immutable image npm-install layer sha256:3795a855f2596c4dbfb20725f11a1973340687f263b2950e3ed02acc6840af1b; @earendil-works/pi-coding-agent/package.json",
+  "piSubagents": {
+    "version": "0.71.0",
+    "bundled": false,
+    "sourceURL": "https://registry.npmjs.org/pi-subagents/0.71.0",
+    "note": "Separate release existence verified only; not installed in the pinned image."
+  },
+  "registryProvenance": "arm64 SLSA attestation associates image with commit; signature not independently verified",
+  "runtimeTested": false
+}

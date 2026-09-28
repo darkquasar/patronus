@@ -94,3 +94,38 @@ Patronus performs no VM, session, tab, authentication or credential operations
 and installs no runtime prerequisites. Updating the host kit makes no promise
 about an existing VM. Herdr examples remain experimental. Package installation
 alone does not establish runtime acceptance.
+
+## Authoring a package
+
+Declare each static file and its executable flag in
+`packages/<name>/package.yaml`, along with schema version 1, package name,
+version and supported platforms. Only declared files enter the archive;
+exclude tests, credentials and runtime output. The Pi example declares
+`spec.yaml`, `README.md`, `LICENSE` and `NOTICE`.
+
+Build the selected package before preparing its recipe pins:
+
+```sh
+go run ./cmd/patronus build --package pi-sandbox --out /tmp/patronus-pi-package
+```
+
+The command writes the deterministic tarball, `.sha256` and
+`.provenance.json` sidecars under `packages/pi-sandbox/1.0.0/` in the output
+directory. Use the emitted digest and package object path at the configured
+registry base URL in a `patronus/v3` recipe with `deliver.unpack: directory`.
+Set the package identity and supported tar.gz platform asset explicitly;
+omit recipe wiring and executable entrypoints.
+
+Then verify the committed recipe pins against a full local build:
+
+```sh
+go test ./packages/pi-sandbox/tests ./cmd/patronus -run 'PiPackage|Directory' -count=1
+go run ./cmd/patronus build --out /tmp/patronus-pi-registry
+go run ./cmd/patronus check-versions
+```
+
+Full builds reject mismatched identity, URL or checksum pins without rewriting
+the recipe. Package versions and recipe versions are independent. Change the
+package version when payload bytes change, rebuild and update its recipe pins.
+These authoring commands create local output only; publication is a separate
+operation through the existing catalog workflow.
