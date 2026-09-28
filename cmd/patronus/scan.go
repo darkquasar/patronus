@@ -72,6 +72,12 @@ func newScanCmd() *cobra.Command {
 				}{inv, findings})
 			}
 			render.PrintInventory(cmd.OutOrStdout(), inv)
+			for _, pkg := range inv.Packages {
+				fmt.Fprintf(cmd.OutOrStdout(), "Package %s %s: %s (%s)\n", pkg.Recipe, pkg.Version, pkg.Status, pkg.Root)
+				for _, path := range pkg.Paths {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", path)
+				}
+			}
 			render.PrintDrift(cmd.OutOrStdout(), findings)
 
 			// Reconcile the lock's plugin statuses against installed reality. Scan

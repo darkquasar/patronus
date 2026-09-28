@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -95,122 +96,13 @@ func newInstallCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
-
 			home := toolpath.HomeDir(os.LookupEnv)
-			reg, root, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
+			planned, err := planInstall(cmd, installPlanRequest{Names: names, Profile: profileSel, Tool: tool, Scope: scope, Home: home, ProjectDir: wd, Registry: regSel})
 			if err != nil {
 				return err
 			}
-
-			// adapters/ comes from the checkout when local; loadAdapters falls back to
-			// the embedded adapters when root is "" (installed-binary / remote case).
-			adapters, err := loadAdapters(filepath.Join(root, "adapters"))
-			if err != nil {
-				return err
-			}
-
-			// Load the catalog. When the user is installing ONLY out-of-tree sources
-			// (git:/https:/file:) and no profile, the registry is not actually needed,
-			// so a fetch failure (e.g. offline, no cache) degrades to an empty catalog
-			// rather than blocking a self-contained sourced install.
-			cat, err := reg.Catalog(cmd.Context())
-			if err != nil {
-				// Only tolerate a registry failure when every name is a self-contained
-				// sourced reference (git:/https:/file:) and there's no profile to resolve.
-				if profileSel != "" || !allSourced(names) {
-					return err
-				}
-				warnf("registry unavailable (%v); proceeding with sourced references only", err)
-				cat = &registry.Catalog{}
-			}
-
-			// --profile expands to the profile's resolved item names, which then flow
-			// through the SAME artifact-vs-recipe dispatch a plain install uses.
-			if profileSel != "" {
-				// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
-				res, err := profile.Resolve(cat, profileSel, tool)
-				if err != nil {
-					return err
-				}
-				for _, w := range res.Warnings {
-					warnf("%s", w)
-				}
-				names = res.Names()
-				if len(names) == 0 {
-					return fmt.Errorf("profile %q resolved to no installable items", profileSel)
-				}
-
-				// Per-item reality-follows-lock: if a committed patronus.lock pins this
-				// profile's items, rewrite the catalog so each is fetched at its LOCKED
-				// version+sha from the registry's immutable key (not the index's latest).
-				if rr, ok := reg.(*registry.RemoteRegistry); ok {
-					applyLockPins(wd, profileSel, rr.Base(), cat, warnf)
-				}
-			}
-
-			// Expand the `requires` closure: an item that needs another (a hook that
-			// needs its binary recipe, an instruction that needs the binary it
-			// documents) silently pulls that dependency in, dependency-before-dependent.
-			// Pure over the catalog — sourced/unknown names contribute no edges and
-			// pass through. Applies to BOTH the profile path (above) and a direct
-			// `install <name>`, since both converge on `names` here. The profile's own
-			// flavour/without selection has already run; requires works on base names.
-			expanded := requires.Expand(names, cat.Deps)
-			if pulled := requires.Pulled(names, expanded); len(pulled) > 0 {
-				warnf("also installing required item(s): %s", strings.Join(pulled, ", "))
-			}
-			names = expanded
-
-			// A positional name may be a sourced reference (file:, git:, https:, ...).
-			// Resolve any sourced entries into the catalog so they dispatch like an
-			// in-tree item; bare names are left untouched.
-			names, err = mergeSourcedNames(cmd.Context(), cat, names, home)
-			if err != nil {
-				return err
-			}
-
-			// --target is required for anything that wires into a runtime. A
-			// purely-agnostic item (binary/package-only recipe) may omit it.
-			if tool == "" {
-				var needing []string
-				for _, n := range names {
-					if itemNeedsTarget(cat, n) {
-						needing = append(needing, n)
-					}
-				}
-				if len(needing) > 0 {
-					return fmt.Errorf("--target is required (one of claude|codex|opencode|all) for: %s", strings.Join(needing, ", "))
-				}
-			}
-
-			// For a remote registry, fetch+unpack the selected artifacts' source so
-			// the local adapter path can transform them (no-op for local/recipes).
-			if err := materializeSelected(cmd.Context(), reg, cat, names); err != nil {
-				return err
-			}
-
-			inv, err := scan.Scan(scan.Options{ProjectDir: wd, Adapters: adapters})
-			if err != nil {
-				return err
-			}
-
-			env := os.LookupEnv
-			res := toolpath.New(env, toolpath.HomeDir(env), wd)
-
-			cs, err := computePlan(planInputs{
-				cat:      cat,
-				inv:      inv,
-				adapters: adapterMap(adapters),
-				res:      res,
-				names:    names,
-				tool:     tool,
-				scope:    scope,
-				warnf:    warnf,
-			})
-			if err != nil {
-				return err
-			}
+			cs, res := planned.Changes, planned.Resolver
+			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
 			// DryRun drives the footer wording; only a real --deploy writes.
 			cs.DryRun = !deploy
@@ -243,7 +135,7 @@ func newInstallCmd() *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: toolpath.HomeDir(env), projectDir: wd})
+			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd})
 		},
 	}
 
@@ -254,13 +146,167 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "also show per-artifact unified diffs")
 	cmd.Flags().BoolVar(&force, "force", false, "with --deploy: overwrite conflicting files without prompting")
-	cmd.Flags().BoolVar(&yes, "yes", false, "with --deploy: assume non-interactive (conflicts are skipped, never overwritten)")
+	cmd.Flags().BoolVar(&yes, "yes", false, "with --deploy: non-interactive; legacy conflicts are skipped, directory conflicts remain errors")
 	cmd.Flags().StringVar(&recipeSel, "recipe", "", "pick a specific recipe for a capability (e.g. memory-engram)")
 	cmd.Flags().StringVar(&profileSel, "profile", "", "install a curated bundle across layers (§5d)")
 	addRegistryFlags(cmd, &regSel)
 	cmd.Flags().BoolVar(&allowPkgInstalls, "allow-package-installs", false,
 		"with --deploy: let Patronus run package-manager installs (npm/cargo/uv) non-interactively; all-or-nothing — errors if any required manager is absent")
 	return cmd
+}
+
+// installPlanRequest separates planning from consent and deployment.
+type installPlanRequest struct {
+	Names                                  []string
+	Profile, Tool, Scope, Home, ProjectDir string
+	Registry                               registrySel
+	Catalog                                *registry.Catalog
+}
+
+type plannedInstall struct {
+	Changes  *diff.ChangeSet
+	Resolver toolpath.Resolver
+}
+
+func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, error) {
+	names := append([]string(nil), req.Names...)
+	profileSel, tool, scope, home, wd, regSel := req.Profile, req.Tool, req.Scope, req.Home, req.ProjectDir, req.Registry
+	warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
+
+	reg, root, err := resolveRegistry(cmd.Context(), wd, regSel, home, warnf)
+	if err != nil {
+		return plannedInstall{}, err
+	}
+
+	// adapters/ comes from the checkout when local; loadAdapters falls back to
+	// the embedded adapters when root is "" (installed-binary / remote case).
+	adapters, err := loadAdapters(filepath.Join(root, "adapters"))
+	if err != nil {
+		return plannedInstall{}, err
+	}
+
+	// Load the catalog. When the user is installing ONLY out-of-tree sources
+	// (git:/https:/file:) and no profile, the registry is not actually needed,
+	// so a fetch failure (e.g. offline, no cache) degrades to an empty catalog
+	// rather than blocking a self-contained sourced install.
+	cat := req.Catalog
+	if cat != nil {
+		data, marshalErr := json.Marshal(cat)
+		if marshalErr != nil {
+			return plannedInstall{}, marshalErr
+		}
+		cat = &registry.Catalog{}
+		if err := json.Unmarshal(data, cat); err != nil {
+			return plannedInstall{}, err
+		}
+	} else {
+		cat, err = reg.Catalog(cmd.Context())
+	}
+	if err != nil {
+		// Only tolerate a registry failure when every name is a self-contained
+		// sourced reference (git:/https:/file:) and there's no profile to resolve.
+		if profileSel != "" || !allSourced(names) {
+			return plannedInstall{}, err
+		}
+		warnf("registry unavailable (%v); proceeding with sourced references only", err)
+		cat = &registry.Catalog{}
+	}
+
+	// --profile expands to the profile's resolved item names, which then flow
+	// through the SAME artifact-vs-recipe dispatch a plain install uses.
+	if profileSel != "" {
+		// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
+		res, err := profile.Resolve(cat, profileSel, tool)
+		if err != nil {
+			return plannedInstall{}, err
+		}
+		for _, w := range res.Warnings {
+			warnf("%s", w)
+		}
+		names = res.Names()
+		if len(names) == 0 {
+			return plannedInstall{}, fmt.Errorf("profile %q resolved to no installable items", profileSel)
+		}
+
+		// Per-item reality-follows-lock: if a committed patronus.lock pins this
+		// profile's items, rewrite the catalog so each is fetched at its LOCKED
+		// version+sha from the registry's immutable key (not the index's latest).
+		base := ""
+		if rr, ok := reg.(*registry.RemoteRegistry); ok {
+			base = rr.Base()
+		}
+		if err := applyLockPins(wd, profileSel, base, cat, warnf); err != nil {
+			return plannedInstall{}, err
+		}
+	}
+
+	// Expand the `requires` closure: an item that needs another (a hook that
+	// needs its binary recipe, an instruction that needs the binary it
+	// documents) silently pulls that dependency in, dependency-before-dependent.
+	// Pure over the catalog — sourced/unknown names contribute no edges and
+	// pass through. Applies to BOTH the profile path (above) and a direct
+	// `install <name>`, since both converge on `names` here. The profile's own
+	// flavour/without selection has already run; requires works on base names.
+	expanded := requires.Expand(names, cat.Deps)
+	if pulled := requires.Pulled(names, expanded); len(pulled) > 0 {
+		warnf("also installing required item(s): %s", strings.Join(pulled, ", "))
+	}
+	names = expanded
+
+	// A positional name may be a sourced reference (file:, git:, https:, ...).
+	// Resolve any sourced entries into the catalog so they dispatch like an
+	// in-tree item; bare names are left untouched.
+	names, err = mergeSourcedNames(cmd.Context(), cat, names, home)
+	if err != nil {
+		return plannedInstall{}, err
+	}
+
+	// --target is required for anything that wires into a runtime. A
+	// purely-agnostic item (binary/package-only recipe) may omit it.
+	if tool == "" {
+		var needing []string
+		for _, n := range names {
+			if itemNeedsTarget(cat, n) {
+				needing = append(needing, n)
+			}
+		}
+		if len(needing) > 0 {
+			return plannedInstall{}, fmt.Errorf("--target is required (one of claude|codex|opencode|all) for: %s", strings.Join(needing, ", "))
+		}
+	}
+
+	// For a remote registry, fetch+unpack the selected artifacts' source so
+	// the local adapter path can transform them (no-op for local/recipes).
+	if err := materializeSelected(cmd.Context(), reg, cat, names); err != nil {
+		return plannedInstall{}, err
+	}
+
+	inv, err := scan.Scan(scan.Options{ProjectDir: wd, Adapters: adapters})
+	if err != nil {
+		return plannedInstall{}, err
+	}
+
+	env := os.LookupEnv
+	res := toolpath.New(env, home, wd)
+
+	cs, err := computePlan(planInputs{
+		cat:      cat,
+		inv:      inv,
+		adapters: adapterMap(adapters),
+		res:      res,
+		names:    names,
+		tool:     tool,
+		scope:    scope,
+		warnf:    warnf,
+	})
+	if err != nil {
+		return plannedInstall{}, err
+	}
+
+	if err := inspectDirectoryPlan(home, cs); err != nil {
+		return plannedInstall{}, err
+	}
+	return plannedInstall{Changes: cs, Resolver: res}, nil
 }
 
 // planInputs carries everything computePlan needs to build a change set across a
@@ -303,6 +349,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		artifactNames []string
 		raw           []diff.FileDiff
 	)
+	seenDirectories := map[string]bool{}
 	for _, name := range in.names {
 		if pl := findPlugin(in.cat, name); pl != nil {
 			// Resolve scope and the target tool list the same way artifacts do:
@@ -319,6 +366,12 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 			continue
 		}
 		if rec := findRecipe(in.cat, name); rec != nil {
+			if rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory" {
+				if seenDirectories[name] {
+					continue
+				}
+				seenDirectories[name] = true
+			}
 			diffs, err := recipe.Compute(recipe.Request{
 				Recipe:       rec.Manifest,
 				Adapters:     in.adapters,
@@ -444,7 +497,7 @@ func allSourced(names []string) bool {
 
 // applyLockPins implements PER-ITEM reality-follows-lock: when a committed
 // patronus.lock pins this profile's items, it rewrites each matching catalog
-// artifact entry so the install fetches the LOCKED version+bytes from the
+// artifact or directory recipe entry so the install fetches the locked version+bytes from the
 // registry's immutable name/version key, rather than whatever the (mutable)
 // discovery index now advertises as latest. This is what makes a shared lock
 // reproduce the exact environment even as the catalog moves on.
@@ -452,17 +505,51 @@ func allSourced(names []string) bool {
 // It is a no-op when there's no lock, the lock is for a different profile, or an
 // item isn't pinned — those follow the index latest, unchanged. base is the
 // RemoteRegistry base URL (used to reconstruct the immutable item URL).
-func applyLockPins(wd, profileName, base string, cat *registry.Catalog, warnf func(string, ...any)) {
+func applyLockPins(wd, profileName, base string, cat *registry.Catalog, warnf func(string, ...any)) error {
 	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
-	if err != nil || len(l.Entries) == 0 {
-		return // no lock → follow index latest
+	if err != nil {
+		return fmt.Errorf("read patronus.lock: %w", err)
+	}
+	if len(l.Entries) == 0 {
+		return nil
 	}
 	if l.Profile != "" && l.Profile != profileName {
-		return // an unrelated lock never silently pins this install
+		return nil // an unrelated lock never silently pins this install
 	}
 	pin := make(map[string]lock.Entry, len(l.Entries))
 	for _, e := range l.Entries {
 		pin[e.Name] = e
+	}
+	for _, e := range l.Entries {
+		if e.Delivery != nil {
+			rec := findRecipe(cat, e.Name)
+			if rec == nil || rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory" {
+				return fmt.Errorf("patronus.lock: directory pin %q is inapplicable to the selected catalog", e.Name)
+			}
+		}
+	}
+	for i := range cat.Recipes {
+		rec := &cat.Recipes[i]
+		if rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory" {
+			continue
+		}
+		e, ok := pin[rec.Manifest.Name]
+		if !ok {
+			continue
+		}
+		if e.Kind != "recipe" || e.Delivery == nil || e.Delivery.Unpack != "directory" {
+			return fmt.Errorf("patronus.lock: directory recipe %q requires a complete directory delivery pin", e.Name)
+		}
+		pinned := *rec.Manifest
+		pinned.Version, pinned.Delivery = e.Version, e.Delivery
+		if err := manifest.ValidateRecipe(&pinned); err != nil {
+			return fmt.Errorf("patronus.lock: %w", err)
+		}
+		rec.Manifest = &pinned
+	}
+	if base == "" {
+		// Local artifact sources retain their current behavior.
+		return nil
 	}
 	base = strings.TrimRight(base, "/")
 	for i := range cat.Artifacts {
@@ -484,6 +571,7 @@ func applyLockPins(wd, profileName, base string, cat *registry.Catalog, warnf fu
 		}
 		a.Source.LocalDir = ""
 	}
+	return nil
 }
 
 // contains reports whether ss includes s.
@@ -644,13 +732,18 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 		}
 	}
 
+	directoryResult, err := deployDirectories(cmd.Context(), opts.home, cs, opts.force)
+	if err != nil {
+		return err
+	}
+	legacy := directoryResult.Legacy
 	app := &install.Applier{
 		Force:    opts.force,
 		Conflict: conflictPrompt(cmd, res, opts.yes),
 		Fetcher:  fetcherForDeploy,
 		Ctx:      cmd.Context(),
 	}
-	result, applyErr := app.Apply(cs)
+	result, applyErr := app.Apply(legacy)
 
 	// Realize self-wiring post-install commands (EXEC diffs) only after the file
 	// writes/fetches succeed, and only on --deploy (we are here). The applier
@@ -660,7 +753,7 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 		if runner == nil {
 			runner = execRunner{cmd: cmd}
 		}
-		ran, execErr := runExecs(cmd, cs, runner, consent)
+		ran, execErr := runExecs(cmd, legacy, runner, consent)
 		realized = append(realized, ran...)
 		if execErr != nil {
 			applyErr = execErr
@@ -675,6 +768,10 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 	}
 
 	fmt.Fprintf(out, "\nApplied: %d written, %d skipped\n", len(result.Applied), len(result.Skipped))
+	if directoryResult.Written+directoryResult.Skipped > 0 {
+		fmt.Fprintf(out, "Packages: %d committed, %d unchanged\n", directoryResult.Written, directoryResult.Skipped)
+		printDirectoryReadiness(out, cs)
+	}
 	if applyErr != nil {
 		return applyErr
 	}
@@ -693,7 +790,7 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner, cons
 	var skipped []string // package installs declined/unsatisfiable — summarised at the end
 	for i := range cs.Diffs {
 		d := cs.Diffs[i]
-		if d.Action != diff.Exec || d.Exec == nil {
+		if d.Directory != nil || d.Action != diff.Exec || d.Exec == nil {
 			continue
 		}
 
@@ -766,6 +863,9 @@ func recordState(applied []diff.FileDiff, opts deployOptions) error {
 
 	byScope := map[string][]diff.FileDiff{}
 	for _, d := range applied {
+		if d.Directory != nil {
+			continue
+		}
 		byScope[d.Scope] = append(byScope[d.Scope], d)
 	}
 	for scope, diffs := range byScope {

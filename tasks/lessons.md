@@ -288,3 +288,57 @@ here was net-positive (4 independent streams, no cross-contamination, all delive
 L2b's "inline is often better" corollary is about *coordination/retrieval cost*, which
 stayed low here because streams were cleanly separable and the lead pulled rather than
 polled.
+
+---
+
+## L8 — A hook that "fires" is not a hook the model hears. Verify the channel, not the exit code.
+
+**2026-09-08 · from `11-code-intel-depth`**
+
+Three code-intel nudge hooks were correctly installed, guards passing, and firing one by
+hand printed its hint and exited 0. The lead read that as "the mechanism works" and moved
+on to diagnosing placement. Wrong: all three wrote to **stderr**, and Claude Code sends
+hook stderr to a debug log the model never reads. The hints had been invisible for the
+entire time they were installed — corroborated by a 27-day-stale graph and no `graphify
+query` in 37 days.
+
+**The trap:** firing a hook by hand shows you its stderr because *you are the terminal*.
+The harness is not the terminal. A manual invocation can only prove the script runs; it
+can never prove the text reaches the model.
+
+**How to apply:** when testing a hook, assert on the **channel the harness reads**
+(`hookSpecificOutput.additionalContext` JSON on stdout), not on whether output appeared in
+your shell. The cheapest check is a positive control: find a hook in the same install that
+demonstrably works and diff the emission shape. Here every working hook emitted JSON
+`additionalContext`; every failing one used `echo >&2` — a perfectly clean split that
+would have located the bug in one step. Note the structural cause: inline `sh -c`
+one-liners make JSON assembly painful, so the delivery shape drove the broken protocol
+choice.
+
+---
+
+## L9 — Ask "can the code do this?" before "where should this go?" — the mechanism may forbid the design.
+
+**2026-09-08 · from `11-code-intel-depth`**
+
+The lead proposed a "capability slot": an opt-in profile contributes text *into* a lean
+skill's body, removed cleanly on uninstall. Plausible, and it matched an existing primitive
+by name (composed APPEND with per-contributor tracking). It is also structurally impossible:
+a skill body is a `CREATE`, and `plan.composeByPath`'s CREATE arm keeps the first writer and
+discards the rest. No fence machinery is reachable from the skill path at all. Two fallback
+designs (a conditional `requires` edge; a placeholder that empties when a capability is
+absent) failed for independent reasons — one needs presence resolution the resolver is
+documented never to do, the other bakes at plan time so a later install/uninstall leaves the
+deployed file wrong.
+
+**What saved it:** the stream was briefed to VALIDATE OR REFUTE the proposed shape rather
+than to implement it, and to report BUILDABLE-TODAY / NEEDS-SMALL-CHANGE /
+NEEDS-NEW-PRIMITIVE per option with file:line evidence. It refuted all three and found the
+mechanism that *does* work one level up (pointer-mode instructions fold fenced sections into
+the control file; remove strips exactly that fence) — turning a Go project into content work.
+
+**How to apply:** when a design depends on a composition/merge/removal behavior, read the
+code path that performs the write **before** deciding where content goes. Name the write
+action (CREATE vs APPEND vs MERGE) — it determines what is composable. And brief the
+investigating agent to refute, not to confirm; a stream told to find "where the slot goes"
+would have produced a confident plan for something the engine cannot do.

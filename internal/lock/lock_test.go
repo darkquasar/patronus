@@ -254,3 +254,110 @@ func TestLockRoundTripsPluginEntry(t *testing.T) {
 		t.Errorf("name = %s, want superpowers", out.Entries[0].Name)
 	}
 }
+
+func TestRecipeVersionPinned(t *testing.T) {
+	recipe := &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "kit", Version: "1.2.3"}}
+	cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: recipe}}}
+	resolved := &profile.Resolved{Profile: &manifest.Profile{}, Items: []profile.ResolvedItem{{Name: "kit", Family: manifest.FamilyRecipe}}}
+	l, err := FromResolved(cat, resolved, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Entries[0].Version != "1.2.3" {
+		t.Fatalf("recipe version = %q", l.Entries[0].Version)
+	}
+}
+
+func directoryLockJSON() string {
+	return `{"version":2,"entries":[{"name":"kit","kind":"recipe","version":"1.0.0","source":"registry","sha256":"sha256:` + strings.Repeat("0", 64) + `","delivery":{"via":"fetch","unpack":"directory","package":{"name":"payload","version":"2.0.0"},"assets":[{"os":"darwin","arch":"arm64","url":"https://example.test/kit.tar.gz","sha256":"` + strings.Repeat("0", 64) + `","archive":"tar.gz"}]}}]}`
+}
+
+func TestDirectoryLockRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "patronus.lock")
+	mustWrite(t, path, directoryLockJSON())
+	l, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, l); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"unpack": "directory"`) {
+		t.Fatal("directory pin lost")
+	}
+}
+
+func TestDirectoryLockRejectsMalformedPins(t *testing.T) {
+	for _, tc := range []struct{ name, old, replacement string }{
+		{"future schema", `"version":2`, `"version":3`},
+		{"negative schema", `"version":2`, `"version":-1`},
+		{"wrong kind", `"kind":"recipe"`, `"kind":"artifact"`},
+		{"bad recipe name", `"name":"kit"`, `"name":"../kit"`},
+		{"bad recipe version", `"version":"1.0.0"`, `"version":"01.0.0"`},
+		{"bad package version", `"version":"2.0.0"`, `"version":"next"`},
+		{"bad pin", "https://", "http://"},
+		{"unknown unpack", `"unpack":"directory"`, `"unpack":"future"`},
+		{"file metadata", `"unpack":"directory",`, ``},
+		{"short digest", strings.Repeat("0", 64), "abc"},
+		{"bad asset digest", `"sha256":"` + strings.Repeat("0", 64), `"sha256":"abc`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "patronus.lock")
+			mustWrite(t, path, strings.Replace(directoryLockJSON(), tc.old, tc.replacement, 1))
+			if _, err := Load(path); err == nil {
+				t.Fatal("invalid directory lock accepted")
+			}
+		})
+	}
+}
+
+func TestDirectoryLockCopiesResolvedDelivery(t *testing.T) {
+	d := &manifest.Delivery{Via: manifest.ViaFetch, Unpack: "directory", Package: &manifest.PackageIdentity{Name: "payload", Version: "2.0.0"}, Assets: []manifest.Asset{
+		{OS: "darwin", Arch: "arm64", URL: "https://example.test/darwin.tar.gz", SHA256: strings.Repeat("a", 64), Archive: "tar.gz"},
+		{OS: "linux", Arch: "amd64", URL: "https://example.test/linux.tar.gz", SHA256: "sha256:" + strings.Repeat("b", 64), Archive: "tar.gz"},
+	}}
+	r := &manifest.Recipe{Meta: manifest.Meta{APIVersion: "patronus/v3", Family: manifest.FamilyRecipe, Role: manifest.RoleSandbox, Name: "kit", Version: "1.0.0"}, Delivery: d}
+	cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: r}}}
+	resolved := &profile.Resolved{Profile: &manifest.Profile{}, Items: []profile.ResolvedItem{{Name: "kit", Family: manifest.FamilyRecipe}}}
+	l, err := FromResolved(cat, resolved, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned := l.Entries[0].Delivery
+	if !reflect.DeepEqual(pinned, d) {
+		t.Fatalf("delivery changed during locking: %#v", pinned)
+	}
+	d.Package.Version = "3.0.0"
+	d.Assets[0].URL = "https://example.test/changed.tar.gz"
+	if pinned.Package.Version != "2.0.0" || pinned.Assets[0].URL != "https://example.test/darwin.tar.gz" {
+		t.Fatal("catalog mutation changed lock pins")
+	}
+	path := filepath.Join(t.TempDir(), "patronus.lock")
+	if err := Save(path, l); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(loaded, l) {
+		t.Fatal("directory lock changed in round trip")
+	}
+}
+
+func TestRecipeVersionLegacyDeliveryOmitted(t *testing.T) {
+	r := &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "legacy", Version: "1.0.0"}, Delivery: &manifest.Delivery{Via: manifest.ViaFetch, Unpack: "file"}}
+	cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: r}}}
+	resolved := &profile.Resolved{Profile: &manifest.Profile{}, Items: []profile.ResolvedItem{{Name: "legacy", Family: manifest.FamilyRecipe}}}
+	l, err := FromResolved(cat, resolved, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Entries[0].Delivery != nil {
+		t.Fatal("legacy lock gained delivery pin")
+	}
+}

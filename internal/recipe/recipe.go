@@ -73,6 +73,10 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 		goarch = runtime.GOARCH
 	}
 
+	if rec.Delivery != nil && rec.Delivery.Unpack == "directory" {
+		return directoryDiff(req, goos, goarch)
+	}
+
 	var diffs []diff.FileDiff
 
 	// 1) DELIVERY — obtaining the payload, independent of wiring:

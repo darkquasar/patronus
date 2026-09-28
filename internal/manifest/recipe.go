@@ -1,8 +1,11 @@
 package manifest
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -97,7 +100,9 @@ func (c InstallCandidate) InstallCommand(recipeName string) string {
 // Delivery describes how the recipe's payload is obtained (§4b). Via is the
 // mechanism; the mechanism-specific fields carry the rest.
 type Delivery struct {
-	Via DeliverVia `yaml:"via" json:"via"` // fetch | package-manager | docker | script
+	Unpack  string           `yaml:"unpack,omitempty" json:"unpack,omitempty"`
+	Package *PackageIdentity `yaml:"package,omitempty" json:"package,omitempty"`
+	Via     DeliverVia       `yaml:"via" json:"via"` // fetch | package-manager | docker | script
 	// Install is the ordered candidate list for via: package-manager (first
 	// present-on-PATH wins). Empty for fetch/docker/script.
 	Install   []InstallCandidate `yaml:"install,omitempty" json:"install,omitempty"`
@@ -111,6 +116,12 @@ type Delivery struct {
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
 	SHA256    string   `yaml:"sha256,omitempty" json:"sha256,omitempty"`       // hex digest; pinned
 	Platforms []string `yaml:"platforms,omitempty" json:"platforms,omitempty"` // GOOS allow-list; empty = unrestricted
+}
+
+// PackageIdentity pins the independently versioned directory payload.
+type PackageIdentity struct {
+	Name    string `yaml:"name" json:"name"`
+	Version string `yaml:"version" json:"version"`
 }
 
 // PinnedURL is the single pinned download of a `url` delivery. It exists so
@@ -273,9 +284,37 @@ func DecodeRecipe(data []byte) (*Recipe, error) {
 	return &r, nil
 }
 
+// ValidateRecipe applies the same validation to decoded YAML and restored JSON.
+func ValidateRecipe(r *Recipe) error {
+	return validateRecipe(r)
+}
+
 func validateRecipe(r *Recipe) error {
+	if r == nil {
+		return errors.New("missing recipe")
+	}
 	if err := validateMeta(r.Meta, FamilyRecipe); err != nil {
 		return err
+	}
+	if r.APIVersion == "patronus/v3" && (r.Delivery == nil || r.Delivery.Unpack != "directory") {
+		return errors.New("apiVersion patronus/v3 requires directory delivery")
+	}
+	if r.Delivery != nil && (r.Delivery.Unpack == "directory" || r.Delivery.Package != nil) && r.APIVersion != "patronus/v3" {
+		return errors.New("directory delivery fields require apiVersion patronus/v3")
+	}
+	if r.Delivery != nil && r.Delivery.Unpack == "directory" {
+		if !validPackageName(r.Name) || !ValidPackageVersion(r.Version) {
+			return errors.New("directory recipe requires a canonical name and SemVer version")
+		}
+		if r.Role != RoleSandbox {
+			return errors.New("directory recipe requires role: sandbox")
+		}
+		if r.Scope != nil && r.Scope.Marker != "" {
+			return errors.New("directory recipe does not support local scope")
+		}
+		if r.Wire.Method != WireNone || r.Wire.Actor != "" || len(r.Wire.Tools) != 0 || len(r.Wire.Run) != 0 || r.Wire.Mcp != nil {
+			return errors.New("directory recipe is install-only and does not support wiring or tool targeting")
+		}
 	}
 	if r.Role == "" {
 		return fmt.Errorf("missing role")
@@ -319,6 +358,15 @@ func validateRecipe(r *Recipe) error {
 // validateDelivery checks the mechanism-specific shape of a deliver block. The
 // via enum is closed; each mechanism then has its own required fields.
 func validateDelivery(d *Delivery) error {
+	if d.Unpack != "" && d.Unpack != "file" && d.Unpack != "directory" {
+		return fmt.Errorf("invalid deliver.unpack %q", d.Unpack)
+	}
+	if d.Package != nil && d.Unpack != "directory" {
+		return errors.New("deliver.package requires directory delivery")
+	}
+	if d.Unpack == "directory" && d.Via != ViaFetch {
+		return errors.New("directory delivery requires via: fetch")
+	}
 	if !deliverVias[d.Via] {
 		return fmt.Errorf("invalid deliver.via %q (want fetch|package-manager|docker|script)", d.Via)
 	}
@@ -333,6 +381,9 @@ func validateDelivery(d *Delivery) error {
 			}
 		}
 	case ViaFetch:
+		if d.Unpack == "directory" {
+			return validateDirectoryDelivery(d)
+		}
 		// A single-URL fetch is a pinned artifact needing url+sha256; an
 		// asset-matrix fetch carries per-OS assets. The two are distinguished by
 		// which field is set (URL vs Assets), not a separate via. A fetch with
@@ -346,6 +397,75 @@ func validateDelivery(d *Delivery) error {
 			if len(d.Assets) > 0 {
 				return errors.New("deliver.via fetch takes a single url OR assets, not both")
 			}
+		}
+	}
+	return nil
+}
+
+var packageNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]*$`)
+var packageVersionPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$`)
+
+func validPackageName(name string) bool { return packageNamePattern.MatchString(name) }
+
+// ValidPackageVersion reports whether version is a SemVer 2.0 version, without
+// bounding numeric components to a machine integer.
+func ValidPackageVersion(version string) bool {
+	if !packageVersionPattern.MatchString(version) {
+		return false
+	}
+	core, _, _ := strings.Cut(version, "+")
+	_, prerelease, _ := strings.Cut(core, "-")
+	for _, part := range strings.Split(prerelease, ".") {
+		if len(part) < 2 || part[0] != '0' {
+			continue
+		}
+		numeric := true
+		for _, c := range part {
+			if c < '0' || c > '9' {
+				numeric = false
+				break
+			}
+		}
+		if numeric {
+			return false
+		}
+	}
+	return true
+}
+
+func validateDirectoryDelivery(d *Delivery) error {
+	if d.Package == nil || !validPackageName(d.Package.Name) || !ValidPackageVersion(d.Package.Version) {
+		return errors.New("directory delivery requires a package identity with a canonical name and SemVer version")
+	}
+	if d.Binary != "" || d.InstallTo != "" || d.URL != "" || d.SHA256 != "" || len(d.Install) != 0 || len(d.Platforms) != 0 {
+		return errors.New("directory delivery requires platform assets, without binary, installTo, direct URL or other delivery fields")
+	}
+	if len(d.Assets) == 0 {
+		return errors.New("directory delivery requires assets")
+	}
+	seen := make(map[string]bool, len(d.Assets))
+	for _, a := range d.Assets {
+		if (a.OS != "darwin" && a.OS != "linux" && a.OS != "windows") || (a.Arch != "arm64" && a.Arch != "amd64") {
+			return fmt.Errorf("unsupported directory asset platform %q/%q", a.OS, a.Arch)
+		}
+		key := a.OS + "/" + a.Arch
+		if seen[key] {
+			return fmt.Errorf("duplicate directory asset platform %s", key)
+		}
+		seen[key] = true
+		if a.Archive != "tar.gz" || a.BinaryPath != "" {
+			return errors.New("directory asset requires archive: tar.gz without binaryPath")
+		}
+		u, err := url.Parse(a.URL)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" {
+			return fmt.Errorf("directory asset requires an HTTPS URL: %q", a.URL)
+		}
+		digest := strings.TrimPrefix(a.SHA256, "sha256:")
+		if len(digest) != 64 {
+			return errors.New("directory asset requires a SHA-256 digest")
+		}
+		if _, err := hex.DecodeString(digest); err != nil {
+			return fmt.Errorf("directory asset SHA-256: %w", err)
 		}
 	}
 	return nil

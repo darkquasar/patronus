@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/packagedelivery"
+	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/render"
@@ -88,10 +91,18 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
+				if scope == "global" {
+					if err := mergeDirectoryDiscovery(home, s); err != nil {
+						return err
+					}
+				}
 				loaded[scope] = s
 				for _, name := range args {
-					items := s.Find(name, tool, "")
+					items := s.Find(name, "", "")
 					for _, it := range items {
+						if tool != "" && it.Tool != tool && it.PackageReceipt == "" {
+							continue
+						}
 						anyKnown[name] = true
 						selected = append(selected, it)
 					}
@@ -131,6 +142,20 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			var packageItems []state.Item
+			var legacyItems []state.Item
+			for _, item := range selected {
+				if item.PackageReceipt != "" {
+					packageItems = append(packageItems, item)
+				} else {
+					legacyItems = append(legacyItems, item)
+				}
+			}
+			selected = legacyItems
+			packagePlans, err := planDirectoryRemovals(home, packageItems, force)
+			if err != nil {
+				return err
+			}
 			computed, err := remove.Compute(selected, read, occupancy)
 			if err != nil {
 				return err
@@ -162,12 +187,31 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			env := os.LookupEnv
 			res := toolpath.New(env, home, wd)
 			if jsonOutput {
-				return render.JSON(cmd.OutOrStdout(), cs)
+				if len(packagePlans) == 0 {
+					return render.JSON(cmd.OutOrStdout(), cs)
+				}
+				return render.JSON(cmd.OutOrStdout(), struct {
+					*diff.ChangeSet
+					Packages []directoryRemovalPlan `json:"packages"`
+				}{cs, packagePlans})
 			}
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
+			for _, plan := range packagePlans {
+				fmt.Fprintf(cmd.OutOrStdout(), "Package %s: delete %v; retain %v; unknown leftovers %v; pending recovery %t\n", plan.Recipe, plan.Delete, plan.Retain, plan.Leftovers, plan.Pending)
+			}
 
 			if !deploy {
 				return nil
+			}
+			if err := deployDirectoryRemovals(cmd, home, packagePlans, force); err != nil {
+				return err
+			}
+			if len(packagePlans) > 0 {
+				refreshed, err := state.Load(removeStatePath("global", home, wd))
+				if err != nil {
+					return err
+				}
+				loaded["global"] = refreshed
 			}
 			return runRemove(cmd, cs, ledger, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
 		},
@@ -457,4 +501,98 @@ func installedSummary(loaded map[string]*state.State) string {
 	}
 	sort.Strings(list)
 	return "installed: " + strings.Join(list, ", ")
+}
+
+// directoryRemovalPlan never passes package identities to legacy fileUndo.
+type directoryRemovalPlan struct {
+	Recipe    string   `json:"recipe"`
+	Delete    []string `json:"delete"`
+	Retain    []string `json:"retain"`
+	Leftovers []string `json:"leftovers"`
+	Pending   bool     `json:"pending"`
+}
+
+func planDirectoryRemovals(home string, items []state.Item, force bool) ([]directoryRemovalPlan, error) {
+	var plans []directoryRemovalPlan
+	seen := map[string]bool{}
+	service := directoryServiceForDeploy(home)
+	for _, item := range items {
+		name := item.PackageReceipt
+		if item.Artifact != name || item.Scope != "global" {
+			return nil, fmt.Errorf("package %s: invalid discovery reference %q in %s scope", item.Artifact, name, item.Scope)
+		}
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		receipt, err := packagestate.Load(home, name)
+		if err != nil {
+			return nil, err
+		}
+		tx, err := packagestate.ReadTransaction(home, name)
+		if err != nil {
+			return nil, err
+		}
+		p := directoryRemovalPlan{Recipe: name, Pending: tx != nil}
+		if tx != nil {
+			plans = append(plans, p)
+			continue
+		}
+		if receipt == nil {
+			return nil, fmt.Errorf("package %s: discovery reference has no receipt; no deletion authorized", name)
+		}
+		in, err := service.Inspect(packagedelivery.Request{Recipe: name, RecipeVersion: receipt.RecipeVersion, Root: receipt.Root, URL: receipt.URL, SHA256: receipt.ArchiveSHA256, Identity: receipt.Identity})
+		if err != nil {
+			return nil, err
+		}
+		changed := map[string]bool{}
+		for _, path := range in.Changed {
+			changed[path] = true
+		}
+		for _, entry := range receipt.Files {
+			if changed[entry.Path] && !force {
+				p.Retain = append(p.Retain, entry.Path)
+			} else {
+				p.Delete = append(p.Delete, entry.Path)
+			}
+		}
+		p.Leftovers = in.Unknown
+		plans = append(plans, p)
+	}
+	return plans, nil
+}
+
+func deployDirectoryRemovals(cmd *cobra.Command, home string, plans []directoryRemovalPlan, force bool) (err error) {
+	if len(plans) == 0 {
+		return nil
+	}
+	release, err := packagestate.Acquire(home)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, release()) }()
+	service := directoryServiceForDeploy(home)
+	for _, plan := range plans {
+		// A prior removal may already have deleted its receipt. Reconcile it first,
+		// then only start a fresh removal if authoritative ownership still exists.
+		if err := recoverDirectory(cmd.Context(), service, plan.Recipe); err != nil {
+			return err
+		}
+		receipt, err := packagestate.Load(home, plan.Recipe)
+		if err != nil {
+			return err
+		}
+		if receipt == nil {
+			continue
+		}
+		result, err := service.Remove(cmd.Context(), plan.Recipe, force)
+		if err != nil {
+			return directoryDiagnostic(err)
+		}
+		if err := recoverDirectory(cmd.Context(), service, plan.Recipe); err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Package %s removed; retained owned paths: %v; unowned leftovers: %v\n", plan.Recipe, result.Retained, result.Leftovers)
+	}
+	return nil
 }
