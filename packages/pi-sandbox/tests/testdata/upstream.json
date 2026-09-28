@@ -15,8 +15,11 @@
     "version": "0.71.0",
     "bundled": false,
     "sourceURL": "https://registry.npmjs.org/pi-subagents/0.71.0",
-    "note": "Separate release existence verified only; not installed in the pinned image."
+    "note": "Not baked into the base image. Kit setup installs npm:pi-subagents@0.71.0; fresh Linux/arm64 VM verified Pi SDK discovery and native RPC extension startup without model requests.",
+    "installedByKit": true
   },
   "registryProvenance": "arm64 SLSA attestation associates image with commit; signature not independently verified",
-  "runtimeTested": false
+  "runtimeTested": false,
+  "extensionStartupTested": true,
+  "modelDelegationTested": false
 }

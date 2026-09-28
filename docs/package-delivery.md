@@ -97,6 +97,19 @@ alone does not establish runtime acceptance.
 
 ## Authoring a package
 
+`package.yaml` is a Patronus build descriptor with its own `schemaVersion: 1`,
+independent of the recipe manifest API and the sbx kit schema. It is not a
+catalog item. For editor validation and completion, add this modeline in a
+`packages/<name>/package.yaml` file:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/package-v1.schema.json
+```
+
+This explicit association avoids unrelated PNPM/Mason schemas automatically
+selected for the generic filename. The build command remains authoritative
+for file existence, case collisions, identity and byte limits.
+
 Declare each static file and its executable flag in
 `packages/<name>/package.yaml`, along with schema version 1, package name,
 version and supported platforms. Only declared files enter the archive;

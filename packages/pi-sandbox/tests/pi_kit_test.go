@@ -25,7 +25,7 @@ func readFile(t *testing.T, path string) []byte {
 
 // The upstream publishes a normative Markdown specification, not JSON Schema.
 // This deliberately narrow validator accepts only the reviewed upstream kit's
-// fields and values, with its rolling image replaced by the verified digest.
+// fields and values, with an immutable image and one pinned extension installation.
 // SPEC-v2 sections 3.2, 5.1, 5.4, 5.6 and 5.8 distinguish bundled inputs from
 // runtime output paths. New fields or file references require a new review.
 func TestPiPackageStaticKit(t *testing.T) {
@@ -66,8 +66,14 @@ func TestPiPackageStaticKit(t *testing.T) {
 		t.Fatal("image is not immutable")
 	}
 	sandbox["image"] = provenance.Image
+	setup := upstream["setup"].(map[string]any)
+	setup["install"] = append(setup["install"].([]any), map[string]any{
+		"command":     "pi install npm:pi-subagents@0.71.0",
+		"user":        "1000",
+		"description": "Install and register pinned pi-subagents inside the sandbox using Pi's package manager",
+	})
 	if !reflect.DeepEqual(kit, upstream) {
-		t.Fatal("kit differs from reviewed upstream semantics beyond image pin")
+		t.Fatal("kit differs from reviewed upstream semantics beyond image pin and pinned extension installation")
 	}
 }
 
@@ -90,7 +96,7 @@ func TestPiPackageInventory(t *testing.T) {
 	if err := d.Decode(&descriptor); err != nil {
 		t.Fatal(err)
 	}
-	if descriptor.SchemaVersion != 1 || descriptor.Name != "pi-sandbox" || descriptor.Version != "1.0.0" {
+	if descriptor.SchemaVersion != 1 || descriptor.Name != "pi-sandbox" || descriptor.Version != "1.1.0" {
 		t.Fatal("unexpected package identity")
 	}
 	if len(descriptor.Platforms) != 1 || descriptor.Platforms[0].OS != "darwin" || descriptor.Platforms[0].Arch != "arm64" {

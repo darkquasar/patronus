@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Patronus static package build descriptor",
+  "description": "Build input, not an installable catalog family. Patronus build also checks files, collisions, identity and byte limits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "version",
+    "platforms",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Version of the Patronus package build descriptor format."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "Must match the packages/<name> source directory."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$",
+      "description": "Immutable package release version (SemVer)."
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "os",
+          "arch"
+        ],
+        "properties": {
+          "os": {
+            "enum": [
+              "darwin",
+              "linux",
+              "windows"
+            ]
+          },
+          "arch": {
+            "enum": [
+              "arm64",
+              "amd64"
+            ]
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4095,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 512,
+            "pattern": "^(?!\\.{1,2}(/|$))[A-Za-z0-9_.-]+(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.-]+){0,15}$",
+            "not": {
+              "const": "package.json"
+            },
+            "description": "Source-relative regular file; no links, traversal or case-colliding paths. package.json is generated."
+          },
+          "executable": {
+            "type": "boolean",
+            "default": false,
+            "description": "Install as 0755 when true; otherwise 0644."
+          }
+        }
+      }
+    }
+  }
+}

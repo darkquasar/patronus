@@ -63,9 +63,8 @@ credentials:
             # behavior, not something the spec text promises.
             expires: "{{.ExpiresAt}}"
 setup:
-  # Config only -- pi itself is baked into the image, so nothing is installed
-  # here. This is the re-export pattern of SPEC-v2 §9.5, and it is idempotent,
-  # so re-running it on recreate is fine.
+  # Pi is baked into the image. Configure its proxy before installing the
+  # pinned extension inside the VM; Patronus never executes these commands.
   #
   # Guarded on HTTP_PROXY being non-empty: npm rejects an empty value for a
   # url-typed config key, so an unset or empty variable would fail the step and
@@ -78,3 +77,6 @@ setup:
     - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
       user: "1000"
       description: Point npm at the sandbox proxy in ~/.npmrc so pi's runtime npm use (`pi install npm:...`, `pi update`, startup package fetches) works in exec contexts that do not inherit the proxy environment variables
+    - command: 'pi install npm:pi-subagents@0.71.0'
+      user: "1000"
+      description: Install and register pinned pi-subagents inside the sandbox using Pi's package manager

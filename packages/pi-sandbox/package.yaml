@@ -1,6 +1,7 @@
+# yaml-language-server: $schema=../../schemas/package-v1.schema.json
 schemaVersion: 1
 name: pi-sandbox
-version: 1.0.0
+version: 1.1.0
 platforms:
   - os: darwin
     arch: arm64
