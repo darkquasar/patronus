@@ -37,15 +37,33 @@ The index selects Linux/arm64 manifest
 for the VM. Read-only registry and immutable layer inspection verified
 `@earendil-works/pi-coding-agent` **0.87.1**. Registry build provenance links
 the image to the upstream commit above; its signature was not independently
-verified. The separate **pi-subagents 0.71.0** release is not installed in this
-image. Pi's bundled subagent example does not establish that extension's presence.
+verified. The base image does not include **pi-subagents 0.71.0**. This kit installs
+that exact release during sandbox creation with
+`pi install npm:pi-subagents@0.71.0`, after configuring npm's proxy. Pi records
+and loads the extension through its native package manager; no host Pi or
+pi-subagents installation is required. Creation requires npm registry access.
+The top-level extension version is pinned; npm resolves its transitive
+dependencies at creation time, so this is not an offline or fully locked image.
+
+Parent and child agents execute within the same sandbox. Foreground children
+use Pi sessions; background children use detached runners in that VM. There is
+no separate VM per child. They share the sandbox workspace and provider setup.
+After launch, ask Pi to use a reviewer or run parallel workers; use
+`/subagents-doctor` to inspect extension setup. Web research agents require the
+separate pi-web-access extension, which this kit does not install.
+
+See the [pi-subagents documentation](https://github.com/nicobailon/pi-subagents)
+for delegation, concurrency and agent configuration.
 
 This package follows the upstream Anthropic kit. It does not reproduce a
 custom OpenAI environment. Static acceptance checks the reviewed kit semantics
 against upstream's normative [SPEC-v2.md](https://github.com/docker/sbx-kits-contrib/blob/869c83997680a252ed2b35671b3fd0d9adc2d487/spec/SPEC-v2.md),
-pins and payload inventory. Upstream provides no JSON schema. No VM launch,
-provider authentication or end-to-end runtime validation was performed for
-this package. License and modification details are in `LICENSE` and `NOTICE`.
+pins and payload inventory. Upstream provides no JSON schema. A fresh Linux/arm64 sandbox passed package discovery, extension loading,
+delegation-tool registration and native Pi RPC startup checks with these pins.
+Provider authentication and model-backed end-to-end delegation were not tested.
+The repeatable, model-free smoke test is `tests/check-runtime.mjs`: copy it
+into a newly created sandbox and run `node /tmp/check-runtime.mjs` there.
+It is test tooling, excluded from the installed package. License and modification details are in `LICENSE` and `NOTICE`.
 
 ## Separate example: a Codex mixin
 
