@@ -120,6 +120,9 @@ func newCheckVersionsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := checkPackageVersions(cmd.Context(), root, base); err != nil {
+				return err
+			}
 			changes := gatherChanges(cmd.Context(), root, base)
 			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _recipesDir)...)
 			changes = append(changes, gatherFlatManifestChanges(cmd.Context(), root, base, _profilesDir)...)
