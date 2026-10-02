@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/darkquasar/patronus/internal/packagestate"
 )
@@ -105,6 +106,11 @@ func TestCrashHelper(t *testing.T) {
 	point := os.Getenv("PATRONUS_CRASH_POINT")
 	s.Fault = func(p string) error {
 		if p == point {
+			if os.Getenv("PATRONUS_CRASH_KILL") == "1" {
+				process, err := os.FindProcess(os.Getpid())
+				must(t, err)
+				must(t, process.Kill()) // SIGKILL on supported Unix mutation platforms.
+			}
 			os.Exit(97)
 		}
 		return nil
@@ -160,7 +166,9 @@ func TestCrashHelper(t *testing.T) {
 }
 func runCrash(t *testing.T, home, point string, extra ...string) {
 	t.Helper()
-	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=^TestCrashHelper$")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCrashHelper$")
 	cmd.Env = append(os.Environ(), "PATRONUS_CRASH_CHILD=1", "PATRONUS_CRASH_HOME="+home, "PATRONUS_CRASH_POINT="+point)
 	cmd.Env = append(cmd.Env, extra...)
 	out, err := cmd.CombinedOutput()

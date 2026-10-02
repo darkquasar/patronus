@@ -56,6 +56,8 @@ func TestBuildRejectsInvalidPayloads(t *testing.T) {
 		{"metadata", []File{{Path: "package.json", Mode: 0644}}},
 		{"duplicate", []File{{Path: "a", Mode: 0644}, {Path: "a", Mode: 0644}}},
 		{"case collision", []File{{Path: "Dir/a", Mode: 0644}, {Path: "dir/b", Mode: 0644}}},
+		{"scoped case collision", []File{{Path: "@Scope/a", Mode: 0644}, {Path: "@scope/b", Mode: 0644}}},
+		{"scoped traversal", []File{{Path: "@scope/../outside", Mode: 0644}}},
 		{"ancestor file", []File{{Path: "a", Mode: 0644}, {Path: "a/b", Mode: 0644}}},
 		{"privileged mode", []File{{Path: "a", Mode: 04755}}},
 		{"noncanonical mode", []File{{Path: "a", Mode: 0700}}},

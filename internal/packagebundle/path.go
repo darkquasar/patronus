@@ -25,7 +25,7 @@ func validatePath(name string, directory bool, components, pathBytes int) (strin
 			return "", fmt.Errorf("invalid member path %q", name)
 		}
 		for _, c := range []byte(part) {
-			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-' || c == '.') {
+			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-' || c == '.' || c == '@') {
 				return "", fmt.Errorf("invalid member path %q", name)
 			}
 		}

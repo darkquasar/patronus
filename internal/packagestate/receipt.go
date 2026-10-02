@@ -139,7 +139,7 @@ func (s storage) directory(home, rel string, create bool) (string, error) {
 	}
 	return current, nil
 }
-func paths(home, recipe string, create bool) (string, string, string, error) {
+func paths(home, recipe string) (string, string, string, error) {
 	if err := safeRecipe(recipe); err != nil {
 		return "", "", "", err
 	}
@@ -151,7 +151,7 @@ func paths(home, recipe string, create bool) (string, string, string, error) {
 	if err != nil {
 		return "", "", "", err
 	}
-	state, err := directory(h, filepath.Join(".patronus", "package-state"), create)
+	state, err := directory(h, filepath.Join(".patronus", "package-state"), false)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -298,8 +298,10 @@ func readJSON(path string, out any) (bool, error) {
 }
 
 // Load returns nil, nil when no committed receipt exists. It never writes.
+// A pending removal keeps this last committed snapshot until its final outcome;
+// callers must consult ReadTransaction before treating it as mutation authority.
 func Load(home, recipe string) (*Receipt, error) {
-	_, root, path, err := paths(home, recipe, false)
+	_, root, path, err := paths(home, recipe)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +325,7 @@ func (s storage) save(home string, r *Receipt) error {
 	if r == nil {
 		return errors.New("nil receipt")
 	}
-	h, root, path, err := paths(home, r.Recipe, false)
+	h, root, path, err := paths(home, r.Recipe)
 	if err != nil {
 		return err
 	}
@@ -337,6 +339,8 @@ func (s storage) save(home string, r *Receipt) error {
 }
 
 // List returns committed receipts in recipe-name order. Transactions are excluded.
+// These are snapshots, not proof that removal is idle: discovery must also enumerate
+// transaction directories (including recipes whose final receipt was deleted).
 func List(home string) ([]Receipt, error) {
 	h, err := canonicalHome(home)
 	if err != nil {
@@ -372,7 +376,7 @@ func List(home string) ([]Receipt, error) {
 // DeleteReceipt durably removes a receipt, including when it is already absent.
 func DeleteReceipt(home, recipe string) error { return (storage{}).deleteReceipt(home, recipe) }
 func (s storage) deleteReceipt(home, recipe string) error {
-	_, _, path, err := paths(home, recipe, false)
+	_, _, path, err := paths(home, recipe)
 	if err != nil {
 		return err
 	}

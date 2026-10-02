@@ -40,14 +40,20 @@ type Transaction struct {
 	Removed       []string              `json:"removed"`
 	PendingRemove []string              `json:"pendingRemove"`
 	Detail        string                `json:"detail"`
+	// Schema-2 removal fields. Inventories above are a detached full-reader view;
+	// only private validated removal state can authorize checkpoint writes.
+	RemovalID    string `json:"removalID,omitempty"`
+	ManifestHash string `json:"manifestHash,omitempty"`
+	Completed    int    `json:"completed,omitempty"`
+	removal      *removalState
 }
 
-func transactionPath(home, recipe string, create bool) (string, string, string, error) {
-	h, root, _, err := paths(home, recipe, create)
+func transactionPath(home, recipe string) (string, string, string, error) {
+	h, root, _, err := paths(home, recipe)
 	if err != nil {
 		return "", "", "", err
 	}
-	dir, err := directory(h, filepath.Join(".patronus", "package-state", "transactions", recipe), create)
+	dir, err := directory(h, filepath.Join(".patronus", "package-state", "transactions", recipe), false)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -57,6 +63,9 @@ func validPhase(p Phase) bool { return p == Prepared || p == PackagePlaced || p 
 func validateTransaction(home, recipe, root string, tx *Transaction) error {
 	if tx == nil {
 		return errors.New("nil transaction")
+	}
+	if tx.RemovalID != "" || tx.ManifestHash != "" || tx.Completed != 0 || tx.removal != nil {
+		return errors.New("removal checkpoint fields in legacy transaction")
 	}
 	if tx.SchemaVersion != 1 {
 		return fmt.Errorf("unsupported transaction schema %d", tx.SchemaVersion)
@@ -135,7 +144,7 @@ func validateTransaction(home, recipe, root string, tx *Transaction) error {
 
 // ReadTransaction reads without recovering or changing filesystem state.
 func ReadTransaction(home, recipe string) (*Transaction, error) {
-	h, root, path, err := transactionPath(home, recipe, false)
+	h, root, path, err := transactionPath(home, recipe)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +155,12 @@ func ReadTransaction(home, recipe string) (*Transaction, error) {
 	}
 	if !found {
 		return nil, nil //nolint:nilnil // Absence is the documented contract.
+	}
+	if tx != nil && tx.SchemaVersion == 2 {
+		if tx.Recipe != recipe || tx.Root != root {
+			return nil, errors.New("transaction recipe/root does not match derived path")
+		}
+		return readRemoval(path, tx)
 	}
 	if err := validateTransaction(h, recipe, root, tx); err != nil {
 		return nil, err
@@ -161,9 +176,15 @@ func (s storage) writeTransaction(home string, tx *Transaction) error {
 	if tx == nil {
 		return errors.New("nil transaction")
 	}
-	h, root, path, err := transactionPath(home, tx.Recipe, false)
+	h, root, path, err := transactionPath(home, tx.Recipe)
 	if err != nil {
 		return err
+	}
+	if tx.SchemaVersion == 2 {
+		if tx.Root != root {
+			return errors.New("transaction root does not match derived path")
+		}
+		return s.writeRemoval(path, tx)
 	}
 	if err := validateTransaction(h, tx.Recipe, root, tx); err != nil {
 		return err
@@ -177,9 +198,14 @@ func (s storage) writeTransaction(home string, tx *Transaction) error {
 // ClearTransaction durably deletes the journal, leaving its private directory.
 func ClearTransaction(home, recipe string) error { return (storage{}).clearTransaction(home, recipe) }
 func (s storage) clearTransaction(home, recipe string) error {
-	_, _, path, err := transactionPath(home, recipe, false)
+	_, _, path, err := transactionPath(home, recipe)
 	if err != nil {
 		return err
 	}
-	return s.remove(path)
+	// Remove and sync the discovery marker first. A crash afterward may leave an
+	// inert manifest, but never a live marker referencing a missing manifest.
+	if err := s.remove(path); err != nil {
+		return err
+	}
+	return s.remove(filepath.Join(filepath.Dir(path), "removal.json"))
 }
