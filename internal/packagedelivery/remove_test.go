@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/darkquasar/patronus/internal/packagebundle"
 	"github.com/darkquasar/patronus/internal/packagestate"
@@ -55,7 +58,7 @@ func TestPackageRemovalRetainsEditsAndUnknown(t *testing.T) {
 }
 
 func TestPackageRemovalHardCrashRecovery(t *testing.T) {
-	for _, point := range []string{"after-unlink-intent", "after-unlink", "after-reduced-receipt-write", "after-removal-commit"} {
+	for _, point := range []string{"after-removal-publication", "after-unlink-intent", "after-unlink-before-parent-sync", "after-unlink", "after-removal-progress", "after-reduced-receipt-write", "after-removal-commit"} {
 		t.Run(point, func(t *testing.T) {
 			home := t.TempDir()
 			setupCrashBaseline(t, home, true)
@@ -166,7 +169,14 @@ func TestPackageRemovalRejectsUnownedJournalIntent(t *testing.T) {
 func TestPackageRemovalPartialPersistenceRetry(t *testing.T) {
 	s, req := installed(t)
 	sentinel := errors.New("disk error")
-	s.persistence = &persistence{save: func(string, *packagestate.Receipt) error { return sentinel }}
+	// Per-file progress is now the durability boundary; receipts are published
+	// once at finalization. Retain the stop-before-next-unlink assertion.
+	s.persistence = &persistence{write: func(home string, tx *packagestate.Transaction) error {
+		if tx.Intent == "progress" {
+			return sentinel
+		}
+		return packagestate.WriteTransaction(home, tx)
+	}}
 	_, err := s.Remove(context.Background(), req.Recipe, false)
 	if !errors.Is(err, sentinel) {
 		t.Fatalf("persistence error lost: %v", err)
@@ -188,6 +198,9 @@ func TestPackageRemovalAmbiguousReceiptStops(t *testing.T) {
 	for _, visibleWrite := range []bool{false, true} {
 		t.Run(fmt.Sprint(visibleWrite), func(t *testing.T) {
 			s, req := installed(t)
+			// Retain an edit so the final outcome saves (rather than deletes) a
+			// receipt. An ambiguous final write must not prune or commit afterward.
+			must(t, os.WriteFile(filepath.Join(req.Root, "package.json"), []byte("edit"), 0644))
 			s.persistence = &persistence{save: func(home string, r *packagestate.Receipt) error {
 				if visibleWrite {
 					must(t, packagestate.Save(home, r))
@@ -198,8 +211,16 @@ func TestPackageRemovalAmbiguousReceiptStops(t *testing.T) {
 			if !errors.Is(err, ErrRecoveryRequired) {
 				t.Fatalf("ambiguous error lost: %v", err)
 			}
-			if _, err := os.Stat(filepath.Join(req.Root, "package.json")); err != nil {
-				t.Fatal("destructive follow-up", err)
+			if string(mustReadRemoval(t, filepath.Join(req.Root, "package.json"))) != "edit" {
+				t.Fatal("destructive follow-up")
+			}
+			if _, err := os.Stat(filepath.Join(req.Root, "dir")); err != nil {
+				t.Fatal("pruned after receipt failure", err)
+			}
+			tx, err := packagestate.ReadTransaction(s.Home, req.Recipe)
+			must(t, err)
+			if tx.Phase == packagestate.Committed {
+				t.Fatal("committed after ambiguous receipt failure")
 			}
 			s.persistence = nil
 			must(t, s.Recover(context.Background(), req.Recipe))
@@ -310,6 +331,251 @@ func TestPackageRemovalRejectsTypeSubstitutionAfterIntent(t *testing.T) {
 			if string(mustReadRemoval(t, outside)) != "outside" {
 				t.Fatal("outside changed")
 			}
+		})
+	}
+}
+
+func TestPackageRemovalManifestBeforePublicationCrash(t *testing.T) {
+	for _, point := range []string{"before-removal-manifest", "after-removal-manifest"} {
+		t.Run(point, func(t *testing.T) {
+			home := t.TempDir()
+			setupCrashBaseline(t, home, false)
+			runCrash(t, home, point, "PATRONUS_REMOVE=1")
+			locked(t, home)
+			s := Service{Home: home}
+			tx, err := packagestate.ReadTransaction(home, "kit")
+			must(t, err)
+			if tx != nil {
+				t.Fatal("manifest alone published a transaction")
+			}
+			path := filepath.Join(home, ".patronus", "packages", "kit", "dir/tool")
+			if string(mustReadRemoval(t, path)) != "1.0.0" {
+				t.Fatal("unlink before publication")
+			}
+			must(t, s.Recover(context.Background(), "kit"))
+			_, err = s.Remove(context.Background(), "kit", false)
+			must(t, err)
+		})
+	}
+}
+
+func TestPackageRemovalCompletedPrefixPreservesRecreation(t *testing.T) {
+	for _, body := range []string{"1.0.0", "different user bytes"} {
+		t.Run(body, func(t *testing.T) {
+			s, req := installed(t)
+			injected := errors.New("stop after durable prefix")
+			s.Fault = func(point string) error {
+				if point == "after-removal-progress" {
+					return injected
+				}
+				return nil
+			}
+			_, err := s.Remove(context.Background(), req.Recipe, false)
+			if !errors.Is(err, injected) {
+				t.Fatalf("fault not hit: %v", err)
+			}
+			path := filepath.Join(req.Root, "dir/tool")
+			must(t, os.WriteFile(path, []byte(body), 0755))
+			s.Fault = nil
+			must(t, s.Recover(context.Background(), req.Recipe))
+			if string(mustReadRemoval(t, path)) != body {
+				t.Fatal("replayed completed path")
+			}
+			result, err := s.Remove(context.Background(), req.Recipe, true)
+			must(t, err)
+			if len(result.Leftovers) != 1 || result.Leftovers[0] != "dir/tool" {
+				t.Fatalf("recreation gained ownership: %+v", result)
+			}
+		})
+	}
+}
+
+func TestPackageRemovalLegacyPartialJournalRecovery(t *testing.T) {
+	s, req := installed(t)
+	previous, err := packagestate.Load(s.Home, req.Recipe)
+	must(t, err)
+	// Schema-1 stored a growing Removed set and an intermediate receipt. Keep
+	// replaying that representation instead of migrating its ambiguous boundary.
+	tx := &packagestate.Transaction{SchemaVersion: 1, Recipe: req.Recipe, Root: req.Root,
+		Operation: "remove", Phase: packagestate.Prepared, Intent: "save-receipt",
+		Previous: previous, Observed: previous.Files, Removed: []string{"dir/tool"}, PendingRemove: []string{"package.json"}}
+	must(t, packagestate.WriteTransaction(s.Home, tx))
+	must(t, packagestate.Save(s.Home, reducedRemovalReceipt(tx)))
+	// Same bytes at a durably completed path are no longer owned, even for v1.
+	must(t, s.Recover(context.Background(), req.Recipe))
+	if string(mustReadRemoval(t, filepath.Join(req.Root, "dir/tool"))) != "1.0.0" {
+		t.Fatal("legacy completed file was replayed")
+	}
+	tx, err = packagestate.ReadTransaction(s.Home, req.Recipe)
+	must(t, err)
+	if tx.SchemaVersion != 1 || tx.Phase != packagestate.Committed {
+		t.Fatalf("legacy recovery changed format or failed to commit: %+v", tx)
+	}
+}
+
+func TestPackageRemovalPendingInspectionAndReplacement(t *testing.T) {
+	s, req := installed(t)
+	s.Fault = func(point string) error {
+		if point == "after-removal-progress" {
+			return errors.New("interrupt")
+		}
+		return nil
+	}
+	_, err := s.Remove(context.Background(), req.Recipe, false)
+	if !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("missing interruption: %v", err)
+	}
+	// The last committed receipt remains whole, but full readers must surface
+	// pending work instead of deriving a fresh mutation from its stale inventory.
+	in, err := s.Inspect(req)
+	must(t, err)
+	if in.Pending == nil || in.Pending.SchemaVersion != 2 || in.Pending.Completed != 1 || len(in.Receipt.Files) != 2 || len(in.Pending.PendingRemove) != 1 {
+		t.Fatalf("pending inspection: %+v", in)
+	}
+	if err := inspectionConflict(req.Recipe, in, true); !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("pending inspection authorizes mutation: %v", err)
+	}
+	s.Fault = nil
+	// Modification of a still-pending preimage must block even a forced replace.
+	must(t, os.WriteFile(filepath.Join(req.Root, "package.json"), []byte("later edit"), 0644))
+	_, err = s.Replace(context.Background(), req, true)
+	if !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("replace bypassed pending removal: %v", err)
+	}
+}
+
+func TestPackageRemovalUnlinkSyncFailureStops(t *testing.T) {
+	s, req := installed(t)
+	injected := errors.New("parent sync failure")
+	s.Fault = func(point string) error {
+		if point == "after-unlink-before-parent-sync" {
+			return injected
+		}
+		return nil
+	}
+	_, err := s.Remove(context.Background(), req.Recipe, false)
+	var de *packagestate.DurabilityError
+	if !errors.Is(err, injected) || !errors.As(err, &de) || !de.MayBeVisible {
+		t.Fatalf("lost uncertain durability: %v", err)
+	}
+	tx, err := packagestate.ReadTransaction(s.Home, req.Recipe)
+	must(t, err)
+	if tx.Completed != 0 || tx.Intent != "unlink" {
+		t.Fatal("advanced progress after failed sync")
+	}
+	if _, err := os.Stat(filepath.Join(req.Root, "package.json")); err != nil {
+		t.Fatal("continued after failed sync", err)
+	}
+	s.Fault = nil
+	must(t, s.Recover(context.Background(), req.Recipe))
+}
+
+func TestPackageRemovalCancellationPreservesPending(t *testing.T) {
+	s, req := installed(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.Fault = func(point string) error {
+		if point == "after-removal-progress" {
+			cancel()
+		}
+		return nil
+	}
+	_, err := s.Remove(ctx, req.Recipe, false)
+	if !errors.Is(err, context.Canceled) || !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("cancellation lost: %v", err)
+	}
+	tx, err := packagestate.ReadTransaction(s.Home, req.Recipe)
+	must(t, err)
+	if tx.Completed != 1 {
+		t.Fatal("cancellation lost durable prefix")
+	}
+	if _, err := os.Stat(filepath.Join(req.Root, "package.json")); err != nil {
+		t.Fatal("continued after cancellation", err)
+	}
+	s.Fault = nil
+	must(t, s.Recover(context.Background(), req.Recipe))
+}
+
+func TestPackageRemovalSIGKILLCompletedPrefix(t *testing.T) {
+	home := t.TempDir()
+	setupCrashBaseline(t, home, false)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCrashHelper$")
+	cmd.Env = append(os.Environ(), "PATRONUS_CRASH_CHILD=1", "PATRONUS_CRASH_HOME="+home,
+		"PATRONUS_CRASH_POINT=after-removal-progress", "PATRONUS_REMOVE=1", "PATRONUS_CRASH_KILL=1")
+	out, err := cmd.CombinedOutput() // Wait and reap the killed child.
+	var exit *exec.ExitError
+	if ctx.Err() != nil || !errors.As(err, &exit) || !strings.Contains(err.Error(), "signal: killed") {
+		t.Fatalf("expected SIGKILL at durable prefix, got %v: %s", err, out)
+	}
+	locked(t, home)
+	tx, err := packagestate.ReadTransaction(home, "kit")
+	must(t, err)
+	if tx == nil || tx.Completed != 1 {
+		t.Fatal("SIGKILL lost durable prefix")
+	}
+	path := filepath.Join(tx.Root, "dir/tool")
+	must(t, os.WriteFile(path, []byte("1.0.0"), 0755))
+	s := Service{Home: home}
+	must(t, s.Recover(context.Background(), "kit"))
+	if string(mustReadRemoval(t, path)) != "1.0.0" {
+		t.Fatal("SIGKILL recovery replayed completed path")
+	}
+}
+
+func TestPackageRemovalReceiptPublishedOnce(t *testing.T) {
+	for _, retain := range []bool{false, true} {
+		t.Run(fmt.Sprint(retain), func(t *testing.T) {
+			s, req := installed(t)
+			if retain {
+				must(t, os.WriteFile(filepath.Join(req.Root, "package.json"), []byte("edit"), 0644))
+			}
+			saves, deletes := 0, 0
+			s.persistence = &persistence{
+				save: func(home string, receipt *packagestate.Receipt) error {
+					saves++
+					return packagestate.Save(home, receipt)
+				},
+				deleteReceipt: func(home, recipe string) error {
+					deletes++
+					return packagestate.DeleteReceipt(home, recipe)
+				},
+			}
+			_, err := s.Remove(context.Background(), req.Recipe, false)
+			must(t, err)
+			must(t, s.Recover(context.Background(), req.Recipe))
+			if saves+deletes != 1 || (saves == 1) != retain {
+				t.Fatalf("receipt writes: saves=%d deletes=%d", saves, deletes)
+			}
+		})
+	}
+}
+
+func TestPackageRemovalAmbiguousReceiptDeletionStops(t *testing.T) {
+	for _, visibleWrite := range []bool{false, true} {
+		t.Run(fmt.Sprint(visibleWrite), func(t *testing.T) {
+			s, req := installed(t)
+			s.persistence = &persistence{deleteReceipt: func(home, recipe string) error {
+				if visibleWrite {
+					must(t, packagestate.DeleteReceipt(home, recipe))
+				}
+				return &packagestate.DurabilityError{Path: "kit.json", Stage: "test-sync", MayBeVisible: true, Err: errors.New("ambiguous deletion")}
+			}}
+			_, err := s.Remove(context.Background(), req.Recipe, false)
+			if !errors.Is(err, ErrRecoveryRequired) {
+				t.Fatalf("ambiguous deletion lost: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(req.Root, "dir")); err != nil {
+				t.Fatal("pruned after ambiguous deletion", err)
+			}
+			tx, err := packagestate.ReadTransaction(s.Home, req.Recipe)
+			must(t, err)
+			if tx.Phase == packagestate.Committed || tx.Intent != "delete-receipt" {
+				t.Fatal("advanced after ambiguous deletion")
+			}
+			s.persistence = nil
+			must(t, s.Recover(context.Background(), req.Recipe))
 		})
 	}
 }

@@ -46,14 +46,30 @@ func (s *Service) Remove(ctx context.Context, recipe string, force bool) (Result
 		return Result{}, &ConflictError{Recipe: recipe, Kind: "path-type", Paths: scan.types}
 	}
 	tx := &packagestate.Transaction{SchemaVersion: 1, Recipe: recipe, Root: root, Operation: "remove", Phase: packagestate.Prepared, Previous: receipt, Removed: slices.Clone(scan.missing)}
+	changed := make(map[string]bool, len(scan.changed))
+	for _, path := range scan.changed {
+		changed[path] = true
+	}
 	for _, entry := range scan.entries {
-		if !force && slices.Contains(scan.changed, entry.Path) {
+		if !force && changed[entry.Path] {
 			continue
 		}
 		tx.Observed = append(tx.Observed, entry)
 		tx.PendingRemove = append(tx.PendingRemove, entry.Path)
 	}
+	if err := s.fault("before-removal-manifest"); err != nil {
+		return Result{}, err
+	}
+	if err := packagestate.PrepareRemoval(s.Home, tx); err != nil {
+		return Result{}, pendingError(recipe, []string{root}, err)
+	}
+	if err := s.fault("after-removal-manifest"); err != nil {
+		return Result{}, pendingError(recipe, []string{root}, err)
+	}
 	if err := s.write(tx); err != nil {
+		return Result{}, pendingError(recipe, []string{root}, err)
+	}
+	if err := s.fault("after-removal-publication"); err != nil {
 		return Result{}, pendingError(recipe, []string{root}, err)
 	}
 	if err := s.finishRemoval(ctx, tx); err != nil {
@@ -63,11 +79,18 @@ func (s *Service) Remove(ctx context.Context, recipe string, force bool) (Result
 }
 
 func reducedRemovalReceipt(tx *packagestate.Transaction) *packagestate.Receipt {
+	if tx.SchemaVersion == 2 {
+		return tx.RemovalReceipt()
+	}
+	removed := make(map[string]bool, len(tx.Removed))
+	for _, path := range tx.Removed {
+		removed[path] = true
+	}
 	r := *tx.Previous
 	r.Files = nil
 	r.Directories = slices.Clone(tx.Previous.Directories)
 	for _, entry := range tx.Previous.Files {
-		if !slices.Contains(tx.Removed, entry.Path) {
+		if !removed[entry.Path] {
 			r.Files = append(r.Files, entry)
 		}
 	}
@@ -143,6 +166,9 @@ func validateRemoval(tx *packagestate.Transaction, current *packagestate.Receipt
 }
 
 func (s *Service) finishRemoval(ctx context.Context, tx *packagestate.Transaction) error {
+	if tx.SchemaVersion == 2 {
+		return s.finishCheckpointRemoval(ctx, tx)
+	}
 	current, err := packagestate.Load(s.Home, tx.Recipe)
 	if err != nil {
 		return pendingError(tx.Recipe, []string{tx.Root}, err)
@@ -267,6 +293,9 @@ func (s *Service) unlinkOwned(ctx context.Context, tx *packagestate.Transaction,
 	if err := os.Remove(path); err != nil {
 		return err
 	}
+	if err := s.fault("after-unlink-before-parent-sync"); err != nil {
+		return &packagestate.DurabilityError{Path: path, Stage: "unlink-parent-sync", MayBeVisible: true, Err: err}
+	}
 	if err := syncPath(filepath.Dir(path)); err != nil {
 		return &packagestate.DurabilityError{Path: path, Stage: "unlink-parent-sync", MayBeVisible: true, Err: err}
 	}
@@ -288,7 +317,11 @@ func syncExistingParent(home, path string) error {
 }
 
 func (s *Service) pruneRemoval(ctx context.Context, tx *packagestate.Transaction) error {
-	dirs := slices.Clone(tx.Previous.Directories)
+	previous := tx.Previous
+	if tx.SchemaVersion == 2 {
+		previous = tx.RemovalPrevious()
+	}
+	dirs := slices.Clone(previous.Directories)
 	slices.Sort(dirs)
 	home := filepath.Dir(filepath.Dir(filepath.Dir(tx.Root)))
 	for i := len(dirs) - 1; i >= 0; i-- {
