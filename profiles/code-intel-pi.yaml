@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: code-intel-pi
+version: 1.0.0
+summary: "Optional Pi code intelligence: static guidance and shared HTTP wiring; externally provisioned services remain runtime-unverified."
+extends: core-profile-pi
+layers:
+  instructions:
+    - code-intel-pointer-pi
+  context:
+    - pattern-mcp-pi
+    - graphify-pi
+    - code-intel-operations-pi
+    - serena-shared-pi
+    - graphify-shared-pi
