@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: code-intel-operations-pi
+description: "Inert MCP lifecycle, failure/resource procedures and qualification handoff"
+version: 1.0.0
+entry: SKILL.md
+files: ["references", "fixtures/manual-lifecycle.test.mjs", "SOURCE.md", "NOTICE", "LICENSE"]
+targets: [pi]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/darkquasar/patronus
+  license: GPL-3.0
+  copyright: "Patronus contributors"
+  commit: e32b6a87a56bb43e45ad318b4b2c5349b8b57379
+  note: "Original Patronus Pi guidance or adaptation of the repository source sibling; see SOURCE.md. No external server code redistributed."

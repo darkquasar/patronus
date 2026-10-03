@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "serena-shared-pi": { "url": "http://127.0.0.1:9121/mcp" },
+    "graphify-shared-pi": { "url": "http://127.0.0.1:9122/mcp" }
+  },
+  "settings": {
+    "allowInstall": false,
+    "hostConfigDiscovery": "off",
+    "ancestorConfigRoots": [],
+    "agentPluginPaths": [],
+    "projectServers": "ask",
+    "sampling": false,
+    "samplingAutoApprove": false,
+    "jev": false,
+    "scriptMode": false,
+    "autoAuth": false,
+    "elicitation": false
+  }
+}

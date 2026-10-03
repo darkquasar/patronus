@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: recipe
+name: serena-shared-pi
+version: 1.0.0
+role: context
+summary: "Shared Serena HTTP client wiring only; operator-provisioned server identity and read/navigation restrictions require readiness checks."
+upstream: github.com/oraios/serena
+license: GPL-3.0
+# Application license, not the obsolete MIT claim from the legacy recipe.
+# No server code, dependency resolver or credentials are delivered.
+# wire.tools is the default route, not an explicit-target allowlist.
+wire:
+  method: merge
+  actor: patronus
+  mcp:
+    transport: http
+    url: http://127.0.0.1:9121/mcp
+  tools: [pi]
