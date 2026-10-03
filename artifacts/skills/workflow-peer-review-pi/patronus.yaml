@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: workflow-peer-review-pi
+description: "Runnable bounded peer-review workflow using upstream execution authority"
+version: 1.0.0
+entry: SKILL.md
+files: ["workflow.js", "request.schema.json", "fixtures/workflow.test.mjs", "fixtures/request.json"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["pi-subagents", "patronus-technical-reviewer-pi", "patronus-plan-reviewer-pi"]
