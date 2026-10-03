@@ -1,0 +1,14 @@
+apiVersion: patronus/v2
+family: recipe
+name: graphify-runtime-pi
+version: 1.0.0
+role: context
+summary: "Pinned Graphify runtime with the MCP HTTP dependencies required for one coordinator-owned query service. Graph building and service startup remain explicit coordinator actions."
+upstream: github.com/Graphify-Labs/graphify
+license: Apache-2.0
+deliver:
+  via: package-manager
+  install:
+    - manager: uv
+      ref: graphifyy[mcp]==0.9.31
+  binary: graphify-mcp
