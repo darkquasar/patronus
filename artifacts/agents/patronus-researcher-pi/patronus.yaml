@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-researcher-pi
+description: "Investigate local source and return attributed findings"
+version: 2.0.0
+entry: agent.md
+files: []
+targets: [pi]
+defaults:
+  scope: project
+requires:
+  - research-team-pi
+  - verification-before-completion-pi
+  - pi-subagents

@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: writing-style-pointer-pi
+description: "Inline house style with Pi editorial skill read"
+version: 1.0.1
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["writing-editorial-pi"]
