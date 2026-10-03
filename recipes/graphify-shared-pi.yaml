@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: recipe
+name: graphify-shared-pi
+version: 1.0.0
+role: context
+summary: "Shared Graphify HTTP client wiring only; query-only server and snapshot provenance are coordinator-owned and separately qualified."
+upstream: github.com/Graphify-Labs/graphify
+license: Apache-2.0
+# Independently versioned wiring; no binary delivery or server startup.
+# wire.tools is the default route, not an explicit-target allowlist.
+wire:
+  method: merge
+  actor: patronus
+  mcp:
+    transport: http
+    url: http://127.0.0.1:9122/mcp
+  tools: [pi]

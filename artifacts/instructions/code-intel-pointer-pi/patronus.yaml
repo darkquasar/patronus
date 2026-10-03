@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: code-intel-pointer-pi
+description: "Read optional Pi code-intelligence guidance before queries"
+version: 1.0.0
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
+targets: [pi]
+defaults:
+  scope: project
+requires: [pattern-mcp-pi, graphify-pi, code-intel-operations-pi]
+attribution:
+  upstream: github.com/darkquasar/patronus
+  license: GPL-3.0
+  copyright: "Patronus contributors"
+  commit: e32b6a87a56bb43e45ad318b4b2c5349b8b57379
+  note: "Original Patronus Pi guidance or adaptation of the repository source sibling; see SOURCE.md. No external server code redistributed."

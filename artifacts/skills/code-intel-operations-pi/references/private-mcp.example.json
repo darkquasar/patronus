@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "serena-writer-pi": {
+      "command": "/ABSOLUTE/APPROVED/EXECUTABLE/serena",
+      "args": [
+        "start-mcp-server",
+        "--project", "/ABSOLUTE/APPROVED/PROJECT",
+        "--context", "ide",
+        "--mode", "editing"
+      ],
+      "cwd": "/ABSOLUTE/APPROVED/PROJECT",
+      "inheritEnv": false,
+      "directTools": false,
+      "includeTools": [
+        "<discovered-server-initial-instructions>",
+        "<discovered-server-find-symbol>",
+        "<discovered-server-find-referencing-symbols>"
+      ]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: graphify-pi
+description: "Query-only Graphify snapshot guidance and provenance"
+version: 1.0.0
+entry: SKILL.md
+files: [".graphify_version", "references", "SOURCE.md", "NOTICE", "LICENSE", "LICENSE-MIT"]
+targets: [pi]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/Graphify-Labs/graphify
+  license: Apache-2.0
+  copyright: "Copyright 2026 Safi Shamsi and the Graphify contributors."
+  note: "Pi query-only adaptation of installed skill marker 0.9.31; source bytes and provenance limits in SOURCE.md. Prior MIT portions retain LICENSE-MIT. No runtime redistributed."
