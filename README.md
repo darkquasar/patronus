@@ -4,7 +4,7 @@
 
 Patronus is not just an installer — it's an **opinionated model of what a complete AI coding
 environment is**, plus the machinery to install that environment onto whichever agent tool you use
-(**Claude Code**, **OpenAI Codex CLI**, **OpenCode**), at the **global** or **local-repo** scope, on
+(**Claude Code**, **OpenAI Codex CLI**, **OpenCode**, **Pi**), at the **global** or **local-repo** scope, on
 Linux / macOS / Windows.
 
 Those tools are **agent harnesses** — the scaffolding (tool set, sandbox, context management,
@@ -317,7 +317,7 @@ patronus list [--artifacts] [--recipes] [--profiles] [--layers] [--json]   # bro
 patronus scan [--json]                                                      # detect installed tools
 
 # install — dry run by default; --deploy writes
-patronus install <name>... [--target claude|codex|opencode|all] [--global|--local] [--deploy]
+patronus install <name>... [--target claude|codex|opencode|pi|all] [--global|--local] [--deploy]
 patronus install --profile <name> [--deploy]                               # a cross-layer bundle
 
 # lifecycle
@@ -338,6 +338,50 @@ go run ./cmd/patronus scan
 ```
 
 ---
+
+### Pi: static resources and Pi-managed packages
+
+Use `core-profile-pi` for the Pi core deployment profile and `code-intel-pi` for
+its optional code intelligence overlay. The current
+[Docker Sandbox validation](docs/pi-native-validation.md) covers deployment,
+native package lifecycle and actual Pi resource loading.
+
+Explicit `--target pi` supports skills/sidecars, prompts, finite native Markdown
+agents, context sections, scalar settings and MCP configuration. Global paths honor
+`PI_CODING_AGENT_DIR` (default `~/.pi/agent`); local paths use the selected workspace.
+Pi updates require exactly one scope:
+
+```sh
+patronus install --profile core-profile-pi --target pi --global  # preview
+patronus install --profile core-profile-pi --target pi --global --deploy --allow-package-installs
+patronus update <item-or-profile> --target pi --local       # preview
+patronus update <item-or-profile> --target pi --global      # preview
+patronus remove <item> --target pi --local                 # preview
+patronus lock --profile <profile> --target pi              # target-bearing lock
+```
+
+Pi locks use v3 for authored resources and v4 when native package references are
+included. Existing non-Pi locks retain their v2 format.
+
+Placement of Patronus-authored static resources is **runtime-unverified**, not loading
+or trust. Exact native package refs are different: Patronus delegates install, update
+and removal to Pi, then re-observes the selected settings declaration and package
+manifest before settling intent. Patronus never edits or deletes npm-owned files.
+Static admission checks known files/declarations, not every runtime registration;
+configured extensions alone are not blockers. Cold-start activation, web
+configuration and all-consumer quiescence remain separate operator actions. Profile
+removal has no independent lifetime/refcount; item removal does not erase desired pins
+or cause update to reinstall absent items.
+Pi scalar/MCP inverse restores owned leaves' original semantic values, preserving
+siblings—not a stale whole config; JSON formatting may change. Drift and partial
+state failures need explicit recovery, not assumed rollback. Old Pi-state mutators
+are unsupported even if they bypass a v3 lock.
+
+See [Pi delivery, migration and qualification boundaries](docs/pi-delivery.md) and
+[agent artifacts and the exact native subset](docs/agent-artifacts.mdx). Invented
+application tests, generic catalog validation and real deployment qualification are
+separate evidence layers; no runtime/platform compatibility claim follows from
+static tests alone.
 
 ### Install → what actually changes
 

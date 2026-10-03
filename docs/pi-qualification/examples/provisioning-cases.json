@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "example": true,
+  "status": "unknown",
+  "case_id": "Q-T5-M",
+  "class": "M",
+  "model_class": "C",
+  "production_subject": "scripts/check-pi-evidence.py",
+  "scenario_consumer": "docs/pi-qualification/operational-tests.md",
+  "limitations": [
+    "INDEPENDENT EXAMPLE MODEL; invented observations, not release evidence.",
+    "C model consistency plus M checker-record coverage only. No actual provisioning denial, interception, isolation or web-bound proof; QP-03 must run pinned I subjects."
+  ],
+  "observations": [
+    {
+      "scenario": "approved-argv",
+      "trace": [
+        {
+          "event": "approval-match"
+        },
+        {
+          "event": "fake-dispatch"
+        },
+        {
+          "event": "observe",
+          "value": "allowed"
+        }
+      ],
+      "approved_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "observed_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "expected": "allowed",
+      "observed": "allowed",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "changed-argv",
+      "trace": [
+        {
+          "event": "argv-changed"
+        },
+        {
+          "event": "no-dispatch"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "observed_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented"
+      ],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "scripts-deny",
+      "trace": [
+        {
+          "event": "transitive-script-detected"
+        },
+        {
+          "event": "scripts-policy",
+          "value": "deny"
+        },
+        {
+          "event": "no-dispatch"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "observed_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "interruption",
+      "trace": [
+        {
+          "event": "fake-dispatch"
+        },
+        {
+          "event": "interrupt"
+        },
+        {
+          "event": "descendant-settlement",
+          "value": "unknown"
+        },
+        {
+          "event": "preserve-outputs"
+        },
+        {
+          "event": "observe",
+          "value": "retained"
+        }
+      ],
+      "approved_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "observed_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "expected": "retained",
+      "observed": "retained",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "partial-result",
+      "trace": [
+        {
+          "event": "partial-write"
+        },
+        {
+          "event": "report-partial"
+        },
+        {
+          "event": "preserve-outputs"
+        },
+        {
+          "event": "observe",
+          "value": "partial"
+        }
+      ],
+      "approved_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "observed_argv": [
+        "fake-provision",
+        "add",
+        "fixture-package@sha256:invented",
+        "--ignore-scripts"
+      ],
+      "expected": "partial",
+      "observed": "partial",
+      "outcome": "pass"
+    }
+  ]
+}

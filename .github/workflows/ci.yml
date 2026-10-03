@@ -49,6 +49,8 @@ jobs:
         run: bash scripts/tests/publish-packages-test.sh
       - name: test
         run: go test -race ./...
+      - name: check Pi qualification evidence
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_pi_*.py' -v
       # Substitution leaves unknown braces alone by design, so a typo like
       # {skilDir} would ship as a literal and fail only when a user runs the
       # skill. Unlike version-bump this needs no base ref, so it runs on every

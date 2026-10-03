@@ -1,0 +1,260 @@
+{
+  "version": 1,
+  "kind": "qualification",
+  "example": true,
+  "status": "unknown",
+  "claim": "static-delivery",
+  "class": "C",
+  "source": {
+    "root": "/EXAMPLE/not-evidence",
+    "revision": "unknown",
+    "dirty_inventory": []
+  },
+  "inputs": [],
+  "outputs": [],
+  "environment": {
+    "platform": "unknown",
+    "pins": {
+      "interpreter": "unknown"
+    }
+  },
+  "grant": {
+    "version": 1,
+    "kind": "grant",
+    "example": true,
+    "status": "unknown",
+    "issuer": "unknown",
+    "issued_at": "2026-01-01T00:00:00Z",
+    "action": "qualification",
+    "roots": [
+      "."
+    ],
+    "outputs": [],
+    "inputs": [],
+    "expires_at": null,
+    "revalidation_trigger": "any changed input or scope",
+    "owner_verification": {
+      "owner": "unknown",
+      "result": "unknown",
+      "checked_at": "2026-01-01T00:00:00Z",
+      "action": "qualification",
+      "roots": [
+        "."
+      ],
+      "outputs": [],
+      "inputs": []
+    }
+  },
+  "invocation": {
+    "argv": [
+      "EXAMPLE-NOT-EXECUTED"
+    ],
+    "started_at": "2026-01-01T00:00:00Z",
+    "ended_at": "2026-01-01T00:00:00Z"
+  },
+  "result": "unknown",
+  "expected": "unknown",
+  "observation": "unknown",
+  "logs": [],
+  "exit_code": null,
+  "settlement": "unknown",
+  "review": {
+    "cycles": 0,
+    "reviewer": "unknown",
+    "reviewed": [],
+    "corrections": [],
+    "findings": [],
+    "disposition": "incomplete"
+  },
+  "gates": {
+    "required_tests": "unknown",
+    "authority": "unknown",
+    "release": "unknown"
+  },
+  "limitations": [
+    "EXAMPLE ONLY; never release evidence"
+  ],
+  "owner_acceptance": {
+    "owner": "unknown",
+    "result": "unknown",
+    "claim": "static-delivery",
+    "stage": "qualification",
+    "inputs": []
+  },
+  "cases": {
+    "path": "docs/pi-qualification/cases.json",
+    "sha256": "ab6d4f8c81d0cd7f6d366e0657e981c65e396686c0d4b7082eadfaa7194d20b8"
+  },
+  "claims": {
+    "static-delivery": {
+      "status": "selected",
+      "required": [
+        "D-T1:M",
+        "D-T2:M",
+        "D-T3:M",
+        "D-T4:M",
+        "D-T5:M",
+        "D-T6:M",
+        "D-T7:M",
+        "D-T8:M",
+        "C-T1:C",
+        "C-T8:C"
+      ],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "static-delivery",
+        "stage": "qualification",
+        "inputs": []
+      }
+    },
+    "core-exact-pin": {
+      "status": "unselected",
+      "required": [],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "core-exact-pin",
+        "stage": "qualification",
+        "inputs": []
+      }
+    },
+    "code-intel-exact-pin": {
+      "status": "unselected",
+      "required": [],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "code-intel-exact-pin",
+        "stage": "qualification",
+        "inputs": []
+      }
+    },
+    "web-functional": {
+      "status": "unselected",
+      "required": [],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "web-functional",
+        "stage": "qualification",
+        "inputs": []
+      }
+    },
+    "unattended-mutation": {
+      "status": "unselected",
+      "required": [],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "unattended-mutation",
+        "stage": "qualification",
+        "inputs": []
+      }
+    },
+    "web-bounded-unattended": {
+      "status": "unselected",
+      "required": [],
+      "decision": {
+        "owner": "unknown",
+        "result": "unknown",
+        "claim": "web-bounded-unattended",
+        "stage": "qualification",
+        "inputs": []
+      }
+    }
+  },
+  "dependencies": [],
+  "applicability": null,
+  "deployment_acceptance": null,
+  "evidence": [],
+  "required_set_rules": {
+    "static-delivery": {
+      "parents": [],
+      "required": [
+        "D-T1:M",
+        "D-T2:M",
+        "D-T3:M",
+        "D-T4:M",
+        "D-T5:M",
+        "D-T6:M",
+        "D-T7:M",
+        "D-T8:M",
+        "C-T1:C",
+        "C-T8:C"
+      ],
+      "dependency_groups": []
+    },
+    "core-exact-pin": {
+      "parents": [
+        "static-delivery"
+      ],
+      "required": [
+        "Q-T3-M:M",
+        "Q-T5-M:M",
+        "Q-T7-M:M",
+        "OP-WEB:I",
+        "OP-DELIVERY:I",
+        "OP-ROLES:I",
+        "OP-TRUST-PI:I",
+        "OP-WORKFLOW:I",
+        "OP-WORKTREE:I",
+        "OP-APPROVAL-PI:I",
+        "OP-LIFECYCLE:I",
+        "OP-CORE-DEPENDENCIES:I",
+        "OP-UPDATE-REMOVE:I"
+      ],
+      "dependency_groups": [
+        "core"
+      ]
+    },
+    "code-intel-exact-pin": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "I-T1:M",
+        "I-T2:M",
+        "I-T2:C",
+        "I-T4:C",
+        "I-T5:M",
+        "I-T6:M",
+        "I-T7:M",
+        "OP-CODEINTEL:I",
+        "OP-TRUST-MCP:I",
+        "OP-APPROVAL-MCP:I"
+      ],
+      "dependency_groups": [
+        "code-intel"
+      ]
+    },
+    "web-functional": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "C-T8:C",
+        "Q-T7-M:M",
+        "OP-WEB:I"
+      ],
+      "dependency_groups": []
+    },
+    "unattended-mutation": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "OP-ISOLATION:I"
+      ],
+      "dependency_groups": []
+    },
+    "web-bounded-unattended": {
+      "parents": [
+        "web-functional",
+        "unattended-mutation"
+      ],
+      "required": [],
+      "dependency_groups": []
+    }
+  }
+}
