@@ -1,0 +1,67 @@
+{
+  "toolActivation": "eager",
+  "workflow": "none",
+  "maxInlineContentChars": 8000,
+  "fetch": {
+    "defaultMode": "raw",
+    "allowedModes": [
+      "raw"
+    ]
+  },
+  "fetchRouting": {
+    "providers": [
+      "http"
+    ],
+    "allowRemoteHostedProviders": false
+  },
+  "webSearch": {
+    "enabled": true,
+    "allowedProviders": [
+      "openai"
+    ]
+  },
+  "autoOpenBrowser": false,
+  "curatorRemote": false,
+  "allowBrowserCookies": false,
+  "githubClone": {
+    "enabled": false
+  },
+  "githubPrIssue": {
+    "enabled": false
+  },
+  "youtube": {
+    "enabled": false
+  },
+  "video": {
+    "enabled": false
+  },
+  "image": {
+    "enabled": false
+  },
+  "pdf": {
+    "enabled": false
+  },
+  "commands": {
+    "websearch": {
+      "enabled": false
+    },
+    "curator": {
+      "enabled": false
+    },
+    "search": {
+      "enabled": false
+    },
+    "google-account": {
+      "enabled": false
+    }
+  },
+  "searchRouting": {
+    "providers": [
+      "openai"
+    ],
+    "useCurrentModel": true,
+    "fallbackOn": [
+      "unsupported"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: web-research-pi
+description: "Required core DDG web research with inert conservative config"
+version: 2.0.2
+entry: SKILL.md
+files: ["SOURCE.md", "references/openai-current-model.example.json", "references/qualification.md", "references/runbook.md", "references/web-search.example.json"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["pi-web-access"]

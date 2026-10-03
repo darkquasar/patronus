@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-execute-pi
+description: "Execute an approved plan with proportionate solo or independent task review"
+version: 2.0.0
+entry: SKILL.md
+files: ["NOTICE", "SOURCE.md", "fixtures/01-hard-trigger-one-task.md", "fixtures/02-one-soft-signal.md", "fixtures/03-two-soft-signals.md", "fixtures/04-twenty-mechanical-tasks.md", "fixtures/05-risky-coupled-multimodule.md", "fixtures/06-qualitative-with-oracle.md", "fixtures/07-lexical-false-positive.md", "fixtures/08-override-to-solo.md", "fixtures/09-override-to-sdd.md", "fixtures/README.md", "fixtures/RESULTS.md", "fixtures/helpers.test.mjs", "implementer-prompt.md", "scripts/review-package", "scripts/sdd-workspace", "scripts/task-brief", "sdd.md", "solo.md", "task-reviewer-prompt.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["requesting-code-review-pi", "pi-subagents"]
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."
