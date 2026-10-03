@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: spec-review-pi
+description: "Review the exact spec against evidence before planning"
+version: 2.0.0
+entry: SKILL.md
+files: ["SOURCE.md", "spec-reviewer.md"]
+targets: [pi]
+defaults:
+  scope: project

@@ -1,0 +1,45 @@
+This artifact (`skills-dispatch`) is AUTHORED by Patronus, ADAPTED from the
+keystone "using-superpowers" skill in obra/superpowers. It is NOT a verbatim copy.
+
+Derived from (upstream path):
+  - skills/using-superpowers/SKILL.md
+
+Adaptations: renamed from `using-superpowers`/`superpowers-bootstrap` to
+`skills-dispatch` and de-branded (the superpowers-specific name and the "you have
+superpowers" framing removed) so the keystone reads as a general skill-dispatch
+discipline; a "Scope: every installed skill" section was added making explicit
+that the rule governs the ENTIRE installed skill set regardless of origin; the
+skill-priority examples point at Patronus's own skills (brainstorming, grilling,
+diagnosing-bugs); the upstream's per-platform reference files (claude-code-tools.md,
+codex-tools.md, gemini-tools.md, …) were not vendored. The strong skill-first
+discipline retained from upstream — the 1%-rule, the red-flags table, and the
+decision flow — is the basis of the credit below. The SessionStart hook that
+auto-injects this body is the separate `skills-dispatch-activate` hook artifact.
+
+Upstream: https://github.com/obra/superpowers
+Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
+License:  MIT
+
+----------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2025 Jesse Vincent
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
