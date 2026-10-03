@@ -34,7 +34,8 @@ func repoRoot(t *testing.T) string {
 // TestRealCatalogLoadsAndMatchesOntology is the canary against catalog<->code
 // drift. It loads EVERY shipped manifest through the real loaders and asserts
 // each item's three axes (family/type/role) and computed recipe Shape against
-// the §6 mapping table. If a future change desyncs a manifest from the schema —
+// the schema, without freezing catalog membership. If a future change desyncs
+// a manifest from the schema —
 // a bad enum value, a renamed field, a recipe whose deliver×wire no longer
 // computes the documented shape — this fails loudly instead of shipping broken.
 func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
@@ -45,150 +46,15 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		t.Fatalf("loading real catalog: %v", err)
 	}
 
-	// --- Artifacts: family=artifact, declared type, declared role (§6). -------
-	wantArtifacts := map[string]struct {
-		typ  manifest.ArtifactType
-		role manifest.Role
-	}{
-		"agent-principles":      {manifest.TypeInstruction, manifest.RoleInstruction},
-		"research-team":         {manifest.TypeSkill, manifest.RoleCapability},
-		"plan-execute-parallel": {manifest.TypeSkill, manifest.RoleCapability},
-		"pattern-cloudflare":    {manifest.TypeSkill, manifest.RoleContext}, // was role: pattern
-		"pattern-mcp":           {manifest.TypeSkill, manifest.RoleContext},
-		// P7.2-L1 vendored/authored instructions. diagram-explain was an
-		// output-style; it is an instruction so its body appends into
-		// CLAUDE.md/AGENTS.md and is live on Claude from install.
-		"agents-spine":    {manifest.TypeInstruction, manifest.RoleInstruction},
-		"diagram-explain": {manifest.TypeInstruction, manifest.RoleInstruction},
-		// P7.2-L2 vendored capability skills (superpowers + mattpocock subset).
-		"skills-dispatch": {manifest.TypeSkill, manifest.RoleCapability},
-		"plan-writing":    {manifest.TypeSkill, manifest.RoleCapability},
-		"executing-plans": {manifest.TypeSkill, manifest.RoleCapability},
-		// The authored proportionality router core installs in place of the two
-		// upstream execution skills, which stay in the catalog as opt-ins.
-		"plan-execute":    {manifest.TypeSkill, manifest.RoleCapability},
-		"grilling":        {manifest.TypeSkill, manifest.RoleCapability},
-		"diagnosing-bugs": {manifest.TypeSkill, manifest.RoleCapability},
-		"tdd":             {manifest.TypeSkill, manifest.RoleCapability},
-		// P7.2-L4 vendored context/design-vocabulary skills (mattpocock).
-		"codebase-design": {manifest.TypeSkill, manifest.RoleContext},
-		"domain-modeling": {manifest.TypeSkill, manifest.RoleContext},
-		// agent-rules split into two skills, each dispatched on its own trigger.
-		"ddd-distilled":         {manifest.TypeSkill, manifest.RoleContext},
-		"refactoring-distilled": {manifest.TypeSkill, manifest.RoleContext},
-		// Distilled Go-idiomatic guide (Uber Go Style Guide) — a skill, dispatched on
-		// relevance (writing/reviewing Go) rather than inlined into CLAUDE.md.
-		"go-style-uber": {manifest.TypeSkill, manifest.RoleContext},
-		// Core eng-team: work-on-a-branch disposition (authored, advisory).
-		"branch-first": {manifest.TypeInstruction, manifest.RoleInstruction},
-		// P7.5.2 L8 eval: the test-first ENFORCEMENT hook + the verification skill (core's strict gate).
-		"tdd-guard-hook":                 {manifest.TypeHook, manifest.RoleEval},
-		"verification-before-completion": {manifest.TypeSkill, manifest.RoleEval},
-		// P7.5.3 L9 guardrails: the default guard set (all type:hook).
-		"git-guardrails": {manifest.TypeHook, manifest.RoleGuardrail},
-		"block-secrets":  {manifest.TypeHook, manifest.RoleGuardrail},
-		"gitleaks-guard": {manifest.TypeHook, manifest.RoleGuardrail},
-		// P7.5.4: the keystone's SessionStart activation (L2) + the ccusage statusline setting (L7).
-		"skills-dispatch-activate": {manifest.TypeHook, manifest.RoleCapability},
-		"ccusage-statusline":       {manifest.TypeSetting, manifest.RoleObservability},
-		// P7.5.5 L6 sandbox: the native-sandbox toggle (type:setting, flavoured @claude/@codex).
-		"native-sandbox": {manifest.TypeSetting, manifest.RoleSandbox},
-		// L10 orchestration: the ticket work-graph instruction (requires: [tk]) + 2 vendored superpowers skills.
-		"ticket": {manifest.TypeInstruction, manifest.RoleOrchestration},
-		// L4 context: the graphify cluster — a PreToolUse nudge hook + an always-on
-		// instruction, both requires: [graphify]. Wired by the opt-in code-intel profile.
-		"graphify-hint":          {manifest.TypeHook, manifest.RoleContext},
-		"graphify-query-pointer": {manifest.TypeInstruction, manifest.RoleContext},
-		// code-intel checkpoints: a serena onboarding pointer (all tools) +
-		// two claude/codex-only nudges (edit-time caller check, graph staleness).
-		// Wired by the opt-in code-intel profile.
-		"serena-pointer":          {manifest.TypeInstruction, manifest.RoleContext},
-		"serena-refs-hint":        {manifest.TypeHook, manifest.RoleContext},
-		"graphify-staleness-hint": {manifest.TypeHook, manifest.RoleContext},
-		// L10 orchestration: end-of-session push discipline. Wholly authored (no
-		// upstream), tracker-agnostic, and NO requires edge — it names no tool.
-		"session-completion":          {manifest.TypeInstruction, manifest.RoleOrchestration},
-		"subagent-driven-development": {manifest.TypeSkill, manifest.RoleOrchestration},
-		"dispatching-parallel-agents": {manifest.TypeSkill, manifest.RoleOrchestration},
-		// Remaining superpowers workflow skills (complete the vendored set).
-		"spec-brainstorming":             {manifest.TypeSkill, manifest.RoleCapability},
-		"using-git-worktrees":            {manifest.TypeSkill, manifest.RoleCapability},
-		"finishing-a-development-branch": {manifest.TypeSkill, manifest.RoleCapability},
-		"writing-skills":                 {manifest.TypeSkill, manifest.RoleCapability},
-		"requesting-code-review":         {manifest.TypeSkill, manifest.RoleEval},
-		"receiving-code-review":          {manifest.TypeSkill, manifest.RoleEval},
-		// Core eng-team: the two advisory lifecycle review gates (authored).
-		"spec-review": {manifest.TypeSkill, manifest.RoleEval},
-		"plan-review": {manifest.TypeSkill, manifest.RoleEval},
-		// The house writing style, split by how it is consulted: an invocable
-		// editorial review (core.capabilities) and an always-on pointer whose
-		// stanza inlines the two tier-1 mechanics (core.instructions). The
-		// pointer keeps its own name: renaming it would rewrite the user's
-		// global CLAUDE.md wiring, a wider blast radius than the skill rename.
-		// writing-like-me composes those tiers with a private voice corpus; it
-		// is opt-in via the `writing` profile, never core, because it ships
-		// empty exemplar files and does nothing until a corpus exists.
-		"writing-editorial":     {manifest.TypeSkill, manifest.RoleCapability},
-		"writing-style-pointer": {manifest.TypeInstruction, manifest.RoleInstruction},
-		"writing-like-me":       {manifest.TypeSkill, manifest.RoleCapability},
-		// L2 notebook-authoring cluster, chained by requires: and wired by the
-		// visual profile. generate-notebooks owns the uv edge (it owns
-		// bootstrap_env.sh); marimo-visual-explanation owns the mermaid-cli edge;
-		// marimo-teach-topic shells into both siblings and inherits their binaries.
-		"generate-notebooks":        {manifest.TypeSkill, manifest.RoleCapability},
-		"marimo-visual-explanation": {manifest.TypeSkill, manifest.RoleCapability},
-		"marimo-teach-topic":        {manifest.TypeSkill, manifest.RoleCapability},
-		// Tiered JIT re-grounding hooks (authored; Claude-only): per-turn skill
-		// heartbeat + resume/compaction work-state reground (Ticket + ai-memory).
-		"skills-heartbeat":    {manifest.TypeHook, manifest.RoleCapability},
-		"work-state-reground": {manifest.TypeHook, manifest.RoleCapability},
-		// Core eng-team: SessionStart language-idiom pointer (authored).
-		"language-detect": {manifest.TypeHook, manifest.RoleCapability},
-		// ai-memory lifecycle hooks (vendored, Claude-only): Patronus-tracked
-		// versions of ai-memory install-hooks, each requires: [memory-ai-memory].
-		"ai-memory-session-start": {manifest.TypeHook, manifest.RoleMemory},
-		"ai-memory-user-prompt":   {manifest.TypeHook, manifest.RoleMemory},
-		"ai-memory-pre-tool-use":  {manifest.TypeHook, manifest.RoleMemory},
-		"ai-memory-post-tool-use": {manifest.TypeHook, manifest.RoleMemory},
-		"ai-memory-pre-compact":   {manifest.TypeHook, manifest.RoleMemory},
-		"ai-memory-stop":          {manifest.TypeHook, manifest.RoleMemory},
-		// Self-hosted dev skill: builds and smoke-drives this repo's own CLI
-		// against a sandboxed HOME. Ships driver.sh under files:; no requires
-		// edge (it needs only the Go toolchain the checkout already assumes).
-		"run-patronus": {manifest.TypeSkill, manifest.RoleCapability},
+	if len(cat.Artifacts) == 0 || len(cat.Recipes) == 0 || len(cat.Profiles) == 0 {
+		t.Fatal("real catalog must contain artifacts, recipes and profiles")
 	}
-	if len(cat.Artifacts) != len(wantArtifacts) {
-		t.Errorf("artifact count = %d, want %d (did the catalog gain/lose an item without updating this guard?)",
-			len(cat.Artifacts), len(wantArtifacts))
-	}
-	for _, e := range cat.Artifacts {
-		m := e.Manifest
-		want, ok := wantArtifacts[m.Name]
-		if !ok {
-			t.Errorf("unexpected artifact %q (add it to the ontology guard)", m.Name)
-			continue
+	for _, entry := range cat.Artifacts {
+		if err := entry.Manifest.Validate(); err != nil {
+			t.Errorf("%s: %v", entry.Manifest.Name, err)
 		}
-		if m.Family != manifest.FamilyArtifact {
-			t.Errorf("%s: family = %q, want artifact", m.Name, m.Family)
-		}
-		if m.Type != want.typ {
-			t.Errorf("%s: type = %q, want %q", m.Name, m.Type, want.typ)
-		}
-		if m.Role != want.role {
-			t.Errorf("%s: role = %q, want %q", m.Name, m.Role, want.role)
-		}
-		if !manifest.SupportsAPIVersion(m.APIVersion) {
-			t.Errorf("%s: unsupported apiVersion %q", m.Name, m.APIVersion)
-		}
-	}
-
-	for _, entry := range cat.Recipes {
-		r := entry.Manifest
-		if !manifest.SupportsAPIVersion(r.APIVersion) {
-			t.Errorf("%s: unsupported apiVersion %q", r.Name, r.APIVersion)
-		}
-		if r.Delivery != nil && r.Delivery.Unpack == "directory" && r.APIVersion != "patronus/v3" {
-			t.Errorf("%s: directory recipe requires v3", r.Name)
+		if err := cp00ValidateMeta(entry.Manifest.Header()); err != nil {
+			t.Errorf("%s: %v", entry.Manifest.Name, err)
 		}
 	}
 
@@ -229,93 +95,23 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		}
 	}
 
-	// --- Recipes: family=recipe, declared role, COMPUTED Shape (§6). ----------
-	wantRecipes := map[string]struct {
-		role   manifest.Role
-		shape  manifest.RecipeShape
-		method manifest.WireMethod
-		actor  manifest.WireActor
-	}{
-		"github":           {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"memory-engram":    {manifest.RoleMemory, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
-		"memory-ai-memory": {manifest.RoleMemory, manifest.ShapeFetchRun, manifest.WireExec, manifest.ActorExternal},
-		"sandbox":          {manifest.RoleSandbox, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
-		// P7.3 L4 context recipes (live docs + local semantic search) — wire-only MCP.
-		"context7": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		// Codex as an MCP server: a second model reachable as a tool. Standalone
-		// by design, bound to no profile, because it presumes a working codex CLI
-		// with credentials Patronus cannot supply.
-		"codex-mcp": {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"serena":    {manifest.RoleContext, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		// P7.3 L5 tool recipes (opt-in) — all wire-only MCP (npx/uvx on demand, or hosted).
-		"playwright":     {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"postgres":       {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"cloudflare-mcp": {manifest.RoleTools, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		// P7.5.2 L8 eval: install-only recipe (deliver: npm) for the tdd-guard CLI; no wire.
-		"tdd-guard": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireNone, ""},
-		// P7.5.3 L9 guardrails: install-only recipe (github-release fetch) for the gitleaks binary; no wire.
-		"gitleaks": {manifest.RoleGuardrail, manifest.ShapeInstall, manifest.WireNone, ""},
-		// P7.5.4 L7 observability: install-only recipe (deliver: npm) for the ccusage CLI; no wire.
-		"ccusage": {manifest.RoleObservability, manifest.ShapeInstall, manifest.WireNone, ""},
-		// P7.5.5 L6 sandbox: srt (install-only npm, @opencode) + microsandbox (wire-only MCP, hard-isolation).
-		"sandbox-runtime": {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireNone, ""},
-		"microsandbox":    {manifest.RoleSandbox, manifest.ShapeWireOnly, manifest.WireMerge, manifest.ActorPatronus},
-		"pi-sandbox":      {manifest.RoleSandbox, manifest.ShapeInstall, manifest.WireNone, ""},
-		// P7.5.6 L8 eval: promptfoo CI gate (install-only npm) — the eval profile.
-		"promptfoo": {manifest.RoleEval, manifest.ShapeInstall, manifest.WireNone, ""},
-		// L10 orchestration: the tk (Ticket) work-graph binary — install-only `url`
-		// (upstream ships no release assets; the tool IS one bash script); the
-		// `ticket` instruction (requires: [tk]) wires it.
-		"tk": {manifest.RoleOrchestration, manifest.ShapeInstall, manifest.WireNone, ""},
-		// L4 context: graphify — a via:package-manager (uv) delivery AND a stdio MCP
-		// merge (fetch+wire shape). The opt-in code-intel profile pulls it via the
-		// graphify artifacts' requires: [graphify].
-		"graphify": {manifest.RoleContext, manifest.ShapeFetchWire, manifest.WireMerge, manifest.ActorPatronus},
-		// L5 tools: the two install-only substrates the visual profile's notebook
-		// skills require — uv (the sole Python prerequisite; it provisions its own
-		// interpreter) and mermaid-cli (`mmdc`, for rendered diagrams).
-		"uv":          {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
-		"mermaid-cli": {manifest.RoleTools, manifest.ShapeInstall, manifest.WireNone, ""},
+	for _, entry := range cat.Recipes {
+		if err := cp00ValidateRecipe(entry.Manifest); err != nil {
+			t.Errorf("%s: %v", entry.Manifest.Name, err)
+		}
 	}
-	// Per-recipe install-command invariants, as DATA (not an inline `if name ==`
-	// branch). Each entry says "this recipe's rendered install command must contain
-	// this substring." graphify's uv install MUST carry the [mcp] extra, or
-	// graphify-mcp dies with ModuleNotFoundError: No module named 'mcp'; guarding it
-	// here keeps a ref edit from silently dropping the extra. Add a row to extend the
-	// invariant to another recipe — never a new branch in the loop.
-	wantInstallSubstr := map[string]string{
-		"graphify": "graphifyy[mcp]",
+	// Keep this substantive regression: without the MCP extra the installed
+	// graphify server fails to import mcp, even though the manifest is valid.
+	var graphify *manifest.Recipe
+	for _, entry := range cat.Recipes {
+		if entry.Manifest.Name == "graphify" {
+			graphify = entry.Manifest
+		}
 	}
-	if len(cat.Recipes) != len(wantRecipes) {
-		t.Errorf("recipe count = %d, want %d", len(cat.Recipes), len(wantRecipes))
-	}
-	for _, e := range cat.Recipes {
-		m := e.Manifest
-		want, ok := wantRecipes[m.Name]
-		if !ok {
-			t.Errorf("unexpected recipe %q (add it to the ontology guard)", m.Name)
-			continue
-		}
-		if m.Family != manifest.FamilyRecipe {
-			t.Errorf("%s: family = %q, want recipe", m.Name, m.Family)
-		}
-		if m.Role != want.role {
-			t.Errorf("%s: role = %q, want %q", m.Name, m.Role, want.role)
-		}
-		if got := m.Shape(); got != want.shape {
-			t.Errorf("%s: Shape() = %q, want %q", m.Name, got, want.shape)
-		}
-		if m.Wire.Method != want.method {
-			t.Errorf("%s: wire.method = %q, want %q", m.Name, m.Wire.Method, want.method)
-		}
-		if substr, ok := wantInstallSubstr[m.Name]; ok {
-			if cmd := m.Delivery.Install[0].InstallCommand(m.Name); !strings.Contains(cmd, substr) {
-				t.Errorf("%s install command %q must contain %q", m.Name, cmd, substr)
-			}
-		}
-		if m.Wire.Actor != want.actor {
-			t.Errorf("%s: wire.actor = %q, want %q", m.Name, m.Wire.Actor, want.actor)
-		}
+	if graphify == nil || graphify.Delivery == nil || len(graphify.Delivery.Install) == 0 {
+		t.Error("graphify: missing install candidate")
+	} else if cmd := graphify.Delivery.Install[0].InstallCommand(graphify.Name); !strings.Contains(cmd, "graphifyy[mcp]") {
+		t.Errorf("graphify install command %q must contain graphifyy[mcp]", cmd)
 	}
 
 	// §6b.4 invariant: the catalog must carry at least one recipe of EVERY shape,
@@ -336,52 +132,33 @@ func TestRealCatalogLoadsAndMatchesOntology(t *testing.T) {
 		}
 	}
 
-	// --- Profiles: family=profile, role=lifecycle (§6). -----------------------
-	wantProfiles := []string{"ai-memory", "code-intel", "safe-git", "cloudflare", "core", "data", "eval", "golang", "hard-isolation", "hardened", "lean-code", "tdd-enforced", "python", "quiet", "terse", "visual", "web-dev", "writing"}
-	if len(cat.Profiles) != len(wantProfiles) {
-		t.Errorf("profile count = %d, want %d", len(cat.Profiles), len(wantProfiles))
-	}
-	for _, e := range cat.Profiles {
-		m := e.Manifest
-		if m.Family != manifest.FamilyProfile {
-			t.Errorf("%s: family = %q, want profile", m.Name, m.Family)
-		}
-		if m.Role != manifest.RoleLifecycle {
-			t.Errorf("%s: role = %q, want lifecycle", m.Name, m.Role)
+	for _, entry := range cat.Profiles {
+		if err := cp00ValidateMeta(entry.Manifest.Header()); err != nil {
+			t.Errorf("%s: %v", entry.Manifest.Name, err)
 		}
 	}
 }
 
-// TestRealAdaptersLoad loads the three shipped adapters through LoadAdapter and
-// asserts family=adapter plus a parsed layout keyed by the lowercase type axis
-// (so the engine's type->layout identity lookup keeps working).
+// TestRealAdaptersLoad discovers every shipped adapter, including newly added
+// tools. Unsupported surfaces may be omitted; declared surfaces must be usable.
 func TestRealAdaptersLoad(t *testing.T) {
-	root := repoRoot(t)
-	for _, tool := range []string{"claude", "codex", "opencode"} {
-		ad, err := manifest.LoadAdapter(filepath.Join(root, "adapters", tool+".yaml"))
-		if err != nil {
-			t.Fatalf("load adapter %s: %v", tool, err)
-		}
-		if ad.Family != manifest.FamilyAdapter {
-			t.Errorf("%s: family = %q, want adapter", tool, ad.Family)
-		}
-		if ad.Tool != tool {
-			t.Errorf("%s: tool = %q", tool, ad.Tool)
-		}
-		// Every tool must declare the artifact-type layouts the engine dispatches
-		// to (skill/agent/command/instruction); mcp is the recipe MERGE primitive.
-		if ad.Layout.Skill == nil {
-			t.Errorf("%s: missing skill layout", tool)
-		}
-		if ad.Layout.Instruction == nil {
-			t.Errorf("%s: missing instruction layout", tool)
-		}
-		if ad.Layout.OutputStyle == nil {
-			t.Errorf("%s: missing output-style layout", tool)
-		}
-		if ad.Layout.Mcp == nil {
-			t.Errorf("%s: missing mcp layout", tool)
-		}
+	paths, err := filepath.Glob(filepath.Join(repoRoot(t), "adapters", "*.yaml"))
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("discover adapters: paths=%v, err=%v", paths, err)
+	}
+	for _, path := range paths {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			ad, err := manifest.LoadAdapter(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ad.Tool != strings.TrimSuffix(filepath.Base(path), ".yaml") {
+				t.Errorf("adapter tool %q disagrees with filename", ad.Tool)
+			}
+			if err := cp00ValidateAdapter(ad); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

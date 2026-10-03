@@ -9,6 +9,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/scan"
 )
 
 // transformInstruction produces an APPEND diff: the artifact body is written
@@ -28,12 +29,33 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 	if entry == "" {
 		return nil, fmt.Errorf("adapter: Instruction %q missing entry", art.Name)
 	}
+	if ad.Tool == "pi" {
+		if _, err := scan.PiSourcePath(srcDir, entry); err != nil {
+			return nil, err
+		}
+		if !scan.PiSafeName(art.Name) {
+			return nil, fmt.Errorf("pi instruction: invalid identity %q", art.Name)
+		}
+	}
 	body, err := os.ReadFile(filepath.Join(srcDir, entry))
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read instruction entry: %w", err)
 	}
 
 	ctrlPath := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
+	sectionName := art.Name
+	var warning string
+	if ad.Tool == "pi" {
+		context, err := scan.DiscoverPiContext(filepath.Dir(ctrlPath), scan.PiReadFile(readExisting))
+		if err != nil {
+			return nil, err
+		}
+		ctrlPath, warning = context.Path, context.Warning
+		if err := scan.PiSafePath(ctrlPath); err != nil {
+			return nil, err
+		}
+		sectionName = "pi:" + art.Name
+	}
 
 	if art.Mode == "pointer" {
 		dir := ad.Layout.Instruction.PointerDirFor(scope)
@@ -51,7 +73,7 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 			Role:   string(art.Role),
 		}
 		stanza := renderPointer(art, relPath)
-		appendDiff, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), art.Name, stanza, readExisting)
+		appendDiff, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), sectionName, stanza, readExisting)
 		if err != nil {
 			return nil, err
 		}
@@ -59,10 +81,11 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 	}
 
 	// inline (default): unchanged single APPEND of the full body.
-	d, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
+	d, err := e.appendSectionDiff(ctrlPath, ad.Tool, scope, string(art.Role), sectionName, body, readExisting)
 	if err != nil {
 		return nil, err
 	}
+	d.Warning = warning
 	return []diff.FileDiff{d}, nil
 }
 
@@ -99,6 +122,13 @@ func (e *Engine) appendSectionDiff(path, tool, scope, role, name string, body []
 	existing, _, err := readExisting(path)
 	if err != nil {
 		return diff.FileDiff{}, fmt.Errorf("adapter: read existing section file: %w", err)
+	}
+	if tool == "pi" {
+		start, end := sectionMarkers(name)
+		starts, ends := bytes.Count(existing, []byte(start)), bytes.Count(existing, []byte(end))
+		if starts != ends || starts > 1 || (starts == 1 && bytes.Index(existing, []byte(end)) < bytes.Index(existing, []byte(start))) || bytes.Contains(body, []byte(start)) || bytes.Contains(body, []byte(end)) {
+			return diff.FileDiff{}, fmt.Errorf("pi instruction %s: malformed or duplicate section identity %s; preserve existing text and repair before apply", path, name)
+		}
 	}
 	return diff.FileDiff{
 		Path:    path,

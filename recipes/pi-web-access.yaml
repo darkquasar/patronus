@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+kind: Recipe
+name: pi-web-access
+version: 2.0.0
+family: recipe
+role: tools
+description: Native Pi web access via an exact npm source; reviewed DDG configuration required
+deliver:
+  via: package-manager
+  install:
+    - manager: pi
+      ref: npm:pi-web-access@0.35.0

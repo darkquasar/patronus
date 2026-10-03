@@ -7,6 +7,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/scan"
 )
 
 // transformCommand produces a CREATE diff for a Command: a single markdown file
@@ -29,9 +30,29 @@ func (e *Engine) transformCommand(art *manifest.Artifact, ad *manifest.Adapter, 
 	if entry == "" {
 		entry = art.Name + ".md"
 	}
+	if ad.Tool == "pi" {
+		if _, err := scan.PiSourcePath(srcDir, entry); err != nil {
+			return nil, err
+		}
+		if err := scan.PiSafePath(path); err != nil {
+			return nil, err
+		}
+		if !scan.PiSafeName(art.Name) || filepath.Base(path) != art.Name+".md" {
+			return nil, fmt.Errorf("pi prompt %q: destination identity mismatch", art.Name)
+		}
+	}
 	body, err := os.ReadFile(filepath.Join(srcDir, entry))
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read command entry: %w", err)
+	}
+	if ad.Tool == "pi" {
+		name, err := scan.PiMarkdownName(body)
+		if err != nil {
+			return nil, err
+		}
+		if name != "" && name != art.Name {
+			return nil, fmt.Errorf("pi prompt %q: frontmatter name %q disagrees with catalog identity", art.Name, name)
+		}
 	}
 	return []diff.FileDiff{{
 		Path:   path,

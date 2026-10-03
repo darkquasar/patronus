@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
 	toml "github.com/pelletier/go-toml/v2"
 )
@@ -353,5 +354,30 @@ func assertJSONEqual(t *testing.T, got, want []byte) {
 	}
 	if !reflect.DeepEqual(g, w) {
 		t.Fatalf("got  %s\nwant %s", got, want)
+	}
+}
+
+func TestSettingInverseRefusesChangedLeaf(t *testing.T) {
+	e := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "ui.color", ScalarValue: true, PriorPresent: true, PriorValue: nil}
+	current := []byte(`{"ui":{"color":false,"sibling":"keep"}}`)
+	before := append([]byte(nil), current...)
+	out, found, err := RemoveSettingEdit(current, e)
+	if err == nil || out != nil || found {
+		t.Fatalf("changed leaf removed: %s %v %v", out, found, err)
+	}
+	if !bytes.Equal(current, before) {
+		t.Fatal("input changed")
+	}
+}
+
+func TestSettingHookDuplicateIdentityRefuses(t *testing.T) {
+	e := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "hooks.Before", IdentityKey: "id", Identity: "fixture", Elem: map[string]any{"id": "fixture"}}
+	for _, raw := range []string{`{"hooks":{"Before":false}}`, `{"hooks":{"Before":[{"id":"fixture"},{"id":"fixture"}]}}`} {
+		if _, err := ApplySettingEdit([]byte(raw), e); err == nil {
+			t.Fatalf("invalid list accepted: %s", raw)
+		}
+		if _, _, err := RemoveSettingEdit([]byte(raw), e); err == nil {
+			t.Fatalf("invalid list removed: %s", raw)
+		}
 	}
 }

@@ -12,6 +12,60 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+func TestPiContextDiscoveryAndFences(t *testing.T) {
+	home, project, src := t.TempDir(), t.TempDir(), t.TempDir()
+	mustWrite(t, filepath.Join(src, "entry.md"), "Pi contribution\n")
+	art := &manifest.Artifact{Meta: manifest.Meta{Name: "fixture-context"}, Type: manifest.TypeInstruction, Entry: "entry.md"}
+	eng := agentEngine(t, home, project)
+	for _, name := range []string{"AGENTS.override.md", "AGENTS.md", "AGENTS.MD", "CLAUDE.md", "CLAUDE.MD"} {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(project, name)
+			prior := []byte("User-prepared text\n")
+			read := func(p string) ([]byte, bool, error) {
+				if p == path {
+					return prior, true, nil
+				}
+				return nil, false, nil
+			}
+			ds, err := eng.Transform(art, loadAdapter(t, "pi"), "local", src, read)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ds) != 1 || ds[0].Path != path || ds[0].Section.Name != "pi:fixture-context" || !bytes.HasPrefix(ds[0].After, prior) {
+				t.Fatalf("wrong context/fence or lost user text: %+v", ds)
+			}
+			if name == "AGENTS.override.md" && ds[0].Warning == "" {
+				t.Fatal("override warning missing")
+			}
+			legacy, err := eng.Transform(art, claudeAdapter(t), "local", src, read)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if legacy[0].Path != filepath.Join(project, "CLAUDE.md") || legacy[0].Section.Name != "fixture-context" {
+				t.Fatalf("legacy discovery changed: %+v", legacy)
+			}
+		})
+	}
+}
+
+func TestPiContextMalformedFences(t *testing.T) {
+	src, home, project := t.TempDir(), t.TempDir(), t.TempDir()
+	mustWrite(t, filepath.Join(src, "entry.md"), "Body\n")
+	art := &manifest.Artifact{Meta: manifest.Meta{Name: "fixture"}, Type: manifest.TypeInstruction, Entry: "entry.md"}
+	start, end := sectionMarkers("pi:fixture")
+	for _, prior := range []string{start + "\ntext", end + "\n" + start, start + end + start + end} {
+		read := func(path string) ([]byte, bool, error) {
+			if filepath.Base(path) == "AGENTS.md" {
+				return []byte(prior), true, nil
+			}
+			return nil, false, nil
+		}
+		if _, err := agentEngine(t, home, project).Transform(art, loadAdapter(t, "pi"), "local", src, read); err == nil {
+			t.Fatalf("ambiguous section admitted: %q", prior)
+		}
+	}
+}
+
 func TestAppendSectionNewFile(t *testing.T) {
 	got := AppendSection(nil, "agent-principles", []byte("hello world"))
 	want := "<!-- patronus:start agent-principles -->\nhello world\n<!-- patronus:end agent-principles -->\n"

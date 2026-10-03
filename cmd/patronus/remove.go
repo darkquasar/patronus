@@ -17,6 +17,7 @@ import (
 	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/plugin"
+	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/state"
@@ -28,19 +29,20 @@ import (
 // spine — delete CREATEs, un-APPEND sections by marker, restore MERGEs to their
 // pre-install bytes. Safe by default: a dry run unless --deploy. User edits since
 // install are detected by the recorded checksum and skipped unless --force.
-func newRemoveCmd(use string, aliases []string) *cobra.Command {
+func newRemoveCmd(aliases []string) *cobra.Command {
 	var (
-		tool    string
-		global  bool
-		local   bool
-		deploy  bool
-		dryRun  bool
-		verbose bool
-		force   bool
+		tool           string
+		global         bool
+		local          bool
+		deploy         bool
+		dryRun         bool
+		verbose        bool
+		force          bool
+		allowPiProject bool
 	)
 
 	cmd := &cobra.Command{
-		Use:     use + " <name>...",
+		Use:     "remove <name>...",
 		Aliases: aliases,
 		Short:   "Uninstall tracked item(s) — dry-run by default; --deploy to apply",
 		Long: "Undoes a previous install by reading ~/.patronus/state.json (global) and\n" +
@@ -50,9 +52,16 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			"SAFE BY DEFAULT: remove is a dry run unless you pass --deploy. Files edited\n" +
 			"since install are detected (via the recorded checksum) and skipped — pass\n" +
 			"--force to remove them anyway. Self-wired recipes cannot be auto-reverted and\n" +
-			"are reported for manual cleanup.",
+			"are reported for manual cleanup.\n\n" +
+			"Pi --deploy acknowledges settled dependent work and reload/restart obligations.\n" +
+			"Native packages are removed by Pi/npm; internal manual edits are not checked.\n" +
+			"Stored profiles select historical concrete effects. Desired lock pins and\n" +
+			"unrelated roots/configuration remain unchanged.",
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if err := dp06Target(tool); err != nil {
+				return err
+			}
 			if global && local {
 				return fmt.Errorf("--global and --local are mutually exclusive")
 			}
@@ -72,6 +81,14 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				return err
 			}
 			home := homeDir()
+			var mutation *mutation
+			if deploy && !jsonOutput {
+				mutation, err = beginMutation(home, wd)
+				if err != nil {
+					return err
+				}
+				defer mutation.close(&err)
+			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
 			// Which scopes' state files to consult. Default = both.
@@ -82,6 +99,7 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 
 			// Collect the matching state items across the selected scopes, tracking
 			// which scope's file each came from so we can rewrite it after a deploy.
+			selectedProfiles := map[string]bool{}
 			var selected []state.Item
 			loaded := map[string]*state.State{}
 			anyKnown := map[string]bool{} // name -> seen anywhere
@@ -99,8 +117,21 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				loaded[scope] = s
 				for _, name := range args {
 					items := s.Find(name, "", "")
+					root := piSelectedRoot(scope, home, wd)
+					for _, p := range s.Profiles {
+						if p.Name == name && p.Scope == scope && p.Root == root && (tool == "" || tool == "all" || tool == p.Tool) {
+							anyKnown[name] = true
+							selectedProfiles[p.Name+"\x00"+p.Root] = true
+							items = append(items, currentProfileMembers(s, p)...)
+						}
+					}
 					for _, it := range items {
-						if tool != "" && it.Tool != tool && it.PackageReceipt == "" {
+						var ok bool
+						it, ok = piProjectItem(it, root)
+						if !ok {
+							continue
+						}
+						if tool != "" && tool != "all" && it.Tool != tool && it.PackageReceipt == "" && !(tool == "pi" && it.Tool == recipe.TargetAgnostic && scope == "global") {
 							continue
 						}
 						anyKnown[name] = true
@@ -142,23 +173,66 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Multiple names/profiles may select the same concrete effect.
+			selected = deduplicateEffects(selected)
+			var retainedShared error
+			var nativeItems []state.Item
 			var packageItems []state.Item
 			var legacyItems []state.Item
 			for _, item := range selected {
-				if item.PackageReceipt != "" {
-					packageItems = append(packageItems, item)
+				if item.Native != nil {
+					nativeItems = append(nativeItems, item)
+				} else if item.PackageReceipt != "" {
+					if !force && sharedDirectoryProfile(loaded[item.Scope], item.PackageReceipt, selectedProfiles) {
+						retainedShared = errors.Join(retainedShared, fmt.Errorf("package %s retained: shared profile effect (use --force)", item.Artifact))
+					} else {
+						packageItems = append(packageItems, item)
+					}
 				} else {
 					legacyItems = append(legacyItems, item)
 				}
+			}
+			piSelected := tool == "pi"
+			for _, it := range selected {
+				piSelected = piSelected || it.Tool == "pi"
 			}
 			selected = legacyItems
 			packagePlans, err := planDirectoryRemovals(home, packageItems, force)
 			if err != nil {
 				return err
 			}
-			computed, err := remove.Compute(selected, read, occupancy)
+			var removable []state.Item
+			var shared []state.Item
+			for _, it := range selected {
+				ready, held := it, it
+				ready.Files, held.Files = nil, nil
+				for _, f := range it.Files {
+					if !force && sharedProfileEffect(loaded[it.Scope], it, f, selectedProfiles) {
+						held.Files = append(held.Files, f)
+					} else {
+						ready.Files = append(ready.Files, f)
+					}
+				}
+				if len(held.Files) > 0 {
+					shared = append(shared, held)
+				}
+				if len(ready.Files) > 0 || len(it.Files) == 0 {
+					removable = append(removable, ready)
+				}
+			}
+			computed, err := remove.ComputeWithForce(removable, read, occupancy, force)
 			if err != nil {
 				return err
+			}
+			for _, it := range shared {
+				for _, f := range it.Files {
+					current, _, err := read(f.Path)
+					if err != nil {
+						return err
+					}
+					computed.ChangeSet.Diffs = append(computed.ChangeSet.Diffs, diff.FileDiff{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope, Path: f.Path, Action: diff.Skip, Before: current, Note: "shared profile effect retained (use --force)"})
+					computed.Ledger = append(computed.Ledger, remove.LedgerEntry{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope, Path: f.Path, Effect: f, Outcome: remove.DriftSkipped})
+				}
 			}
 			cs, warnings, ledger := computed.ChangeSet, computed.Warnings, computed.Ledger
 
@@ -172,7 +246,10 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 
 			if force {
 				computed = remove.Promote(computed)
-				cs, ledger = computed.ChangeSet, computed.Ledger
+				cs, warnings, ledger = computed.ChangeSet, computed.Warnings, computed.Ledger
+			}
+			if retainedShared != nil {
+				warnf("%v", retainedShared)
 			}
 			for _, w := range warnings {
 				if w.Path != "" {
@@ -182,6 +259,26 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				}
 			}
 
+			for _, it := range nativeItems {
+				op := it.Native.Operation
+				op.Kind = "remove"
+				// A profile reference is identity, not a stale authority snapshot.
+				if index, err := nativeItem(loaded[it.Scope], op.Identity); err != nil {
+					return err
+				} else if index >= 0 {
+					op.Source = loaded[it.Scope].Items[index].Native.Operation.Source
+				}
+				// Ownership remains root-qualified, while invocation context is always
+				// refreshed from this removal rather than stale install-time values.
+				op.Identity.Project = wd
+				if op.Identity.Scope == "local" {
+					op.Identity.AgentRoot = piSelectedRoot("global", home, wd)
+				}
+				cs.Diffs = append(cs.Diffs, diff.FileDiff{Action: diff.Native, Artifact: it.Artifact, Tool: "pi", Scope: it.Scope, Root: it.Root, Path: op.Identity.MetadataPath(), Native: &op})
+			}
+			if err := inspectNative(cs, home, wd, force, selectedProfiles); err != nil {
+				return err
+			}
 			cs.DryRun = !deploy
 
 			env := os.LookupEnv
@@ -195,6 +292,7 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 					Packages []directoryRemovalPlan `json:"packages"`
 				}{cs, packagePlans})
 			}
+			dp06PrintSelection(cmd, cs, tool, res)
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
 			for _, plan := range packagePlans {
 				fmt.Fprintf(cmd.OutOrStdout(), "Package %s: delete %v; retain %v; unknown leftovers %v; pending recovery %t\n", plan.Recipe, plan.Delete, plan.Retain, plan.Leftovers, plan.Pending)
@@ -203,7 +301,21 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			if err := deployDirectoryRemovals(cmd, home, packagePlans, force); err != nil {
+			if piSelected {
+				dp06Acknowledge(cmd, "remove")
+				for _, p := range packagePlans {
+					if !force && (len(p.Retain) > 0 || len(p.Leftovers) > 0) {
+						return fmt.Errorf("pi whole-selection removal conflict: package %s has retained or unknown files; resolve before removal", p.Recipe)
+					}
+				}
+			}
+			if err := staticPiSelection(cs, piSelected); err != nil {
+				return err
+			}
+			if err := mutation.checkPlan(cs, nil); err != nil {
+				return err
+			}
+			if err := deployDirectoryRemovalsLocked(cmd, home, packagePlans, force, mutation); err != nil {
 				return err
 			}
 			if len(packagePlans) > 0 {
@@ -213,16 +325,17 @@ func newRemoveCmd(use string, aliases []string) *cobra.Command {
 				}
 				loaded["global"] = refreshed
 			}
-			return runRemove(cmd, cs, ledger, selected, loaded, removeStateOpts{home: home, projectDir: wd, force: force})
+			return runRemoveLocked(cmd, cs, ledger, selected, loaded, removeStateOpts{retained: retainedShared, allowPiProject: allowPiProject, profiles: selectedProfiles, mutation: mutation, home: home, projectDir: wd, force: force})
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "target", "", "limit to a target runtime: claude|codex|opencode (default: all)")
+	cmd.Flags().StringVar(&tool, "target", "", "limit to a target runtime: claude|codex|opencode|pi|all (default: installed provenance)")
 	cmd.Flags().BoolVar(&global, "global", false, "limit to global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "limit to project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually undo the changes on disk (default: dry run only)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "also show per-item unified diffs")
+	cmd.Flags().BoolVar(&allowPiProject, "allow-pi-project-config", false, "authorize native Pi project configuration/trust")
 	cmd.Flags().BoolVar(&force, "force", false, "with --deploy: undo files edited since install (overrides drift skips)")
 	return cmd
 }
@@ -278,7 +391,7 @@ func fullOccupancy(home, projectDir string, loaded map[string]*state.State) (rem
 	return occupancyOf(states), nil
 }
 
-// occupancyOf indexes every recorded MERGE row across the given states by path,
+// occupancyOf indexes recorded MERGE and APPEND rows across the states by path,
 // listing the contributors wired into each. remove.Compute uses it to tell a
 // config file this record owns alone from one it shares, which is what makes a
 // pre-compose whole-file restore safe or unsafe.
@@ -288,7 +401,6 @@ func fullOccupancy(home, projectDir string, loaded map[string]*state.State) (rem
 // this command did not load is exactly the one the user cannot see coming.
 func occupancyOf(states []*state.State) remove.Occupancy {
 	occ := remove.Occupancy{}
-	seen := map[remove.Contributor]map[string]bool{}
 	for _, s := range states {
 		if s == nil {
 			continue
@@ -299,16 +411,11 @@ func occupancyOf(states []*state.State) remove.Occupancy {
 			// the other's contribution to a shared file.
 			c := remove.Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
 			for _, f := range it.Files {
-				if f.Action != string(diff.Merge) {
+				if f.Action != string(diff.Merge) && f.Action != string(diff.Append) {
 					continue
 				}
-				if seen[c] == nil {
-					seen[c] = map[string]bool{}
-				}
-				if seen[c][f.Path] {
-					continue // one record may hold several edits to one file
-				}
-				seen[c][f.Path] = true
+				c.Setting = f.Setting
+				c.Section = f.Section
 				occ[f.Path] = append(occ[f.Path], c)
 			}
 		}
@@ -318,9 +425,14 @@ func occupancyOf(states []*state.State) remove.Occupancy {
 
 // removeStateOpts carries what runRemove needs to rewrite state after an undo.
 type removeStateOpts struct {
-	home       string
-	projectDir string
-	force      bool
+	retained       error
+	allowPiProject bool
+	profiles       map[string]bool
+	mutation       *mutation
+	saveState      func(string, *state.State) error // nil uses atomic state.Save
+	home           string
+	projectDir     string
+	force          bool
 }
 
 // runRemove applies the inverse change set and, on success, drops the fully-undone
@@ -329,11 +441,105 @@ type removeStateOpts struct {
 // the new reality. An item is dropped from state only when every one of its files
 // was actually undone (not skipped as drift); a partially-skipped item stays so a
 // later --force can finish it.
-func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
-	out := cmd.OutOrStdout()
+func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) (err error) {
+	m, err := beginMutation(opts.home, opts.projectDir)
+	if err != nil {
+		return err
+	}
+	defer m.close(&err)
+	opts.mutation = m
+	return runRemoveLocked(cmd, cs, ledger, selected, loaded, opts)
+}
 
-	app := &install.Applier{}
+func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
+	piSelected := false
+	for _, item := range selected {
+		piSelected = piSelected || item.Tool == "pi"
+	}
+	if err := staticPiSelection(cs, piSelected); err != nil {
+		return err
+	}
+	if err := opts.mutation.checkPlan(cs, nil); err != nil {
+		return err
+	}
+	out := cmd.OutOrStdout()
+	nativeErr := opts.retained
+	var authored, natives []diff.FileDiff
+	changedSettings := map[string]bool{}
+	for _, d := range cs.Diffs {
+		if d.Native == nil {
+			authored = append(authored, d)
+			continue
+		}
+		natives = append(natives, d)
+		changedSettings[d.Native.Identity.SettingsPath()] = true
+	}
+	// Native policy and runtime probes are a whole-selection admission barrier.
+	// In particular, do not let an early singleton removal or authored revert land
+	// before a later selected native member fails admission.
+	if len(natives) > 0 {
+		if err := applyNative(cmd, &diff.ChangeSet{Diffs: natives}, deployOptions{mutation: opts.mutation, saveState: opts.saveState, home: opts.home, projectDir: opts.projectDir, force: opts.force, allowPiProject: opts.allowPiProject}, opts.profiles); err != nil {
+			return errors.Join(nativeErr, err)
+		}
+	}
+	cs = &diff.ChangeSet{Diffs: authored}
+	if len(changedSettings) > 0 {
+		for scope := range loaded {
+			s, err := state.Load(removeStatePath(scope, opts.home, opts.projectDir))
+			if err != nil {
+				return errors.Join(nativeErr, err)
+			}
+			loaded[scope] = s
+		}
+		// Recompute only selected authored settings after the manager changed its
+		// packages array. Sharing gates still apply to the concrete effects.
+		var settings []state.Item
+		for _, it := range selected {
+			row := it
+			row.Files = nil
+			for _, f := range it.Files {
+				if changedSettings[f.Path] && (opts.force || !sharedProfileEffect(loaded[it.Scope], it, f, opts.profiles)) {
+					row.Files = append(row.Files, f)
+				}
+			}
+			if len(row.Files) > 0 {
+				settings = append(settings, row)
+			}
+		}
+		if len(settings) > 0 {
+			fresh, err := remove.ComputeWithForce(settings, func(path string) ([]byte, bool, error) {
+				b, e := os.ReadFile(path)
+				if os.IsNotExist(e) {
+					return nil, false, nil
+				}
+				return b, e == nil, e
+			}, occupancyOf([]*state.State{loaded["global"], loaded["local"]}), opts.force)
+			if err != nil {
+				return errors.Join(nativeErr, err)
+			}
+			if opts.force {
+				fresh = remove.Promote(fresh)
+			}
+			var keep []diff.FileDiff
+			for _, d := range cs.Diffs {
+				if !changedSettings[d.Path] {
+					keep = append(keep, d)
+				}
+			}
+			cs.Diffs = append(keep, fresh.ChangeSet.Diffs...)
+			var keptLedger remove.Ledger
+			for _, e := range ledger {
+				if !changedSettings[e.Path] {
+					keptLedger = append(keptLedger, e)
+				}
+			}
+			ledger = append(keptLedger, fresh.Ledger...)
+		}
+	}
+
+	app := &install.Applier{BeforeWrite: func(d diff.FileDiff) error { return opts.mutation.checkFile(d, nil) }}
 	result, applyErr := app.Apply(cs)
+	applyErr = errors.Join(nativeErr, applyErr)
 	var ranExecs []diff.FileDiff
 
 	// Run plugin uninstall EXECs (the applier skips EXEC diffs — it stays a pure
@@ -360,6 +566,10 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	// contributions into one physical write, so a landed path no longer identifies
 	// who was undone. The ledger answers that per contributor; the applier's
 	// Applied set confirms the write it predicted actually happened.
+	verifiedSkippedPaths := map[string]bool{}
+	for _, d := range result.Skipped {
+		verifiedSkippedPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
+	}
 	writtenPaths := map[string]bool{}
 	for _, d := range result.Applied {
 		writtenPaths[d.Tool+"\x00"+d.Scope+"\x00"+d.Path] = true
@@ -372,8 +582,11 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	// artifact whose wiring is still on disk.
 	undone := map[string]bool{} // artifact+tool+scope+path -> EVERY contribution there is settled
 	for _, e := range ledger {
-		k := e.Artifact + "\x00" + e.Tool + "\x00" + e.Scope + "\x00" + e.Path
-		settled := e.Outcome.Complete()
+		k := removalEffectKey(e.Artifact, e.Tool, e.Scope, e.Effect)
+		if e.Effect.Path == "" {
+			k = removalEffectKey(e.Artifact, e.Tool, e.Scope, state.FileState{Path: e.Path})
+		}
+		settled := e.Outcome.Complete() && verifiedSkippedPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
 		if e.Outcome == remove.Applied {
 			// Predicted to be written; credit it only if the write actually landed.
 			settled = writtenPaths[e.Tool+"\x00"+e.Scope+"\x00"+e.Path]
@@ -388,7 +601,7 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	for _, it := range selected {
 		fullyUndone := true
 		for _, f := range it.Files {
-			if !undone[it.Artifact+"\x00"+it.Tool+"\x00"+it.Scope+"\x00"+f.Path] {
+			if !undone[removalEffectKey(it.Artifact, it.Tool, it.Scope, f)] {
 				fullyUndone = false
 				break
 			}
@@ -401,7 +614,24 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 			fullyUndone = false
 			surfaceUninstallAdvisory(out, it)
 		}
+		var settledFiles []state.FileState
+		for _, f := range it.Files {
+			if undone[removalEffectKey(it.Artifact, it.Tool, it.Scope, f)] {
+				settledFiles = append(settledFiles, f)
+			}
+		}
+		if !fullyUndone && len(settledFiles) > 0 && it.Tool == "pi" {
+			state.ForgetEffects(loaded[it.Scope], it, settledFiles)
+			dirty[it.Scope] = true
+		}
 		if !fullyUndone {
+			shared := false
+			for _, f := range it.Files {
+				shared = shared || sharedProfileEffect(loaded[it.Scope], it, f, opts.profiles)
+			}
+			if it.Tool == "pi" || shared {
+				applyErr = errors.Join(applyErr, fmt.Errorf("removal conflict unresolved: %s (pi/%s); ownership retained", it.Artifact, it.Scope))
+			}
 			continue
 		}
 		// Every tracked deletion for this item is settled, so a directory-shaped
@@ -425,16 +655,34 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s (%s): %s\n", w.Item, w.Path, w.Message)
 		}
 		if s := loaded[it.Scope]; s != nil {
-			s.Remove(it.Artifact, it.Tool, it.Scope)
+			if it.Tool == "pi" {
+				state.ForgetEffects(s, it, it.Files)
+			} else {
+				s.Remove(it.Artifact, it.Tool, it.Scope)
+			}
 			dirty[it.Scope] = true
 		}
 	}
 
+	for scope, s := range loaded {
+		if len(opts.profiles) > 0 {
+			settleProfiles(s, opts.profiles)
+			dirty[scope] = true
+		}
+	}
 	// Persist the trimmed state files (only those that changed).
-	for scope := range dirty {
+	for _, scope := range []string{"global", "local"} {
+		if !dirty[scope] {
+			continue
+		}
 		sp := removeStatePath(scope, opts.home, opts.projectDir)
-		if err := state.Save(sp, loaded[scope]); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to update %s state: %v\n", scope, err)
+		save := opts.saveState
+		if save == nil {
+			save = state.Save
+		}
+		if err := opts.mutation.saveState(sp, loaded[scope], save); err != nil {
+			applyErr = errors.Join(applyErr, fmt.Errorf("save %s state: %w; ownership uncertain; %s; re-preview before repair", sp, err, resultDiagnostics(result)))
+			break
 		}
 	}
 
@@ -461,7 +709,10 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 	// file-less plugin would report "0 undone" after doing the work.
 	undoneCount += len(ranExecs)
 	fmt.Fprintf(out, "\nRemoved: %d undone, %d skipped\n", undoneCount, skippedCount)
-	return applyErr
+	if applyErr != nil {
+		return fmt.Errorf("%w; %s; re-preview current bytes before repair", applyErr, resultDiagnostics(result))
+	}
+	return nil
 }
 
 // surfaceUninstallAdvisory prints a manual-uninstall reminder for a package-install
@@ -563,19 +814,23 @@ func planDirectoryRemovals(home string, items []state.Item, force bool) ([]direc
 }
 
 func deployDirectoryRemovals(cmd *cobra.Command, home string, plans []directoryRemovalPlan, force bool) (err error) {
-	if len(plans) == 0 {
-		return nil
-	}
-	release, err := packagestate.Acquire(home)
+	m, err := acquireMutation(home, filepath.Join(home, ".patronus/state.json"))
 	if err != nil {
 		return err
 	}
-	defer func() { err = errors.Join(err, release()) }()
+	defer m.close(&err)
+	return deployDirectoryRemovalsLocked(cmd, home, plans, force, m)
+}
+
+func deployDirectoryRemovalsLocked(cmd *cobra.Command, home string, plans []directoryRemovalPlan, force bool, m *mutation) (err error) {
+	if len(plans) == 0 {
+		return nil
+	}
 	service := directoryServiceForDeploy(home)
 	for _, plan := range plans {
 		// A prior removal may already have deleted its receipt. Reconcile it first,
 		// then only start a fresh removal if authoritative ownership still exists.
-		if err := recoverDirectory(cmd.Context(), service, plan.Recipe); err != nil {
+		if err := recoverDirectory(cmd.Context(), service, plan.Recipe, m); err != nil {
 			return err
 		}
 		receipt, err := packagestate.Load(home, plan.Recipe)
@@ -589,7 +844,7 @@ func deployDirectoryRemovals(cmd *cobra.Command, home string, plans []directoryR
 		if err != nil {
 			return directoryDiagnostic(err)
 		}
-		if err := recoverDirectory(cmd.Context(), service, plan.Recipe); err != nil {
+		if err := recoverDirectory(cmd.Context(), service, plan.Recipe, m); err != nil {
 			return err
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Package %s removed; retained owned paths: %v; unowned leftovers: %v\n", plan.Recipe, result.Retained, result.Leftovers)

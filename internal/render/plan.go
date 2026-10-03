@@ -14,9 +14,25 @@ import (
 // summary table first, then the ASCII file tree, then (only with --verbose) the
 // per-artifact unified diffs, and finally a footer tally.
 func PrintPlan(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver, verbose bool) {
+	pi := false
+	for _, d := range cs.Diffs {
+		pi = pi || d.Tool == "pi"
+	}
+	if pi {
+		fmt.Fprintln(w, "Pi static placement: eligible at startup/reload; runtime-unverified. Config serialization may change formatting/comments.")
+		for _, d := range cs.Diffs {
+			fmt.Fprintf(w, "  %s scope=%s resource=%s path=%s\n", d.Action, d.Scope, d.Artifact, d.Path)
+		}
+		verbose = true
+	}
 	if len(visibleDiffs(cs)) == 0 {
 		fmt.Fprintln(w, "No changes — everything is already up to date.")
 		return
+	}
+	for _, d := range cs.Diffs {
+		if d.Native != nil || strings.Contains(d.Note, "shared profile") {
+			fmt.Fprintln(w, d.Note)
+		}
 	}
 	PrintSummaryTable(w, cs, r)
 	printDirectoryDetails(w, cs)
@@ -164,7 +180,7 @@ func printVerboseDiffs(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 func printPlanFooter(w io.Writer, cs *diff.ChangeSet) {
 	c := cs.Counts()
 	parts := []string{}
-	for _, a := range []diff.Action{diff.Create, diff.Append, diff.Merge, diff.Fetch, diff.Exec, diff.Delete, diff.Unappend, diff.Restore, diff.Conflict, diff.Skip} {
+	for _, a := range []diff.Action{diff.Native, diff.Create, diff.Append, diff.Merge, diff.Fetch, diff.Exec, diff.Delete, diff.Unappend, diff.Restore, diff.Conflict, diff.Skip} {
 		if c[a] > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", c[a], a))
 		}

@@ -11,7 +11,7 @@ import (
 // If this fails, re-copy the root adapters into this package (the root is the
 // authoring source).
 func TestEmbeddedMatchesRoot(t *testing.T) {
-	for _, tool := range []string{"claude", "codex", "opencode"} {
+	for _, tool := range []string{"claude", "codex", "opencode", "pi"} {
 		name := tool + ".yaml"
 		embedded, err := files.ReadFile(name)
 		if err != nil {
@@ -33,14 +33,14 @@ func TestAdaptersParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ads) != 3 {
-		t.Fatalf("got %d adapters, want 3", len(ads))
+	if len(ads) != 4 {
+		t.Fatalf("got %d adapters, want 4", len(ads))
 	}
 	seen := map[string]bool{}
 	for _, a := range ads {
 		seen[a.Tool] = true
 	}
-	for _, tool := range []string{"claude", "codex", "opencode"} {
+	for _, tool := range []string{"claude", "codex", "opencode", "pi"} {
 		if !seen[tool] {
 			t.Errorf("missing embedded adapter for %s", tool)
 		}

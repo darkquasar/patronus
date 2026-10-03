@@ -11,6 +11,8 @@ import (
 	"bytes"
 	"io/fs"
 
+	"github.com/darkquasar/patronus/internal/nativepi"
+
 	"znkr.io/diff/textdiff"
 )
 
@@ -20,6 +22,7 @@ import (
 type Action string
 
 const (
+	Native   Action = "NATIVE"
 	Create   Action = "CREATE"   // Before absent, After is new content
 	Append   Action = "APPEND"   // delimited-section insert/replace (non-destructive)
 	Merge    Action = "MERGE"    // structural config edit (never blind overwrite)
@@ -56,6 +59,7 @@ type FileDiff struct {
 	Type     string `json:"type,omitempty"`     // shape: artifact type or recipe Shape()
 	Tool     string `json:"tool,omitempty"`
 	Scope    string `json:"scope,omitempty"`
+	Root     string `json:"root,omitempty"`
 	Role     string `json:"role,omitempty"` // the layer it fills
 	Note     string `json:"note,omitempty"`
 	IsDir    bool   `json:"isDir,omitempty"`
@@ -117,7 +121,11 @@ type FileDiff struct {
 	Fetch *FetchSpec `json:"-"`
 
 	// Directory is static package intent, handled outside the file applier.
-	Directory *DirectorySpec `json:"directory,omitempty"`
+	Native             *nativepi.Operation   `json:"native,omitempty"`
+	NativePrerequisite bool                  `json:"nativePrerequisite,omitempty"`
+	NativeDecision     string                `json:"nativeDecision,omitempty"`
+	NativeObservation  *nativepi.Observation `json:"observation,omitempty"`
+	Directory          *DirectorySpec        `json:"directory,omitempty"`
 
 	// Exec, when set, describes a self-wiring recipe's post-install command.
 	// It lives only on Action==Exec diffs, which are display-only in the change

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/recipe"
@@ -35,11 +37,14 @@ import (
 // Like install, the installed-item refresh is a dry run unless --deploy.
 func newUpdateCmd() *cobra.Command {
 	var (
-		regSel registrySel
-		deploy bool
-		dryRun bool
-		all    bool
-		force  bool
+		regSel                                          registrySel
+		allowPkgInstalls, allowPiProject, trackExisting bool
+		deploy                                          bool
+		dryRun                                          bool
+		all                                             bool
+		force                                           bool
+		target                                          string
+		local, global                                   bool
 	)
 
 	cmd := &cobra.Command{
@@ -54,9 +59,19 @@ func newUpdateCmd() *cobra.Command {
 			"With one or more names (or --all), also compares each installed item's recorded\n" +
 			"version against the registry's latest and, when newer, re-installs it at the\n" +
 			"tool/scope it was originally installed to. Manual and explicit, nothing auto-\n" +
-			"updates. Like install, this is a dry run unless --deploy.",
+			"updates. Like install, this is a dry run unless --deploy.\n\n" +
+			"Pi updates require exactly one of --local or --global after target/provenance\n" +
+			"selection. Pi dry previews use cached/local sources without network acquisition.\n" +
+			"Pi --deploy acknowledges settled dependent work and the reload/restart obligation;\n" +
+			"global updates require all-consumer review. Runtime activation remains unverified.",
 		Args: cobra.ArbitraryArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if err := dp06Target(target); err != nil {
+				return err
+			}
+			if target == "pi" && local == global {
+				return fmt.Errorf("pi update scope requires exactly one of --local or --global")
+			}
 			if deploy && dryRun {
 				return fmt.Errorf("--deploy and --dry-run are mutually exclusive")
 			}
@@ -66,6 +81,14 @@ func newUpdateCmd() *cobra.Command {
 				return err
 			}
 			home := homeDir()
+			var mutation *mutation
+			if deploy && !jsonOutput && (len(args) > 0 || all) {
+				mutation, err = beginMutation(home, wd)
+				if err != nil {
+					return err
+				}
+				defer mutation.close(&err)
+			}
 
 			// Resolve the registry the same way install/list do (local checkout vs
 			// remote R2), then refresh its catalog so the comparison sees the latest.
@@ -73,11 +96,31 @@ func newUpdateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cat := refreshCatalog(cmd, reg, warnf)
+			previewPi, err := dp06PotentialPi(args, all, target, home, wd)
+			if err != nil {
+				return err
+			}
+			var cat *registry.Catalog
+			catalogRefreshed := false
+			if previewPi && !(target == "pi" && deploy && !jsonOutput) {
+				if rr, ok := reg.(*registry.RemoteRegistry); ok {
+					rr.Fetcher = dp06OfflineFetcher{}
+				}
+				cat, err = reg.Catalog(cmd.Context())
+				if err != nil {
+					return err
+				}
+			} else {
+				cat = refreshCatalog(cmd, reg, warnf)
+				catalogRefreshed = true
+			}
 
 			// No names → the classic cache-refresh job (already done above for remote;
 			// report it).
 			if len(args) == 0 && !all {
+				if target != "" || local || global {
+					return fmt.Errorf("update target/scope requires names or --all")
+				}
 				if cat == nil {
 					return fmt.Errorf("update: unable to refresh registry (offline and no cache)")
 				}
@@ -96,6 +139,42 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("update: registry unavailable; cannot check for updates")
 			}
 
+			piRoute, err := dp06UpdateTarget(cat, args, all, target, home, wd)
+			if err != nil {
+				return err
+			}
+			if piRoute {
+				if local == global {
+					return fmt.Errorf("pi update scope requires exactly one of --local or --global")
+				}
+				scope := "global"
+				if local {
+					scope = "local"
+				}
+				if deploy && !jsonOutput && !catalogRefreshed {
+					if rr, ok := reg.(*registry.RemoteRegistry); ok {
+						rr.Fetcher = registryFetcher
+					}
+					cat = refreshCatalog(cmd, reg, warnf)
+					if cat == nil {
+						return fmt.Errorf("update: registry unavailable")
+					}
+				}
+				return dp06UpdatePi(cmd, cat, regSel, args, all, scope, home, wd, deploy, force, mutation, deployOptions{allowPkgInstalls: allowPkgInstalls, allowPiProject: allowPiProject, trackExisting: trackExisting})
+			}
+			if local || global {
+				return fmt.Errorf("update scope flags require a proven Pi target")
+			}
+			if !catalogRefreshed {
+				if rr, ok := reg.(*registry.RemoteRegistry); ok {
+					rr.Fetcher = registryFetcher
+				}
+				cat = refreshCatalog(cmd, reg, warnf)
+				if cat == nil {
+					return fmt.Errorf("update: registry unavailable")
+				}
+			}
+
 			// Installed-item refresh. Gather candidate items from both scope state
 			// files, filtered to the requested names (or all installed items).
 			want := map[string]bool{}
@@ -109,7 +188,11 @@ func newUpdateCmd() *cobra.Command {
 			// each. The profile's own version is not compared (model A).
 			for _, n := range args {
 				if catalogHasProfile(cat, n) {
-					res, err := profile.Resolve(cat, n, "all")
+					resolutionTarget := target
+					if resolutionTarget == "" {
+						resolutionTarget = "all"
+					}
+					res, err := profile.Resolve(cat, n, resolutionTarget)
 					if err != nil {
 						return fmt.Errorf("resolve profile %q: %w", n, err)
 					}
@@ -161,6 +244,9 @@ func newUpdateCmd() *cobra.Command {
 				}
 				for _, it := range s.Items {
 					anyInstalled = true
+					if target != "" && target != "all" && it.Tool != target && it.Tool != recipe.TargetAgnostic {
+						continue
+					}
 					if !all && !want[it.Artifact] {
 						continue
 					}
@@ -275,8 +361,9 @@ func newUpdateCmd() *cobra.Command {
 			}
 			// A directory anywhere in the selected dependency closure adds a batch
 			// barrier. Legacy-only updates retain planning immediately before apply.
-			hasDirectory := false
+			hasDirectory, piSelected := false, false
 			for _, c := range selected {
+				piSelected = piSelected || c.tool == "pi"
 				for _, name := range requires.Expand([]string{c.name}, cat.Deps) {
 					rec := findRecipe(cat, name)
 					if rec != nil && rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory" {
@@ -316,7 +403,13 @@ func newUpdateCmd() *cobra.Command {
 					printReadiness(out, readinessReport(p.Changes, exec.LookPath))
 					printPathReadiness(out, pathReadiness(p.Changes, pathDirs(os.Getenv("PATH"))))
 				}
-				result, err := deployDirectories(cmd.Context(), home, batch, force)
+				if err := staticPiSelection(batch, piSelected); err != nil {
+					return err
+				}
+				if err := mutation.checkPlan(batch, nil); err != nil {
+					return err
+				}
+				result, err := deployDirectoriesLocked(cmd.Context(), home, batch, force, mutation, nil)
 				if err != nil {
 					return err
 				}
@@ -360,8 +453,10 @@ func newUpdateCmd() *cobra.Command {
 						p.Changes = legacy
 					}
 					// Legacy overwrites retain existing update semantics; directory
-					// force is exclusively the flag the user supplied.
-					if err := runDeploy(cmd, p.Changes, p.Resolver, deployOptions{force: true, home: home, projectDir: wd}); err != nil {
+					// force is exclusively the flag the user supplied. runDeploy must
+					// reconcile the complete owned set before this candidate counts as
+					// updated; unresolved paths/state persistence stop the loop.
+					if err := runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{mutation: mutation, target: c.tool, force: true, home: home, projectDir: wd}, runnerForCommands); err != nil {
 						return err
 					}
 				}
@@ -374,9 +469,15 @@ func newUpdateCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&target, "target", "", "select target: claude|codex|opencode|pi|all (default: installed provenance)")
+	cmd.Flags().BoolVar(&local, "local", false, "Pi update: select only project resources; verify global prerequisites")
+	cmd.Flags().BoolVar(&global, "global", false, "Pi update: select only global resources, including agnostic dependencies")
 	addRegistryFlags(cmd, &regSel) // --local-registry + --registry-url, same as list/install
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually re-install updated items (default: dry run only)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "explicitly plan only (the default; no-op without --deploy)")
+	cmd.Flags().BoolVar(&allowPkgInstalls, "allow-package-installs", false, "authorize required native package installs/updates and dependency scripts")
+	cmd.Flags().BoolVar(&allowPiProject, "allow-pi-project-config", false, "authorize native Pi project configuration/trust")
+	cmd.Flags().BoolVar(&trackExisting, "track-existing", false, "enroll selected external native packages")
 	cmd.Flags().BoolVar(&force, "force", false, "replace edited owned directory package files; legacy updates already overwrite their files")
 	cmd.Flags().BoolVar(&all, "all", false, "check every installed item for updates")
 	return cmd
@@ -443,4 +544,267 @@ func catalogHasProfile(cat *registry.Catalog, name string) bool {
 		}
 	}
 	return false
+}
+
+// dp06UpdateTarget resolves provenance before allowing any scope collection.
+func dp06UpdateTarget(cat *registry.Catalog, args []string, all bool, target, home, wd string) (bool, error) {
+	if err := dp06Target(target); err != nil {
+		return false, err
+	}
+	wanted := map[string]bool{}
+	for _, name := range args {
+		wanted[name] = true
+		if catalogHasProfile(cat, name) {
+			l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+			if err != nil {
+				return false, err
+			}
+			if l.Profile == name && l.Target != "" {
+				if target != "" && target != l.Target {
+					return false, fmt.Errorf("profile lock target %s differs from requested %s", l.Target, target)
+				}
+				target = l.Target
+			}
+			res, err := profile.Resolve(cat, name, "pi")
+			if err != nil {
+				return false, err
+			}
+			for _, n := range res.Names() {
+				wanted[n] = true
+			}
+		}
+	}
+	if target != "" && target != "all" {
+		return target == "pi", nil
+	}
+	for _, scope := range []string{"global", "local"} {
+		s, err := state.Load(removeStatePath(scope, home, wd))
+		if err != nil {
+			return false, err
+		}
+		for _, it := range s.Items {
+			if it.Tool == "pi" && (all || wanted[it.Artifact]) {
+				if target == "all" {
+					return false, fmt.Errorf("pi selection requires a separate --target pi update with explicit scope")
+				}
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, args []string, all bool, scope, home, wd string, deploy, force bool, mutation *mutation, nativeOpts deployOptions) error {
+	out := cmd.OutOrStdout()
+	installed, err := state.Load(removeStatePath(scope, home, wd))
+	if err != nil {
+		return err
+	}
+	if scope == "global" {
+		if err := mergeDirectoryDiscovery(home, installed); err != nil {
+			return err
+		}
+	}
+	available := map[string]bool{}
+	versions := map[string]string{}
+	for _, it := range installed.Items {
+		if _, ok := piProjectItem(it, piSelectedRoot(scope, home, wd)); !ok {
+			continue
+		}
+		if it.Tool == "pi" || it.Tool == recipe.TargetAgnostic {
+			available[it.Artifact] = true
+			versions[it.Artifact] = it.ItemVersion
+		}
+	}
+	wanted := map[string]bool{}
+	explicit := map[string]bool{}
+	for _, name := range args {
+		if !catalogHasProfile(cat, name) {
+			wanted[name] = true
+			explicit[name] = true
+			continue
+		}
+		res, err := profile.Resolve(cat, name, "pi")
+		if err != nil {
+			return err
+		}
+		if err := dp06ProfileComplete(res); err != nil {
+			return err
+		}
+		if err := dp06CheckProfileLock(wd, name, "pi", cat, home, scope, out); err != nil {
+			return err
+		}
+		for _, n := range res.Names() {
+			wanted[n] = true
+		}
+		l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+		if err != nil {
+			return err
+		}
+		if l.Profile == name {
+			for _, e := range l.Entries {
+				if !available[e.Name] {
+					fmt.Fprintf(out, "%s: absent pinned member; not reinstalling\n", e.Name)
+				}
+			}
+		}
+	}
+	var names []string
+	for name := range wanted {
+		if !available[name] {
+			fmt.Fprintf(out, "%s: absent current member in %s scope; not reinstalling\n", name, scope)
+			if explicit[name] {
+				return fmt.Errorf("not installed in selected %s root: %s; update cannot relocate ownership", scope, name)
+			}
+		}
+	}
+	for name := range available {
+		if all || wanted[name] {
+			if latestVersion(cat, name) == "" {
+				fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", name)
+				continue
+			}
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	// Validate the complete selected installed closure, even for up-to-date members.
+	for _, name := range names {
+		for _, dep := range requires.Expand([]string{name}, cat.Deps) {
+			if available[dep] {
+				continue
+			}
+			if scope == "local" {
+				if rec := findRecipe(cat, dep); rec != nil && rec.Manifest.Delivery != nil && rec.Manifest.Wire.Method == "" {
+					continue
+				}
+			}
+			return fmt.Errorf("pi update dependency-incomplete: %s requires absent %s; separately preview and install the prerequisite", name, dep)
+		}
+	}
+	var changed []string
+	for _, name := range names {
+		latest := latestVersion(cat, name)
+		if latest == "" {
+			fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", name)
+			continue
+		}
+		if latest == versions[name] && !force {
+			fmt.Fprintf(out, "%s: up to date (%s)\n", name, latest)
+		} else {
+			fmt.Fprintf(out, "%s: %s -> %s\n", name, versions[name], latest)
+			changed = append(changed, name)
+		}
+	}
+	// Plan all selected members together: dependency validation and composition are
+	// whole-selection barriers, not a per-item apply loop.
+	if len(names) == 0 {
+		return nil
+	}
+	p, err := planInstall(cmd, installPlanRequest{Names: names, Tool: "pi", Scope: scope, Home: home, ProjectDir: wd, Registry: reg, Catalog: cat, Force: force, Acquire: deploy && !jsonOutput})
+	if err != nil {
+		return err
+	}
+	if err := dp06UpdatePaths(p.Changes, installed.Items); err != nil {
+		return err
+	}
+	needsFetch := false
+	for _, d := range p.Changes.Diffs {
+		needsFetch = needsFetch || d.Native != nil || (d.Fetch != nil && d.Action == diff.Fetch)
+	}
+	if len(changed) == 0 && !needsFetch {
+		return nil
+	}
+	// Finalize has already combined shared file contributions. Retain verified
+	// unchanged members in the batch so their ownership is never dropped.
+	p.Changes.DryRun = !deploy
+	if err := staticPiSelection(p.Changes, true); err != nil {
+		return err
+	}
+	for _, w := range planWarnings(p.Changes) {
+		fmt.Fprintln(cmd.ErrOrStderr(), w)
+	}
+	if jsonOutput {
+		return render.JSON(out, p.Changes)
+	}
+	dp06PrintSelection(cmd, p.Changes, "pi", p.Resolver)
+	render.PrintPlan(out, p.Changes, p.Resolver, true)
+	if !deploy {
+		return nil
+	}
+	dp06Acknowledge(cmd, "update")
+	// Pi preflight has proved these ordinary replacements are unchanged owned
+	// resources. They are updates, not discretionary overwrite prompts. Directory
+	// force remains exclusively the operator flag.
+	for i := range p.Changes.Diffs {
+		if p.Changes.Diffs[i].Action == diff.Conflict {
+			p.Changes.Diffs[i].Action = diff.Create
+		}
+	}
+	return runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{allowPkgInstalls: nativeOpts.allowPkgInstalls, allowPiProject: nativeOpts.allowPiProject, trackExisting: nativeOpts.trackExisting, mutation: mutation, target: "pi", globalPrerequisites: p.GlobalPrerequisites, force: force, home: home, projectDir: wd}, runnerForCommands)
+}
+
+// Before catalog acquisition, conservatively recognize possible Pi provenance.
+// Exact profile membership is resolved afterwards from available catalog bytes.
+func dp06PotentialPi(args []string, all bool, target, home, wd string) (bool, error) {
+	if target != "" && target != "all" {
+		return target == "pi", nil
+	}
+	if len(args) == 0 && !all {
+		return false, nil
+	}
+	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+	if err != nil {
+		return false, err
+	}
+	if l.Target == "pi" && (all || contains(args, l.Profile)) {
+		return true, nil
+	}
+	for _, scope := range []string{"global", "local"} {
+		s, err := state.Load(removeStatePath(scope, home, wd))
+		if err != nil {
+			return false, err
+		}
+		for _, it := range s.Items {
+			if it.Tool == "pi" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// Changed environment roots cannot silently relocate an installed identity.
+// Removal always uses the recorded paths; relocation needs a distinct migration.
+func dp06UpdatePaths(cs *diff.ChangeSet, old []state.Item) error {
+	desired := map[string]map[string]bool{}
+	for _, d := range cs.Diffs {
+		names := []string{d.Artifact}
+		for _, c := range d.Contrib {
+			names = append(names, c.Artifact)
+		}
+		for _, c := range d.SettingContrib {
+			names = append(names, c.Artifact)
+		}
+		for _, name := range names {
+			if desired[name] == nil {
+				desired[name] = map[string]bool{}
+			}
+			desired[name][d.Path] = true
+		}
+	}
+	for _, it := range old {
+		paths, selected := desired[it.Artifact]
+		if !selected || it.Tool != "pi" || len(it.Files) == 0 {
+			continue
+		}
+		overlaps := false
+		for _, f := range it.Files {
+			overlaps = overlaps || paths[f.Path]
+		}
+		if !overlaps {
+			return fmt.Errorf("pi update %s would relocate recorded root/path %s; restore the recorded root or authorize a separate migration", it.Artifact, it.Files[0].Path)
+		}
+	}
+	return nil
 }

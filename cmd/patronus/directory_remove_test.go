@@ -260,3 +260,32 @@ func TestDirectoryMixedRemovalDoesNotRestoreReference(t *testing.T) {
 		t.Fatal("runtime call")
 	}
 }
+
+func TestDirectoryRemovalOwningHelperAndCommandRespectBusyLock(t *testing.T) {
+	f := newDirectoryFixture(t)
+	f.recipe(t, "fixture-kit", "1.0.0", "inert payload")
+	f.install(t, "fixture-kit")
+	release, err := packagestate.Acquire(f.home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := lifecycleSnapshot(t, filepath.Join(f.home, ".patronus"))
+	plans := []directoryRemovalPlan{{Recipe: "fixture-kit"}}
+	cmd := newRemoveCmd(nil)
+	if err := deployDirectoryRemovals(cmd, f.home, plans, false); !errors.Is(err, packagestate.ErrBusy) {
+		t.Fatalf("helper bypassed lock: %v", err)
+	}
+	if _, _, err := execRemove(t, "fixture-kit", "--deploy"); !errors.Is(err, packagestate.ErrBusy) {
+		t.Fatalf("command bypassed lock: %v", err)
+	}
+	lifecycleEqual(t, before, lifecycleSnapshot(t, filepath.Join(f.home, ".patronus")))
+	if err := release(); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := execRemove(t, "fixture-kit", "--deploy"); err != nil {
+		t.Fatalf("directory command recursively reacquired: %v", err)
+	}
+	if _, err := os.Stat(f.readme("fixture-kit")); !os.IsNotExist(err) {
+		t.Fatal("payload not removed")
+	}
+}

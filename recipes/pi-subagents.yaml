@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+kind: Recipe
+name: pi-subagents
+version: 2.0.0
+family: recipe
+role: orchestration
+description: Native Pi subagents orchestration via an exact npm source
+deliver:
+  via: package-manager
+  install:
+    - manager: pi
+      ref: npm:pi-subagents@0.72.1

@@ -1,0 +1,44 @@
+apiVersion: patronus/v2
+family: adapter
+tool: pi
+
+# Global paths honor PI_CODING_AGENT_DIR (default ~/.pi/agent).
+detect:
+  global: ["~/.pi/agent/"]
+  project: [".pi/"]
+
+layout:
+  skill:
+    global: "~/.pi/agent/skills/{name}/SKILL.md"
+    project: ".pi/skills/{name}/SKILL.md"
+    nameSource: dir
+    frontmatter: passthrough
+    required: [name, description]
+
+  agent:
+    global: "~/.pi/agent/agents/{name}.md"
+    project: ".pi/agents/{name}.md"
+    format: pi-subagents-markdown
+    required: [name, description]
+
+  command:
+    global: "~/.pi/agent/prompts/{name}.md"
+    project: ".pi/prompts/{name}.md"
+
+  mcp:
+    global: { file: "~/.pi/agent/mcp-adapter.json", format: json, path: "mcpServers.{name}" }
+    project: { file: ".pi/mcp-adapter.json", format: json, path: "mcpServers.{name}" }
+    transports:
+      stdio:
+        keys: { command: "{command}", args: "{args}" }
+      http:
+        keys: { url: "{url}" }
+
+  setting:
+    global: { file: "~/.pi/agent/settings.json", format: json }
+    project: { file: ".pi/settings.json", format: json }
+
+  # Inline sections only; effective context discovery is handled by Pi preflight.
+  instruction:
+    global: { file: "~/.pi/agent/AGENTS.md", action: appendSection }
+    project: { file: "AGENTS.md", action: appendSection }

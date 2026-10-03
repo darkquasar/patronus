@@ -327,3 +327,31 @@ func TestResolveWithoutBlocksRequiresPullback(t *testing.T) {
 		}
 	}
 }
+
+func TestResolvePiFlavour(t *testing.T) {
+	cat := fakeCatalog([]string{"sample-shared", "sample-pi", "sample-claude"}, nil,
+		&manifest.Profile{Meta: manifest.Meta{Name: "sample-profile"}, Layers: manifest.ProfileLayers{
+			Capabilities: manifest.StringList{"sample-shared", "sample-pi@pi", "sample-claude@claude"},
+		}})
+	for _, tc := range []struct{ target, names string }{
+		{"pi", "sample-shared,sample-pi"}, {"all", "sample-shared"}, {"", "sample-shared"},
+		{"claude", "sample-shared,sample-claude"},
+	} {
+		t.Run(tc.target, func(t *testing.T) {
+			got, err := Resolve(cat, "sample-profile", tc.target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantTarget := tc.target
+			if wantTarget == "" {
+				wantTarget = "all"
+			}
+			if got.Target != wantTarget {
+				t.Fatalf("target = %q, want %q", got.Target, wantTarget)
+			}
+			if strings.Join(got.Names(), ",") != tc.names || len(got.Warnings) != 0 {
+				t.Fatalf("resolution = %+v", got)
+			}
+		})
+	}
+}

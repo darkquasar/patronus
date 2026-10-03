@@ -633,3 +633,39 @@ func TestDirectoryUpdateRecoversSameVersionAfterReceiptCrash(t *testing.T) {
 	}
 	f.assertPackage(t, rec, lifecycleFile("README.md", "new"))
 }
+
+func TestDirectoryMutationLockHeldThroughReceiptAndDiscovery(t *testing.T) {
+	f := newDirectoryFixture(t)
+	f.recipe(t, "fixture-kit", "1.0.0", "inert payload")
+	old := directoryServiceForDeploy
+	called := false
+	directoryServiceForDeploy = func(home string) *packagedelivery.Service {
+		service := old(home)
+		service.Fault = func(point string) error {
+			release, err := packagestate.Acquire(home)
+			if release != nil {
+				_ = release()
+			}
+			if !errors.Is(err, packagestate.ErrBusy) {
+				t.Fatalf("directory callee bypassed outer lock at %s: %v", point, err)
+			}
+			if point == "after-receipt-save" {
+				called = true
+			}
+			return nil
+		}
+		return service
+	}
+	defer func() { directoryServiceForDeploy = old }()
+	f.install(t, "fixture-kit")
+	if !called {
+		t.Fatal("did not reach receipt commit")
+	}
+	// A second owned call verifies/repairs under its new outer lock; recursive
+	// reacquisition would return busy here rather than complete.
+	f.install(t, "fixture-kit")
+	loaded, err := state.Load(filepath.Join(f.home, ".patronus/state.json"))
+	if err != nil || len(loaded.Find("fixture-kit", "", "")) != 1 {
+		t.Fatalf("discovery not recorded: %+v %v", loaded, err)
+	}
+}
