@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/darkquasar/patronus/internal/nativepi"
 )
 
 // Recipe is an external binary/tool that Patronus delivers (optional fetch+verify)
@@ -50,6 +52,7 @@ var deliverVias = map[DeliverVia]bool{ViaFetch: true, ViaPackageManager: true, V
 type PackageManager string
 
 const (
+	PMPi     PackageManager = "pi"
 	PMNpm    PackageManager = "npm"
 	PMCargo  PackageManager = "cargo"
 	PMUv     PackageManager = "uv"
@@ -60,7 +63,7 @@ const (
 )
 
 var packageManagers = map[PackageManager]bool{
-	PMNpm: true, PMCargo: true, PMUv: true, PMBrew: true, PMScoop: true, PMWinget: true, PMAur: true,
+	PMPi: true, PMNpm: true, PMCargo: true, PMUv: true, PMBrew: true, PMScoop: true, PMWinget: true, PMAur: true,
 }
 
 // pmInstallTemplates renders the user-scope install command per manager. A
@@ -303,11 +306,11 @@ func validateRecipe(r *Recipe) error {
 		return errors.New("directory delivery fields require apiVersion patronus/v3")
 	}
 	if r.Delivery != nil && r.Delivery.Unpack == "directory" {
-		if !validPackageName(r.Name) || !ValidPackageVersion(r.Version) {
-			return errors.New("directory recipe requires a canonical name and SemVer version")
+		if err := ValidateDirectoryPin(r.Name, r.Version, r.Delivery); err != nil {
+			return err
 		}
-		if r.Role != RoleSandbox {
-			return errors.New("directory recipe requires role: sandbox")
+		if r.Role != RoleSandbox && r.Role != RoleOrchestration && r.Role != RoleTools {
+			return errors.New("directory recipe requires role: sandbox, orchestration or tools")
 		}
 		if r.Scope != nil && r.Scope.Marker != "" {
 			return errors.New("directory recipe does not support local scope")
@@ -316,10 +319,15 @@ func validateRecipe(r *Recipe) error {
 			return errors.New("directory recipe is install-only and does not support wiring or tool targeting")
 		}
 	}
+	if IsPiDelivery(r.Delivery) {
+		if r.Wire.Method != "" || r.Wire.Actor != "" || len(r.Wire.Tools) > 0 || len(r.Wire.Run) > 0 || r.Wire.Mcp != nil || r.Scope != nil {
+			return errors.New("pi native recipe is scoped by selection and cannot mix wiring or recipe scope")
+		}
+	}
 	if r.Role == "" {
 		return fmt.Errorf("missing role")
 	}
-	if r.Delivery != nil {
+	if r.Delivery != nil && r.Delivery.Unpack != "directory" {
 		if err := validateDelivery(r.Delivery); err != nil {
 			return err
 		}
@@ -370,12 +378,23 @@ func validateDelivery(d *Delivery) error {
 	if !deliverVias[d.Via] {
 		return fmt.Errorf("invalid deliver.via %q (want fetch|package-manager|docker|script)", d.Via)
 	}
+	if IsPiDelivery(d) && d.Via != ViaPackageManager {
+		return errors.New("pi native candidate requires package-manager delivery")
+	}
 	switch d.Via {
 	case ViaPackageManager:
 		if len(d.Install) == 0 {
 			return errors.New("deliver.via package-manager requires at least one install candidate")
 		}
 		for _, c := range d.Install {
+			if c.Manager == PMPi {
+				if len(d.Install) != 1 || d.Unpack != "" || d.InstallTo != "" || d.Binary != "" || len(d.Assets) > 0 || d.URL != "" || d.SHA256 != "" || len(d.Platforms) > 0 {
+					return errors.New("pi native delivery cannot mix candidates or delivery mechanisms")
+				}
+				if _, _, err := nativepi.ParseSource(c.Ref); err != nil {
+					return err
+				}
+			}
 			if !packageManagers[c.Manager] {
 				return fmt.Errorf("invalid install candidate manager %q", c.Manager)
 			}
@@ -433,6 +452,19 @@ func ValidPackageVersion(version string) bool {
 	return true
 }
 
+// ValidateDirectoryPin validates role-independent directory pin structure. Lock
+// decoding uses it without inventing a recipe role; actual recipes must still
+// pass ValidateRecipe for manifest version, role, wiring and scope eligibility.
+func ValidateDirectoryPin(name, version string, d *Delivery) error {
+	if d == nil || d.Unpack != "directory" {
+		return errors.New("pinned delivery requires directory unpack")
+	}
+	if !validPackageName(name) || !ValidPackageVersion(version) {
+		return errors.New("directory recipe requires a canonical name and SemVer version")
+	}
+	return validateDelivery(d)
+}
+
 func validateDirectoryDelivery(d *Delivery) error {
 	if d.Package == nil || !validPackageName(d.Package.Name) || !ValidPackageVersion(d.Package.Version) {
 		return errors.New("directory delivery requires a package identity with a canonical name and SemVer version")
@@ -469,4 +501,17 @@ func validateDirectoryDelivery(d *Delivery) error {
 		}
 	}
 	return nil
+}
+
+// IsPiDelivery identifies native manager candidates without shell fallback.
+func IsPiDelivery(d *Delivery) bool {
+	if d == nil {
+		return false
+	}
+	for _, c := range d.Install {
+		if c.Manager == PMPi {
+			return true
+		}
+	}
+	return false
 }

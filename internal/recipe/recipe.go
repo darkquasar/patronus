@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +14,7 @@ import (
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/nativepi"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -73,6 +75,31 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 		goarch = runtime.GOARCH
 	}
 
+	if manifest.IsPiDelivery(rec.Delivery) {
+		if err := manifest.ValidateRecipe(rec); err != nil {
+			return nil, err
+		}
+		if req.Tool != "pi" {
+			return nil, fmt.Errorf("native Pi recipe requires --target pi")
+		}
+		source := rec.Delivery.Install[0].Ref
+		name, _, err := nativepi.ParseSource(source)
+		if err != nil {
+			return nil, err
+		}
+		agent := req.Resolver.ResolveMarker("~/.pi/agent", "pi", "global")
+		project := req.Resolver.ResolveMarker(".", "pi", "local")
+		root := agent
+		if scope == "local" {
+			root = filepath.Join(project, ".pi")
+		}
+		op := nativepi.Operation{Kind: "install", Source: source, Identity: nativepi.Identity{Name: name, Scope: scope, Root: root, AgentRoot: agent, Project: project}}
+		observed, err := nativepi.Observe(op)
+		if err != nil {
+			return nil, err
+		}
+		return []diff.FileDiff{{Action: diff.Native, Artifact: rec.Name, Version: rec.Version, Type: string(rec.Shape()), Tool: "pi", Scope: scope, Root: root, Path: op.Identity.MetadataPath(), Native: &op, NativeObservation: &observed, Note: strings.Join(op.Argv(), " ") + "; observed " + observed.Status + " at " + root + ". " + nativepi.EditWarning}}, nil
+	}
 	if rec.Delivery != nil && rec.Delivery.Unpack == "directory" {
 		return directoryDiff(req, goos, goarch)
 	}
@@ -88,7 +115,11 @@ func Compute(req Request) ([]diff.FileDiff, error) {
 	//     manager resolves the host itself, so there is no FETCH for this path.
 	//     Patronus never silently runs the install — the consent layer (cmd) decides.
 	installPath := ""
-	if d, fetch := fetchDiff(req, goos, goarch); fetch != nil {
+	d, fetch, err := fetchDiff(req, goos, goarch)
+	if err != nil {
+		return nil, err
+	}
+	if fetch != nil {
 		installPath = d
 		diffs = append(diffs, *fetch)
 	}
@@ -165,27 +196,22 @@ func candidateSpecs(cands []manifest.InstallCandidate, recipeName string) []diff
 // the destination on disk (matching sha -> SKIP). A fetch is one of two sub-shapes,
 // distinguished by which field is set: a per-OS/arch asset MATRIX (Assets) or a
 // single pinned URL artifact (URL). It returns the resolved install path (so
-// wireDiffs can substitute {installPath}) and the diff, or ("", nil) when the
-// recipe has no binary to fetch — including when this host has no pinned artifact,
-// which is an advisory, not an error. docker/package-manager/script deliveries have
-// no fetcher.
-func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
+// wireDiffs can substitute {installPath}) and the diff. Recipes without fetch
+// delivery return no row; a selected fetch with no valid host pin is an error.
+func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff, error) {
 	rec := req.Recipe
 	if rec.Delivery == nil || rec.Delivery.Via != manifest.ViaFetch {
-		return "", nil // docker/package-manager/script or wire-only: no fetcher
+		return "", nil, nil // docker/package-manager/script or wire-only: no fetcher
 	}
 
 	var spec *diff.FetchSpec
 	if rec.Delivery.URL != "" {
 		// One pinned artifact for every supported host — no per-OS/arch matrix.
-		// Platforms gates the hosts it can run on (tk is bash: POSIX only), and an
-		// unsupported host takes the same seam as a missing asset: warn, emit no
-		// FETCH. Archive stays empty, so classifyFetch verifies the placed file's sha
-		// against the pin on every run.
+		// Unsupported platforms refuse the required selection. Archive stays empty,
+		// so classifyFetch verifies the placed file against the pin on every run.
 		pin, err := rec.Delivery.ResolveURL(goos)
 		if err != nil {
-			warn(req, "%s: %v — skipping fetch", rec.Name, err)
-			return "", nil
+			return "", nil, fmt.Errorf("required recipe %s: %w", rec.Name, err)
 		}
 		spec = &diff.FetchSpec{
 			URL:    pin.URL,
@@ -195,10 +221,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 	} else {
 		asset, err := rec.Delivery.ResolveAsset(goos, goarch)
 		if err != nil {
-			// No pinned asset for this host (e.g. sandbox's TODO upstream): surface a
-			// clear advisory and emit no FETCH rather than a fake download.
-			warn(req, "%s: %v — skipping fetch", rec.Name, err)
-			return "", nil
+			return "", nil, fmt.Errorf("required recipe %s: %w", rec.Name, err)
 		}
 		spec = &diff.FetchSpec{
 			URL:        asset.URL,
@@ -209,10 +232,23 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 		}
 	}
 
+	u, err := url.Parse(spec.URL)
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" {
+		return "", nil, fmt.Errorf("required recipe %s: invalid HTTPS delivery URL", rec.Name)
+	}
+	digest, err := hex.DecodeString(strings.TrimPrefix(spec.SHA256, "sha256:"))
+	if err != nil || len(digest) != sha256.Size {
+		return "", nil, fmt.Errorf("required recipe %s: missing or invalid sha256 pin", rec.Name)
+	}
+	if spec.Archive != "" && spec.BinaryPath == "" {
+		return "", nil, fmt.Errorf("required recipe %s: missing archive member", rec.Name)
+	}
 	spec.Dest = resolveInstallPath(req.Resolver, rec)
+	before, readErr := os.ReadFile(spec.Dest)
 	d := diff.FileDiff{
 		Path:     spec.Dest,
-		Action:   classifyFetch(spec, req.PlacedDigest),
+		Before:   before,
+		Action:   classifyFetchSnapshot(spec, req.PlacedDigest, before, readErr),
 		Artifact: rec.Name,
 		Type:     string(rec.Shape()),
 		Role:     string(rec.Role),
@@ -221,7 +257,7 @@ func fetchDiff(req Request, goos, goarch string) (string, *diff.FileDiff) {
 		Note:     "fetch " + spec.Label,
 		Fetch:    spec,
 	}
-	return spec.Dest, &d
+	return spec.Dest, &d, nil
 }
 
 // PlacedDigestFunc reports the sha256 (lowercase hex, no "sha256:" prefix) that
@@ -250,6 +286,10 @@ type PlacedDigestFunc func(dest string) (string, bool)
 // filesystem + crypto.
 func classifyFetch(spec *diff.FetchSpec, placed PlacedDigestFunc) diff.Action {
 	data, err := os.ReadFile(spec.Dest)
+	return classifyFetchSnapshot(spec, placed, data, err)
+}
+
+func classifyFetchSnapshot(spec *diff.FetchSpec, placed PlacedDigestFunc, data []byte, err error) diff.Action {
 	if err != nil {
 		return diff.Fetch // absent (or unreadable) -> needs fetching
 	}
@@ -505,10 +545,4 @@ func readFile(p string) ([]byte, bool, error) {
 		return nil, false, err
 	}
 	return b, true, nil
-}
-
-func warn(req Request, format string, args ...any) {
-	if req.Warnf != nil {
-		req.Warnf(format, args...)
-	}
 }

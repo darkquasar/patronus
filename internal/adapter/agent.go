@@ -31,6 +31,10 @@ func (e *Engine) transformAgent(art *manifest.Artifact, ad *manifest.Adapter, sc
 	// agent WOULD land (drift's shadow hunt) can get it without the source present.
 	path := e.resolvePath(target.Path, art.Name, ad.Tool, scope)
 
+	if ad.Tool == "pi" || ad.Layout.Agent.Format == "pi-subagents-markdown" {
+		return e.transformPiAgent(art, ad, scope, srcDir, path)
+	}
+
 	entry := art.Entry
 	if entry == "" {
 		entry = "agent.md"

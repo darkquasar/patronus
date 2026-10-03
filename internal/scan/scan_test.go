@@ -148,3 +148,44 @@ func TestScanDefaultsProjectDirToCwd(t *testing.T) {
 		t.Errorf("ProjectDir = %q, want cwd %q", inv.ProjectDir, wd)
 	}
 }
+
+func TestScanPiRootsAndEnvironment(t *testing.T) {
+	ad, err := manifest.LoadAdapter(filepath.Join("..", "..", "adapters", "pi.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, project, override := t.TempDir(), t.TempDir(), t.TempDir()
+	mustMkdir(t, filepath.Join(home, ".pi", "agent"))
+	mustMkdir(t, filepath.Join(project, ".pi"))
+	for _, tc := range []struct{ name, override, global string }{
+		{"default", "", filepath.Join(home, ".pi", "agent")},
+		{"override", override, override},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			inv, err := Scan(Options{ProjectDir: project, Adapters: []*manifest.Adapter{ad}, Env: envFrom(map[string]string{"HOME": home, "PI_CODING_AGENT_DIR": tc.override})})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if inv.Env.PiCodingAgentDir != tc.override {
+				t.Fatalf("environment = %+v", inv.Env)
+			}
+			if len(inv.Tools) != 1 || inv.Tools[0].Tool != "pi" {
+				t.Fatalf("tools = %+v", inv.Tools)
+			}
+			got := inv.Tools[0]
+			if !got.Global.Detected || len(got.Global.MatchedPaths) != 1 || got.Global.MatchedPaths[0] != tc.global {
+				t.Fatalf("global = %+v", got.Global)
+			}
+			if !got.Local.Detected || len(got.Local.MatchedPaths) != 1 || got.Local.MatchedPaths[0] != filepath.Join(project, ".pi") {
+				t.Fatalf("local = %+v", got.Local)
+			}
+		})
+	}
+	inv, err := Scan(Options{ProjectDir: t.TempDir(), Adapters: []*manifest.Adapter{ad}, Env: envFrom(map[string]string{"HOME": home, "PI_CODING_AGENT_DIR": filepath.Join(override, "absent")})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inv.Tools[0].Global.Detected || inv.Tools[0].Local.Detected {
+		t.Fatal("scan fell back to default despite explicit absent override")
+	}
+}

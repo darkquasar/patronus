@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/packagebundle"
 	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/packagestate"
@@ -120,6 +122,15 @@ func preflightDirectories(home string, cs *diff.ChangeSet, force bool) error {
 }
 
 func deployDirectories(ctx context.Context, home string, cs *diff.ChangeSet, force bool) (result directoryDeployResult, err error) {
+	m, err := acquireMutation(home, filepath.Join(home, ".patronus/state.json"))
+	if err != nil {
+		return result, err
+	}
+	defer m.close(&err)
+	return deployDirectoriesLocked(ctx, home, cs, force, m, nil)
+}
+
+func deployDirectoriesLocked(ctx context.Context, home string, cs *diff.ChangeSet, force bool, m *mutation, prepared packagedelivery.Fetcher) (result directoryDeployResult, err error) {
 	result.Legacy = &diff.ChangeSet{DryRun: cs.DryRun}
 	for _, d := range cs.Diffs {
 		if d.Directory == nil {
@@ -134,17 +145,15 @@ func deployDirectories(ctx context.Context, home string, cs *diff.ChangeSet, for
 	if err = preflightDirectories(home, cs, force); err != nil {
 		return result, err
 	}
-	release, err := packagestate.Acquire(home)
-	if err != nil {
-		return result, err
-	}
-	defer func() { err = errors.Join(err, release()) }()
 	service := directoryServiceForDeploy(home)
+	if prepared != nil {
+		service.Fetcher = prepared
+	}
 	if service.Fetcher == nil {
 		return result, errors.New("directory package fetcher is not configured")
 	}
 	for _, req := range requests {
-		if err = recoverDirectory(ctx, service, req.Recipe); err != nil {
+		if err = recoverDirectory(ctx, service, req.Recipe, m); err != nil {
 			return result, directoryDiagnostic(err)
 		}
 	}
@@ -160,7 +169,7 @@ func deployDirectories(ctx context.Context, home string, cs *diff.ChangeSet, for
 			} else {
 				result.Skipped++
 			}
-			if refErr := repairDirectoryReference(home, outcome.Receipt); refErr != nil {
+			if refErr := repairDirectoryReference(home, outcome.Receipt, m); refErr != nil {
 				return result, errors.Join(replaceErr, fmt.Errorf("package %s committed; repair discovery reference by retrying install: %w", req.Recipe, refErr))
 			}
 		}
@@ -173,7 +182,7 @@ func deployDirectories(ctx context.Context, home string, cs *diff.ChangeSet, for
 
 // recoverDirectory repairs discovery from the resolved committed receipt before
 // the next request can fail. A known committed cleanup failure also permits repair.
-func recoverDirectory(ctx context.Context, service *packagedelivery.Service, name string) error {
+func recoverDirectory(ctx context.Context, service *packagedelivery.Service, name string, m *mutation) error {
 	tx, err := packagestate.ReadTransaction(service.Home, name)
 	if err != nil {
 		return err
@@ -185,7 +194,7 @@ func recoverDirectory(ctx context.Context, service *packagedelivery.Service, nam
 	}
 	committed := tx != nil && (tx.Phase == packagestate.Committed || (tx.Phase == packagestate.RecoveryRequired && tx.ResumePhase == packagestate.Committed)) && tx.Operation != "remove" && reflect.DeepEqual(receipt, tx.Candidate)
 	if receipt != nil && (recoveryErr == nil || committed) {
-		if err := repairDirectoryReference(service.Home, receipt); err != nil {
+		if err := repairDirectoryReference(service.Home, receipt, m); err != nil {
 			return errors.Join(recoveryErr, fmt.Errorf("package %s: repair recovered discovery reference: %w", name, err))
 		}
 	}
@@ -195,7 +204,7 @@ func recoverDirectory(ctx context.Context, service *packagedelivery.Service, nam
 			return err
 		}
 		if resolved != nil && resolved.Operation == "remove" && resolved.Phase == packagestate.Committed {
-			return acknowledgeDirectoryRemoval(service.Home, name, receipt)
+			return acknowledgeDirectoryRemoval(service.Home, name, receipt, m)
 		}
 	}
 	return recoveryErr
@@ -203,10 +212,13 @@ func recoverDirectory(ctx context.Context, service *packagedelivery.Service, nam
 
 // acknowledgeDirectoryRemoval runs only after service recovery proves the
 // reduced receipt committed. Keep evidence until discovery and its link are synced.
-func acknowledgeDirectoryRemoval(home, name string, receipt *packagestate.Receipt) error {
+func acknowledgeDirectoryRemoval(home, name string, receipt *packagestate.Receipt, m *mutation) error {
 	path := filepath.Join(home, ".patronus", "state.json")
+	if err := m.check(path); err != nil {
+		return err
+	}
 	if receipt != nil {
-		if err := repairDirectoryReference(home, receipt); err != nil {
+		if err := repairDirectoryReference(home, receipt, m); err != nil {
 			return err
 		}
 	} else {
@@ -223,7 +235,7 @@ func acknowledgeDirectoryRemoval(home, name string, receipt *packagestate.Receip
 		}
 		if len(remaining) != len(st.Items) {
 			st.Items = remaining
-			if err := state.Save(path, st); err != nil {
+			if err := m.saveState(path, st, nil); err != nil {
 				return err
 			}
 		}
@@ -258,8 +270,11 @@ func mergeDirectoryDiscovery(home string, st *state.State) error {
 }
 
 // repairDirectoryReference is called only for committed ownership under the package lock.
-func repairDirectoryReference(home string, receipt *packagestate.Receipt) error {
+func repairDirectoryReference(home string, receipt *packagestate.Receipt, m *mutation) error {
 	path := filepath.Join(home, ".patronus", "state.json")
+	if err := m.check(path); err != nil {
+		return err
+	}
 	s, err := state.Load(path)
 	if err != nil {
 		return err
@@ -275,7 +290,7 @@ func repairDirectoryReference(home string, receipt *packagestate.Receipt) error 
 		}
 	}
 	state.Merge(s, []state.Item{item})
-	return state.Save(path, s)
+	return m.saveState(path, s, nil)
 }
 
 func directoryStateItem(receipt *packagestate.Receipt) state.Item {
@@ -293,4 +308,84 @@ func printDirectoryReadiness(out io.Writer, cs *diff.ChangeSet) {
 			fmt.Fprintln(out, "Package installed; install sbx before using it.")
 		}
 	}
+}
+
+// dp06Acquisition owns only disposable, verified input bytes. The existing
+// appliers retain all destination/receipt/state authority and reverify replay.
+type dp06Acquisition struct{ paths map[string]string }
+
+func (a *dp06Acquisition) Fetch(ctx context.Context, address string) (io.ReadCloser, error) {
+	return a.Open(ctx, address)
+}
+func (a *dp06Acquisition) Open(ctx context.Context, address string) (io.ReadCloser, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	path, ok := a.paths[address]
+	if !ok {
+		return nil, fmt.Errorf("unprepared acquisition %s", address)
+	}
+	return os.Open(path)
+}
+func (a *dp06Acquisition) close() {
+	for _, path := range a.paths {
+		os.Remove(path)
+	}
+}
+func dp06Acquire(ctx context.Context, cs *diff.ChangeSet) (*dp06Acquisition, error) {
+	a := &dp06Acquisition{paths: map[string]string{}}
+	fail := func(err error) (*dp06Acquisition, error) {
+		a.close()
+		return nil, fmt.Errorf("whole-selection acquisition: %w; no selected destination/state/lock written", err)
+	}
+	for _, d := range cs.Diffs {
+		var path, address string
+		if d.Directory != nil {
+			req := directoryRequest(d.Directory)
+			var err error
+			path, err = packagedelivery.AcquireArchive(ctx, req, directoryFetcherForDeploy)
+			if err != nil {
+				return fail(err)
+			}
+			address = req.URL
+		} else if d.Fetch != nil && d.Action != diff.Skip {
+			data, err := install.AcquireFetch(ctx, d.Fetch, fetcherForDeploy)
+			if err != nil {
+				return fail(err)
+			}
+			f, err := os.CreateTemp("", "patronus-fetch-*")
+			if err != nil {
+				return fail(err)
+			}
+			path = f.Name()
+			address = d.Fetch.URL
+			_, writeErr := f.Write(data)
+			closeErr := f.Close()
+			if err := errors.Join(writeErr, closeErr); err != nil {
+				os.Remove(path)
+				return fail(err)
+			}
+		} else {
+			continue
+		}
+		if old, ok := a.paths[address]; ok {
+			oldBytes, readErr := os.ReadFile(old)
+			if readErr != nil {
+				os.Remove(path)
+				return fail(readErr)
+			}
+			newBytes, readErr := os.ReadFile(path)
+			if readErr != nil {
+				os.Remove(path)
+				return fail(readErr)
+			}
+			if sha256.Sum256(oldBytes) != sha256.Sum256(newBytes) {
+				os.Remove(path)
+				return fail(fmt.Errorf("inconsistent bytes for repeated acquisition URL %s", address))
+			}
+			os.Remove(old)
+		}
+		a.paths[address] = path
+	}
+	return a, nil
 }

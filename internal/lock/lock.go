@@ -22,12 +22,18 @@ import (
 
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/nativepi"
 )
 
-// Version is the lock schema version, bumped when the on-disk shape changes.
+// Version is the legacy generation/default schema, intentionally unchanged for
+// non-Pi locks. Explicit Pi profile generation uses TargetVersion.
 // v2 (Phase 7): dropped the registry-wide RegistryVersion (the registry is no
 // longer versioned as a whole — npm/pip model) and added per-entry TarballSha256.
 const Version = 2
+
+// TargetVersion adds a required explicit target; old v2 readers reject it.
+const TargetVersion = 3
+const NativeVersion = 4
 
 // Plugin reconciliation statuses (Entry.Status, Kind=="plugin" only).
 const (
@@ -41,6 +47,7 @@ const (
 // registry-wide version (there is none).
 type Lock struct {
 	Version   int     `json:"version"`
+	Target    string  `json:"target,omitempty"`
 	Profile   string  `json:"profile,omitempty"`   // the profile this lock was generated from
 	Generated string  `json:"generated,omitempty"` // RFC3339, caller-supplied (pkg stays clockless)
 	Entries   []Entry `json:"entries"`
@@ -52,6 +59,7 @@ type Lock struct {
 // BYTES, used to verify the exact artifact fetched from the registry's immutable
 // name/version key (per-item reality-follows-lock).
 type Entry struct {
+	NativeSource  string `json:"nativeSource,omitempty"`
 	Name          string `json:"name"`
 	Source        string `json:"source"`                  // "registry" for in-tree; canonical ref otherwise
 	ResolvedRef   string `json:"resolvedRef,omitempty"`   // concrete commit a mutable ref resolved to
@@ -87,18 +95,28 @@ func Load(path string) (*Lock, error) {
 	if l.Version == 0 {
 		l.Version = Version
 	}
-	if l.Version < 1 || l.Version > Version {
+	if l.Version < 1 || l.Version > NativeVersion {
 		return nil, fmt.Errorf("unsupported lock schema v%d; upgrade patronus", l.Version)
 	}
+	if err := validateTarget(&l); err != nil {
+		return nil, err
+	}
 	for _, e := range l.Entries {
+		if e.NativeSource != "" {
+			if l.Version != NativeVersion || l.Target != "pi" || e.Kind != "recipe" || e.Delivery != nil {
+				return nil, fmt.Errorf("invalid native lock entry %q", e.Name)
+			}
+			if _, _, err := nativepi.ParseSource(e.NativeSource); err != nil {
+				return nil, err
+			}
+		}
 		if e.Delivery == nil {
 			continue
 		}
 		if e.Kind != "recipe" || e.Delivery.Unpack != "directory" {
 			return nil, fmt.Errorf("lock entry %q: pinned delivery requires a directory recipe", e.Name)
 		}
-		r := &manifest.Recipe{Meta: manifest.Meta{APIVersion: "patronus/v3", Family: manifest.FamilyRecipe, Role: manifest.RoleSandbox, Name: e.Name, Version: e.Version}, Delivery: e.Delivery}
-		if err := manifest.ValidateRecipe(r); err != nil {
+		if err := manifest.ValidateDirectoryPin(e.Name, e.Version, e.Delivery); err != nil {
 			return nil, fmt.Errorf("lock entry %q: %w", e.Name, err)
 		}
 		digest := strings.TrimPrefix(e.SHA256, "sha256:")
@@ -114,10 +132,25 @@ func Load(path string) (*Lock, error) {
 
 // Save writes l atomically as indented, deterministic JSON.
 func Save(path string, l *Lock) error {
+	if err := validateTarget(l); err != nil {
+		return err
+	}
 	out, err := json.MarshalIndent(l, "", "  ")
 	if err != nil {
 		return err
 	}
 	out = append(out, '\n')
 	return install.WriteFileAtomic(path, out, 0o644)
+}
+
+func validateTarget(l *Lock) error {
+	if l.Version != TargetVersion && l.Version != NativeVersion {
+		return nil
+	}
+	switch l.Target {
+	case "pi", "claude", "codex", "opencode", "all":
+		return nil
+	default:
+		return fmt.Errorf("lock schema v3 requires a known nonempty target, got %q", l.Target)
+	}
 }

@@ -1,6 +1,8 @@
 package lock
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -293,7 +295,7 @@ func TestDirectoryLockRoundTrip(t *testing.T) {
 
 func TestDirectoryLockRejectsMalformedPins(t *testing.T) {
 	for _, tc := range []struct{ name, old, replacement string }{
-		{"future schema", `"version":2`, `"version":3`},
+		{"future schema", `"version":2`, `"version":4`},
 		{"negative schema", `"version":2`, `"version":-1`},
 		{"wrong kind", `"kind":"recipe"`, `"kind":"artifact"`},
 		{"bad recipe name", `"name":"kit"`, `"name":"../kit"`},
@@ -359,5 +361,121 @@ func TestRecipeVersionLegacyDeliveryOmitted(t *testing.T) {
 	}
 	if l.Entries[0].Delivery != nil {
 		t.Fatal("legacy lock gained delivery pin")
+	}
+}
+
+func TestLoadTargetAndLegacyNonmutation(t *testing.T) {
+	for _, tc := range []struct {
+		name, data string
+		version    int
+		target     string
+	}{
+		{"v1", `{"version":1,"entries":[]}`, 1, ""},
+		{"v2", `{"version":2,"entries":[]}`, 2, ""},
+		{"zero", `{"version":0,"entries":[]}`, 2, ""},
+		{"missing version", `{"entries":[]}`, 2, ""},
+		{"v3", `{"version":3,"target":"pi","entries":[]}`, 3, "pi"},
+		{"old sandbox", directoryLockJSON(), 2, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "patronus.lock")
+			mustWrite(t, path, tc.data)
+			l, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if l.Version != tc.version || l.Target != tc.target {
+				t.Fatalf("loaded = %+v", l)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != tc.data {
+				t.Fatal("Load rewrote original bytes")
+			}
+			l.Profile = "sample-mutated"
+			if err := Save(path, l); err != nil {
+				t.Fatal(err)
+			}
+			saved, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if saved.Version != tc.version || saved.Target != tc.target || saved.Profile != "sample-mutated" {
+				t.Fatalf("legacy mutation converted lock: %+v", saved)
+			}
+			data, err = os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.target == "" && strings.Contains(string(data), `"target"`) {
+				t.Fatal("legacy lock gained target")
+			}
+		})
+	}
+}
+
+func TestLockV3RequiresKnownTarget(t *testing.T) {
+	t.Run("missing field", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "patronus.lock")
+		mustWrite(t, path, `{"version":3,"entries":[]}`)
+		if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "target") {
+			t.Fatalf("Load error = %v", err)
+		}
+	})
+	for _, target := range []string{"", "unknown", "PI", "pi+claude"} {
+		t.Run(target, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "patronus.lock")
+			mustWrite(t, path, fmt.Sprintf(`{"version":3,"target":%q,"entries":[]}`, target))
+			if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "target") {
+				t.Fatalf("Load error = %v", err)
+			}
+			if err := Save(path, &Lock{Version: 3, Target: target}); err == nil {
+				t.Fatal("Save accepted invalid v3 target")
+			}
+		})
+	}
+	for _, target := range []string{"pi", "claude", "codex", "opencode", "all"} {
+		t.Run(target, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "patronus.lock")
+			mustWrite(t, path, fmt.Sprintf(`{"version":3,"target":%q,"entries":[]}`, target))
+			if _, err := Load(path); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDirectoryLockRestoredPinInvariants(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(*Entry)
+	}{
+		{"via", func(e *Entry) { e.Delivery.Via = manifest.ViaScript }},
+		{"package", func(e *Entry) { e.Delivery.Package = nil }},
+		{"assets", func(e *Entry) { e.Delivery.Assets = nil }},
+		{"binary", func(e *Entry) { e.Delivery.Binary = "run" }},
+		{"archive", func(e *Entry) { e.Delivery.Assets[0].Archive = "zip" }},
+		{"binary path", func(e *Entry) { e.Delivery.Assets[0].BinaryPath = "../run" }},
+		{"URL user", func(e *Entry) { e.Delivery.Assets[0].URL = "https://user@example.test/kit.tar.gz" }},
+		{"URL fragment", func(e *Entry) { e.Delivery.Assets[0].URL += "#fragment" }},
+		{"duplicate asset", func(e *Entry) { e.Delivery.Assets = append(e.Delivery.Assets, e.Delivery.Assets[0]) }},
+		{"manifest digest hex", func(e *Entry) { e.SHA256 = strings.Repeat("g", 64) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var l Lock
+			if err := json.Unmarshal([]byte(directoryLockJSON()), &l); err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(&l.Entries[0])
+			path := filepath.Join(t.TempDir(), "patronus.lock")
+			if err := Save(path, &l); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(path); err == nil {
+				t.Fatal("corrupt restored pin accepted")
+			}
+		})
 	}
 }

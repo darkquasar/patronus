@@ -1,8 +1,10 @@
 package scan
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/packagebundle"
+	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/packagestate"
 )
 
@@ -166,5 +169,55 @@ func TestPackagesSkipsRemovalAcknowledgedDuringDiscovery(t *testing.T) {
 	}
 	if len(packages) != 0 {
 		t.Fatalf("acknowledged removal remains discoverable: %+v", packages)
+	}
+}
+
+func TestPackagesCheckpointRemovalReadOnlyAndJournalOnly(t *testing.T) {
+	home, receipt := packageReceipt(t)
+	release, err := packagestate.Acquire(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := release(); err != nil {
+			t.Error(err)
+		}
+	}()
+	service := packagedelivery.Service{Home: home, Fault: func(point string) error {
+		if point == "after-removal-progress" {
+			return errors.New("interrupted prefix")
+		}
+		return nil
+	}}
+	if _, err := service.Remove(context.Background(), receipt.Recipe, false); !errors.Is(err, packagedelivery.ErrRecoveryRequired) {
+		t.Fatalf("interruption: %v", err)
+	}
+	journal := filepath.Join(home, ".patronus", "package-state", "transactions", receipt.Recipe, "transaction.json")
+	before, err := os.ReadFile(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packages, err := Packages(home)
+	if err != nil || len(packages) != 1 || packages[0].Status != "recovery-required" {
+		t.Fatalf("pending checkpoint: %+v %v", packages, err)
+	}
+	after, err := os.ReadFile(journal)
+	if err != nil || string(before) != string(after) {
+		t.Fatalf("scan changed progress: %v", err)
+	}
+	service.Fault = nil
+	if err := service.Recover(context.Background(), receipt.Recipe); err != nil {
+		t.Fatal(err)
+	}
+	packages, err = Packages(home)
+	if err != nil || len(packages) != 1 || packages[0].Version != receipt.RecipeVersion || packages[0].Status != "recovery-required" {
+		t.Fatalf("journal-only checkpoint: %+v %v", packages, err)
+	}
+	if err := packagestate.ClearTransaction(home, receipt.Recipe); err != nil {
+		t.Fatal(err)
+	}
+	packages, err = Packages(home)
+	if err != nil || len(packages) != 0 {
+		t.Fatalf("acknowledged removal: %+v %v", packages, err)
 	}
 }

@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/state"
+	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
 // runScan drives the real cobra scan command and captures both streams —
@@ -39,8 +42,8 @@ func (f fakeLister) List(_ context.Context, tool string) ([]byte, bool) {
 }
 
 // detectedInv builds an inventory reporting the named tools as detected globally.
-func detectedInv(tools ...string) *scan.Inventory {
-	inv := &scan.Inventory{}
+func detectedInv(home string, tools ...string) *scan.Inventory {
+	inv := &scan.Inventory{Home: home}
 	for _, t := range tools {
 		inv.Tools = append(inv.Tools, scan.ToolStatus{
 			Tool:   t,
@@ -77,7 +80,7 @@ func TestReconcilePluginLockFlipsVerified(t *testing.T) {
 		"claude": []byte(`[{"name":"superpowers","marketplace":"claude-plugins-official"}]`),
 	}}
 
-	reconcilePluginLock(context.Background(), wd, detectedInv("claude"), lister, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
 
 	got, err := lock.Load(lockPath)
 	if err != nil {
@@ -85,6 +88,22 @@ func TestReconcilePluginLockFlipsVerified(t *testing.T) {
 	}
 	if got.Entries[0].Status != lock.StatusVerified {
 		t.Errorf("status = %q, want verified", got.Entries[0].Status)
+	}
+}
+
+func TestReconcilePluginLockRejectsMalformedLock(t *testing.T) {
+	wd, home := t.TempDir(), t.TempDir()
+	lockPath := filepath.Join(wd, "patronus.lock")
+	before := []byte(`{"version":`)
+	if err := os.WriteFile(lockPath, before, 0600); err != nil {
+		t.Fatal(err)
+	}
+	err := reconcilePluginLock(context.Background(), wd, detectedInv(home, "claude"), fakeLister{}, func(string, ...any) {})
+	if err == nil || !strings.Contains(err.Error(), "scan: load lock") {
+		t.Fatalf("malformed lock silently accepted: %v", err)
+	}
+	if got := mustRead(t, lockPath); !bytes.Equal(got, before) {
+		t.Fatalf("malformed lock modified: %q", got)
 	}
 }
 
@@ -106,7 +125,7 @@ func TestReconcilePluginLockFlipsMissing(t *testing.T) {
 
 	// claude is reachable but reports an empty plugin list -> missing.
 	lister := fakeLister{out: map[string][]byte{"claude": []byte(`[]`)}}
-	reconcilePluginLock(context.Background(), wd, detectedInv("claude"), lister, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
 
 	got, err := lock.Load(lockPath)
 	if err != nil {
@@ -120,7 +139,7 @@ func TestReconcilePluginLockFlipsMissing(t *testing.T) {
 func TestReconcilePluginLockNoLockIsNoop(t *testing.T) {
 	wd := t.TempDir() // no patronus.lock written
 	// Must not panic or create a lock; catalog loader must not even be consulted.
-	reconcilePluginLock(context.Background(), wd, detectedInv("claude"), fakeLister{}, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), fakeLister{}, func(string, ...any) {})
 	if _, err := lock.Load(filepath.Join(wd, "patronus.lock")); err != nil {
 		t.Fatalf("Load of absent lock should be empty, not error: %v", err)
 	}
@@ -820,5 +839,184 @@ func TestScanComposedMcpReportsGenuineEdit(t *testing.T) {
 	if hasDriftItem(out, "STALE", "fix-mcp-bin", cfg) {
 		t.Errorf("the UNTOUCHED contributor was wrongly reported; the verdict is not "+
 			"per-setting:\n%s", out)
+	}
+}
+
+func TestPiCompositionSharedRootRefusesWholeSelection(t *testing.T) {
+	for _, names := range [][]string{{"fixture-a", "fixture-b"}, {"fixture-b", "fixture-a"}} {
+		t.Run(strings.Join(names, "+"), func(t *testing.T) {
+			f := dp02Setup(t)
+			t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(f.root, ".pi"))
+			setting := func(name, key, scope, value string) {
+				dp02File(t, filepath.Join(f.root, "artifacts", name, "patronus.yaml"), "apiVersion: patronus/v2\nfamily: artifact\nname: "+name+"\nversion: 1.0.0\ndescription: Invented setting\nrole: capability\ntype: setting\ntargets: [pi]\ndefaults:\n  scope: "+scope+"\nsetting:\n  path: "+key+"\n  value: "+value+"\n")
+			}
+			setting("fixture-b", "b", "global", "1")
+			if _, _, err := runInstall(t, "fixture-b", "--target", "pi", "--global", "--deploy", "--yes"); err != nil {
+				t.Fatal(err)
+			}
+			setting("fixture-a", "a", "global", "true")
+			setting("fixture-b", "b", "local", "2")
+			dp02Artifact(t, f.root, "fresh-fixture", "skill", "---\nname: fresh-fixture\ndescription: Fixture\n---\nBody\n")
+			before := dp02Snapshot(t, f.home, f.root)
+			args := append(append([]string{}, names...), "fresh-fixture", "--target", "pi", "--deploy", "--force")
+			_, _, err := runInstall(t, args...)
+			if err == nil {
+				t.Error("local selection replaced global owner through shared Pi root")
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("refused selection advanced config/state/lock or fresh resource")
+			}
+		})
+	}
+}
+
+func TestScanSettingParseFailureIsConflict(t *testing.T) {
+	e := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "fixture", ScalarValue: true}
+	for _, content := range []string{`null`, `{"fixture":`, `{"fixture":false,"fixture":true}`} {
+		v, err := classifySettingEdit([]byte(content), e)
+		if err == nil || v != settingConflict {
+			t.Fatalf("invalid config reported %s: %v", v, err)
+		}
+	}
+}
+
+func TestScanMalformedSettingReportsConflict(t *testing.T) {
+	home := withRemoteEnv(t, serveFixtureFrom(t, fixtureCatalog(t)))
+	if _, stderr, err := runInstall(t, "fix-setting", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v %s", err, stderr)
+	}
+	path := filepath.Join(home, ".claude", "settings.json")
+	broken := []byte(`{"broken":`)
+	if err := os.WriteFile(path, broken, 0600); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(home, ".patronus", "state.json")
+	before := mustRead(t, statePath)
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasDrift(out, "CONFLICT", path) {
+		t.Fatalf("scan silently accepted malformed setting: %s", out)
+	}
+	if !bytes.Equal(before, mustRead(t, statePath)) || !bytes.Equal(broken, mustRead(t, path)) {
+		t.Fatal("scan advanced config/state")
+	}
+}
+
+func TestScanExistingOwnershipAcrossScopes(t *testing.T) {
+	home := withRemoteEnv(t, serveFixtureFrom(t, fixtureCatalog(t)))
+	if _, stderr, err := runInstall(t, "fix-setting", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatalf("install: %v %s", err, stderr)
+	}
+	globalPath := filepath.Join(home, ".patronus", "state.json")
+	installed, err := state.Load(globalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	collision := installed.Items[0]
+	collision.Artifact, collision.Tool, collision.Scope = "fixture-other-owner", "pi", "local"
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	localPath := filepath.Join(wd, ".patronus", "state.json")
+	if err := state.Save(localPath, &state.State{Version: state.Version, Items: []state.Item{collision}}); err != nil {
+		t.Fatal(err)
+	}
+	configPath := collision.Files[0].Path
+	configBefore, globalBefore, localBefore := mustRead(t, configPath), mustRead(t, globalPath), mustRead(t, localPath)
+	// An ordinary automatic overwrite confirmation cannot waive structural ownership.
+	if _, _, err := runInstall(t, "fix-setting", "fix-skill", "--target", "claude", "--global", "--deploy", "--yes"); err == nil {
+		t.Fatal("unselected local owner accepted")
+	}
+	for path, before := range map[string][]byte{configPath: configBefore, globalPath: globalBefore, localPath: localBefore} {
+		if !bytes.Equal(before, mustRead(t, path)) {
+			t.Fatalf("refused selection advanced %s", path)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "fix-skill", "SKILL.md")); !os.IsNotExist(err) {
+		t.Fatalf("unrelated selected file written: %v", err)
+	}
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasDrift(out, "CONFLICT", configPath) {
+		t.Fatalf("scan missed cross-scope ownership: %s", out)
+	}
+}
+
+func TestScanRecipeCompositionFailureHasNoPartialResult(t *testing.T) {
+	root := fixtureCatalog(t)
+	home := withRemoteEnv(t, serveFixtureFrom(t, root))
+	cat, err := registry.NewLocalRegistry(root).Catalog(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapters, err := loadAdapters(filepath.Join(root, "adapters"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The first (stdio) recipe succeeds; the second (HTTP) cannot transform.
+	ad := adapterMap(adapters)["claude"]
+	delete(ad.Layout.Mcp.Transports, "http")
+	res := toolpath.New(os.LookupEnv, home, t.TempDir())
+	result, err := recipeMergeSources(cat, adapterMap(adapters), res, []string{"fix-mcp-bin", "fix-mcp-two"}, func(string, ...any) {})
+	if err == nil || result != nil {
+		t.Fatalf("partial source success: %+v %v", result, err)
+	}
+}
+
+type dp05PluginListerFunc func(context.Context, string) ([]byte, bool)
+
+func (f dp05PluginListerFunc) List(ctx context.Context, tool string) ([]byte, bool) {
+	return f(ctx, tool)
+}
+
+func TestScanLockReconciliationRejectsLateExternalEdit(t *testing.T) {
+	f := newDirectoryFixture(t)
+	path := filepath.Join(f.root, "patronus.lock")
+	if err := lock.Save(path, &lock.Lock{Version: lock.Version, Entries: []lock.Entry{{Name: "fixture-plugin", Kind: "plugin", Status: lock.StatusUnverified}}}); err != nil {
+		t.Fatal(err)
+	}
+	cat := &registry.Catalog{Plugins: []registry.PluginEntry{{Manifest: &manifest.Plugin{Meta: manifest.Meta{Family: manifest.FamilyPlugin, Name: "fixture-plugin"}, Sources: map[string]manifest.PluginSource{"claude-code": {Kind: "marketplace", Marketplace: "fixture-market", Plugin: "fixture-plugin"}}}}}}
+	old := scanCatalogFn
+	scanCatalogFn = func(context.Context, string, func(string, ...any)) *registry.Catalog { return cat }
+	defer func() { scanCatalogFn = old }()
+	external := []byte(`{"version":2,"profile":"external-editor","entries":[]}`)
+	lister := dp05PluginListerFunc(func(context.Context, string) ([]byte, bool) {
+		if err := os.WriteFile(path, external, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return []byte(`[{"name":"fixture-plugin","marketplace":"fixture-market"}]`), true
+	})
+	err := reconcilePluginLock(context.Background(), f.root, detectedInv(f.home, "claude"), lister, func(string, ...any) {})
+	if err == nil || !strings.Contains(err.Error(), "fresh preview") || !bytes.Equal(mustRead(t, path), external) {
+		t.Fatalf("stale scan persisted verified status: %v", err)
+	}
+}
+
+func TestScanMalformedConfigDoesNotVerifyPluginLock(t *testing.T) {
+	f := newDirectoryFixture(t)
+	if _, _, err := runInstall(t, "fix-setting", "--target", "claude", "--global", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	dp02File(t, filepath.Join(f.home, ".claude/settings.json"), `{"malformed":`)
+	path := filepath.Join(f.root, "patronus.lock")
+	if err := lock.Save(path, &lock.Lock{Version: lock.Version, Entries: []lock.Entry{{Name: "fixture-plugin", Kind: "plugin", Status: lock.StatusUnverified}}}); err != nil {
+		t.Fatal(err)
+	}
+	before := mustRead(t, path)
+	old := pluginListerForScan
+	defer func() { pluginListerForScan = old }()
+	called := false
+	pluginListerForScan = dp05PluginListerFunc(func(context.Context, string) ([]byte, bool) { called = true; return nil, false })
+	out, _, err := runScan(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if called || !strings.Contains(out, "CONFLICT") || !bytes.Equal(before, mustRead(t, path)) {
+		t.Fatalf("malformed config advanced lock: called=%t output=%s", called, out)
 	}
 }

@@ -14,26 +14,34 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/nativepi"
 )
 
 // Version is the state schema version, bumped when the on-disk shape changes so
 // future readers can migrate.
-const Version = 1
+const Version = 2
 
 // State is the full record for one scope's state file.
 type State struct {
-	Version int    `json:"version"`
-	Items   []Item `json:"items"`
+	Version  int       `json:"version"`
+	Items    []Item    `json:"items"`
+	Profiles []Profile `json:"profiles,omitempty"`
 }
 
 // Item is one installed artifact or recipe at one tool+scope.
 type Item struct {
-	Artifact    string `json:"artifact"`
-	ItemVersion string `json:"itemVersion,omitempty"` // the artifact's own version
+	MembershipStatus     string           `json:"membershipStatus,omitempty"`
+	MembershipProvenance string           `json:"membershipProvenance,omitempty"`
+	Native               *nativepi.Record `json:"native,omitempty"`
+	Root                 string           `json:"root,omitempty"`
+	Artifact             string           `json:"artifact"`
+	ItemVersion          string           `json:"itemVersion,omitempty"` // the artifact's own version
 	// PackageReceipt references authoritative package ownership. Empty Files
 	// on a reference row does not mean package removal is complete.
 	PackageReceipt string `json:"packageReceipt,omitempty"`
@@ -102,8 +110,51 @@ func Load(path string) (*State, error) {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, err
 	}
-	if s.Version == 0 {
+	if s.Version == 0 || s.Version == 1 {
 		s.Version = Version
+	}
+	if s.Version != Version {
+		return nil, fmt.Errorf("unsupported state version %d (supported: %d)", s.Version, Version)
+	}
+	// Pi has no legacy whole-file inverse. Require explicitly serialized prior
+	// evidence: decoding an omitted bool as false would fabricate an absent prior.
+	var evidence struct {
+		Items []struct {
+			Files []struct {
+				Setting map[string]json.RawMessage `json:"setting"`
+			} `json:"files"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(data, &evidence); err != nil {
+		return nil, err
+	}
+	for i, it := range s.Items {
+		if it.Native != nil {
+			n := it.Native
+			if err := n.Operation.Validate(); err != nil {
+				return nil, err
+			}
+			if it.Tool != "pi" || it.Root != n.Operation.Identity.Root || it.Scope != n.Operation.Identity.Scope || len(it.Files) > 0 || (n.Provenance != "installed" && n.Provenance != "tracked" && n.Provenance != "pending") {
+				return nil, fmt.Errorf("malformed native ownership for %s", it.Artifact)
+			}
+		}
+		if it.Tool != "pi" {
+			continue
+		}
+		for j, f := range it.Files {
+			if f.Action != string(diff.Merge) {
+				continue
+			}
+			if err := adapter.ValidateSettingEdit(f.Setting); err != nil {
+				return nil, fmt.Errorf("state %s %s: %w", it.Artifact, f.Path, err)
+			}
+			if f.Setting.IdentityKey == "" {
+				fields := evidence.Items[i].Files[j].Setting
+				if len(fields["PriorValue"]) == 0 || (string(fields["PriorPresent"]) != "true" && string(fields["PriorPresent"]) != "false") {
+					return nil, fmt.Errorf("state %s %s: missing or invalid pre-management prior evidence", it.Artifact, f.Path)
+				}
+			}
+		}
 	}
 	return &s, nil
 }
@@ -119,13 +170,29 @@ func Save(path string, s *State) error {
 }
 
 // Merge upserts newItems into s, keyed by (artifact, tool, scope): re-installing
-// the same item replaces its record rather than duplicating it. Returns s for
+// the same item updates its metadata and supplied files, retaining untouched
+// paths. Use Reconcile for lifecycle outcome/version decisions. Returns s for
 // chaining. Pure aside from mutating s.
 func Merge(s *State, newItems []Item) *State {
 	for _, ni := range newItems {
+		ni.Files = append([]FileState(nil), ni.Files...)
 		replaced := false
 		for i := range s.Items {
-			if s.Items[i].Artifact == ni.Artifact && s.Items[i].Tool == ni.Tool && s.Items[i].Scope == ni.Scope {
+			if s.Items[i].Artifact == ni.Artifact && s.Items[i].Tool == ni.Tool && s.Items[i].Scope == ni.Scope && s.Items[i].Root == ni.Root {
+				// A sparse upsert is not authority to forget an untouched path.
+				// Lifecycle callers use Reconcile for outcome/version decisions.
+				for _, old := range s.Items[i].Files {
+					found := false
+					for _, next := range ni.Files {
+						if sameFile(old, next) {
+							found = true
+							break
+						}
+					}
+					if !found {
+						ni.Files = append(ni.Files, old)
+					}
+				}
 				s.Items[i] = ni
 				replaced = true
 				break
@@ -186,21 +253,21 @@ func (s *State) Remove(artifact, tool, scope string) int {
 // diffs are recorded on their recipe's Item as SelfWired + PostInstall rather
 // than as files.
 func FromChangeSet(applied []diff.FileDiff, now string) []Item {
-	type key struct{ artifact, tool, scope string }
+	type key struct{ artifact, tool, scope, root string }
 	order := []key{}
 	byKey := map[key]*Item{}
 
 	getKey := func(k key) *Item {
 		it, ok := byKey[k]
 		if !ok {
-			it = &Item{Artifact: k.artifact, Tool: k.tool, Scope: k.scope, InstalledAt: now}
+			it = &Item{Artifact: k.artifact, Tool: k.tool, Scope: k.scope, Root: k.root, InstalledAt: now}
 			byKey[k] = it
 			order = append(order, k)
 		}
 		return it
 	}
 	get := func(d diff.FileDiff) *Item {
-		it := getKey(key{d.Artifact, d.Tool, d.Scope})
+		it := getKey(key{d.Artifact, d.Tool, d.Scope, d.Root})
 		// A later diff may carry the version when the first one (e.g. a shared
 		// composed file) did not; record the first non-empty we see.
 		if it.ItemVersion == "" && d.Version != "" {
@@ -215,7 +282,7 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 	}
 
 	for _, d := range applied {
-		if d.IsDir {
+		if d.IsDir || d.Native != nil {
 			continue
 		}
 		it := get(d)
@@ -238,7 +305,7 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		// own artifact so remove strips exactly that section, restoring the file to
 		// the state before this contributor was folded in.
 		for _, c := range d.Contrib {
-			ci := getKey(key{c.Artifact, d.Tool, d.Scope})
+			ci := getKey(key{c.Artifact, d.Tool, d.Scope, d.Root})
 			if ci.ItemVersion == "" {
 				ci.ItemVersion = c.Version
 			}
@@ -256,7 +323,7 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 		// each under its own artifact with its list-append intent so remove strips
 		// exactly that element and leaves the rest.
 		for _, c := range d.SettingContrib {
-			ci := getKey(key{c.Artifact, d.Tool, d.Scope})
+			ci := getKey(key{c.Artifact, d.Tool, d.Scope, d.Root})
 			if ci.ItemVersion == "" {
 				ci.ItemVersion = c.Version
 			}

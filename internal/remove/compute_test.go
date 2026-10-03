@@ -5,11 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/state"
 )
@@ -286,6 +290,7 @@ func TestHookMergeStripsOneElement(t *testing.T) {
 // mcpItem builds the state one MCP recipe records for a shared config: a MERGE
 // row whose SettingEdit names exactly its own server key.
 func mcpItem(artifact, path, name string, installed []byte, prior any, priorPresent bool) state.Item {
+	value, _, _ := adapter.ReadDotted(installed, manifest.FileTarget{File: ".claude.json", Format: "json"}, "mcpServers."+name)
 	return state.Item{
 		Artifact: artifact, Tool: "claude", Scope: "global",
 		Files: []state.FileState{{
@@ -293,6 +298,7 @@ func mcpItem(artifact, path, name string, installed []byte, prior any, priorPres
 			Setting: &diff.SettingEdit{
 				Target:       diff.FileTargetRef{File: ".claude.json", Format: "json"},
 				Dotted:       "mcpServers." + name,
+				ScalarValue:  value,
 				PriorValue:   prior,
 				PriorPresent: priorPresent,
 			},
@@ -550,13 +556,18 @@ func TestAncestorDescendantEditsAreRefused(t *testing.T) {
 	const path = "/p/settings.json"
 	installed := []byte(`{"a":{"b":1}}`)
 	item := func(artifact, dotted string) state.Item {
+		value, _, err := adapter.ReadDotted(installed, manifest.FileTarget{File: "settings.json", Format: "json"}, dotted)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return state.Item{
 			Artifact: artifact, Tool: "claude", Scope: "global",
 			Files: []state.FileState{{
 				Path: path, Action: string(diff.Merge), Checksum: sum(installed),
 				Setting: &diff.SettingEdit{
-					Target: diff.FileTargetRef{File: "settings.json", Format: "json"},
-					Dotted: dotted,
+					Target:      diff.FileTargetRef{File: "settings.json", Format: "json"},
+					Dotted:      dotted,
+					ScalarValue: value,
 				},
 			}},
 		}
@@ -578,13 +589,18 @@ func TestSiblingDottedKeysStillCompose(t *testing.T) {
 	const path = "/p/settings.json"
 	installed := []byte(`{"hooks":{"Pre":1,"PreToolUse":2}}`)
 	item := func(artifact, dotted string) state.Item {
+		value, _, err := adapter.ReadDotted(installed, manifest.FileTarget{File: "settings.json", Format: "json"}, dotted)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return state.Item{
 			Artifact: artifact, Tool: "claude", Scope: "global",
 			Files: []state.FileState{{
 				Path: path, Action: string(diff.Merge), Checksum: sum(installed),
 				Setting: &diff.SettingEdit{
-					Target: diff.FileTargetRef{File: "settings.json", Format: "json"},
-					Dotted: dotted,
+					Target:      diff.FileTargetRef{File: "settings.json", Format: "json"},
+					Dotted:      dotted,
+					ScalarValue: value,
 				},
 			}},
 		}
@@ -684,8 +700,8 @@ func TestLegacyRefusedWhenAnUnselectedArtifactSharesThePath(t *testing.T) {
 	}
 }
 
-// A path carrying BOTH shapes: the modern composite is still written and the
-// legacy row is still refused. Neither blocks the other.
+// A legacy whole-file owner has no structural evidence proving disjointness.
+// Neither it nor an overlapping modern owner may be removed automatically.
 func TestMixedModernAndLegacyOnOnePath(t *testing.T) {
 	const path = "/p/.claude.json"
 	installed := []byte(`{"mcpServers":{"graphify":{"command":"gq"},"serena":{"command":"uvx"}}}`)
@@ -702,11 +718,10 @@ func TestMixedModernAndLegacyOnOnePath(t *testing.T) {
 		t.Fatal(err)
 	}
 	restores := restoreDiffs(r.ChangeSet)
-	if len(restores) != 1 {
-		t.Fatalf("the modern removal must still be written, got %d writes", len(restores))
+	if len(restores) != 0 {
+		t.Fatalf("ambiguous legacy ownership must preserve the config, got %d writes", len(restores))
 	}
-	assertServers(t, restores[0].After, []string{"graphify"}, []string{"serena"})
-	assertLedger(t, r.Ledger, map[string]Outcome{"old": UnsafeLegacySkipped, "serena": Applied})
+	assertLedger(t, r.Ledger, map[string]Outcome{"old": UnsafeLegacySkipped, "serena": AmbiguousSkipped})
 }
 
 // --- helpers -----------------------------------------------------------------
@@ -914,5 +929,155 @@ func TestMixedCompleteAndIncompleteFilesHoldTheRowOpen(t *testing.T) {
 	}
 	if complete != 1 {
 		t.Fatalf("want exactly one settled file of two, got %d: %+v", complete, r.Ledger)
+	}
+}
+
+func TestRemoveSettingUnselectedOwnershipConflict(t *testing.T) {
+	const path = "/fixture/settings.json"
+	current := []byte(`{"mcpServers":{"fixture":{"command":"one"}},"keep":true}`)
+	selected := mcpItem("selected", path, "fixture", current, nil, false)
+	selected.Tool = "pi"
+	otherEdit := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "mcpServers", ScalarValue: map[string]any{"fixture": map[string]any{"command": "one"}}}
+	r, err := Compute([]state.Item{selected}, readerFrom(map[string][]byte{path: current}), Occupancy{path: {{Artifact: "unselected", Tool: "claude", Scope: "local", Setting: otherEdit}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r = Promote(r)
+	if len(restoreDiffs(r.ChangeSet)) != 0 {
+		t.Fatal("force bypassed unselected owner")
+	}
+	assertLedger(t, r.Ledger, map[string]Outcome{"selected": AmbiguousSkipped})
+}
+
+func TestRemoveSettingFailureDiscardsEarlierFold(t *testing.T) {
+	const path = "/fixture/config.toml"
+	current := []byte("first = 1\nsecond = 2\nkeep = true\n")
+	items := []state.Item{}
+	for _, name := range []string{"first", "second"} {
+		value, _, err := adapter.ReadDotted(current, manifest.FileTarget{File: "config.toml", Format: "toml"}, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		edit := &diff.SettingEdit{Target: diff.FileTargetRef{File: "config.toml", Format: "toml"}, Dotted: name, ScalarValue: value}
+		if name == "second" {
+			edit.PriorPresent = true
+			edit.PriorValue = ^uint64(0)
+		}
+		items = append(items, state.Item{Artifact: name, Tool: "pi", Scope: "global", Files: []state.FileState{{Path: path, Action: string(diff.Merge), Setting: edit}}})
+	}
+	before, _ := json.Marshal(items)
+	r, err := Compute(items, readerFrom(map[string][]byte{path: current}), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(restoreDiffs(r.ChangeSet)) != 0 {
+		t.Fatal("partially folded success survived serialization error")
+	}
+	for _, row := range r.Ledger {
+		if row.Outcome.Complete() {
+			t.Fatalf("ownership advanced: %+v", row)
+		}
+	}
+	after, _ := json.Marshal(items)
+	if !bytes.Equal(before, after) {
+		t.Fatal("input state mutated")
+	}
+}
+
+func TestRemoveSettingDriftRefusesWholeConfig(t *testing.T) {
+	const path = "/fixture/settings.json"
+	installed := []byte(`{"mcpServers":{"first":{"command":"one"},"second":{"command":"two"}},"keep":true}`)
+	items := []state.Item{mcpItem("first", path, "first", installed, nil, false), mcpItem("second", path, "second", installed, nil, false)}
+	current := []byte(`{"mcpServers":{"first":{"command":"one"},"second":{"command":"edited"}},"keep":true}`)
+	r, err := Compute(items, readerFrom(map[string][]byte{path: current}), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r = Promote(r)
+	if len(restoreDiffs(r.ChangeSet)) != 0 {
+		t.Fatal("partial inverse wrote despite changed leaf")
+	}
+	for _, row := range r.Ledger {
+		if row.Outcome.Complete() {
+			t.Fatal("failed inverse advanced ownership")
+		}
+	}
+}
+
+func TestRemovePiOwnershipRefusesInsufficientEvidenceEvenWithForce(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		file    state.FileState
+		current []byte
+	}{
+		{"checksum missing", state.FileState{Path: "/fixture/file", Action: string(diff.Create)}, []byte("fixture")},
+		{"legacy whole config", state.FileState{Path: "/fixture/file", Action: string(diff.Merge), Checksum: sum([]byte(`{"owned":true}`)), Prior: []byte(`{}`)}, []byte(`{"owned":true}`)},
+		{"edited Pi section", state.FileState{Path: "/fixture/file", Action: string(diff.Append), Section: "pi:fixture", Checksum: sum(adapter.AppendSection([]byte("prepared user text\n"), "pi:fixture", []byte("installed"))), Prior: []byte("prepared user text\n")}, adapter.AppendSection([]byte("prepared user text\n"), "pi:fixture", []byte("user-edited block"))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Compute([]state.Item{{Artifact: "fixture", Tool: "pi", Scope: "global", Files: []state.FileState{tc.file}}}, readerFrom(map[string][]byte{tc.file.Path: tc.current}), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result = Promote(result)
+			if len(result.Ledger) != 1 || result.Ledger[0].Outcome.Complete() || len(result.ChangeSet.Diffs) != 1 || result.ChangeSet.Diffs[0].Action != diff.Skip {
+				t.Fatalf("unsafe inverse promoted: %+v", result)
+			}
+		})
+	}
+}
+
+func TestRemovePiSharedContextSectionsComposeInEitherOrder(t *testing.T) {
+	for _, reverse := range []bool{false, true} {
+		t.Run(fmt.Sprint("reverse=", reverse), func(t *testing.T) {
+			prepared := []byte("Prepared shared text\n\nClaude-specific user content\n")
+			first := adapter.AppendSection(prepared, "pi:first-fixture", []byte("First Pi section"))
+			current := adapter.AppendSection(first, "pi:second-fixture", []byte("Second Pi section"))
+			d := diff.FileDiff{Artifact: "first-fixture", Tool: "pi", Scope: "global", Path: "/fixture/CLAUDE.md", Action: diff.Append, Before: prepared, After: current, Section: &diff.SectionEdit{Name: "pi:first-fixture"}, Contrib: []diff.SectionContrib{{Artifact: "second-fixture", Section: "pi:second-fixture", Prior: first}}}
+			items := state.FromChangeSet([]diff.FileDiff{d}, "first")
+			if reverse {
+				items[0], items[1] = items[1], items[0]
+			}
+			got, err := Compute(items, readerFrom(map[string][]byte{d.Path: current}), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.ChangeSet.Diffs) != 1 || got.ChangeSet.Diffs[0].Action != diff.Unappend || !bytes.Equal(got.ChangeSet.Diffs[0].After, prepared) {
+				t.Fatalf("unsafe shared inverse: %+v", got)
+			}
+			if len(got.Ledger) != 2 || !got.Ledger[0].Outcome.Complete() || !got.Ledger[1].Outcome.Complete() {
+				t.Fatalf("lost contribution outcomes: %+v", got.Ledger)
+			}
+		})
+	}
+}
+
+func TestRemoveRefusedSettingsRetainObservedSnapshot(t *testing.T) {
+	for _, before := range [][]byte{[]byte(`{broken`), {}, []byte(`{"owned":1}`)} {
+		t.Run(fmt.Sprintf("bytes=%q", before), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "fixture.json")
+			if err := os.WriteFile(path, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			items := []state.Item{{Artifact: "fixture", Tool: "pi", Scope: "global", Files: []state.FileState{{Path: path, Action: "MERGE", Setting: &diff.SettingEdit{Target: diff.FileTargetRef{Format: "json"}, Dotted: "owned", ScalarValue: 2}}}}}
+			result, err := Compute(items, readerFrom(map[string][]byte{path: before}), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.ChangeSet.Diffs) != 1 || result.ChangeSet.Diffs[0].Action != diff.Skip {
+				t.Fatalf("expected refused SKIP: %+v", result)
+			}
+			d := result.ChangeSet.Diffs[0]
+			if d.Before == nil || !bytes.Equal(d.Before, before) {
+				t.Fatalf("lost present snapshot: %+v", d)
+			}
+			if err := os.WriteFile(path, []byte("external edit"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			applied, err := (&install.Applier{}).Apply(result.ChangeSet)
+			if err == nil || len(applied.Skipped) != 0 {
+				t.Fatalf("stale SKIP trusted: %+v %v", applied, err)
+			}
+		})
 	}
 }

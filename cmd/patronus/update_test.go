@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -329,4 +333,211 @@ func TestUpdateLocalRegistryDoesNotClaimACacheWrite(t *testing.T) {
 		}
 		assertLocalWording(t, out, root)
 	})
+}
+
+func TestUpdateReconcilesTwoFileSkillSkipAndObsoleteSidecar(t *testing.T) {
+	for _, tool := range []string{"pi", "claude", "codex"} {
+		for _, edited := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/edited=%t", tool, edited), func(t *testing.T) {
+				f := dp02Setup(t)
+				src := filepath.Join(f.root, "artifacts", "fixture-skill")
+				manifest := func(version string, sidecar bool) string {
+					files := ""
+					if sidecar {
+						files = "files: [support]\n"
+					}
+					return fmt.Sprintf("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: fixture-skill\ndescription: Invented fixture\nversion: %s\nentry: SKILL.md\ntargets: [%s]\n%s", version, tool, files)
+				}
+				body := "---\nname: fixture-skill\ndescription: Fixture\n---\nMain fixture\n"
+				dp02File(t, filepath.Join(src, "patronus.yaml"), manifest("1", true))
+				dp02File(t, filepath.Join(src, "SKILL.md"), body)
+				dp02File(t, filepath.Join(src, "support", "note.txt"), "sidecar one")
+				if _, _, err := runInstall(t, "fixture-skill", "--target", tool, "--global", "--deploy", "--yes"); err != nil {
+					t.Fatal(err)
+				}
+				sp := filepath.Join(f.home, ".patronus/state.json")
+				old, err := state.Load(sp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows := old.Find("fixture-skill", tool, "global")
+				if len(rows) != 1 || len(rows[0].Files) != 2 {
+					t.Fatalf("initial state: %+v", rows)
+				}
+				sidecar := ""
+				for _, file := range rows[0].Files {
+					if filepath.Base(file.Path) == "note.txt" {
+						sidecar = file.Path
+					}
+				}
+				if sidecar == "" {
+					t.Fatal("missing sidecar")
+				}
+				// Update only the sidecar; SKILL.md is a verified owned SKIP.
+				dp02File(t, filepath.Join(src, "patronus.yaml"), manifest("2", true))
+				dp02File(t, filepath.Join(src, "support", "note.txt"), "sidecar two")
+				if _, _, err := runUpdate(t, dp06UpdateArgs(tool, "fixture-skill")...); err != nil {
+					t.Fatal(err)
+				}
+				updated, err := state.Load(sp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows = updated.Find("fixture-skill", tool, "global")
+				if len(rows[0].Files) != 2 || rows[0].ItemVersion != "2" {
+					t.Fatalf("SKIP ownership lost: %+v", rows)
+				}
+				if edited {
+					dp02File(t, sidecar, "user-edited obsolete sidecar")
+				}
+				// Omission alone grants no delete authority. Keep both paths and v2 until
+				// explicit removal resolves the obsolete contribution.
+				dp02File(t, filepath.Join(src, "patronus.yaml"), manifest("3", false))
+				if _, _, err := runUpdate(t, dp06UpdateArgs(tool, "fixture-skill")...); err == nil || !strings.Contains(err.Error(), sidecar) {
+					t.Fatalf("obsolete path claimed resolved: %v", err)
+				}
+				updated, err = state.Load(sp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows = updated.Find("fixture-skill", tool, "global")
+				if len(rows[0].Files) != 2 || rows[0].ItemVersion != "2" {
+					t.Fatalf("obsolete ownership/version lost: %+v", rows)
+				}
+				_, _, removeErr := execRemove(t, "fixture-skill", "--target", tool, "--global", "--deploy")
+				if !edited && removeErr != nil {
+					t.Fatal(removeErr)
+				}
+				_, statErr := os.Stat(sidecar)
+				if edited && statErr != nil {
+					t.Fatal("edited sidecar deleted")
+				}
+				if !edited && !os.IsNotExist(statErr) {
+					t.Fatal("unchanged obsolete sidecar not removed")
+				}
+			})
+		}
+	}
+}
+
+func TestUpdateSettingWithEqualExternalDependency(t *testing.T) {
+	for _, tool := range []string{"pi", "claude"} {
+		for _, externalOnInitial := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/external-on-initial=%t", tool, externalOnInitial), func(t *testing.T) {
+				f := dp02Setup(t)
+				root := filepath.Join(f.home, ".claude")
+				if tool == "pi" {
+					root = filepath.Join(f.home, ".pi/agent")
+				}
+				path := filepath.Join(root, "settings.json")
+				dp02File(t, path, `{"external":true,"user":"keep"}`)
+				base := "apiVersion: patronus/v2\nfamily: artifact\ntype: setting\nrole: capability\ndescription: Invented fixture\ntargets: [" + tool + "]\ndefaults:\n  scope: global\n"
+				dp02File(t, filepath.Join(f.root, "artifacts/fixture-external/patronus.yaml"), base+"name: fixture-external\nversion: 1\nsetting:\n  path: external\n  value: true\n")
+				statePath := filepath.Join(f.home, ".patronus/state.json")
+				for _, version := range []string{"1", "2"} {
+					requires := "requires: [fixture-external]\n"
+					if version == "1" && !externalOnInitial {
+						requires = ""
+					}
+					dp02File(t, filepath.Join(f.root, "artifacts/fixture-owned/patronus.yaml"), base+"name: fixture-owned\nversion: "+version+"\n"+requires+"setting:\n  path: managed\n  value: managed-"+version+"\n")
+					var err error
+					if version == "1" {
+						_, _, err = runInstall(t, "fixture-owned", "--target", tool, "--global", "--deploy", "--yes")
+					} else {
+						beforeConfig, beforeState := mustRead(t, path), mustRead(t, statePath)
+						_, _, err = runUpdate(t, dp06UpdateArgs(tool, "fixture-owned")...)
+						if tool == "pi" {
+							if err == nil || !strings.Contains(err.Error(), "dependency-incomplete") {
+								t.Fatalf("absent external prerequisite admitted: %v", err)
+							}
+							s, loadErr := state.Load(statePath)
+							if loadErr != nil {
+								t.Fatal(loadErr)
+							}
+							rows := s.Find("fixture-owned", tool, "global")
+							if len(rows) != 1 || rows[0].ItemVersion != "1" || rows[0].Files[0].Setting.PriorPresent {
+								t.Fatalf("refused update advanced state: %+v", s.Items)
+							}
+							if !bytes.Equal(beforeConfig, mustRead(t, path)) || !bytes.Equal(beforeState, mustRead(t, statePath)) {
+								t.Fatal("refused update changed bytes")
+							}
+							// A separately selected install remains allowed: equal
+							// external settings do not acquire ownership.
+							_, _, err = runInstall(t, "fixture-owned", "--target", "pi", "--global", "--deploy", "--yes")
+						}
+					}
+					if err != nil {
+						t.Fatalf("version %s: %v", version, err)
+					}
+					s, err := state.Load(statePath)
+					if err != nil {
+						t.Fatal(err)
+					}
+					owned := s.Find("fixture-owned", tool, "global")
+					if len(s.Find("fixture-external", tool, "global")) != 0 || len(owned) != 1 || owned[0].ItemVersion != version || len(owned[0].Files) != 1 || owned[0].Files[0].Setting.PriorPresent {
+						t.Fatalf("external adopted or owned baseline/version lost: %+v", s.Items)
+					}
+					var doc map[string]any
+					if err := json.Unmarshal(mustRead(t, path), &doc); err != nil {
+						t.Fatal(err)
+					}
+					if doc["external"] != true || doc["user"] != "keep" || doc["managed"] != "managed-"+version {
+						t.Fatalf("wrong config after version %s: %+v", version, doc)
+					}
+				}
+				beforeConfig, beforeState := mustRead(t, path), mustRead(t, statePath)
+				_, _, _ = execRemove(t, "fixture-external", "--target", tool, "--global", "--deploy")
+				if !bytes.Equal(beforeConfig, mustRead(t, path)) || !bytes.Equal(beforeState, mustRead(t, statePath)) {
+					t.Fatal("unmanaged removal changed config/state")
+				}
+				if _, _, err := execRemove(t, "fixture-owned", "--target", tool, "--global", "--deploy"); err != nil {
+					t.Fatal(err)
+				}
+				var doc map[string]any
+				if err := json.Unmarshal(mustRead(t, path), &doc); err != nil {
+					t.Fatal(err)
+				}
+				if _, present := doc["managed"]; present || doc["external"] != true || doc["user"] != "keep" {
+					t.Fatalf("inverse changed external/user values: %+v", doc)
+				}
+			})
+		}
+	}
+}
+
+func TestUpdatePiSettingKeepsOriginalBaselineThroughNoopReinstall(t *testing.T) {
+	f := dp02Setup(t)
+	path := filepath.Join(f.home, ".pi/agent/settings.json")
+	dp02File(t, path, `{"user":"keep"}`)
+	source := filepath.Join(f.root, "artifacts", "fixture-setting", "patronus.yaml")
+	for _, version := range []string{"1", "2", "3"} {
+		dp02File(t, source, fmt.Sprintf("apiVersion: patronus/v2\nfamily: artifact\ntype: setting\nrole: capability\nname: fixture-setting\ndescription: Invented fixture\nversion: %s\ntargets: [pi]\ndefaults:\n  scope: global\nsetting:\n  path: fixture\n  value: installed-%s\n", version, version))
+		var err error
+		if version == "1" {
+			_, _, err = runInstall(t, "fixture-setting", "--target", "pi", "--global", "--deploy", "--yes")
+		} else {
+			_, _, err = runUpdate(t, "fixture-setting", "--global", "--deploy")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := state.Load(filepath.Join(f.home, ".patronus/state.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := s.Find("fixture-setting", "pi", "global")
+		if len(rows) != 1 || rows[0].ItemVersion != version || rows[0].Files[0].Setting.PriorPresent {
+			t.Fatalf("baseline/version changed incorrectly: %+v", rows)
+		}
+	}
+	if _, _, err := runInstall(t, "fixture-setting", "--target", "pi", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := execRemove(t, "fixture-setting", "--target", "pi", "--global", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	got := string(mustRead(t, path))
+	if strings.Contains(got, "fixture") || !strings.Contains(got, `"user": "keep"`) {
+		t.Fatalf("inverse did not restore absent baseline: %s", got)
+	}
 }

@@ -94,6 +94,7 @@ func (o Outcome) Complete() bool {
 // full (artifact, tool, scope, path) tuple because composition collapses several
 // of these onto one diff, and path alone can no longer distinguish them.
 type LedgerEntry struct {
+	Effect   state.FileState
 	Artifact string
 	Tool     string
 	Scope    string
@@ -127,6 +128,12 @@ type Result struct {
 // selection would miss an installed sibling. Pass nil when there is no wider
 // state to consult; the legacy arm then sees only the selection.
 func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result, error) {
+	return ComputeWithForce(items, read, occupancy, false)
+}
+
+// ComputeWithForce changes preservation policy only for selected concrete effects.
+// Structural parse/identity failures remain non-promotable.
+func ComputeWithForce(items []state.Item, read ReadExisting, occupancy Occupancy, force bool) (Result, error) {
 	var (
 		res   Result
 		files []fileIntent
@@ -150,11 +157,27 @@ func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result
 		}
 	}
 
-	// Modern settings rows are held back and composed per path below; every other
-	// row inverts independently, exactly as before.
+	// Modern settings and Pi sections compose per path below; other rows retain
+	// their legacy independent inverse behavior.
 	byPath := map[string][]fileIntent{}
 	var pathOrder []string
+	// Pi sections sharing a physical file must be inverted together. Independent
+	// UNAPPEND writes would resurrect sections removed by an earlier write.
+	piPaths := map[string][]fileIntent{}
+	var piPathOrder []string
 	for _, fi := range files {
+		if fi.item.Tool == "pi" && fi.file.Action == string(diff.Append) {
+			if _, seen := piPaths[fi.file.Path]; !seen {
+				piPaths[fi.file.Path] = nil
+				piPathOrder = append(piPathOrder, fi.file.Path)
+			}
+		}
+	}
+	for _, fi := range files {
+		if _, shared := piPaths[fi.file.Path]; shared {
+			piPaths[fi.file.Path] = append(piPaths[fi.file.Path], fi)
+			continue
+		}
 		if isModernSetting(fi.file) {
 			if _, seen := byPath[fi.file.Path]; !seen {
 				pathOrder = append(pathOrder, fi.file.Path)
@@ -174,7 +197,7 @@ func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result
 	}
 
 	for _, path := range pathOrder {
-		group, err := composeSettingGroup(path, byPath[path], read)
+		group, err := composeSettingGroup(path, byPath[path], read, occupancy, force)
 		if err != nil {
 			return Result{}, err
 		}
@@ -185,8 +208,22 @@ func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result
 		}
 	}
 
+	for _, path := range piPathOrder {
+		group, err := composePiSections(path, piPaths[path], read, occupancy, force)
+		if err != nil {
+			return Result{}, err
+		}
+		res.Warnings = append(res.Warnings, group.Warnings...)
+		res.Ledger = append(res.Ledger, group.Ledger...)
+		for _, d := range group.ChangeSet.Diffs {
+			res.ChangeSet = appendDiff(res.ChangeSet, d)
+		}
+	}
 	if res.ChangeSet == nil {
 		res.ChangeSet = &diff.ChangeSet{}
+	}
+	if force {
+		res = Promote(res)
 	}
 	return res, nil
 }
@@ -199,6 +236,12 @@ type Contributor struct {
 	Artifact string
 	Tool     string
 	Scope    string
+	Setting  *diff.SettingEdit
+	Section  string // APPEND owner; not a structural config claim
+}
+
+func (c Contributor) owner() adapter.SettingOwner {
+	return adapter.SettingOwner{Artifact: c.Artifact, Tool: c.Tool, Scope: c.Scope}
 }
 
 // Label renders a contributor for a user-facing warning, naming the tool/scope
@@ -210,9 +253,8 @@ func (c Contributor) Label() string {
 	return c.Artifact + " (" + strings.TrimSpace(c.Tool+" "+c.Scope) + ")"
 }
 
-// Occupancy reports, for a recorded path, every contributor that has a MERGE row
-// on it in the recorded state — including ones this command was not asked to
-// remove. The legacy whole-file restore consults it to prove sole ownership
+// Occupancy reports recorded config and section contributors on each path,
+// including ones this command was not asked to remove. The legacy whole-file restore consults it to prove sole ownership
 // before overwriting a file someone else may be wired into.
 //
 // Paths are absolute, so an entry from ANY scope's state file belongs here: what
@@ -225,7 +267,7 @@ type Occupancy map[string][]Contributor
 func (o Occupancy) othersOn(path string, self Contributor) []string {
 	var out []string
 	for _, c := range o[path] {
-		if c == self {
+		if c.owner() == self.owner() {
 			continue
 		}
 		out = append(out, c.Label())
@@ -262,6 +304,7 @@ func ledgerEntry(fi fileIntent, out Outcome) LedgerEntry {
 		Scope:    fi.item.Scope,
 		Path:     fi.file.Path,
 		Outcome:  out,
+		Effect:   fi.file,
 	}
 }
 
@@ -286,7 +329,7 @@ type settingGroup struct {
 // Only edits proven INDEPENDENT are folded. Ordering within state is not a
 // trustworthy install chronology, so a fold whose result would depend on order is
 // refused rather than guessed at: overlapping targets become non-promotable SKIPs.
-func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (settingGroup, error) {
+func composeSettingGroup(path string, group []fileIntent, read ReadExisting, occupancy Occupancy, force bool) (settingGroup, error) {
 	var out settingGroup
 
 	current, exists, err := read(path)
@@ -315,24 +358,33 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 		if unreadable == "" {
 			continue
 		}
-		return refuseGroup(group, path, unreadable), nil
+		return refuseGroup(group, path, unreadable, current), nil
+	}
+
+	if force {
+		return forceSettingGroup(path, group, current), nil
+	}
+
+	// Include unselected contributors: reversing a child can destroy an owned
+	// parent just as surely as a selected overlap can. No --force promotion.
+	for _, fi := range group {
+		self := adapter.SettingOwner{Artifact: fi.item.Artifact, Tool: fi.item.Tool, Scope: fi.item.Scope}
+		for _, other := range occupancy[path] {
+			if other.owner() == self {
+				continue
+			}
+			if err := adapter.CheckSettingPair(fi.file.Setting, self, other.Setting, other.owner()); err != nil {
+				return refuseOverlap(group, path, err.Error(), current), nil
+			}
+			if adapter.SettingEditsOverlap(fi.file.Setting, other.Setting) {
+				return refuseOverlap(group, path, "overlaps recorded owner "+other.Label()+"; explicit migration required", current), nil
+			}
+		}
 	}
 
 	foldable, ambiguous := partitionByOverlap(group)
-	for _, fi := range ambiguous {
-		d := baseDiff(fi)
-		d.Action = diff.Skip
-		// No Intended: --force means "I accept losing my own edit to this file",
-		// never "I accept losing another artifact's wiring". Promoting this would
-		// reinstate the very data loss composition exists to prevent.
-		d.Note = "overlapping settings edit — skipped"
-		out.diffs = append(out.diffs, d)
-		out.ledger = append(out.ledger, ledgerEntry(fi, AmbiguousSkipped))
-		out.warnings = append(out.warnings, Warning{
-			Item:    fi.item.Artifact,
-			Path:    path,
-			Message: "another selected artifact edits the same settings key; not removed — remove them one at a time",
-		})
+	if len(ambiguous) > 0 {
+		return refuseOverlap(group, path, "overlapping selected settings keys; explicit migration required", current), nil
 	}
 
 	// Fold the independent edits onto one buffer, in stable identity order so the
@@ -349,11 +401,12 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 			// buffer and refuse the whole group: an unreadable config is a
 			// recoverable warn-and-skip the user can fix and re-run, never a fatal
 			// and never a partial write.
-			return refuseGroup(group, path, unreadable), nil
+			return refuseGroup(group, path, unreadable, current), nil
 		}
 		if !found {
 			d := baseDiff(fi)
 			d.Action = diff.Skip
+			d.Before = current
 			d.Note = "setting absent — nothing to remove"
 			out.diffs = append(out.diffs, d)
 			out.ledger = append(out.ledger, ledgerEntry(fi, SettingAbsent))
@@ -391,12 +444,13 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting) (se
 // warning, writing nothing. It is the all-or-nothing answer to a file we cannot
 // parse: the removal is not done, so each row is held open for a re-run once the
 // user has repaired the file.
-func refuseGroup(group []fileIntent, path, unreadable string) settingGroup {
+func refuseGroup(group []fileIntent, path, unreadable string, current []byte) settingGroup {
 	var out settingGroup
 	for _, fi := range group {
 		d := baseDiff(fi)
 		d.Action = diff.Skip
-		d.Note = "settings unreadable — skipped"
+		d.Before = current
+		d.Note = "settings conflict — skipped"
 		out.diffs = append(out.diffs, d)
 		out.ledger = append(out.ledger, ledgerEntry(fi, UnreadableSkipped))
 		out.warnings = append(out.warnings, Warning{Item: fi.item.Artifact, Path: path, Message: unreadable})
@@ -418,7 +472,7 @@ func partitionByOverlap(group []fileIntent) (foldable, ambiguous []fileIntent) {
 	conflicted := make([]bool, len(group))
 	for i := range group {
 		for j := i + 1; j < len(group); j++ {
-			if overlaps(group[i].file.Setting, group[j].file.Setting) {
+			if adapter.SettingEditsOverlap(group[i].file.Setting, group[j].file.Setting) {
 				conflicted[i], conflicted[j] = true, true
 			}
 		}
@@ -431,31 +485,6 @@ func partitionByOverlap(group []fileIntent) (foldable, ambiguous []fileIntent) {
 		foldable = append(foldable, fi)
 	}
 	return foldable, ambiguous
-}
-
-// overlaps reports whether reversing a and b could interfere. List edits at the
-// same dotted path are independent while their identities differ — that is the
-// whole point of identity-keyed removal — so only a shared identity collides.
-// Everything else compares dotted paths for equality or ancestry.
-func overlaps(a, b *diff.SettingEdit) bool {
-	if a == nil || b == nil {
-		return false
-	}
-	aList, bList := a.IdentityKey != "", b.IdentityKey != ""
-	if aList && bList && a.Dotted == b.Dotted && a.IdentityKey == b.IdentityKey {
-		return a.Identity == b.Identity
-	}
-	return dottedRelated(a.Dotted, b.Dotted)
-}
-
-// dottedRelated reports whether two dotted paths are the same key or one is an
-// ancestor of the other ("mcpServers" vs "mcpServers.serena"). Segment-aware, so
-// "hooks.Pre" is unrelated to "hooks.PreToolUse".
-func dottedRelated(a, b string) bool {
-	if a == b {
-		return true
-	}
-	return strings.HasPrefix(a, b+".") || strings.HasPrefix(b, a+".")
 }
 
 // sortByIdentity orders rows deterministically so composed output bytes are
@@ -472,15 +501,18 @@ func sortByIdentity(rows []fileIntent) {
 }
 
 // probeParse reports a user-facing message when current cannot be parsed at all,
-// by attempting the recorded edit's own reversal. It distinguishes "the file is
+// using the recorded edit's structural reader. It distinguishes "the file is
 // malformed" from "our key is not there", which is the difference between holding
 // a state row open and retiring it.
 func probeParse(current []byte, edit *diff.SettingEdit) string {
 	if edit == nil {
 		return ""
 	}
-	_, _, unreadable := stripSetting(current, edit)
-	return unreadable
+	_, _, err := adapter.SettingStatus(current, edit)
+	if err != nil {
+		return err.Error()
+	}
+	return ""
 }
 
 // baseDiff builds the identity-carrying shell every undo row shares, so the
@@ -505,6 +537,16 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting, occupancy Occ
 	current, exists, err := read(f.Path)
 	if err != nil {
 		return base, nil, "", fmt.Errorf("remove: read %s: %w", f.Path, err)
+	}
+
+	base.Before = current
+
+	// Pi never had a supported whole-file configuration inverse or checksumless
+	// file adoption. Preserve insufficient evidence, even under --force.
+	if it.Tool == "pi" && ((f.Action == string(diff.Merge) && f.Setting == nil) || f.Checksum == "") {
+		base.Action = diff.Skip
+		base.Note = "insufficient Pi ownership evidence — retained"
+		return base, &Warning{Item: it.Artifact, Path: f.Path, Message: base.Note}, UnsafeLegacySkipped, nil
 	}
 
 	switch f.Action {
@@ -696,6 +738,19 @@ func Promote(r Result) Result {
 			e.Outcome = Applied
 		}
 	}
+	var warnings []Warning
+	for _, w := range r.Warnings {
+		removed := false
+		for _, d := range r.ChangeSet.Diffs {
+			if d.Artifact == w.Item && d.Path == w.Path && promoted[d.Artifact+"\x00"+d.Tool+"\x00"+d.Scope+"\x00"+d.Path] {
+				removed = true
+			}
+		}
+		if !removed {
+			warnings = append(warnings, w)
+		}
+	}
+	r.Warnings = warnings
 	return r
 }
 
@@ -720,7 +775,7 @@ func driftsFromChecksum(current []byte, recorded string) bool {
 func stripSetting(current []byte, edit *diff.SettingEdit) (stripped []byte, found bool, warning string) {
 	out, found, err := adapter.RemoveSettingEdit(current, edit)
 	if err != nil {
-		return nil, false, "settings file unparseable; setting not removed: " + err.Error()
+		return nil, false, "settings conflict; setting not removed: " + err.Error()
 	}
 	return out, found, ""
 }
@@ -734,5 +789,141 @@ func joinCmds(cmds []string) string {
 		}
 		out += c
 	}
+	return out
+}
+
+func refuseOverlap(group []fileIntent, path, message string, current []byte) settingGroup {
+	out := refuseGroup(group, path, message, current)
+	for i := range out.diffs {
+		out.diffs[i].Note = "overlapping settings ownership — skipped"
+	}
+	for i := range out.ledger {
+		out.ledger[i].Outcome = AmbiguousSkipped
+	}
+	return out
+}
+
+// composePiSections validates all selected sections against the same original
+// bytes, then strips them in one physical write. The existing ledger records
+// each logical inverse; no new persisted ownership or section-body hash exists.
+func composePiSections(path string, group []fileIntent, read ReadExisting, occupancy Occupancy, force bool) (Result, error) {
+	current, exists, err := read(path)
+	if err != nil {
+		return Result{}, fmt.Errorf("remove: read %s: %w", path, err)
+	}
+	sort.SliceStable(group, func(i, j int) bool { return group[i].file.Section < group[j].file.Section })
+	sections := map[string]bool{}
+	for _, fi := range group {
+		f := fi.file
+		if fi.item.Tool != "pi" || fi.item.Scope != group[0].item.Scope || f.Action != string(diff.Append) || f.Section != "pi:"+fi.item.Artifact || sections[f.Section] {
+			return refusePiSections(group, "ambiguous section ownership or incompatible actions/scopes", current), nil
+		}
+		sections[f.Section] = true
+		self := adapter.SettingOwner{Artifact: fi.item.Artifact, Tool: fi.item.Tool, Scope: fi.item.Scope}
+		claims := 0
+		for _, other := range occupancy[path] {
+			if other.Section == "" {
+				return refusePiSections(group, "incompatible recorded config ownership", current), nil
+			}
+			if other.Section != f.Section {
+				continue
+			}
+			claims++
+			if other.owner() != self || claims > 1 {
+				return refusePiSections(group, "overlapping recorded section ownership", current), nil
+			}
+		}
+		if !exists {
+			continue
+		}
+		if f.Checksum == "" || (!force && driftsFromChecksum(current, f.Checksum)) {
+			return refusePiSections(group, "Pi context changed or lacks checksum evidence", current), nil
+		}
+		start := []byte("<!-- patronus:start " + f.Section + " -->")
+		end := []byte("<!-- patronus:end " + f.Section + " -->")
+		from, to := bytes.Index(current, start), bytes.Index(current, end)
+		if bytes.Count(current, start) != 1 || bytes.Count(current, end) != 1 || from < 0 || to < from+len(start) {
+			return refusePiSections(group, "missing, duplicated or unordered Pi section markers", current), nil
+		}
+		afterEnd := to + len(end)
+		if (from > 0 && current[from-1] != '\n') || from+len(start) >= len(current) || current[from+len(start)] != '\n' || current[to-1] != '\n' || (afterEnd < len(current) && current[afterEnd] != '\n') || bytes.Contains(current[from+len(start):to], []byte("<!-- patronus:")) {
+			return refusePiSections(group, "ambiguous or nested Pi section markers", current), nil
+		}
+	}
+	result := Result{ChangeSet: &diff.ChangeSet{}}
+	if !exists {
+		for _, fi := range group {
+			d := baseDiff(fi)
+			d.Action = diff.Skip
+			d.Note = "context file absent — nothing to remove"
+			result.ChangeSet.Diffs = append(result.ChangeSet.Diffs, d)
+			result.Ledger = append(result.Ledger, ledgerEntry(fi, AlreadyAbsent))
+		}
+		return result, nil
+	}
+	buf := current
+	var names []string
+	for _, fi := range group {
+		var found bool
+		buf, found = adapter.RemoveSection(buf, fi.file.Section)
+		if !found {
+			return refusePiSections(group, "Pi section could not be stripped after folding", current), nil
+		}
+		names = append(names, fi.file.Section)
+		result.Ledger = append(result.Ledger, ledgerEntry(fi, Applied))
+	}
+	composite := baseDiff(group[0])
+	composite.Action = diff.Unappend
+	composite.Before = current
+	composite.After = buf
+	composite.Note = "remove Pi sections: " + strings.Join(names, ", ")
+	result.ChangeSet.Diffs = append(result.ChangeSet.Diffs, composite)
+	return result, nil
+}
+
+func refusePiSections(group []fileIntent, message string, current []byte) Result {
+	result := Result{ChangeSet: &diff.ChangeSet{}}
+	for _, fi := range group {
+		d := baseDiff(fi)
+		d.Action = diff.Skip
+		d.Before = current
+		d.Note = message + " — retained"
+		result.ChangeSet.Diffs = append(result.ChangeSet.Diffs, d)
+		result.Ledger = append(result.Ledger, ledgerEntry(fi, AmbiguousSkipped))
+		result.Warnings = append(result.Warnings, Warning{Item: fi.item.Artifact, Path: fi.file.Path, Message: d.Note})
+	}
+	return result
+}
+
+// forceSettingGroup deletes the selected union, never a competing prior value.
+func forceSettingGroup(path string, group []fileIntent, current []byte) settingGroup {
+	sort.SliceStable(group, func(i, j int) bool { return len(group[i].file.Setting.Dotted) < len(group[j].file.Setting.Dotted) })
+	buf := current
+	var out settingGroup
+	var removed []*diff.SettingEdit
+	for _, fi := range group {
+		covered := false
+		for _, parent := range removed {
+			if parent.IdentityKey == "" && (parent.Dotted == fi.file.Setting.Dotted || strings.HasPrefix(fi.file.Setting.Dotted, parent.Dotted+".")) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			next, _, err := adapter.DeleteSettingEdit(buf, fi.file.Setting)
+			if err != nil {
+				return refuseGroup(group, path, err.Error(), current)
+			}
+			buf = next
+			removed = append(removed, fi.file.Setting)
+		}
+		out.ledger = append(out.ledger, ledgerEntry(fi, Applied))
+	}
+	d := baseDiff(group[0])
+	d.Before = current
+	d.After = buf
+	d.Action = diff.Restore
+	d.Note = "force: delete selected setting union (no prior restoration)"
+	out.diffs = []diff.FileDiff{d}
 	return out
 }
