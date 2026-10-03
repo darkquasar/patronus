@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-web-researcher-pi
+description: "Read-only qualified web research with runtime-persisted findings"
+version: 2.0.0
+entry: agent.md
+files: []
+targets: [pi]
+defaults:
+  scope: project
+requires: ["pi-web-access", "pi-subagents", "research-team-pi", "verification-before-completion-pi", "web-research-pi"]

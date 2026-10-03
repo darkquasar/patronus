@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: language-detect-pi
+description: "Advisory bounded language checks and Go-triggered style"
+version: 1.0.0
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["go-style-uber-pi"]
