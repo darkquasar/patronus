@@ -1,169 +1,97 @@
-# Manual role augmentation (operator-owned)
+# Declarative core-role augmentation
 
-These numbered steps are a checklist, not shipped enforcement. The inert
-[role example](role-agentOverrides.example.json) shows complete field replacements
-under supported `subagents.agentOverrides.<role>` in **effective settings.json**.
-Select only the granted roles/fields; never copy the whole file over existing
-settings. No agent inheritance, Markdown rewrite, runtime helper or new per-launch
-`tools`/`extensions` field is supplied. Call-level skills do not widen strict tools.
-Base role context, output, acceptance, no-nesting and write-scope limits stay intact.
-Bash and mode guidance are not an OS sandbox.
+The overlay does not replace the role Markdown delivered by `core-profile-pi`.
+It installs one setting artifact for the `tools` leaf and one for the `skills`
+leaf of each inherited role. This keeps output, acceptance, context inheritance,
+no-nesting and every unrelated override under its existing owner.
 
-## RO-1 — Inventory and claim one scope
+## RO-1: inventory one effective scope
 
-Record one operator owner and a matching stage/action/root/files grant. Inventory
-active user-global settings in the effective agent directory (`PI_CODING_AGENT_DIR`
-or the default Pi agent directory), exact project/worktree `.pi/settings.json`,
-role source definitions, user/project `agentOverrides`, provider-scoped overrides,
-per-run selections, extension defaults, required runtime extensions and inherited
-capability ceilings (`excludeTools`, denied tools/extensions included). Verify the
-selected pins' actual resolution; do not assume destination wins. At subagents
-0.72.1 project settings override user fields; lists replace, not concatenate.
-Provider-scoped overrides and call-level replacements can supersede the plan.
+Preview the exact global or project Pi settings target and all higher-precedence
+sources. Record existing values for each selected leaf. A conflicting owner,
+unreadable source, malformed settings, symlink alias or changed preview input
+blocks the whole selected install. Do not copy a complete `agentOverrides` object
+over user settings.
 
-Refuse competing owners, higher-precedence definitions for selected fields,
-unknown precedence, unreadable/malformed sources and path/symlink aliases. An equal
-conflicting definition is still not this owner's field. Do not widen a ceiling to
-make a tool available. Global changes must identify **all affected clients** and
-owners; unknown consumers block. Writers always use their exact allocated worktree
-scope, never a global switch between concurrent writers. Research/spec/review/plan
-roles refuse execution-configured worktrees pending [TD-1 through TD-4](teardown.md).
+The managed paths are:
 
-## RO-2 — Preview complete role plans
-
-The example includes the base tools/skills for each delivered C role and adds
-`pattern-mcp-pi`, `graphify-pi`, `code-intel-operations-pi`. It also preserves the web
-role's mandatory web tools/skill/provider. Reconcile with the actual base definition
-on every update; do not use this example as a permanent role inventory oracle.
-The selected route adds the adapter's **`mcp` gateway** to each complete base tool
-list, not individual registered MCP tool names. Keep its explicit child extension
-below. Discover underlying server/tool names and schemas through the gateway;
-those names are call arguments and exact server filters, NOT replacements for
-`mcp` in the role list. Researchers/authors/reviewers/planners select shared
-read/navigation Serena plus query-only Graphify. The writer selects its approved
-private Serena server; Graphify still describes the **main snapshot**.
-
-At subagents 0.72.1, `src/agents/agents.js:splitToolList` creates direct selections
-only for `mcp:` entries. `src/runs/shared/child-launch.js:childProcessEnv` otherwise
-sets `MCP_DIRECT_TOOLS=__none__`; adapter 3.0.0 `index.ts:resolveCurrentDirectTools`
-suppresses direct registration even if a server says `directTools:true`.
-`index.ts:registerProxyTool`/`syncProxyTool` still supplies `mcp` when direct tools
-are absent. Thus raw registered names in role tools cannot work at these pins.
-Do not blindly prefix them with `mcp:`: subagents' direct selector resolver reads
-legacy `mcp.json` paths, not the delivered `mcp-adapter.json` source set. This route
-uses the adapter's qualified effective config through the gateway, with no legacy
-config copy, environment override, resolver patch or capability-ceiling bypass.
-Changed pins require renewed source review and runtime qualification.
-
-Before granting the gateway, inventory **every** reachable effective server and
-its exposed tool surface. Require only approved query/navigation operations, with
-server-side restrictions where supported and reviewed exact nonempty `includeTools`
-filters; an empty list is not a deny-all list. No wildcards, admin, build, edits,
-project/mode switching or unapproved servers. Preserve operator/Patronus ownership
-rules: do not silently edit managed shared leaves to add filters. If the approved
-surface cannot be established, hold MCP use and report source-read fallback.
-The private candidate uses `directTools:false`; this disables direct exposure,
-not proxy calls. Reload and observe allowed and denied calls before dispatch.
-
-Authorized leaf operations are server-scoped lexical search, describe and calls
-to the approved discovered query tools, within task budgets. For example, after
-substituting reviewed server/name values (not executing these placeholders):
-
-```json
-{"server":"<approved-server>","search":"symbol","searchMode":"lexical","limit":5}
-{"server":"<approved-server>","describe":"<discovered-query-tool>"}
-{"server":"<approved-server>","tool":"<discovered-query-tool>","args":{}}
+```text
+subagents.agentOverrides.<core-role>.tools
+subagents.agentOverrides.<core-role>.skills
 ```
 
-Use the tool's discovered argument schema, not the illustrative empty args.
-Initialize the selected Serena before symbols; use the same server-scoped route
-for the approved Graphify query. Implicit connection is allowed only to the exact
-already-approved definition under the bootstrap grant. No leaf gateway install,
-auth, configuration or service-management action, semantic search or script mode
-is granted. The gateway itself advertises broader operations and can reach other
-configured servers: these usage limits are **cooperative**, not a per-call policy
-interceptor or OS sandbox. Hardening and negative runtime observations remain
-mandatory; `mcp` in a tools list alone proves neither security nor readiness.
+There are eight `<core-role>` values: plan author, plan reviewer, researcher, spec
+author, technical reviewer, web researcher, workflow security reviewer and
+writer. Patronus's ordinary setting inverse records and restores each leaf.
 
-The explicit `extensions` list **disables ambient extension discovery**: substitute
-reviewed absolute paths for ALL required model-provider and runtime extensions,
-not just the illustrated slots. The web role also needs its qualified web provider.
-`subagentOnlyExtensions` loads the reviewed MCP adapter into that role's child;
-retain any other required child-only extensions when replacing that list. Both
-lists replace prior lists. Empty lists are not an inheritance shortcut. Provider
-paths, tool names, effective MCP source definitions and selected skills require
-inspection/smoke evidence, not assumptions from a frontmatter name. The child must
-actually register `mcp` with the approved config and server restrictions. Keep the
-approved model/provider/protocol; no fallback or model pin is implied.
+## RO-2: verify complete replacement lists
 
-Preview only selected field changes: `tools`, `skills`, `extensions`,
-`subagentOnlyExtensions`. Save expected original absence versus null versus value,
-full original file bytes and SHA-256 in a protected operator evidence location,
-plus planned values/digests and all affected consumers. Do not put secrets in logs
-or source control. A call-level skill replacement must contain the full C-role plus
-three-code-intel-skill union; a missing mandatory skill blocks launch. Include the
-technical reviewer's full dual-review skill union, not just its selected rubric.
+Pi-subagents treats these arrays as replacements, not additions. Each delivered
+value therefore repeats its role's complete core list and adds only the overlay
+members.
 
-## RO-3 — Quiesce and record before mutation
+- Every tools list adds `mcp`.
+- Every skills list adds `pattern-mcp-pi`, `graphify-pi` and
+  `code-intel-operations-pi`.
+- The web role retains `web_search`, `fetch_content`, `get_search_content`,
+  `source_check` and `web-research-pi`.
+- The technical reviewer retains `spec-review-pi` and
+  `requesting-code-review-pi`.
+- Author and writer roles retain their existing write tools. Read-only roles do
+  not gain write tools.
 
-Settle all affected runs/clients successfully; cancellation, an empty status list
-or a missing row is not settlement. Record outputs, run/session/descendant identity
-and shutdown evidence. Unknown/active/failed consumers retain configuration.
-Re-read the full source inventory and selected fields immediately before writing.
-A competing editor or changed managed field/digest blocks; no blind overwrite.
+The overlay does not set `extensions` or `subagentOnlyExtensions`. Leaving those
+leaves untouched preserves Pi package discovery and any separately owned provider
+configuration. The exact `pi-mcp-adapter` package is a profile dependency. Since
+`tools` is a strict allowlist, `mcp` is required and overlaid roles must run as
+background children with `async: true`. A foreground child cannot load ambient
+extensions and fails before its first model turn. A child that lacks `mcp` after
+reload likewise fails preflight. Neither failure is a source-read fallback. Do not
+add raw discovered tool names or legacy `mcp:` selectors as a repair.
 
-Use the [ownership descriptor](private-ownership.example.json) record pattern for
-settings too: separate record per config file, field path such as
-`["subagents", "agentOverrides", "<selected-role>", "tools"]`, original presence/
-value, desired managed value/digest, original bytes, root/run/owner and matching
-hashed grant. This is external operator evidence, **not installer state** and not
-a generic trust ledger. Grants follow the deployment's QP-01 record format:
-issuer, action, roots, exact input/output hashes, expiry or revalidation trigger,
-and owner verification binding the same scope. The record is not authorization.
-No marker alone confers deletion rights. Example nulls/placeholders are unverified.
+These are frozen copies of the core lists at the overlay release. Every core role
+tool or skill change requires a matching overlay update and SemVer bump. The
+catalogue test compares current core frontmatter with each replacement list, but
+an already installed older overlay still needs an ordinary previewed upgrade.
 
-For digests, hash original file **bytes** exactly; for each JSON field, use UTF-8
-compact JSON with object keys recursively sorted, arrays ordered, no trailing
-newline, and SHA-256. Record that algorithm alongside local evidence. Distinguish
-`original.present:false` from `original.present:true,value:null`. Record the
-preview's input hashes and desired digest before the manual change. Retain the
-first baseline on same-owner updates; append history of prior/new managed digests,
-grants, reload and effective-plan observations. Never make a prior managed value
-the new original. New fields need their own baseline before first mutation.
+## RO-3: preserve the shared-only boundary
 
-## RO-4 — Apply selected fields manually and verify reload
+Before MCP-dependent dispatch, inspect every effective server reachable through
+the gateway. Reject active stdio/command Serena or Graphify entries, alternate
+aliases, host-discovered entries and unresolved imports that could start a private
+copy in a child. The approved profile entries are `serena-shared-pi` and
+`graphify-shared-pi`. Children may search, describe and call approved navigation
+or query tools on those entries. They may not install, authenticate, reconfigure,
+retarget, build, refresh, start or stop services.
 
-Only after RO-1 through RO-3, manually change the approved fields, preserving all
-unrelated entries. Save resulting bytes/digests. Reload/restart every affected
-session; acknowledge actual reload, effective role definition, complete tool,
-extension/provider and skill plan. Read selected skill contents explicitly;
-discovery/inheritance is not reading. Missing tools/provider/skills or a ceiling
-conflict is a held launch, not permission for a builtin or model/protocol fallback.
+The gateway can expose more operations than the role should use. Prompt and tool
+lists are cooperative boundaries, not server authorization. Serena's planning
+mode, Graphify's query surface, exact adapter policy and runtime negative tests
+must supply the effective restriction evidence.
 
-MCP-dependent launches require qualified **background native sessions** at the
-selected pin; foreground MCP rejection is an infrastructure failure, not a reason
-to silently switch launch mode. Before fanout, coordinator runs one separately
-authorized child capability smoke: Serena initialization and expected root, known
-definition/caller, Graphify query with provenance, and effective restrictions,
-all through server-scoped `mcp`. Observe the gateway under the normal child
-`MCP_DIRECT_TOOLS=__none__` environment; do not change that variable to repair it.
-Include disallowed-tool/server and management-action boundary observations without
-claiming the cooperative instructions technically block arbitrary gateway callers.
-Unloaded/unknown tools block MCP use. Source reads may continue only under the
-task's existing allowance and with the limitation reported. Exact schema/effect,
-base/enabled/restored child behavior and loading remain QP-03 integration evidence.
+## RO-4: reload and smoke a cold background child
 
-## RO-5 — Update, restore and uninstall boundary
+After deployment, restart or reload Pi. Inspect the effective role definition and
+confirm the complete tools, skills, package extensions and provider plan. Run one
+qualified background child smoke before fanout:
 
-Same-owner updates repeat RO-1 through RO-4 with the original baseline carried
-forward. Restore through [TD-1 through TD-4](teardown.md) only after successful
-settlement, unchanged recorded fields and a matching reset grant. Restore original
-values (including null); delete only fields originally absent. Preserve unrelated
-settings, even those added after augmentation. Empty parent objects may remain;
-never delete a containing object/file just because the selected field is absent.
+1. confirm the `mcp` gateway is registered;
+2. initialize `serena-shared-pi` and verify the expected root;
+3. query one known definition and caller;
+4. query `graphify-shared-pi` and bind the result to snapshot provenance; and
+5. verify a lifecycle or mutation operation is outside the child's grant.
 
-Profile uninstall removes Patronus-owned artifacts only. Manual settings survive
-until explicit operator cleanup; plan cleanup before removing required skills.
-Retain the original backup and digest history after uninstall or an interrupted
-reset. Noncooperating editor races remain a manual-procedure limitation; rereads
-and ownership conventions are not a lock or hard enforcement.
+Missing package, provider, skill or tool is a launch/infrastructure failure.
+After successful background startup, a missing endpoint, approval or root stops
+MCP use; source reads may continue only when the task permits that fallback.
+
+## RO-5: update and remove without replacing siblings
+
+A profile update re-previews each tools and skills leaf against the recorded prior
+and current managed value. Drift blocks the affected inverse. Removal restores the
+original leaf value or deletes the leaf when it was originally absent. It preserves
+other role fields, sibling role overrides and settings added later.
+
+Settle affected children and acknowledge reload before update or removal. Removing
+role settings does not stop shared services, remove packages or delete snapshots.
+Follow TD-1 through TD-4 for service settlement and retained data.

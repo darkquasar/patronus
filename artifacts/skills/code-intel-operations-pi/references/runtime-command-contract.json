@@ -1,0 +1,58 @@
+{
+  "recordKind": "immutable-source-command-contract-not-runtime-qualification",
+  "inspectedAt": "2026-10-05",
+  "runtimeExecuted": false,
+  "serena": {
+    "packagePin": "git+https://github.com/oraios/serena@7a2968335f2198b966864de1ce3655c8e485a653",
+    "sourceRevision": "7a2968335f2198b966864de1ce3655c8e485a653",
+    "sourceFiles": [
+      {
+        "path": "src/serena/cli.py",
+        "gitBlobSHA1": "63d49c151cc0c67f216d401dc730bf14af976cdc",
+        "url": "https://raw.githubusercontent.com/oraios/serena/7a2968335f2198b966864de1ce3655c8e485a653/src/serena/cli.py"
+      },
+      {
+        "path": "src/serena/resources/config/modes/planning.yml",
+        "gitBlobSHA1": "a24d0dfb150bc3c10b0c16be8c15014297cc6687",
+        "url": "https://raw.githubusercontent.com/oraios/serena/7a2968335f2198b966864de1ce3655c8e485a653/src/serena/resources/config/modes/planning.yml"
+      }
+    ],
+    "observedContract": {
+      "versionArg": "--version",
+      "command": "start-mcp-server",
+      "transportValues": ["stdio", "sse", "streamable-http"],
+      "booleanValueOptions": ["--enable-web-dashboard", "--open-web-dashboard"],
+      "planningExcludedTools": ["create_text_file", "replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "delete_lines", "replace_lines", "insert_at_line", "execute_shell_command", "replace_content"]
+    },
+    "argv": ["serena", "start-mcp-server", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", "9121", "--project", "/ABSOLUTE/APPROVED/PROJECT", "--context", "ide", "--mode", "planning", "--enable-web-dashboard", "false", "--open-web-dashboard", "false"]
+  },
+  "graphify": {
+    "packagePin": "graphifyy[mcp]==0.9.31",
+    "sourceRevision": "4fe11092ccbe9f543608f140c790f68d5d83cae4",
+    "candidateDossierRecordedDigest": "b0d47f823f924e7f89acfee390b9f18dc3410917617c5f6f2731bd2642abf16f",
+    "sourceFiles": [
+      {
+        "path": "pyproject.toml",
+        "gitBlobSHA1": "619f00af51506898f74738e95dc99a532ad2adf5",
+        "url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/4fe11092ccbe9f543608f140c790f68d5d83cae4/pyproject.toml"
+      },
+      {
+        "path": "graphify/__main__.py",
+        "gitBlobSHA1": "924ae986d3a8e2b7c38154a5f4d32dff07d21a2f",
+        "url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/4fe11092ccbe9f543608f140c790f68d5d83cae4/graphify/__main__.py"
+      },
+      {
+        "path": "graphify/serve.py",
+        "gitBlobSHA1": "1a44c781d5db84703f4965414da3c162b11efc10",
+        "url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/4fe11092ccbe9f543608f140c790f68d5d83cae4/graphify/serve.py"
+      }
+    ],
+    "observedContract": {
+      "consoleScripts": ["graphify", "graphify-mcp"],
+      "versionArg": "--version",
+      "transportValues": ["stdio", "http"],
+      "options": ["--host", "--port", "--path", "--stateless"]
+    },
+    "argv": ["graphify-mcp", "/ABSOLUTE/PROTECTED/CODE-INTEL-RUNTIME/graphify/<graph-sha256>.json", "--transport", "http", "--host", "127.0.0.1", "--port", "9122", "--path", "/mcp", "--stateless"]
+  }
+}

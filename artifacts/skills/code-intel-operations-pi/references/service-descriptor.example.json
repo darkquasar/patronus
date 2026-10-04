@@ -1,26 +1,39 @@
 {
-  "recordKind": "manual-service-descriptor-example-not-installer-state",
+  "recordKind": "shared-service-descriptor-example-not-installer-state",
   "sourceRoot": "/ABSOLUTE/APPROVED/PROJECT",
   "repositoryRevision": "<observed-full-commit>",
   "trackedDirty": null,
   "trackedDiffSHA256": "<observed-digest-or-clean>",
   "untrackedTreatment": "<record-inventory-and-included-or-excluded-status>",
-  "service": {
-    "entryName": "serena-shared-pi",
-    "implementation": "Serena",
-    "version": "<qualified-version>",
-    "ref": "<immutable-source-ref>",
-    "owner": "<coordinator-run-identity>",
-    "endpoint": "http://127.0.0.1:9121/mcp",
-    "transport": "http",
-    "clientNetworkNamespace": "<observed-namespace>",
-    "allowedTools": [],
-    "observedTools": [],
-    "restrictionEvidence": "<fixed-read-navigation-server-surface-and-client-plan>",
-    "configurationSources": [],
-    "configurationDigest": "<redacted-safe-config-digest>",
-    "lifecycle": { "state": "unverified", "observationTime": null, "logReference": null }
-  },
+  "owner": "<coordinator-run-identity>",
+  "services": [
+    {
+      "entryName": "serena-shared-pi",
+      "implementation": "Serena",
+      "pin": "7a2968335f2198b966864de1ce3655c8e485a653",
+      "endpoint": "http://127.0.0.1:9121/mcp",
+      "transport": "streamable-http",
+      "argv": ["serena", "start-mcp-server", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", "9121", "--project", "/ABSOLUTE/APPROVED/PROJECT", "--context", "ide", "--mode", "planning", "--enable-web-dashboard", "false", "--open-web-dashboard", "false"],
+      "observedTools": [],
+      "restrictionEvidence": "<planning-navigation-surface>",
+      "lifecycle": { "state": "unverified", "processIdentity": null, "logReference": null }
+    },
+    {
+      "entryName": "graphify-shared-pi",
+      "implementation": "Graphify",
+      "pin": "graphifyy[mcp]==0.9.31",
+      "endpoint": "http://127.0.0.1:9122/mcp",
+      "transport": "streamable-http",
+      "argv": ["graphify-mcp", "/ABSOLUTE/PROTECTED/CODE-INTEL-RUNTIME/graphify/<graph-sha256>.json", "--transport", "http", "--host", "127.0.0.1", "--port", "9122", "--path", "/mcp", "--stateless"],
+      "graphSHA256": "<observed-graph-digest>",
+      "observedTools": [],
+      "restrictionEvidence": "<query-only-surface>",
+      "lifecycle": { "state": "unverified", "processIdentity": null, "logReference": null }
+    }
+  ],
+  "clientNetworkNamespace": "<observed-namespace>",
+  "configurationSources": [],
+  "configurationDigest": "<redacted-safe-config-digest>",
   "readiness": {
     "status": "runtime-unverified",
     "mcpInitialize": null,
@@ -29,6 +42,7 @@
     "definitionAndCaller": null,
     "graphQueryAndProvenance": null,
     "effectiveRestrictions": null,
+    "coldChildGateway": null,
     "clientReloadAcknowledged": false,
     "observationTime": null,
     "evidenceReferences": []
