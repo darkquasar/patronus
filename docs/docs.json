@@ -1,0 +1,48 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Patronus",
+  "colors": {
+    "primary": "#6554C0",
+    "light": "#8B7BDD",
+    "dark": "#48359A"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Use Patronus",
+        "pages": [
+          "profiles",
+          "lifecycle",
+          "cli"
+        ]
+      },
+      {
+        "group": "Harnesses and packages",
+        "pages": [
+          "harnesses",
+          "pi-core",
+          "pi-delivery",
+          "agent-artifacts",
+          "package-delivery"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/darkquasar/patronus"
+      }
+    ]
+  }
+}

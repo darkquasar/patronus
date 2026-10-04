@@ -5,7 +5,7 @@ Vendored files (upstream paths):
   - skills/brainstorming/spec-document-reviewer-prompt.md
 
 SKILL.md is ADAPTED, not verbatim. Patronus re-coupled it into its own lifecycle
-(see docs/adr/0001-profiles-recouple-plugins-stay-as-is.md) with three additions:
+(see .github/decisions/0001-profiles-recouple-plugins-stay-as-is.md) with three additions:
 an explicit ASCII-diagram step at design-presentation points, a `grilling` hand-off
 offered after design approval (before the spec is written), and a `research-team`
 hand-off at the scope-assessment step for genuinely unknown domains. The body

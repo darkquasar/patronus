@@ -82,7 +82,7 @@
     "inputs": []
   },
   "cases": {
-    "path": "docs/pi-qualification/cases.json",
+    "path": "scripts/qualification/pi-native/evidence/cases.json",
     "sha256": "ab6d4f8c81d0cd7f6d366e0657e981c65e396686c0d4b7082eadfaa7194d20b8"
   },
   "claims": {

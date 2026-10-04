@@ -163,3 +163,15 @@ builds; the native race suite requires CGO enabled. Windows compilation checks
 the unsupported-platform fallback and does not establish directory mutation
 support there. Record the tested revision and any untested runtime behavior in
 the release handoff.
+
+## Documentation layout
+
+Tracked `docs/` contains user-facing MDX pages and Mintlify's `docs.json`. Add new
+pages to its navigation. Keep test fixtures, evidence templates, validation
+procedures and results under `scripts/qualification/` or the owning package's
+`tests/` directory. Contributor decisions live under `.github/decisions/`.
+`docs/specs/` remains gitignored local planning state and is excluded from
+Mintlify processing by `docs/.mintignore`.
+
+For a local docs preview, run `npx mint dev` from `docs/`. Do not move local specs
+into published navigation or commit generated preview files.

@@ -11,7 +11,7 @@ import test_pi_evidence as fixtures
 
 class QualificationExampleTests(fixtures.EvidenceFixture):
     def examples(self, name):
-        value = json.loads((fixtures.ROOT / 'docs/pi-qualification/examples' / name).read_text())
+        value = json.loads((fixtures.ROOT / 'scripts/qualification/pi-native/evidence/examples' / name).read_text())
         self.assertTrue(value['example'])
         self.assertEqual('unknown', value['status'])
         self.assertEqual('M', value['class'])

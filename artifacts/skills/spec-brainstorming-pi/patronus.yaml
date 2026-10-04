@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: spec-brainstorming-pi
 description: "Pi-scoped spec brainstorming discipline"
-version: 2.0.0
+version: 2.0.1
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "spec-document-reviewer-prompt.md"]
 targets: [pi]
