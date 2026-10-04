@@ -3,7 +3,53 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
-## Unreleased
+## v2.5.0
+
+The binary release adds Pi as a first-class deployment target and the lifecycle
+fixes below. Profile and skill content publishes through the catalogue independently;
+the catalogue-only writing changes later in this entry do not require this binary
+upgrade unless you also need the new CLI behavior.
+
+### Added
+
+- **Deploy to Pi with an explicit target and scope.** `--target pi` supports skills,
+  sidecars, prompts, native agent roles, instruction sections, settings and MCP
+  configuration. Select `--global` or `--local`; Pi updates require one explicit
+  scope. Global destinations honor `PI_CODING_AGENT_DIR`.
+- **Install and manage pinned Pi extensions through Pi's package manager.** Native
+  recipes support preview, installation, update and removal while retaining exact
+  source identity, scope and pending outcomes. Pi/npm own extension files and
+  dependency resolution. Package installation requires `--allow-package-installs`;
+  project configuration consent and Pi runtime trust remain separate.
+- **Pin Pi environments with target-aware locks.** Authored Pi resources use v3;
+  locks including native package references use v4. Existing non-Pi locks retain v2.
+  Upgrade the executable before using the new Pi lock formats.
+
+### Fixed
+
+- **Global and project copies of an identical npm source follow Pi's project
+  precedence.** The inactive global copy no longer produces duplicate role or
+  skill conflicts during local updates. Competing authored identities and different
+  package references still receive conflict checks.
+- **Pi configuration removal preserves unrelated values.** Owned scalar and MCP
+  values restore their original semantic values without restoring a stale whole-file
+  snapshot over sibling changes.
+- **Interrupted directory removals retain durable progress.** Selective removal
+  checkpoints completed paths, preserves unknown files and retains pending recovery
+  records on errors. Older binaries refuse the new pending journal format; finish
+  recovery with a supporting version. Existing schema-1 journals remain supported.
+- **Archive extraction and error reporting are stricter.** Single-file extraction
+  enforces bounds and validates entries, and malformed lock or failed readback
+  operations report errors rather than silently continuing.
+
+### Catalogue
+
+`core-profile-pi` supplies Pi roles, development/review/research skills and three
+workflow skills, with exact `pi-subagents@0.72.1` and `pi-web-access@0.35.0`
+references. `code-intel-pi` provides optional code intelligence guidance. These
+catalogue selections are available independently of the binary release; installing
+them for Pi requires the new target support above.
+
 
 ### writing-like-me 2.1.0
 
