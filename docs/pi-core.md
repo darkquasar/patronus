@@ -19,7 +19,7 @@ Node 22.22.1 and required host peers remain externally provisioned. Read
 [delivery/ownership](pi-delivery.md) before an authorized operation.
 
 See [Pi-native deployment validation](pi-native-validation.md) for the current
-Docker Sandbox install/update/remove and actual resource-loading observations.
+install/update/remove and actual resource-loading observations.
 
 ## Explicit selection and preview
 

@@ -19,17 +19,13 @@ pending outcomes. This validation covers that deployment boundary.
 
 ## Observed environment
 
-The 2026-10-04 validation used a disposable Linux ARM64 Docker Sandbox with two
-CPUs and 4 GiB of memory. Its runtime derives from Docker's
-[Pi kit](https://hub.docker.com/r/sbx/pi-kit), using the pinned base image
-`docker.io/sbx/pi-image@sha256:a2c3ac953dcef579f89a1a4c20f993e3b9325d58633b7f672694f64b0a067a67`.
-The temporary kit retained npm proxy setup and omitted provider credential
-bindings. The host checkout was mounted read-only; deployment used disposable
-global and project directories. Patronus was cross-built from this source tree.
+The 2026-10-04 validation used a disposable Linux ARM64 runtime with two CPUs
+and 4 GiB of memory. Deployment used disposable global and project directories;
+the source checkout was read-only. Patronus was cross-built from this source tree.
+Provider credentials were not supplied.
 
 | Component | Observed version |
 |---|---|
-| Docker Sandboxes CLI | 0.45.1 |
 | Pi | 0.87.1 |
 | Node | 22.22.1 |
 | pi-subagents | 0.72.1 |
@@ -68,7 +64,7 @@ native definitions retain static conflict checks.
 ## Repeatable installed-runtime checks
 
 These scripts are opt-in. They execute the installed extension factories and
-start the actual Pi CLI, so run them in the approved disposable sandbox after
+start the actual Pi CLI, so run them in the approved disposable runtime after
 deploying `core-profile-pi`. They never prompt a model, start child agents or invoke
 web tools. Pass the installed Pi package directory, global agent directory,
 project and evidence output explicitly:
