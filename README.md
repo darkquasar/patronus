@@ -343,7 +343,7 @@ go run ./cmd/patronus scan
 
 Use `core-profile-pi` for the Pi core deployment profile and `code-intel-pi` for
 its optional code intelligence overlay. The current
-[Docker Sandbox validation](docs/pi-native-validation.md) covers deployment,
+[Pi runtime validation](docs/pi-native-validation.md) covers deployment,
 native package lifecycle and actual Pi resource loading.
 
 Explicit `--target pi` supports skills/sidecars, prompts, finite native Markdown
