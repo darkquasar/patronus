@@ -1,6 +1,6 @@
 // Package toolpath turns adapter detect:/layout: markers into absolute
 // filesystem paths, honoring per-tool environment overrides (CODEX_HOME,
-// OPENCODE_CONFIG_DIR, XDG_CONFIG_HOME) and ~ expansion. The scanner and the
+// OPENCODE_CONFIG_DIR, PI_CODING_AGENT_DIR, XDG_CONFIG_HOME) and ~ expansion. The scanner and the
 // planner share this logic so detection and install target the same paths.
 package toolpath
 
@@ -65,6 +65,21 @@ func (r Resolver) ResolveMarker(marker, tool, scope string) string {
 // marker that lives under that tool's canonical default base.
 func (r Resolver) redirectGlobal(marker, tool string) (string, bool) {
 	switch tool {
+	case "pi":
+		if base, ok := r.env("PI_CODING_AGENT_DIR"); ok && base != "" {
+			if rest, found := underBase(marker, "~/.pi/agent"); found {
+				// Resolve qualified Pi root spellings against the explicit working
+				// base, never this process's ambient cwd. Whitespace/URI forms are
+				// left uninterpreted for Pi preflight to refuse host/MCP mismatch.
+				if base == strings.TrimSpace(base) && !strings.Contains(base, "://") {
+					base = r.ExpandHome(base)
+					if !filepath.IsAbs(base) && filepath.IsAbs(r.projectDir) {
+						base = filepath.Join(r.projectDir, base)
+					}
+				}
+				return filepath.Join(base, rest), true
+			}
+		}
 	case "codex":
 		if base, ok := r.env("CODEX_HOME"); ok && base != "" {
 			if rest, found := underBase(marker, "~/.codex"); found {

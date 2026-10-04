@@ -1,0 +1,3 @@
+# Spec completeness supplement
+
+Read the exact spec bytes, brief, source evidence and native mission state after compaction. Check missing sections/placeholders, conflicting requirements, two plausible readings, implementable scope, failure paths and YAGNI. Return source-backed findings with section/quote, consequence and correction, using the spec-review-pi rubric and normalized Critical/Major/Medium/Low policy. This supplement is not another mandatory review cycle. You are a fresh-context leaf with no source/shared-state writes or delegation; return the full report for runtime persistence. Parent owns disposition and next-stage authority.

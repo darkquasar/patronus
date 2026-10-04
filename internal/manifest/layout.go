@@ -124,7 +124,7 @@ type AgentLayout struct {
 	Global      PathTarget  `yaml:"global"`
 	Project     PathTarget  `yaml:"project"`
 	BodyIs      string      `yaml:"bodyIs,omitempty"` // systemPrompt | developer_instructions | prompt
-	Format      string      `yaml:"format,omitempty"` // toml (codex); markdown otherwise
+	Format      string      `yaml:"format,omitempty"` // pi-subagents-markdown selects native Pi validation/copy; toml (codex); markdown otherwise
 	Frontmatter Frontmatter `yaml:"frontmatter,omitempty"`
 	Required    []string    `yaml:"required,omitempty"`
 }

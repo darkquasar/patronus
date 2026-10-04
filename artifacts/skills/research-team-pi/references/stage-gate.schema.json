@@ -1,0 +1,258 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "reasons",
+    "predicates",
+    "findings",
+    "evidence",
+    "corrections"
+  ],
+  "properties": {
+    "verdict": {
+      "enum": [
+        "ready",
+        "blocked"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "predicates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "authority",
+        "runsSettled",
+        "inputs",
+        "outputsAcceptanceAndFreshness",
+        "reviewsForBytes",
+        "reviewDisposition",
+        "requirementsGate",
+        "testsGate",
+        "authorityGate",
+        "releaseGate",
+        "budgetNotExceeded",
+        "actionAdmission"
+      ],
+      "properties": {
+        "source": {
+          "type": "boolean"
+        },
+        "authority": {
+          "type": "boolean"
+        },
+        "runsSettled": {
+          "type": "boolean"
+        },
+        "inputs": {
+          "type": "boolean"
+        },
+        "outputsAcceptanceAndFreshness": {
+          "type": "boolean"
+        },
+        "reviewsForBytes": {
+          "type": "boolean"
+        },
+        "reviewDisposition": {
+          "type": "boolean"
+        },
+        "requirementsGate": {
+          "type": "boolean"
+        },
+        "testsGate": {
+          "type": "boolean"
+        },
+        "authorityGate": {
+          "type": "boolean"
+        },
+        "releaseGate": {
+          "type": "boolean"
+        },
+        "budgetNotExceeded": {
+          "type": "boolean"
+        },
+        "actionAdmission": {
+          "type": "boolean"
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sources",
+          "severity",
+          "rationale",
+          "evidence",
+          "location",
+          "unresolved",
+          "residual"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "originalSeverity",
+                "consequenceEvidence"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "originalSeverity": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "consequenceEvidence": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "severity": {
+            "enum": [
+              "Critical",
+              "Major",
+              "Medium",
+              "Low"
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unresolved": {
+            "type": "boolean"
+          },
+          "residual": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "owner",
+                  "reason",
+                  "scope"
+                ],
+                "properties": {
+                  "owner": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scope": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "invocationId"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "invocationId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "oldReviewedSha256",
+          "newSha256",
+          "disposition",
+          "independentlyReviewed",
+          "parentInvocationId"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "oldReviewedSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "newSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "disposition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "independentlyReviewed": {
+            "enum": [
+              false
+            ]
+          },
+          "parentInvocationId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EXAMPLE host-evaluated stage verdict, not authority authentication"
+}

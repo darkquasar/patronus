@@ -57,6 +57,10 @@ func TestAgentClaudePassthrough(t *testing.T) {
 		t.Errorf("path = %q, want %q", diffs[0].Path, want)
 	}
 	s := string(diffs[0].After)
+	const golden = "---\ndescription: Reviews code\nextra: dropme\nmode: subagent\nmodel: opus\nname: reviewer\npermission: read\n---\n\nYou are a careful reviewer.\n"
+	if s != golden {
+		t.Fatalf("legacy Claude bytes changed:\n%q", s)
+	}
 	// Passthrough keeps the body and frontmatter (incl. extra key).
 	if !strings.Contains(s, "You are a careful reviewer.") {
 		t.Errorf("body missing:\n%s", s)
@@ -75,6 +79,10 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(diffs[0].After)
+	const golden = "---\nmode: subagent\nmodel: opus\npermission: read\nprompt: You are a careful reviewer.\n---\n"
+	if s != golden {
+		t.Fatalf("legacy OpenCode bytes changed:\n%q", s)
+	}
 	// Allowed keys kept; disallowed "extra" and "description"/"name" dropped from
 	// frontmatter (allow-list is [mode, model, prompt, permission]).
 	if !strings.Contains(s, "mode: subagent") || !strings.Contains(s, "model: opus") || !strings.Contains(s, "permission: read") {
@@ -111,6 +119,10 @@ func TestAgentCodexTOML(t *testing.T) {
 	want := filepath.Join(home, ".codex", "agents", "reviewer.toml")
 	if diffs[0].Path != want {
 		t.Errorf("path = %q, want %q", diffs[0].Path, want)
+	}
+	const golden = "description = 'Reviews code'\ndeveloper_instructions = 'You are a careful reviewer.'\nmodel = 'o1'\nname = 'reviewer'\n"
+	if string(diffs[0].After) != golden {
+		t.Fatalf("legacy Codex bytes changed:\n%q", diffs[0].After)
 	}
 	var doc map[string]any
 	if err := toml.Unmarshal(diffs[0].After, &doc); err != nil {

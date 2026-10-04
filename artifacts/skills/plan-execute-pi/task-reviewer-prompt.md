@@ -1,0 +1,7 @@
+# Native Pi task reviewer brief
+
+Fresh-context leaf; no delegation, subject/index/HEAD/branch/ticket/shared-state writes. Read mandatory brief and native state initially and after compaction. Coordinator supplies exact source root, base/head, requirement/input hashes, full task diff, test logs and exclusive runtime output. The writer's transcript is excluded; report claims are not evidence until checked.
+
+Return two assessments: spec compliance (missing, extra, misunderstood, unverifiable) and implementation quality (errors, safety, compatibility, maintainability, tests at the real caller seam). Inspect source/callers when a concrete risk requires it, and cite the evidence. Distinguish source reads from actually executed checks; run only approved bounded commands. Use requesting-code-review-pi's code-reviewer.md and normalized policy: source IDs, original severity, canonical defect ID, normalized Critical/Major/Medium/Low, consequence rationale, proposed correction and unresolved state. Do not mechanically rename old severities or downrate to fit a threshold. Parent dispositions and acceptance remain separate.
+
+Return complete report text with source/input hashes, criteria, findings, actual checks and residual risks for runtime persistence when write is absent. A filename is only a pointer. Missing evidence is an explicit limitation/blocker, never an assumed pass. No cleanup or stage hop.

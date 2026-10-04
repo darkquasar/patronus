@@ -1,0 +1,637 @@
+{
+  "version": 1,
+  "cases": {
+    "D-T1": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T2": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T3": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T4": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T5": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T6": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T7": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "D-T8": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "C-T1": {
+      "classes": [
+        "C"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "C-T8": {
+      "classes": [
+        "C"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "Q-T1": {
+      "classes": [
+        "C"
+      ],
+      "scope": "dependency",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "Q-T5": {
+      "classes": [
+        "C"
+      ],
+      "scope": "dependency",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "Q-T6": {
+      "classes": [
+        "C"
+      ],
+      "scope": "dependency",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "Q-T3-M": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "mutation",
+        "order",
+        "exception",
+        "cancel",
+        "expiry",
+        "parallel-consumption"
+      ],
+      "limit": "INDEPENDENT EXAMPLE MODEL: C consistency and M checker-record coverage only; no provisioning denial, interception, isolation or web-bound I proof."
+    },
+    "Q-T5-M": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "approved-argv",
+        "changed-argv",
+        "scripts-deny",
+        "interruption",
+        "partial-result"
+      ],
+      "limit": "INDEPENDENT EXAMPLE MODEL: C consistency and M checker-record coverage only; no provisioning denial, interception, isolation or web-bound I proof."
+    },
+    "Q-T7-M": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "oversized",
+        "redirect",
+        "private-destination",
+        "challenge",
+        "429",
+        "offline",
+        "cancel",
+        "summary-override",
+        "background-fetch",
+        "provider-mismatch",
+        "model-mismatch"
+      ],
+      "limit": "INDEPENDENT EXAMPLE MODEL: C consistency and M checker-record coverage only; no provisioning denial, interception, isolation or web-bound I proof."
+    },
+    "I-T1": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T2": {
+      "classes": [
+        "M",
+        "C"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T3": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T4": {
+      "classes": [
+        "C"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T5": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T6": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "I-T7": {
+      "classes": [
+        "M"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "observed"
+      ]
+    },
+    "OP-DELIVERY": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "global",
+        "project",
+        "relocation",
+        "context-consent",
+        "refusal",
+        "update",
+        "remove",
+        "partial-writes",
+        "baseline-binary"
+      ]
+    },
+    "OP-ROLES": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "native-parser",
+        "omitted-empty",
+        "quoting-lists",
+        "malformed-refusal",
+        "parsed-only",
+        "cold-loading",
+        "background-loading",
+        "overrides",
+        "missing-prerequisite"
+      ]
+    },
+    "OP-TRUST-PI": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "interactive",
+        "print",
+        "json",
+        "rpc",
+        "background",
+        "missing-trust",
+        "tool-cancel",
+        "absent-approval",
+        "deadline"
+      ]
+    },
+    "OP-TRUST-MCP": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "effective-approval",
+        "missing-approval",
+        "headless-denial"
+      ]
+    },
+    "OP-WORKFLOW": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "dependency-order",
+        "outputs",
+        "blocked-lane",
+        "fresh-reviewer",
+        "ignored-mutation",
+        "resume-fork-retry",
+        "compaction-reload",
+        "zero-spare-capacity",
+        "attempt-lineage",
+        "malformed-evidence"
+      ]
+    },
+    "OP-WORKTREE": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "no-grant",
+        "named-base",
+        "retained-cwd",
+        "capture",
+        "capture-failure",
+        "unknown-descendants"
+      ]
+    },
+    "OP-APPROVAL-PI": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "mutation",
+        "order",
+        "exception",
+        "parallel-consumption",
+        "shell-bang",
+        "shell-double-bang",
+        "rpc-bash",
+        "sdk-bash",
+        "pi-exec",
+        "node",
+        "bypass-assessment"
+      ]
+    },
+    "OP-APPROVAL-MCP": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "alternate-client",
+        "bypass-assessment"
+      ]
+    },
+    "OP-LIFECYCLE": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "registration",
+        "session-start",
+        "reload",
+        "active-branch",
+        "abort-retry",
+        "forced-kill",
+        "session-shutdown",
+        "quiescence",
+        "unknown-descendants"
+      ]
+    },
+    "OP-CORE-DEPENDENCIES": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "source-lock",
+        "sbom",
+        "licenses",
+        "attestation",
+        "global-install",
+        "agnostic-update",
+        "preflight-refusal",
+        "project-missing-global",
+        "local-remove",
+        "manual-registration",
+        "duplicate-inventory",
+        "cold",
+        "background",
+        "host-peer-aliases",
+        "readonly-payload",
+        "external-caches",
+        "quiesce",
+        "deregister",
+        "rollback",
+        "unknown-consumers"
+      ]
+    },
+    "OP-UPDATE-REMOVE": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "old-new-diff",
+        "invalidation",
+        "rollback",
+        "optional-remove",
+        "claude-preservation",
+        "external-preservation",
+        "native-argv",
+        "scripts",
+        "interruption"
+      ]
+    },
+    "OP-CODEINTEL": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "I-T1",
+        "I-T3",
+        "I-T4",
+        "I-T6",
+        "I-T7"
+      ]
+    },
+    "OP-ISOLATION": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "nonprivileged",
+        "no-management-socket",
+        "readonly-inputs",
+        "assigned-writes",
+        "no-home",
+        "scoped-secrets",
+        "egress-deny",
+        "process-limit",
+        "memory-limit",
+        "cpu-limit",
+        "deadline",
+        "shell-forbidden-read",
+        "shell-forbidden-write",
+        "shell-credentials",
+        "shell-network",
+        "sdk-forbidden-read",
+        "sdk-forbidden-write",
+        "sdk-credentials",
+        "sdk-network",
+        "descendant-settlement",
+        "no-host-fallback"
+      ]
+    },
+    "OP-WEB": {
+      "classes": [
+        "I"
+      ],
+      "scope": "global",
+      "outcomes": [
+        "cold-four-tools",
+        "ddg-schema",
+        "ddg-only",
+        "eager-tools",
+        "inline-8000",
+        "workflow-none",
+        "raw-fetch",
+        "no-summary",
+        "no-background",
+        "no-paid-fallback",
+        "browser-cookie-clone-media-disabled",
+        "cookie-env-sanitized",
+        "discovery-five-no-content",
+        "source-check-no-fetch",
+        "get-content-pages-2000",
+        "web-search-presentation",
+        "fetch-content-presentation",
+        "get-content-presentation",
+        "source-check-presentation",
+        "long-content-pagination",
+        "error-presentation",
+        "caller-overrides-disclosed",
+        "oversized",
+        "redirect",
+        "private-destination",
+        "content-type",
+        "challenge",
+        "429",
+        "offline",
+        "cancel",
+        "summary-override",
+        "background-fetch",
+        "provider-mismatch",
+        "model-mismatch"
+      ],
+      "bounds": [
+        "response-bytes",
+        "redirect-limit",
+        "content-type-limit",
+        "aggregate-output",
+        "call-limit",
+        "cost-limit",
+        "route-denial",
+        "summary-denial",
+        "background-denial",
+        "provider-override-denial"
+      ]
+    }
+  },
+  "claims": {
+    "static-delivery": {
+      "parents": [],
+      "required": [
+        "D-T1:M",
+        "D-T2:M",
+        "D-T3:M",
+        "D-T4:M",
+        "D-T5:M",
+        "D-T6:M",
+        "D-T7:M",
+        "D-T8:M",
+        "C-T1:C",
+        "C-T8:C"
+      ],
+      "dependency_groups": []
+    },
+    "core-exact-pin": {
+      "parents": [
+        "static-delivery"
+      ],
+      "required": [
+        "Q-T3-M:M",
+        "Q-T5-M:M",
+        "Q-T7-M:M",
+        "OP-WEB:I",
+        "OP-DELIVERY:I",
+        "OP-ROLES:I",
+        "OP-TRUST-PI:I",
+        "OP-WORKFLOW:I",
+        "OP-WORKTREE:I",
+        "OP-APPROVAL-PI:I",
+        "OP-LIFECYCLE:I",
+        "OP-CORE-DEPENDENCIES:I",
+        "OP-UPDATE-REMOVE:I"
+      ],
+      "dependency_groups": [
+        "core"
+      ]
+    },
+    "code-intel-exact-pin": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "I-T1:M",
+        "I-T2:M",
+        "I-T2:C",
+        "I-T4:C",
+        "I-T5:M",
+        "I-T6:M",
+        "I-T7:M",
+        "OP-CODEINTEL:I",
+        "OP-TRUST-MCP:I",
+        "OP-APPROVAL-MCP:I"
+      ],
+      "dependency_groups": [
+        "code-intel"
+      ]
+    },
+    "web-functional": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "C-T8:C",
+        "Q-T7-M:M",
+        "OP-WEB:I"
+      ],
+      "dependency_groups": []
+    },
+    "unattended-mutation": {
+      "parents": [
+        "core-exact-pin"
+      ],
+      "required": [
+        "OP-ISOLATION:I"
+      ],
+      "dependency_groups": []
+    },
+    "web-bounded-unattended": {
+      "parents": [
+        "web-functional",
+        "unattended-mutation"
+      ],
+      "required": [],
+      "dependency_groups": []
+    }
+  },
+  "dependency_roles": {
+    "core": [
+      "pi-host",
+      "pi-subagents",
+      "tk",
+      "pi-web-access"
+    ],
+    "code-intel": [
+      "pi-mcp-adapter",
+      "serena",
+      "graphify"
+    ]
+  },
+  "dependency_selectors": [
+    "Q-T1:C",
+    "Q-T5:C",
+    "Q-T6:C"
+  ],
+  "runtime_mcp_selectors": [
+    "OP-TRUST-MCP:I",
+    "OP-APPROVAL-MCP:I"
+  ],
+  "groups": {
+    "OP-TRUST": [
+      "OP-TRUST-PI",
+      "OP-TRUST-MCP"
+    ],
+    "OP-APPROVAL": [
+      "OP-APPROVAL-PI",
+      "OP-APPROVAL-MCP"
+    ]
+  }
+}

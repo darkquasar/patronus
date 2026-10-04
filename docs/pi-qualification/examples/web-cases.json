@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "example": true,
+  "status": "unknown",
+  "case_id": "Q-T7-M",
+  "class": "M",
+  "model_class": "C",
+  "production_subject": "scripts/check-pi-evidence.py",
+  "scenario_consumer": "docs/pi-qualification/operational-tests.md",
+  "limitations": [
+    "INDEPENDENT EXAMPLE MODEL; invented observations, not release evidence.",
+    "C model consistency plus M checker-record coverage only. No actual provisioning denial, interception, isolation or web-bound proof; QP-03 must run pinned I subjects."
+  ],
+  "observations": [
+    {
+      "scenario": "oversized",
+      "trace": [
+        {
+          "event": "response-byte-limit"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "redirect",
+      "trace": [
+        {
+          "event": "redirect-denied"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "private-destination",
+      "trace": [
+        {
+          "event": "private-route-denied"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "challenge",
+      "trace": [
+        {
+          "event": "challenge-observed"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "429",
+      "trace": [
+        {
+          "event": "rate-limit-observed"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "offline",
+      "trace": [
+        {
+          "event": "network-unavailable"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "cancel",
+      "trace": [
+        {
+          "event": "cancel-request"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "summary-override",
+      "trace": [
+        {
+          "event": "summary-route-denied"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "background-fetch",
+      "trace": [
+        {
+          "event": "background-route-denied"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "provider-mismatch",
+      "trace": [
+        {
+          "event": "provider-revalidation"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "model-mismatch",
+      "trace": [
+        {
+          "event": "model-revalidation"
+        },
+        {
+          "event": "no-fallback"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -362,6 +363,46 @@ func TestAPIVersionV3RejectedOutsideRecipes(t *testing.T) {
 		t.Run(string(family), func(t *testing.T) {
 			if err := validateMeta(Meta{APIVersion: "patronus/v3", Family: family, Name: "x", Version: "1.0.0"}, family); err == nil {
 				t.Fatal("v3 accepted for non-recipe")
+			}
+		})
+	}
+}
+
+func TestValidateRecipeRestoredDirectoryEligibility(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(*Recipe)
+	}{
+		{"memory", func(r *Recipe) { r.Role = RoleMemory }},
+		{"capability", func(r *Recipe) { r.Role = RoleCapability }},
+		{"unknown", func(r *Recipe) { r.Role = "unknown" }},
+		{"missing role", func(r *Recipe) { r.Role = "" }},
+		{"local scope", func(r *Recipe) { r.Scope = &RecipeScope{Marker: ".sample"} }},
+		{"wire actor", func(r *Recipe) { r.Wire.Actor = ActorExternal }},
+		{"wire tools", func(r *Recipe) { r.Wire.Tools = []string{"pi"} }},
+		{"wire run", func(r *Recipe) { r.Wire.Run = []string{"echo sample"} }},
+		{"wire MCP", func(r *Recipe) { r.Wire.Mcp = &WireMcp{Transport: "http"} }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := DecodeRecipe([]byte(directoryYAML()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Role = RoleOrchestration
+			tc.mutate(r)
+			data, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var restored Recipe
+			if err := json.Unmarshal(data, &restored); err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateDirectoryPin(restored.Name, restored.Version, restored.Delivery); err != nil {
+				t.Fatalf("role-independent pin rejected: %v", err)
+			}
+			if err := ValidateRecipe(&restored); err == nil {
+				t.Fatal("invalid actual restored recipe accepted")
 			}
 		})
 	}

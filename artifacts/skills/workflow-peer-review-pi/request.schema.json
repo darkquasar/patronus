@@ -1,0 +1,523 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workflow-peer-review-pi request",
+  "description": "Pi-subagents 0.72.1 envelope: <=16384 UTF-8 JSON bytes total, nonempty strings, <=16 properties/object, <=64 items/array, nesting <=8. Inline evidence <=8192 UTF-8 JSON bytes total; script enforces byte and cross-field constraints. Parent assertions do not prove external facts.",
+  "type": "object",
+  "properties": {
+    "cwd": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/(?!.*(?:\\\\|//|/\\.\\.?(/|$)))[^\\u0000-\\u001f]*[^/]$"
+    },
+    "outputDir": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/(?!.*(?:\\\\|//|/\\.\\.?(/|$)))[^\\u0000-\\u001f]*[^/]$"
+    },
+    "sourceRevision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "sourceRoots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": "^/(?!.*(?:\\\\|//|/\\.\\.?(/|$)))[^\\u0000-\\u001f]*[^/]$"
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "authorization": {
+      "type": "object",
+      "properties": {
+        "parentVerified": {
+          "const": true
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*(?:\\.\\.|\\\\|\\*|\\?|\\[|\\]))[^\\u0000-\\u001f]+$"
+          },
+          "minItems": 0,
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "parentVerified",
+        "evidence",
+        "actions",
+        "files"
+      ],
+      "additionalProperties": false,
+      "maxProperties": 16
+    },
+    "preflight": {
+      "type": "object",
+      "properties": {
+        "pathsVerified": {
+          "const": true
+        },
+        "rolesVerified": {
+          "const": true
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "piVersion": {
+          "const": "0.87.1"
+        },
+        "subagentsVersion": {
+          "const": "0.72.1"
+        }
+      },
+      "required": [
+        "pathsVerified",
+        "rolesVerified",
+        "evidence",
+        "piVersion",
+        "subagentsVersion"
+      ],
+      "additionalProperties": false,
+      "maxProperties": 16
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "maxLength": 40,
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          }
+        },
+        "required": [
+          "key",
+          "text"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 16
+      },
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          }
+        },
+        "required": [
+          "label",
+          "text"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 16
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "roles": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "enum": [
+            "patronus-technical-reviewer-pi"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "patronus-plan-reviewer-pi",
+            "patronus-technical-reviewer-pi"
+          ]
+        }
+      },
+      "required": [
+        "peer",
+        "disposition"
+      ],
+      "additionalProperties": false,
+      "maxProperties": 16
+    },
+    "runners": {
+      "type": "object",
+      "properties": {
+        "native": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "available",
+                "unverified",
+                "unavailable"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "executable": {
+              "type": "string",
+              "maxLength": 4096,
+              "minLength": 1,
+              "description": "Canonical observed executable, or nonempty UNAVAILABLE sentinel for an unavailable candidate."
+            },
+            "version": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1,
+              "description": "Observed qualified version, or nonempty UNAVAILABLE sentinel for unavailable candidate."
+            },
+            "checkedAt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "contractVerified": {
+              "type": "boolean"
+            },
+            "authEvidence": {
+              "type": "string",
+              "maxLength": 2000,
+              "minLength": 1,
+              "description": "Existing nonsecret version-qualified evidence when available; exactly UNVERIFIED for unverified auth, never an empty string."
+            },
+            "allowUnverified": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "executable",
+            "version",
+            "checkedAt",
+            "contractVerified",
+            "authEvidence",
+            "allowUnverified"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "unverified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "const": "UNVERIFIED"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "available"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "not": {
+                      "enum": [
+                        "UNVERIFIED",
+                        "UNAVAILABLE"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "claude-code": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "available",
+                "unverified",
+                "unavailable"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "executable": {
+              "type": "string",
+              "maxLength": 4096,
+              "minLength": 1,
+              "description": "Canonical observed executable, or nonempty UNAVAILABLE sentinel for an unavailable candidate."
+            },
+            "version": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1,
+              "description": "Observed qualified version, or nonempty UNAVAILABLE sentinel for unavailable candidate."
+            },
+            "checkedAt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "contractVerified": {
+              "type": "boolean"
+            },
+            "authEvidence": {
+              "type": "string",
+              "maxLength": 2000,
+              "minLength": 1,
+              "description": "Existing nonsecret version-qualified evidence when available; exactly UNVERIFIED for unverified auth, never an empty string."
+            },
+            "allowUnverified": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "executable",
+            "version",
+            "checkedAt",
+            "contractVerified",
+            "authEvidence",
+            "allowUnverified"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "unverified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "const": "UNVERIFIED"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "available"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "not": {
+                      "enum": [
+                        "UNVERIFIED",
+                        "UNAVAILABLE"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "codex-exec": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "available",
+                "unverified",
+                "unavailable"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "executable": {
+              "type": "string",
+              "maxLength": 4096,
+              "minLength": 1,
+              "description": "Canonical observed executable, or nonempty UNAVAILABLE sentinel for an unavailable candidate."
+            },
+            "version": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1,
+              "description": "Observed qualified version, or nonempty UNAVAILABLE sentinel for unavailable candidate."
+            },
+            "checkedAt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "contractVerified": {
+              "type": "boolean"
+            },
+            "authEvidence": {
+              "type": "string",
+              "maxLength": 2000,
+              "minLength": 1,
+              "description": "Existing nonsecret version-qualified evidence when available; exactly UNVERIFIED for unverified auth, never an empty string."
+            },
+            "allowUnverified": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "reason",
+            "executable",
+            "version",
+            "checkedAt",
+            "contractVerified",
+            "authEvidence",
+            "allowUnverified"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "unverified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "const": "UNVERIFIED"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "available"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "authEvidence": {
+                    "not": {
+                      "enum": [
+                        "UNVERIFIED",
+                        "UNAVAILABLE"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "native",
+        "claude-code",
+        "codex-exec"
+      ],
+      "additionalProperties": false,
+      "maxProperties": 16
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2
+    },
+    "spawnLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600000
+    },
+    "allowReduced": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "cwd",
+    "outputDir",
+    "sourceRevision",
+    "sourceRoots",
+    "authorization",
+    "preflight",
+    "tasks",
+    "evidence",
+    "roles",
+    "runners",
+    "concurrency",
+    "spawnLimit",
+    "timeoutMs",
+    "allowReduced"
+  ],
+  "additionalProperties": false,
+  "maxProperties": 16
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "kind": "grant",
+  "example": true,
+  "status": "unknown",
+  "issuer": "unknown",
+  "issued_at": "2026-01-01T00:00:00Z",
+  "action": "qualification",
+  "roots": [
+    "."
+  ],
+  "outputs": [],
+  "inputs": [],
+  "expires_at": null,
+  "revalidation_trigger": "any changed input or scope",
+  "owner_verification": {
+    "owner": "unknown",
+    "result": "unknown",
+    "checked_at": "2026-01-01T00:00:00Z",
+    "action": "qualification",
+    "roots": [
+      "."
+    ],
+    "outputs": [],
+    "inputs": []
+  }
+}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -45,9 +46,29 @@ func (e *Engine) transformSkill(art *manifest.Artifact, ad *manifest.Adapter, sc
 	if entry == "" {
 		entry = "SKILL.md"
 	}
+	if ad.Tool == "pi" {
+		if _, err := scan.PiSourcePath(srcDir, entry); err != nil {
+			return nil, err
+		}
+		if err := scan.PiSafePath(skillMd); err != nil {
+			return nil, err
+		}
+		if !scan.PiSafeName(art.Name) || filepath.Base(skillDir) != art.Name {
+			return nil, fmt.Errorf("pi skill %q: destination identity mismatch", art.Name)
+		}
+	}
 	body, err := os.ReadFile(filepath.Join(srcDir, entry))
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read skill entry: %w", err)
+	}
+	if ad.Tool == "pi" {
+		name, err := scan.PiMarkdownName(body)
+		if err != nil {
+			return nil, err
+		}
+		if name != art.Name {
+			return nil, fmt.Errorf("pi skill %q: frontmatter name %q disagrees with catalog identity", art.Name, name)
+		}
 	}
 	diffs = append(diffs, diff.FileDiff{
 		Path:   skillMd,
@@ -60,6 +81,11 @@ func (e *Engine) transformSkill(art *manifest.Artifact, ad *manifest.Adapter, sc
 
 	// 2. Supporting Files directories, copied under the skill dir.
 	for _, rel := range art.Files {
+		if ad.Tool == "pi" {
+			if _, err := scan.PiSourcePath(srcDir, rel); err != nil {
+				return nil, err
+			}
+		}
 		rel = filepath.Clean(rel)
 		ops, err := e.copyTree(filepath.Join(srcDir, rel), filepath.Join(skillDir, rel), ad.Tool, scope, string(art.Role), ph)
 		if err != nil {
@@ -116,8 +142,16 @@ func (e *Engine) copyTree(srcRoot, dstRoot, tool, scope, role string, ph skillPl
 		if err != nil {
 			return err
 		}
+		if tool == "pi" {
+			if err := scan.PiSafePath(path); err != nil {
+				return err
+			}
+		}
 		if d.IsDir() {
 			return nil
+		}
+		if tool == "pi" && !d.Type().IsRegular() {
+			return fmt.Errorf("pi sidecar %s is not regular", path)
 		}
 		rel, err := filepath.Rel(srcRoot, path)
 		if err != nil {

@@ -19,6 +19,38 @@ func receiptFixture(t *testing.T, home string) *Receipt {
 	}
 	return &Receipt{SchemaVersion: 1, Recipe: "pi-sandbox", RecipeVersion: "1.0.0", Root: filepath.Join(canonical, ".patronus/packages/pi-sandbox"), URL: "https://example.com/package.tar.gz", ArchiveSHA256: "sha256:" + strings.Repeat("a", 64), Identity: packagebundle.Identity{Name: "pi-sandbox", Version: "1.0.0", OS: "linux", Arch: "amd64"}, Files: []packagebundle.Entry{{Path: "package.json", Mode: 0644, SHA256: "sha256:" + strings.Repeat("b", 64)}}, Directories: []string{"."}}
 }
+func cp05ScopedReceipt(t *testing.T, home string) *Receipt {
+	t.Helper()
+	canonical, err := filepath.EvalSymlinks(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := "sha256:" + strings.Repeat("b", 64)
+	return &Receipt{
+		SchemaVersion: 1, Recipe: "invented-kit", RecipeVersion: "1.0.0",
+		Root: filepath.Join(canonical, ".patronus/packages/invented-kit"),
+		URL:  "https://fixture.invalid/kit.tar.gz", ArchiveSHA256: digest,
+		Identity: packagebundle.Identity{Name: "invented-payload", Version: "2.0.0", OS: "linux", Arch: "arm64"},
+		Files: []packagebundle.Entry{
+			{Path: "node_modules/@example/tool/index.js", Mode: 0644, SHA256: digest},
+			{Path: "package.json", Mode: 0644, SHA256: digest},
+		},
+		Directories: []string{".", "node_modules", "node_modules/@example", "node_modules/@example/tool"},
+	}
+}
+
+func TestReceiptScopedMemberRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	want := cp05ScopedReceipt(t, home)
+	if err := Save(home, want); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(home, want.Recipe)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("scoped receipt: %#v, %v", got, err)
+	}
+}
+
 func TestReceiptAbsent(t *testing.T) {
 	home := t.TempDir()
 	got, err := Load(home, "pi-sandbox")

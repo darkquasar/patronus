@@ -1,0 +1,60 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: core-profile-pi
+version: 2.0.0
+summary: "Upstream-only bounded Pi workflows, native roles and required subagents and DDG web delivery. Static placement is runtime-unverified; activation and qualification are separate."
+# Deliberately no extends edge to the Claude core. Membership is catalog data,
+# reviewed in docs/pi-content-inventory.md, not an executable name/count oracle.
+layers:
+  instructions:
+    - agents-spine-pi
+    - diagram-explain-pi
+    - branch-first-pi
+    - writing-style-pointer-pi
+    - work-state-reground-pi
+    - language-detect-pi
+    - session-completion-pi
+    - web-research-pointer-pi
+  capabilities:
+    - skills-dispatch-pi
+    - plan-writing-pi
+    - plan-execute-pi
+    - grilling-pi
+    - diagnosing-bugs-pi
+    - tdd-pi
+    - spec-brainstorming-pi
+    - using-git-worktrees-pi
+    - finishing-a-development-branch-pi
+    - writing-editorial-pi
+    - research-team-pi
+    - workflow-research-pi
+    - workflow-implement-pi
+    - workflow-peer-review-pi
+    - plan-execute-parallel-pi
+    - web-research-pi
+  context:
+    - codebase-design-pi
+    - domain-modeling-pi
+    - ddd-distilled-pi
+    - refactoring-distilled-pi
+    - go-style-uber-pi # inherited by overlays; read only when Go work is relevant
+  tools:
+    - pi-web-access
+  eval:
+    - spec-review-pi
+    - plan-review-pi
+    - verification-before-completion-pi
+    - requesting-code-review-pi
+    - receiving-code-review-pi
+  orchestration:
+    - dispatching-parallel-agents-pi
+    - pi-subagents
+    - patronus-researcher-pi
+    - patronus-spec-author-pi
+    - patronus-technical-reviewer-pi
+    - patronus-workflow-security-reviewer-pi
+    - patronus-plan-author-pi
+    - patronus-plan-reviewer-pi
+    - patronus-writer-pi
+    - patronus-web-researcher-pi

@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: branch-first-pi
+description: "Advisory preference for feature branches, subordinate to the task's Git grant and allocated branch/worktree. Inline Pi context guidance."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [pi]
+defaults:
+  scope: project

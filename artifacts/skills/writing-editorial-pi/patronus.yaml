@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: writing-editorial-pi
+description: "Pi-scoped writing editorial discipline"
+version: 2.0.1
+entry: SKILL.md
+files: ["NOTICE", "SOURCE.md", "edit-record.md", "sectioning.md", "tier-0.md", "tier-1-fixtures.md", "tier-1.md", "tier-2.md", "tier-3.md"]
+targets: [pi]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/conorbronsdon/avoid-ai-writing
+  license: MIT
+  copyright: "Copyright (c) 2026 Conor Bronsdon"
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."

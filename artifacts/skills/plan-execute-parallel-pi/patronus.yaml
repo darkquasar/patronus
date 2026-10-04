@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-execute-parallel-pi
+description: "Execute independent file-owning lanes with serial consumption barriers"
+version: 2.0.0
+entry: SKILL.md
+files: ["PROVENANCE-GUIDE.md", "SOURCE.md", "TEAMMATE-TEMPLATE.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["pi-subagents"]

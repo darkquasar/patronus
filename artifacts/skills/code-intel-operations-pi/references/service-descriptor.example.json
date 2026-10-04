@@ -1,0 +1,36 @@
+{
+  "recordKind": "manual-service-descriptor-example-not-installer-state",
+  "sourceRoot": "/ABSOLUTE/APPROVED/PROJECT",
+  "repositoryRevision": "<observed-full-commit>",
+  "trackedDirty": null,
+  "trackedDiffSHA256": "<observed-digest-or-clean>",
+  "untrackedTreatment": "<record-inventory-and-included-or-excluded-status>",
+  "service": {
+    "entryName": "serena-shared-pi",
+    "implementation": "Serena",
+    "version": "<qualified-version>",
+    "ref": "<immutable-source-ref>",
+    "owner": "<coordinator-run-identity>",
+    "endpoint": "http://127.0.0.1:9121/mcp",
+    "transport": "http",
+    "clientNetworkNamespace": "<observed-namespace>",
+    "allowedTools": [],
+    "observedTools": [],
+    "restrictionEvidence": "<fixed-read-navigation-server-surface-and-client-plan>",
+    "configurationSources": [],
+    "configurationDigest": "<redacted-safe-config-digest>",
+    "lifecycle": { "state": "unverified", "observationTime": null, "logReference": null }
+  },
+  "readiness": {
+    "status": "runtime-unverified",
+    "mcpInitialize": null,
+    "serenaInitialInstructions": null,
+    "expectedRootMatches": null,
+    "definitionAndCaller": null,
+    "graphQueryAndProvenance": null,
+    "effectiveRestrictions": null,
+    "clientReloadAcknowledged": false,
+    "observationTime": null,
+    "evidenceReferences": []
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "example": true,
+  "status": "unknown",
+  "case_id": "Q-T3-M",
+  "class": "M",
+  "model_class": "C",
+  "production_subject": "scripts/check-pi-evidence.py",
+  "scenario_consumer": "docs/pi-qualification/operational-tests.md",
+  "limitations": [
+    "INDEPENDENT EXAMPLE MODEL; invented observations, not release evidence.",
+    "C model consistency plus M checker-record coverage only. No actual provisioning denial, interception, isolation or web-bound proof; QP-03 must run pinned I subjects."
+  ],
+  "observations": [
+    {
+      "scenario": "mutation",
+      "trace": [
+        {
+          "event": "approve",
+          "argv": [
+            "fake-write",
+            "allowed"
+          ]
+        },
+        {
+          "event": "mutate",
+          "argv": [
+            "fake-write",
+            "forbidden"
+          ]
+        },
+        {
+          "event": "recheck",
+          "result": "deny"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [
+        "fake-write",
+        "allowed"
+      ],
+      "observed_argv": [
+        "fake-write",
+        "forbidden"
+      ],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "order",
+      "trace": [
+        {
+          "event": "mutate"
+        },
+        {
+          "event": "final-policy-check",
+          "result": "deny"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "exception",
+      "trace": [
+        {
+          "event": "handler-error"
+        },
+        {
+          "event": "blocking-path",
+          "result": "deny"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "cancel",
+      "trace": [
+        {
+          "event": "approval-cancel"
+        },
+        {
+          "event": "no-dispatch"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "expiry",
+      "trace": [
+        {
+          "event": "deadline-expired"
+        },
+        {
+          "event": "no-dispatch"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    },
+    {
+      "scenario": "parallel-consumption",
+      "trace": [
+        {
+          "event": "reserve",
+          "call": "one"
+        },
+        {
+          "event": "consume",
+          "call": "one"
+        },
+        {
+          "event": "reserve-denied",
+          "call": "two"
+        },
+        {
+          "event": "observe",
+          "value": "denied"
+        }
+      ],
+      "approved_argv": [],
+      "observed_argv": [],
+      "expected": "denied",
+      "observed": "denied",
+      "outcome": "pass"
+    }
+  ]
+}

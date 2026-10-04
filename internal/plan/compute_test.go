@@ -3,6 +3,7 @@ package plan
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
+	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -630,4 +632,236 @@ func paths(diffs []diff.FileDiff) []string {
 		out[i] = d.Path
 	}
 	return out
+}
+
+func TestPiCompositionRefoldFailureDiscardsPlan(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	first := mcpMergeDiff(t, path, nil, "fixture-first", "one")
+	second := mcpMergeDiff(t, path, nil, "fixture-second", "two")
+	// Inject a broken intermediate result, not a broken standalone transform.
+	first.After = []byte(`{"broken":`)
+	cs, err := Finalize([]diff.FileDiff{first, second}, existingBytes(nil))
+	if err == nil || cs != nil {
+		t.Fatalf("refold failure returned success/partial plan: cs=%+v err=%v", cs, err)
+	}
+}
+
+func TestPiCompositionStructuralConflicts(t *testing.T) {
+	for _, tt := range []struct {
+		name, owner, dotted string
+		value               any
+	}{
+		{"different owner equal value", "other", "mcpServers.fixture", map[string]any{"command": "one", "type": "stdio"}},
+		{"same owner different value", "fixture", "mcpServers.fixture", false},
+		{"ancestor", "other", "mcpServers", false},
+		{"descendant", "other", "mcpServers.fixture.command", "one"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "settings.json")
+			first := mcpMergeDiff(t, path, nil, "fixture", "one")
+			second := first
+			edit := *first.Setting
+			edit.Dotted, edit.ScalarValue = tt.dotted, tt.value
+			second.Artifact, second.Setting = tt.owner, &edit
+			cs, err := Finalize([]diff.FileDiff{first, second}, existingBytes(nil))
+			if err == nil || cs != nil {
+				t.Fatalf("overlap accepted: %+v, %v", cs, err)
+			}
+		})
+	}
+}
+
+func TestPiCompositionRejectsHeterogeneousIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name, firstTool, secondTool, firstScope, secondScope string
+	}{
+		{"scope", "pi", "pi", "global", "local"},
+		{"tool", "claude", "codex", "global", "global"},
+	} {
+		for _, reverse := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/reverse=%t", tc.name, reverse), func(t *testing.T) {
+				path := filepath.Join(t.TempDir(), "settings.json")
+				installed := mcpMergeDiff(t, path, nil, "fixture-b", "one")
+				owner := state.Item{Artifact: "fixture-b", Tool: tc.firstTool, Scope: tc.firstScope, Files: []state.FileState{{Path: path, Action: string(diff.Merge), Setting: installed.Setting}}}
+				first := mcpMergeDiff(t, path, installed.After, "fixture-a", "fresh")
+				second := mcpMergeDiff(t, path, installed.After, "fixture-b", "two")
+				first.Tool, first.Scope = tc.firstTool, tc.firstScope
+				second.Tool, second.Scope = tc.secondTool, tc.secondScope
+				rows := []diff.FileDiff{first, second}
+				if reverse {
+					rows[0], rows[1] = rows[1], rows[0]
+				}
+				cs, err := Finalize(rows, existingBytes(installed.After))
+				if err == nil {
+					admitted, admissionErr := AdmitSettings(cs, []state.Item{owner})
+					t.Fatalf("identity lost before admission: admitted=%t admissionErr=%v", admitted != nil, admissionErr)
+				}
+				if cs != nil {
+					t.Fatal("conflict returned a partial plan")
+				}
+			})
+		}
+	}
+}
+
+func TestPiCompositionDuplicateOwnerIsIdempotent(t *testing.T) {
+	d := mcpMergeDiff(t, filepath.Join(t.TempDir(), "settings.json"), nil, "fixture", "one")
+	cs, err := Finalize([]diff.FileDiff{d, d}, existingBytes(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs.Diffs) != 1 || len(cs.Diffs[0].SettingContrib) != 0 {
+		t.Fatalf("duplicate ownership: %+v", cs)
+	}
+}
+
+func TestPiCompositionScalarMCPOrderIndependent(t *testing.T) {
+	base := []byte(`{"unrelated":{"legacy":true},"mcpServers":{"external":{"url":"https://fixture.invalid"}}}`)
+	path := filepath.Join(t.TempDir(), "settings.json")
+	mcp := mcpMergeDiff(t, path, base, "fixture", "one")
+	scalar := mcp
+	scalar.Artifact = "switch"
+	scalar.Setting = &diff.SettingEdit{Target: mcp.Setting.Target, Dotted: "ui.color", ScalarValue: false}
+	var err error
+	scalar.After, err = adapter.ApplySettingEdit(base, scalar.Setting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := Finalize([]diff.FileDiff{mcp, scalar}, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := Finalize([]diff.FileDiff{scalar, mcp}, existingBytes(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first.Diffs[0].After, second.Diffs[0].After) {
+		t.Fatal("order changed result")
+	}
+	for _, dotted := range []string{"unrelated.legacy", "mcpServers.external.url", "mcpServers.fixture.command", "ui.color"} {
+		_, present, err := adapter.ReadDotted(first.Diffs[0].After, manifest.FileTarget{File: "settings.json", Format: "json"}, dotted)
+		if err != nil || !present {
+			t.Fatalf("missing sibling %s: %v", dotted, err)
+		}
+	}
+}
+
+func TestPiCompositionOwnershipAdmission(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	original := mcpMergeDiff(t, path, nil, "fixture", "one")
+	owner := state.Item{Artifact: original.Artifact, Tool: original.Tool, Scope: original.Scope, Files: []state.FileState{{Path: path, Action: string(diff.Merge), Setting: original.Setting}}}
+	current := original.After
+	desired := mcpMergeDiff(t, path, current, "fixture", "two")
+	cs, err := Finalize([]diff.FileDiff{desired}, existingBytes(current))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name   string
+		owners []state.Item
+	}{
+		{"unmanaged differing", nil},
+		{"other owner", []state.Item{{Artifact: "other", Tool: owner.Tool, Scope: owner.Scope, Files: owner.Files}}},
+		{"other scope", []state.Item{{Artifact: owner.Artifact, Tool: owner.Tool, Scope: "local", Files: owner.Files}}},
+		{"duplicate evidence", []state.Item{owner, owner}},
+		{"legacy ownership", []state.Item{{Artifact: "legacy", Files: []state.FileState{{Path: path, Action: string(diff.Merge)}}}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := AdmitSettings(cs, tt.owners)
+			if err == nil || got != nil {
+				t.Fatalf("unsafe admission: %+v %v", got, err)
+			}
+		})
+	}
+	admitted, err := AdmitSettings(cs, []state.Item{owner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(admitted.Diffs[0].After, desired.After) {
+		t.Fatal("same owner update changed result")
+	}
+	edited := mcpMergeDiff(t, path, []byte(`{"mcpServers":{"fixture":{"command":"edited"}}}`), "fixture", "two")
+	if _, err := AdmitSettings(&diff.ChangeSet{Diffs: []diff.FileDiff{edited}}, []state.Item{owner}); err == nil {
+		t.Fatal("drift accepted")
+	}
+}
+
+func TestPiCompositionExternalEqualNeverBecomesContributor(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	external := mcpMergeDiff(t, path, nil, "external-fixture", "one")
+	base := external.After
+	external = mcpMergeDiff(t, path, base, "external-fixture", "one")
+	fresh := mcpMergeDiff(t, path, base, "managed-fixture", "two")
+	for _, raw := range [][]diff.FileDiff{{external, fresh}, {fresh, external}} {
+		cs, err := Finalize(raw, existingBytes(base))
+		if err != nil {
+			t.Fatal(err)
+		}
+		admitted, err := AdmitSettings(cs, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		admitted, err = AdmitSettings(admitted, nil)
+		if err != nil {
+			t.Fatalf("repeat admission rejected equal unmanaged sibling: %v", err)
+		}
+		var writes []diff.FileDiff
+		for _, d := range admitted.Diffs {
+			if d.Action != diff.Skip {
+				writes = append(writes, d)
+			}
+		}
+		if len(writes) != 1 || writes[0].Artifact != "managed-fixture" || len(writes[0].SettingContrib) != 0 {
+			t.Fatalf("external gained authority: %+v", writes)
+		}
+		recorded := state.FromChangeSet(writes, "")
+		if len(recorded) != 1 || recorded[0].Artifact != "managed-fixture" {
+			t.Fatalf("external recorded: %+v", recorded)
+		}
+		if _, ok := servers(t, writes[0].After)["external-fixture"]; !ok {
+			t.Fatal("external lost")
+		}
+	}
+}
+
+func TestPiCompositionAdmissionStillRejectsNonstructuralWrite(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	structural := mcpMergeDiff(t, path, nil, "fixture-setting", "one")
+	file := structural
+	file.Artifact, file.Action, file.Setting = "fixture-file", diff.Create, nil
+	file.After = []byte(`{"replacement":true}`)
+	for _, rows := range [][]diff.FileDiff{{structural, file}, {file, structural}} {
+		if got, err := AdmitSettings(&diff.ChangeSet{Diffs: rows}, nil); err == nil || got != nil {
+			t.Fatalf("real structural/nonstructural conflict admitted: %+v %v", got, err)
+		}
+	}
+}
+
+func TestPiCompositionInvalidPriorAndChangedPath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	d := mcpMergeDiff(t, path, nil, "fixture", "one")
+	d.Before = []byte(`null`)
+	if got, err := Finalize([]diff.FileDiff{d}, existingBytes(d.Before)); err == nil || got != nil {
+		t.Fatal("invalid prior admitted")
+	}
+	d.Before = nil
+	owner := state.Item{Artifact: d.Artifact, Tool: d.Tool, Files: []state.FileState{{Path: path + ".old", Action: string(diff.Merge), Setting: d.Setting}}}
+	if got, err := AdmitSettings(&diff.ChangeSet{Diffs: []diff.FileDiff{d}}, []state.Item{owner}); err == nil || got != nil {
+		t.Fatal("relocated path admitted")
+	}
+}
+
+func TestPiCompositionDuplicateComposedOwnerIsIdempotent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	cs, err := Finalize([]diff.FileDiff{mcpMergeDiff(t, path, nil, "first", "one"), mcpMergeDiff(t, path, nil, "second", "two")}, existingBytes(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	repeated, err := Finalize([]diff.FileDiff{cs.Diffs[0], cs.Diffs[0]}, existingBytes(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repeated.Diffs) != 1 || len(repeated.Diffs[0].SettingContrib) != 1 {
+		t.Fatalf("duplicated composite ownership: %+v", repeated)
+	}
 }

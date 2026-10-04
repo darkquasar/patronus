@@ -99,7 +99,8 @@ func withRemoteEnv(t *testing.T, f *servingFetcher) (home string) {
 	t.Setenv("PATRONUS_REGISTRY_URL", testRegistryBase)
 	// Pin the per-tool config-dir env vars INTO the temp HOME so an install can't
 	// escape the sandbox via an inherited override. OpenCode resolves its global
-	// config from XDG_CONFIG_HOME/OPENCODE_CONFIG_DIR and Codex from CODEX_HOME
+	// config from XDG_CONFIG_HOME/OPENCODE_CONFIG_DIR, Codex from CODEX_HOME,
+	// and Pi from PI_CODING_AGENT_DIR
 	// (see internal/toolpath/resolver.go); on a host where any of these is already
 	// set (e.g. CI runners set XDG_CONFIG_HOME=/home/runner/.config) the writes
 	// would land outside HOME and the `~/.config/opencode/...` assertions would
@@ -108,6 +109,11 @@ func withRemoteEnv(t *testing.T, f *servingFetcher) (home string) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("OPENCODE_CONFIG_DIR", filepath.Join(home, ".config", "opencode"))
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
+	t.Setenv("PI_PACKAGE_DIR", "")
+	t.Setenv("PI_SUBAGENT_EXTRA_AGENT_DIRS", "")
+	t.Setenv("PI_MCP_CONFIG_MODE", "")
+	t.Setenv("PI_OFFLINE", "true")
 	// A cwd with no artifacts/ + adapters/ above it → DiscoverRoot fails → Remote.
 	work := t.TempDir()
 	t.Chdir(work)

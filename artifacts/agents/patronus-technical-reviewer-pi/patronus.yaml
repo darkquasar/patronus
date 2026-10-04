@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-technical-reviewer-pi
+description: "Review source-backed specifications or exact implementation changes"
+version: 2.0.0
+entry: agent.md
+files: []
+targets: [pi]
+defaults:
+  scope: project
+requires:
+  - spec-review-pi
+  - requesting-code-review-pi
+  - verification-before-completion-pi
+  - pi-subagents

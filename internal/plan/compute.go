@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
+	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -26,13 +28,13 @@ type Request struct {
 	Adapters  map[string]*manifest.Adapter // keyed by tool
 	Resolver  toolpath.Resolver
 	Names     []string // positional artifact names to install
-	Tool      string   // "claude"|"codex"|"opencode"|"all"|"" (=> detected/all targeted)
+	Tool      string   // "claude"|"codex"|"opencode"|"pi"|"all"|"" (=> detected/all targeted)
 	Scope     string   // "global"|"local"|"" (=> artifact default)
 }
 
-// toolRank orders tools by the DESIGN build order (claude → opencode → codex)
+// toolRank orders tools by the DESIGN build order (claude → opencode → codex → pi)
 // for stable, intuitive output.
-var toolRank = map[string]int{"claude": 0, "opencode": 1, "codex": 2}
+var toolRank = map[string]int{"claude": 0, "opencode": 1, "codex": 2, "pi": 3}
 
 // Compute resolves req into a classified change set. It performs read-only
 // filesystem access (to read existing targets and stat for classification).
@@ -68,7 +70,11 @@ func Compute(req Request) (*diff.ChangeSet, error) {
 			if !ok {
 				return nil, fmt.Errorf("no adapter for tool %q", tool)
 			}
-			diffs, err := eng.Transform(art, ad, scope, entry.Source.LocalDir, readExisting)
+			read := adapter.ReadExisting(readExisting)
+			if tool == "pi" {
+				read = adapter.ReadExisting(scan.ReadPiFile)
+			}
+			diffs, err := eng.Transform(art, ad, scope, entry.Source.LocalDir, read)
 			if err != nil {
 				return nil, fmt.Errorf("%s -> %s: %w", name, tool, err)
 			}
@@ -76,6 +82,29 @@ func Compute(req Request) (*diff.ChangeSet, error) {
 		}
 	}
 
+	// Native named skills must be in this selected catalog closure, not merely
+	// happen to exist in a user's runtime environment.
+	for _, d := range raw {
+		if d.Tool != "pi" || d.Type != string(manifest.TypeAgent) {
+			continue
+		}
+		skills, err := adapter.ValidatePiAgent(d.Artifact, d.After)
+		if err != nil {
+			return nil, err
+		}
+		for _, skill := range skills {
+			found := false
+			for _, name := range req.Names {
+				entry, err := findArtifact(req.Catalog, name)
+				if err == nil && entry.Manifest.Name == skill && entry.Manifest.Type == manifest.TypeSkill {
+					found = true
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("pi agent %q field skills: %q is absent from selected skill closure", d.Artifact, skill)
+			}
+		}
+	}
 	return Finalize(raw, readExisting)
 }
 
@@ -86,7 +115,23 @@ func Compute(req Request) (*diff.ChangeSet, error) {
 // classified diff.ChangeSet rather than two parallel paths (the brief's
 // "one spine" requirement). read supplies current target bytes for classification.
 func Finalize(raw []diff.FileDiff, read adapter.ReadExisting) (*diff.ChangeSet, error) {
-	composed := composeByPath(raw)
+	for i, d := range raw {
+		if d.Tool != "pi" {
+			continue
+		}
+		if err := scan.PiSafePath(d.Path); err != nil {
+			return nil, err
+		}
+		for _, other := range raw[:i] {
+			if other.Path == d.Path && (other.Tool != "pi" || (d.Action == diff.Create && other.Artifact != d.Artifact)) {
+				return nil, fmt.Errorf("pi destination conflict %s: %s (%s) and %s (%s)", d.Path, other.Artifact, other.Tool, d.Artifact, d.Tool)
+			}
+		}
+	}
+	composed, err := composeByPath(raw)
+	if err != nil {
+		return nil, err
+	}
 	classified, err := classify(composed, read)
 	if err != nil {
 		return nil, err
@@ -179,27 +224,75 @@ func sortByRank(tools []string) []string {
 // case across SKILL.md-native tools); APPEND/MERGE accumulate so e.g. codex and
 // opencode both appending to a shared project AGENTS.md produce one combined
 // result rather than two competing writes.
-func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
+func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 	order := []string{}
 	byPath := map[string]*diff.FileDiff{}
+	settings := map[string][]diff.FileDiff{}
 
 	for _, d := range diffs {
 		// FETCH/EXEC are per-recipe intents (a download, a command) that must
 		// not be folded together even if their Path collides (EXEC rows carry no
 		// real path). Pass each through under a unique key so all are preserved.
-		if d.Action == diff.Fetch || d.Action == diff.Exec {
+		if d.Action == diff.Fetch || d.Action == diff.Exec || d.Native != nil {
 			key := string(d.Action) + "\x00" + d.Path + "\x00" + d.Note
 			cp := d
 			byPath[key] = &cp
 			order = append(order, key)
 			continue
 		}
+		if d.Action == diff.Merge && d.Setting == nil {
+			return nil, fmt.Errorf("compose %s: merge missing structural evidence", d.Path)
+		}
+		// Check every leaf, including contributors from an earlier Finalize.
+		rows := settingRows(d)
+		duplicates := 0
+		for _, row := range rows {
+			// SettingContrib inherits its enclosing diff's tool/scope. Until it
+			// carries independent identities, refuse heterogeneous composition
+			// before a fold can erase the original owner (even for disjoint keys).
+			if strings.Contains(row.Tool, "+") {
+				return nil, fmt.Errorf("compose %s: ambiguous structural tool identity %q", d.Path, row.Tool)
+			}
+			duplicate := false
+			if err := adapter.ValidateSettingEdit(row.Setting); err != nil {
+				return nil, fmt.Errorf("compose %s: %w", d.Path, err)
+			}
+			if _, _, err := adapter.SettingStatus(row.Before, row.Setting); err != nil {
+				return nil, fmt.Errorf("compose %s prior: %w", d.Path, err)
+			}
+			for _, old := range settings[d.Path] {
+				if old.Tool != row.Tool || old.Scope != row.Scope {
+					return nil, fmt.Errorf("compose %s: structural identity conflict between %s/%s and %s/%s", d.Path, old.Tool, old.Scope, row.Tool, row.Scope)
+				}
+				if err := adapter.CheckSettingPair(old.Setting, settingOwner(old), row.Setting, settingOwner(row)); err != nil {
+					return nil, fmt.Errorf("compose %s: %w", d.Path, err)
+				}
+				if adapter.SettingEditsOverlap(old.Setting, row.Setting) {
+					duplicate = true
+				}
+			}
+			if duplicate {
+				duplicates++
+			}
+			settings[d.Path] = append(settings[d.Path], row)
+		}
+		if duplicates > 0 {
+			if duplicates == len(rows) {
+				continue
+			}
+			return nil, fmt.Errorf("compose %s: partially overlapping composite ownership", d.Path)
+		}
 		prev, ok := byPath[d.Path]
 		if !ok {
 			cp := d
+			cp.SettingContrib = append([]diff.SettingContrib(nil), d.SettingContrib...)
+			cp.Contrib = append([]diff.SectionContrib(nil), d.Contrib...)
 			byPath[d.Path] = &cp
 			order = append(order, d.Path)
 			continue
+		}
+		if (prev.Setting == nil) != (d.Setting == nil) {
+			return nil, fmt.Errorf("compose %s: structural and nonstructural writes overlap", d.Path)
 		}
 		switch {
 		case d.Action == diff.Append && d.Section != nil:
@@ -219,7 +312,7 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 			}
 			prev.After = adapter.AppendSection(prev.After, d.Section.Name, d.Section.Body)
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
-		case d.Action == diff.Merge && d.Setting != nil:
+		case d.Setting != nil:
 			// Every settings MERGE was computed against the ORIGINAL file, so it must
 			// be re-applied onto the already-composed After or a second edit into one
 			// file silently drops the first. This covers hook registrations, scalar
@@ -227,14 +320,21 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 			// SettingEdits, and all of them compose. This is the MERGE-side twin of
 			// the composed-APPEND fold: record a per-artifact contributor so remove
 			// can strip exactly this element later.
-			folded, err := adapter.ApplySettingEdit(prev.After, d.Setting)
-			if err != nil {
-				// A malformed re-fold is a planner bug, not user input; surface it by
-				// keeping the standalone result rather than masking a half-merge.
-				prev.After = d.After
-			} else {
-				prev.After = folded
+			if prev.Setting == nil {
+				return nil, fmt.Errorf("compose %s: structural and nonstructural writes overlap", d.Path)
 			}
+			folded := prev.After
+			var err error
+			for _, row := range settingRows(d) {
+				folded, err = adapter.ApplySettingEdit(folded, row.Setting)
+				if err != nil {
+					break
+				}
+			}
+			if err != nil {
+				return nil, fmt.Errorf("compose %s (%s): %w", d.Path, d.Artifact, err)
+			}
+			prev.After = folded
 			// Record a per-edit contributor for every folded setting so state/remove
 			// can strip each element. This covers two shapes: distinct artifacts
 			// merging into one settings.json (the composed-hook case), AND a single
@@ -254,21 +354,33 @@ func composeByPath(diffs []diff.FileDiff) []diff.FileDiff {
 					Role: d.Role,
 				})
 			}
+			prev.SettingContrib = append(prev.SettingContrib, d.SettingContrib...)
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		default:
-			// CREATE, an append without a section, or a MERGE with no SettingEdit:
-			// keep the first, note sharing. Every MERGE producer in the tree attaches
-			// a Setting, so in production the MERGE arm of this is unreachable; it
-			// stays as an honest fallback rather than a silent last-wins.
+			if prev.Setting != nil {
+				return nil, fmt.Errorf("compose %s: structural and nonstructural writes overlap", d.Path)
+			}
+			// Nonstructural CREATE or append-without-section sharing retains the
+			// existing first-result semantics. MERGE evidence was checked above.
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		}
 	}
 
 	out := make([]diff.FileDiff, 0, len(order))
 	for _, p := range order {
-		out = append(out, *byPath[p])
+		d := *byPath[p]
+		for _, row := range settingRows(d) {
+			present, equal, err := adapter.SettingStatus(d.After, row.Setting)
+			if err != nil {
+				return nil, fmt.Errorf("compose %s result: %w", d.Path, err)
+			}
+			if !present || !equal {
+				return nil, fmt.Errorf("compose %s: result lost setting %s", d.Path, row.Setting.Dotted)
+			}
+		}
+		out = append(out, d)
 	}
-	return out
+	return out, nil
 }
 
 // mergeTool combines tool labels for a shared path. Identical tools collapse;
@@ -307,7 +419,7 @@ func classify(diffs []diff.FileDiff, read adapter.ReadExisting) ([]diff.FileDiff
 		// FETCH and EXEC are not file-content edits: FETCH is pre-classified by
 		// the recipe engine (sha-vs-disk), and EXEC is a display-only command
 		// row. Neither compares Before/After bytes, so skip the fs read here.
-		if d.Action == diff.Fetch || d.Action == diff.Exec {
+		if d.Action == diff.Fetch || d.Action == diff.Exec || d.Native != nil {
 			continue
 		}
 		before, exists, err := read(d.Path)
@@ -337,4 +449,125 @@ func sortDiffs(diffs []diff.FileDiff) {
 		}
 		return a.Path < b.Path
 	})
+}
+
+// settingRows retains the owner of every leaf in an already-composed diff.
+func settingRows(d diff.FileDiff) []diff.FileDiff {
+	if d.Setting == nil {
+		return nil
+	}
+	first := d
+	first.SettingContrib = nil
+	rows := []diff.FileDiff{first}
+	for _, c := range d.SettingContrib {
+		row := first
+		row.Artifact, row.Version, row.Type, row.Role, row.Setting = c.Artifact, c.Version, c.Type, c.Role, c.Edit
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func settingOwner(d diff.FileDiff) adapter.SettingOwner {
+	return adapter.SettingOwner{Artifact: d.Artifact, Tool: d.Tool, Scope: d.Scope}
+}
+
+// AdmitSettings checks installed evidence supplied by the command boundary. It
+// does no I/O and never turns byte equality into ownership. Both scopes must be
+// supplied by the caller because recorded absolute paths can cross scopes.
+func AdmitSettings(cs *diff.ChangeSet, owners []state.Item) (*diff.ChangeSet, error) {
+	var raw, noops []diff.FileDiff
+	for _, d := range cs.Diffs {
+		rows := settingRows(d)
+		if len(rows) == 0 {
+			raw = append(raw, d)
+			continue
+		}
+		for _, row := range rows {
+			owned := false
+			for _, it := range owners {
+				if it.Tool == "pi" && it.Root != "" && row.Root != "" && it.Root != row.Root {
+					continue
+				}
+				owner := adapter.SettingOwner{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
+				for _, file := range it.Files {
+					if file.Action != string(diff.Merge) {
+						continue
+					}
+					if owner == settingOwner(row) && (file.Path != row.Path || !adapter.SameSettingTarget(file.Setting, row.Setting)) {
+						// Multiple disjoint leaves of one item are legitimate; a dropped or
+						// relocated recorded leaf is not evidence for a new inverse baseline.
+						retained := false
+						for _, candidate := range cs.Diffs {
+							for _, leaf := range settingRows(candidate) {
+								if settingOwner(leaf) == owner && leaf.Path == file.Path && adapter.SameSettingTarget(leaf.Setting, file.Setting) {
+									retained = true
+								}
+							}
+						}
+						if !retained {
+							return nil, fmt.Errorf("setting %s: recorded path changed for %s; explicit migration required", row.Path, it.Artifact)
+						}
+					}
+					if file.Path != row.Path {
+						continue
+					}
+					if err := adapter.ValidateSettingEdit(file.Setting); err != nil {
+						return nil, fmt.Errorf("setting %s owner %s: %w", row.Path, it.Artifact, err)
+					}
+					if !adapter.SettingEditsOverlap(file.Setting, row.Setting) {
+						if err := adapter.CheckSettingPair(file.Setting, owner, row.Setting, settingOwner(row)); err != nil {
+							return nil, fmt.Errorf("setting %s: %w", row.Path, err)
+						}
+						continue
+					}
+					if owner != settingOwner(row) || !adapter.SameSettingTarget(file.Setting, row.Setting) || owned {
+						return nil, fmt.Errorf("setting ownership conflict at %s: %s (%s/%s) overlaps %s (%s/%s); explicit migration required", row.Path, it.Artifact, it.Tool, it.Scope, row.Artifact, row.Tool, row.Scope)
+					}
+					present, equal, err := adapter.SettingStatus(row.Before, file.Setting)
+					if err != nil {
+						return nil, fmt.Errorf("setting %s: %w", row.Path, err)
+					}
+					if !present || !equal {
+						return nil, fmt.Errorf("setting %s: recorded leaf %s changed or missing", row.Path, file.Setting.Dotted)
+					}
+					owned = true
+				}
+			}
+			present, equal, err := adapter.SettingStatus(row.Before, row.Setting)
+			if err != nil {
+				return nil, fmt.Errorf("setting %s: %w", row.Path, err)
+			}
+			if !owned && present {
+				if !equal {
+					return nil, fmt.Errorf("setting %s at %s differs from unmanaged contribution; explicit migration required", row.Setting.Dotted, row.Path)
+				}
+				// Preserve the intent for repeat admission, but keep it detached
+				// from writable contributors. SKIP grants no ownership; erasing
+				// Setting would misclassify this row as a nonstructural write.
+				row.Action, row.After = diff.Skip, row.Before
+				row.Note = "equal external setting — unmanaged; no removal authority"
+				noops = append(noops, row)
+				continue
+			}
+			row.Action = diff.Merge
+			row.After, err = adapter.ApplySettingEdit(row.Before, row.Setting)
+			if err != nil {
+				return nil, fmt.Errorf("setting %s: %w", row.Path, err)
+			}
+			raw = append(raw, row)
+		}
+	}
+	composed, err := composeByPath(raw)
+	if err != nil {
+		return nil, err
+	}
+	for i := range composed {
+		d := &composed[i]
+		if d.Setting != nil {
+			d.Action = diff.Classify(diff.Merge, d.Before, d.After, len(d.Before) > 0)
+		}
+	}
+	composed = append(composed, noops...)
+	sortDiffs(composed)
+	return &diff.ChangeSet{Diffs: composed, DryRun: cs.DryRun}, nil
 }

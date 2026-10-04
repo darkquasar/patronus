@@ -13,6 +13,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
@@ -76,8 +77,8 @@ func engramRecipe() *manifest.Recipe {
 			InstallTo: "~/.patronus/bin/",
 			Binary:    "engram",
 			Assets: []manifest.Asset{
-				{OS: "linux", Arch: "amd64", URL: "https://x/engram-linux", SHA256: "abc"},
-				{OS: "darwin", Arch: "arm64", URL: "https://x/engram-darwin", SHA256: "def"},
+				{OS: "linux", Arch: "amd64", URL: "https://x/engram-linux", SHA256: sha256Hex([]byte("invented linux payload"))},
+				{OS: "darwin", Arch: "arm64", URL: "https://x/engram-darwin", SHA256: sha256Hex([]byte("invented darwin payload"))},
 			},
 		},
 		Wire: manifest.Wire{
@@ -217,7 +218,10 @@ func TestFetchDiffURLSource(t *testing.T) {
 
 	t.Run("absent dest fetches", func(t *testing.T) {
 		res, _, _ := testEnv(t)
-		dest, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		dest, d, err := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if err != nil {
+			t.Fatal(err)
+		}
 		if d == nil {
 			t.Fatal("want a FETCH diff for a url delivery, got nil")
 		}
@@ -244,7 +248,10 @@ func TestFetchDiffURLSource(t *testing.T) {
 		if err := os.WriteFile(dest, content, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		_, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		_, d, err := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if err != nil {
+			t.Fatal(err)
+		}
 		if d == nil {
 			t.Fatal("want a diff, got nil")
 		}
@@ -267,7 +274,10 @@ func TestFetchDiffURLSource(t *testing.T) {
 		if err := os.WriteFile(dest, []byte("#!/bin/sh\nrm -rf /\n"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		_, d := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		_, d, err := fetchDiff(Request{Recipe: tkRecipe(sha), Resolver: res}, "darwin", "arm64")
+		if err != nil {
+			t.Fatal(err)
+		}
 		if d == nil {
 			t.Fatal("want a diff, got nil")
 		}
@@ -276,10 +286,10 @@ func TestFetchDiffURLSource(t *testing.T) {
 		}
 	})
 
-	t.Run("unsupported platform warns and emits no fetch", func(t *testing.T) {
+	t.Run("unsupported platform refuses", func(t *testing.T) {
 		res, _, _ := testEnv(t)
 		var warnings []string
-		dest, d := fetchDiff(Request{
+		dest, d, err := fetchDiff(Request{
 			Recipe:   tkRecipe(sha),
 			Resolver: res,
 			Warnf:    func(f string, a ...any) { warnings = append(warnings, fmt.Sprintf(f, a...)) },
@@ -291,11 +301,8 @@ func TestFetchDiffURLSource(t *testing.T) {
 		if dest != "" {
 			t.Errorf("dest = %q, want empty", dest)
 		}
-		if len(warnings) != 1 {
-			t.Fatalf("want exactly 1 advisory, got %v", warnings)
-		}
-		if !strings.Contains(warnings[0], "windows") {
-			t.Errorf("advisory %q should name the unsupported platform", warnings[0])
+		if err == nil || !strings.Contains(err.Error(), "windows") {
+			t.Fatalf("want unsupported platform error, got %v", err)
 		}
 	})
 }
@@ -417,7 +424,7 @@ func TestComputeExecSubstitutesInstallPath(t *testing.T) {
 		Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "demo-run", Role: manifest.RoleTools, Version: "1.0.0"},
 		Delivery: &manifest.Delivery{
 			Via: manifest.ViaFetch, InstallTo: "~/.patronus/bin/", Binary: "demo-run",
-			Assets: []manifest.Asset{{OS: "linux", Arch: "amd64", URL: "https://x/demo", SHA256: "abc"}},
+			Assets: []manifest.Asset{{OS: "linux", Arch: "amd64", URL: "https://x/demo", SHA256: sha256Hex([]byte("invented linux payload"))}},
 		},
 		Wire: manifest.Wire{
 			Method: manifest.WireExec,
@@ -703,5 +710,72 @@ func TestClassifyFetchRawUnchanged(t *testing.T) {
 	}
 	if got := classifyFetch(spec, none); got != diff.Fetch {
 		t.Errorf("tampered raw binary classified %v, want FETCH", got)
+	}
+}
+
+func TestFetchDiffRetainsPlanningSnapshotAndRejectsLaterEdit(t *testing.T) {
+	for _, before := range [][]byte{nil, {}, []byte("old inert bytes")} {
+		t.Run(fmt.Sprintf("present=%t,size=%d", before != nil, len(before)), func(t *testing.T) {
+			res, home, _ := testEnv(t)
+			dest := filepath.Join(home, ".patronus/bin/fixture-payload")
+			if err := os.MkdirAll(filepath.Dir(dest), 0700); err != nil {
+				t.Fatal(err)
+			}
+			if before != nil {
+				if err := os.WriteFile(dest, before, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			rec := &manifest.Recipe{Meta: manifest.Meta{Family: manifest.FamilyRecipe, Name: "fixture-payload", Version: "1.0.0", Role: manifest.RoleTools}, Delivery: &manifest.Delivery{Via: manifest.ViaFetch, URL: "https://fixture.invalid/payload", SHA256: sha256Hex([]byte("desired inert bytes")), Platforms: []string{"linux"}}}
+			_, d, err := fetchDiff(Request{Recipe: rec, Resolver: res}, "linux", "arm64")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if d == nil || d.Action != diff.Fetch || !bytes.Equal(d.Before, before) || (d.Before == nil) != (before == nil) {
+				t.Fatalf("lost existence/bytes snapshot: %+v", d)
+			}
+			if err := os.WriteFile(dest, []byte("external edit after planning"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			// No fetcher: the stale snapshot must fail before acquisition is even attempted.
+			result, err := (&install.Applier{}).Apply(&diff.ChangeSet{Diffs: []diff.FileDiff{*d}})
+			if err == nil || !strings.Contains(err.Error(), "fresh preview") || len(result.Applied) != 0 || d.Fetch.PlacedSHA256 != "" {
+				t.Fatalf("stale FETCH admitted: %+v %v", result, err)
+			}
+			got, err := os.ReadFile(dest)
+			if err != nil || string(got) != "external edit after planning" {
+				t.Fatalf("external edit lost: %q %v", got, err)
+			}
+		})
+	}
+}
+
+func TestComputeRequiredDeliveryRefusesMissingPins(t *testing.T) {
+	for _, kind := range []string{"unsupported-platform", "missing-asset", "empty-pin", "invalid-pin", "missing-url", "missing-member"} {
+		t.Run(kind, func(t *testing.T) {
+			res, _, _ := testEnv(t)
+			rec := tkRecipe(sha256Hex([]byte("inert required payload")))
+			goos := "linux"
+			switch kind {
+			case "unsupported-platform":
+				goos = "windows"
+			case "missing-asset":
+				rec.Delivery.URL = ""
+				rec.Delivery.Assets = nil
+			case "empty-pin":
+				rec.Delivery.SHA256 = ""
+			case "invalid-pin":
+				rec.Delivery.SHA256 = "invalid"
+			case "missing-url":
+				rec.Delivery.URL = "https://"
+			case "missing-member":
+				rec.Delivery.URL = ""
+				rec.Delivery.Assets = []manifest.Asset{{OS: "linux", Arch: "arm64", URL: "https://fixture.invalid/bin.tgz", SHA256: sha256Hex([]byte("archive")), Archive: "tar.gz"}}
+			}
+			got, err := Compute(Request{Recipe: rec, Resolver: res, GOOS: goos, GOARCH: "arm64"})
+			if err == nil || len(got) != 0 {
+				t.Fatalf("required delivery silently skipped: %+v %v", got, err)
+			}
+		})
 	}
 }

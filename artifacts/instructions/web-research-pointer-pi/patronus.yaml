@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: web-research-pointer-pi
+description: "Read required DDG guidance before qualified web work"
+version: 1.0.3
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["web-research-pi"]

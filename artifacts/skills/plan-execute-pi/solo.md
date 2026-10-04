@@ -1,0 +1,5 @@
+# Solo execution
+
+One authorized writer follows the plan sequentially. Before each task reread its brief, predecessor contracts and current native state. Implement only assigned files, run the specified focused tests, inspect the actual output and report changed files/hashes. Only the coordinator updates native mission status after reading actual final outputs. Do not batch durable progress until the end or mark completion from memory.
+
+Stop on missing prerequisites, unexplained test failures or unapproved design decisions; contact the supervisor and wait. Never implement in another task's tree to repair a failure. When all tasks settle, run the required full verification and ask the coordinator for the authorized fresh independent whole-branch requesting-code-review-pi pass. Supply recorded branch base/head, exact inputs and logs, not the author's transcript. Apply the normalized policy in SKILL.md; integration/publication/cleanup require separate grants. Hand off through finishing-a-development-branch-pi.

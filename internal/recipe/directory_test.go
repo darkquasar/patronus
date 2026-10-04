@@ -53,3 +53,50 @@ func TestDirectoryComputeRejectsLocalAndUnsupported(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectoryComputeAdmittedRoles(t *testing.T) {
+	for _, role := range []manifest.Role{manifest.RoleSandbox, manifest.RoleOrchestration, manifest.RoleTools} {
+		t.Run(string(role), func(t *testing.T) {
+			rec := directoryRecipe()
+			rec.Name, rec.Role = "sample-package", role
+			res, _, _ := testEnv(t)
+			rows, err := Compute(Request{Recipe: rec, Resolver: res, Tool: "pi", GOOS: "linux", GOARCH: "amd64"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].Directory == nil || rows[0].Role != string(role) || rows[0].Tool != TargetAgnostic || rows[0].Scope != "global" {
+				t.Fatalf("rows = %+v", rows)
+			}
+			rec.Role = manifest.RoleMemory
+			if _, err := Compute(Request{Recipe: rec, Resolver: res, Tool: "pi", GOOS: "linux", GOARCH: "amd64"}); err == nil {
+				t.Fatal("invalid role planned")
+			}
+		})
+	}
+}
+
+func TestDirectoryComputeRejectsRestoredCorruption(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(*manifest.Recipe)
+	}{
+		{"role", func(r *manifest.Recipe) { r.Role = manifest.RoleCapability }},
+		{"local", func(r *manifest.Recipe) { r.Scope = &manifest.RecipeScope{Marker: ".sample"} }},
+		{"wire", func(r *manifest.Recipe) { r.Wire.Tools = []string{"pi"} }},
+		{"digest", func(r *manifest.Recipe) { r.Delivery.Assets[0].SHA256 = "bad" }},
+		{"version", func(r *manifest.Recipe) { r.APIVersion = "patronus/v2" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := directoryRecipe()
+			rec.Name, rec.Role = "sample-package", manifest.RoleOrchestration
+			tc.mutate(rec)
+			res, home, _ := testEnv(t)
+			if _, err := Compute(Request{Recipe: rec, Resolver: res, Tool: "pi", GOOS: "linux", GOARCH: "amd64"}); err == nil {
+				t.Fatal("corrupt recipe planned")
+			}
+			if _, err := os.Stat(filepath.Join(home, ".patronus")); !os.IsNotExist(err) {
+				t.Fatalf("planning wrote files: %v", err)
+			}
+		})
+	}
+}

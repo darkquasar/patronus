@@ -37,6 +37,7 @@ type ResolvedItem struct {
 
 // Resolved is the full resolution of a profile against a catalog.
 type Resolved struct {
+	Target   string // explicit target; "all" means intentionally tool-agnostic
 	Profile  *manifest.Profile
 	Items    []ResolvedItem // flat, ordered (by §1A layer, then author order), deduped
 	Warnings []string       // stub status, unresolved names
@@ -52,7 +53,7 @@ type slotEntry struct {
 // Anything else after an `@` is left as part of the base name (so it simply fails
 // catalog lookup and falls into the existing warn-and-skip path, not silently
 // dropped as a mistyped flavour).
-var flavourTools = map[string]bool{"claude": true, "codex": true, "opencode": true}
+var flavourTools = map[string]bool{"claude": true, "codex": true, "opencode": true, "pi": true}
 
 // splitFlavour separates a slot item into its base name and optional `@tool`
 // flavour. Only a trailing `@<tool>` where <tool> is a known tool counts; every
@@ -76,7 +77,7 @@ func splitFlavour(item string) (base, flavour string) {
 //
 // tool selects per-tool FLAVOURS (§4): a slot item may be a bare name (installed
 // for every tool) or `name@tool` (installed only when its suffix matches). When
-// tool is a concrete agent ("claude"|"codex"|"opencode"), bare names plus that
+// tool is a concrete agent ("claude"|"codex"|"opencode"|"pi"), bare names plus that
 // tool's flavours resolve; when tool is "" or "all" (the tool-agnostic baseline
 // `lock` uses by default), only bare names resolve and all `@tool` flavours drop.
 // The base name is what the install path dispatches on; the `@tool` suffix never
@@ -87,7 +88,10 @@ func Resolve(cat *registry.Catalog, name, tool string) (*Resolved, error) {
 		return nil, err
 	}
 
-	out := &Resolved{Profile: prof}
+	if tool == "" {
+		tool = "all"
+	}
+	out := &Resolved{Profile: prof, Target: tool}
 	if prof.Status == "stub" {
 		out.Warnings = append(out.Warnings,
 			fmt.Sprintf("profile %q is a stub: layers marked TODO are not yet populated", name))

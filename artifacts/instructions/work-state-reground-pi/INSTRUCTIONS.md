@@ -1,0 +1,5 @@
+# Recover native work state
+
+Initially and after resume/compaction, reread the brief, latest native mission decisions and project instructions. Inspect source root/revision, latest run/session/mission IDs, output bytes/hashes, settlement and ownership. Do not replay completed tasks because chat history is absent. Read relevant project lessons where actually present; only the authorized coordinator updates native state and lessons.
+
+Use mission.list/mission.show and exact native status/receipts to reconcile ready/blocked dependencies. Read every saved report and patch: filenames, agent_end, success prose and dispatch receipts are not delivery. Required state persistence failures stop; do not create a competing Markdown/ticket ledger. Bounded native completion/timeout/stop owns continuation, not a second scheduler or always-on goal promise. Validate retained identity and remaining authority/budget before any same-protocol action. Never relaunch a live child or silently change provider/model/protocol/isolation.

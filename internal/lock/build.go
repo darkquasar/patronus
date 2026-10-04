@@ -30,6 +30,9 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 		Profile:   r.Profile.Name,
 		Generated: now,
 	}
+	if r.Target == "pi" {
+		l.Version, l.Target = TargetVersion, "pi"
+	}
 	for _, it := range r.Items {
 		e := Entry{
 			Name:   it.Name,
@@ -56,6 +59,16 @@ func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock
 		e.Version = version
 		if it.Family == manifest.FamilyRecipe {
 			r := findRecipe(cat, it.Name).Manifest
+			if manifest.IsPiDelivery(r.Delivery) {
+				if err := manifest.ValidateRecipe(r); err != nil {
+					return nil, err
+				}
+				if l.Target != "pi" {
+					return nil, fmt.Errorf("native recipe requires Pi lock target")
+				}
+				l.Version = NativeVersion
+				e.NativeSource = r.Delivery.Install[0].Ref
+			}
 			if r.Delivery != nil && r.Delivery.Unpack == "directory" {
 				if err := manifest.ValidateRecipe(r); err != nil {
 					return nil, fmt.Errorf("locking recipe %q: %w", it.Name, err)
