@@ -45,7 +45,7 @@ class EvidenceFixture(unittest.TestCase):
         return status, result
 
     def common_fixture(self):
-        record = json.loads((ROOT / 'docs/pi-qualification/templates/candidate.json').read_text())
+        record = json.loads((ROOT / 'scripts/qualification/pi-native/evidence/templates/candidate.json').read_text())
         input_ref = self.write_json('inputs/invented.json', {'fixture': 'not upstream bytes'})
         log_ref = self.write_json('outputs/log.json', {'fixture': 'observed fake actions only'})
         record.update(example=False, status='observed', result='pass', exit_code=0,
@@ -64,12 +64,12 @@ class EvidenceFixture(unittest.TestCase):
         return record
 
     def packet(self, claim='static-delivery', mcp=False):
-        contract = json.loads((ROOT / 'docs/pi-qualification/cases.json').read_text())
+        contract = json.loads((ROOT / 'scripts/qualification/pi-native/evidence/cases.json').read_text())
         record = self.common_fixture()
         for key in ('identity', 'digest', 'retrieved_at', 'immutable_refs', 'dossier'):
             del record[key]
         record.update(kind='qualification', claim=claim, **{'class': 'C' if claim == 'static-delivery' else 'I'})
-        contract_bytes = (ROOT / 'docs/pi-qualification/cases.json').read_bytes()
+        contract_bytes = (ROOT / 'scripts/qualification/pi-native/evidence/cases.json').read_bytes()
         (self.root / 'cases.json').write_bytes(contract_bytes)
         record['cases'] = {'path': 'cases.json', 'sha256': digest(contract_bytes)}
         selected = set()
@@ -136,7 +136,7 @@ class EvidenceFixture(unittest.TestCase):
             examples = {'Q-T3-M': 'approval-cases.json', 'Q-T5-M': 'provisioning-cases.json',
                         'Q-T7-M': 'web-cases.json'}
             if case_id in examples:
-                case['model_observations'] = json.loads((ROOT / 'docs/pi-qualification/examples' /
+                case['model_observations'] = json.loads((ROOT / 'scripts/qualification/pi-native/evidence/examples' /
                                                         examples[case_id]).read_text())['observations']
             if case_id == 'OP-WEB':
                 case['bounds'] = dict.fromkeys(contract['cases']['OP-WEB']['bounds'],
@@ -517,7 +517,7 @@ class EvidenceTests(EvidenceFixture):
             self.assertFalse(json.loads(output.getvalue())['ok'])
 
     def test_contract_dependency_graph_is_acyclic_and_web_is_mandatory_core(self):
-        contract = json.loads((ROOT / 'docs/pi-qualification/cases.json').read_text())
+        contract = json.loads((ROOT / 'scripts/qualification/pi-native/evidence/cases.json').read_text())
         def visit(name, ancestors):
             self.assertNotIn(name, ancestors)
             for parent in contract['claims'][name]['parents']:
@@ -537,7 +537,7 @@ class EvidenceTests(EvidenceFixture):
             self.assert_refuses(record, mode='record')
 
     def test_honestly_unknown_candidate_is_structurally_valid(self):
-        candidate = json.loads((ROOT / 'docs/pi-qualification/templates/candidate.json').read_text())
+        candidate = json.loads((ROOT / 'scripts/qualification/pi-native/evidence/templates/candidate.json').read_text())
         status, result = self.check(candidate)
         self.assertEqual(0, status, result)
         self.assertEqual(digest((self.root / 'record.json').read_bytes()), result['checked']['record.json'])

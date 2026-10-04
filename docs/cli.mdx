@@ -1,0 +1,38 @@
+---
+title: "CLI reference"
+description: "Common commands and deployment flags."
+---
+
+| Command | Purpose |
+|---|---|
+| `patronus list` | Browse catalogue items and profiles |
+| `patronus scan` | Inspect detected harnesses and installed content |
+| `patronus install <name>...` | Preview installation of selected items |
+| `patronus install --profile <name>` | Preview a profile |
+| `patronus update [name...]` | Refresh catalogue or update selected installed items |
+| `patronus remove <name>...` | Preview removal; alias `revert` |
+| `patronus lock --profile <name>` | Write desired versions to `patronus.lock` |
+
+## Deployment flags
+
+| Flag | Effect |
+|---|---|
+| `--target claude\|codex\|opencode\|pi\|all` | Select a harness |
+| `--global` | Select user scope |
+| `--local` | Select the current project |
+| `--deploy` | Apply the previewed operation |
+| `--force` | Override supported edit/conflict protections for selected content |
+| `--allow-package-installs` | Consent to package installation during deployment |
+| `--allow-pi-project-config` | Authorize selected native Pi project configuration |
+
+Pi updates require exactly one explicit scope. `--force` does not imply
+`--deploy`, broaden selection, or bypass package-install consent.
+
+Use the command's own help for all supported flags:
+
+```sh
+patronus --help
+patronus install --help
+patronus update --help
+patronus remove --help
+```

@@ -342,9 +342,7 @@ go run ./cmd/patronus scan
 ### Pi: static resources and Pi-managed packages
 
 Use `core-profile-pi` for the Pi core deployment profile and `code-intel-pi` for
-its optional code intelligence overlay. The current
-[Pi runtime validation](docs/pi-native-validation.md) covers deployment,
-native package lifecycle and actual Pi resource loading.
+its optional code intelligence overlay. See the [Pi guide](docs/pi-core.mdx).
 
 Explicit `--target pi` supports skills/sidecars, prompts, finite native Markdown
 agents, context sections, scalar settings and MCP configuration. Global paths honor
@@ -377,11 +375,8 @@ siblings—not a stale whole config; JSON formatting may change. Drift and parti
 state failures need explicit recovery, not assumed rollback. Old Pi-state mutators
 are unsupported even if they bypass a v3 lock.
 
-See [Pi delivery, migration and qualification boundaries](docs/pi-delivery.md) and
-[agent artifacts and the exact native subset](docs/agent-artifacts.mdx). Invented
-application tests, generic catalog validation and real deployment qualification are
-separate evidence layers; no runtime/platform compatibility claim follows from
-static tests alone.
+See [Pi package lifecycle](docs/pi-delivery.mdx) and
+[agent roles](docs/agent-artifacts.mdx).
 
 ### Install → what actually changes
 
@@ -542,5 +537,5 @@ agent-principles: up to date (1.1.0)
 
 ---
 
-Patronus is under active development. See [`DESIGN.md`](DESIGN.md) for the complete design, manifest
-schemas, per-tool on-disk layouts, and phased delivery plan.
+See the [user documentation](docs/index.mdx) for installation, profiles and
+lifecycle commands. Contributor guidance lives in [CONTRIBUTING.md](CONTRIBUTING.md).

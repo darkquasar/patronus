@@ -1,0 +1,47 @@
+---
+title: "Quickstart"
+description: "Preview and deploy your first catalogue item."
+---
+
+## Inspect your environment
+
+```sh
+patronus scan
+patronus list --profiles --layers
+patronus list --artifacts
+```
+
+`scan` reports detected harnesses and managed content. `list` shows items available
+from the catalogue.
+
+## Preview an installation
+
+From your project directory, select a target and scope explicitly:
+
+```sh
+patronus install agent-principles --target claude --local
+```
+
+The plan shows destination paths and operations. New files use `CREATE`,
+instruction sections use `APPEND`, and structured configuration uses `MERGE`.
+A preview does not apply those operations.
+
+## Apply the plan
+
+```sh
+patronus install agent-principles --target claude --local --deploy
+```
+
+Restart or reload your harness as appropriate for the changed resources.
+For a complete environment, choose a [profile](/profiles). For Pi, follow the
+[Pi deployment guide](/pi-core).
+
+## Remove the item
+
+```sh
+patronus remove agent-principles --target claude --local
+patronus remove agent-principles --target claude --local --deploy
+```
+
+Removal preserves detected edits unless you explicitly use `--force`.
+See [lifecycle operations](/lifecycle) for sharing and drift behavior.

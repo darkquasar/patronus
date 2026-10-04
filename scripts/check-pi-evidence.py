@@ -23,7 +23,7 @@ DOSSIER_FIELDS = {
     'privilege_network_credentials', 'update_remove_rollback', 'alternatives',
     'residual_risks', 'approval', 'delta_to_latest',
 }
-CONTRACT_PATH = Path(__file__).resolve().parents[1] / 'docs/pi-qualification/cases.json'
+CONTRACT_PATH = Path(__file__).resolve().parents[1] / 'scripts/qualification/pi-native/evidence/cases.json'
 
 
 class Invalid(ValueError):

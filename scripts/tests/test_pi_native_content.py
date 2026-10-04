@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[2]
 CURRENT_GUIDANCE = (
     "README.md",
     "docs/agent-artifacts.mdx",
-    "docs/pi-core.md",
-    "docs/package-delivery.md",
+    "docs/pi-core.mdx",
+    "docs/package-delivery.mdx",
     "artifacts/skills/web-research-pi/SKILL.md",
     "artifacts/skills/web-research-pi/SOURCE.md",
     "artifacts/skills/web-research-pi/references/qualification.md",
@@ -34,7 +34,7 @@ class PiNativeContentTest(unittest.TestCase):
             "scripts/qualification/core-smoke",
             "scripts/qualification/web-smoke",
             "scripts/qualification/qp03",
-            "docs/pi-qualification/functional-smoke-results.json",
+            "scripts/qualification/pi-native/evidence/functional-smoke-results.json",
         ):
             self.assertFalse((ROOT / relative).exists(), relative)
 
@@ -47,7 +47,7 @@ class PiNativeContentTest(unittest.TestCase):
         self.assertIn("Pi/npm own", combined)
 
     def test_pi_core_describes_the_current_profile(self):
-        text = (ROOT / "docs/pi-core.md").read_text()
+        text = (ROOT / "docs/pi-core.mdx").read_text()
         self.assertIn("`core-profile-pi` 2.0.0", text)
         self.assertIn("npm:pi-subagents@0.72.1", text)
         self.assertIn("npm:pi-web-access@0.35.0", text)
@@ -61,7 +61,7 @@ class PiNativeContentTest(unittest.TestCase):
             self.assertNotIn(stale, text)
 
     def test_generic_directory_package_docs_distinguish_pi_manager_recipes(self):
-        text = (ROOT / "docs/package-delivery.md").read_text()
+        text = (ROOT / "docs/package-delivery.mdx").read_text()
         self.assertIn("manager: pi", text)
         self.assertIn("Pi/npm own", text)
 

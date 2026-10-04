@@ -1,0 +1,35 @@
+---
+title: "Introduction"
+description: "Deploy a consistent agent environment across your harnesses."
+---
+
+Patronus installs skills, instructions, agent roles, settings and external tools
+into the harnesses you use: Claude Code, Codex, OpenCode and Pi.
+
+Choose individual catalogue items or a profile. Preview the resulting paths and
+operations, then apply them with `--deploy`.
+
+```text
++-----------+  select =>  +----------+  adapt =>  +----------------+
+| Catalogue | =========> | Patronus | =========> | Agent harness  |
++-----------+            +----------+            +----------------+
+```
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/quickstart">Install Patronus and deploy your first instruction.</Card>
+  <Card title="Pi guide" href="/pi-core">Deploy Pi roles, workflows and native extensions.</Card>
+  <Card title="Profiles" href="/profiles">Install a coordinated environment.</Card>
+  <Card title="Lifecycle" href="/lifecycle">Update and remove managed content.</Card>
+</CardGroup>
+
+## What the catalogue contains
+
+| Item | Purpose |
+|---|---|
+| Artifact | Authored content such as skills, instructions, roles and prompts |
+| Recipe | Instructions for acquiring and wiring an external dependency |
+| Profile | A selection of items across environment layers |
+
+Catalogue content and the Patronus binary release independently. Updating an
+artifact does not upgrade the executable. [Install Patronus](/installation) for
+binary installation options.
