@@ -2,8 +2,8 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: code-intel-pi
-version: 1.0.0
-summary: "Optional Pi code intelligence: static guidance and shared HTTP wiring; externally provisioned services remain runtime-unverified."
+version: 2.0.0
+summary: "Optional Pi code intelligence layered on core-profile-pi: pinned adapter, shared HTTP wiring, and reversible core-role augmentation. Install the companion code-intel-pi-runtime profile first; augmented roles require async:true, while service activation remains coordinator-owned and runtime-qualified."
 extends: core-profile-pi
 layers:
   instructions:
@@ -14,3 +14,22 @@ layers:
     - code-intel-operations-pi
     - serena-shared-pi
     - graphify-shared-pi
+  tools:
+    - pi-mcp-adapter
+  orchestration:
+    - code-intel-pi-plan-author-tools
+    - code-intel-pi-plan-author-skills
+    - code-intel-pi-plan-reviewer-tools
+    - code-intel-pi-plan-reviewer-skills
+    - code-intel-pi-researcher-tools
+    - code-intel-pi-researcher-skills
+    - code-intel-pi-spec-author-tools
+    - code-intel-pi-spec-author-skills
+    - code-intel-pi-technical-reviewer-tools
+    - code-intel-pi-technical-reviewer-skills
+    - code-intel-pi-web-researcher-tools
+    - code-intel-pi-web-researcher-skills
+    - code-intel-pi-workflow-security-reviewer-tools
+    - code-intel-pi-workflow-security-reviewer-skills
+    - code-intel-pi-writer-tools
+    - code-intel-pi-writer-skills

@@ -28,8 +28,13 @@ patronus install --profile core --target claude --local --deploy
 Inspect the plan before applying it. A profile marked as a stub has unpopulated
 layers; only its populated selections are installed.
 
-For Pi, choose `core-profile-pi`. Add `code-intel-pi` when you want its optional
-code intelligence guidance. These are separate from the Claude core profile.
+For Pi, choose `core-profile-pi`. Optional code intelligence is one ordered,
+two-profile delivery: install target-agnostic `code-intel-pi-runtime` first, then
+install the `code-intel-pi` static overlay with `--target pi`. The overlay alone
+adds the adapter, shared URLs and role policy but does not deliver the Serena or
+Graphify executables. See [Pi core profiles](/pi-core#optional-code-intelligence-overlay)
+for the commands and runtime qualification boundary. These profiles are separate
+from the Claude core profile.
 
 ## Pin a profile
 
