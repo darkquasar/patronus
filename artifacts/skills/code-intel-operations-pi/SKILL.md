@@ -1,187 +1,173 @@
 ---
 name: code-intel-operations-pi
-description: Operator-owned MCP readiness, manual lifecycle, failure/resource procedures and qualification handoff for optional Pi code intelligence.
+description: Shared Serena and Graphify runtime delivery, coordinator lifecycle, role exposure, failure handling and qualification for Pi code intelligence.
 ---
 
 # Pi code-intelligence operations
 
-This skill delivers inert documentation/examples, not an executable helper,
-installer, service supervisor or configuration policy writer. Installing the
-optional `code-intel-pi` profile is **placed, runtime-unverified**. Core requires
-neither these services nor this adapter. Operator provision of the selected
-pi-mcp-adapter 3.0.0, server pins, language tools and auth is separate.
+`code-intel-pi` is an overlay on `core-profile-pi`. It keeps every core role
+definition and workflow selection, then adds the pinned Pi adapter, shared HTTP
+MCP wiring and narrow field-level role overrides. Its companion `code-intel-pi-runtime` profile delivers
+Serena and Graphify through uv. The profiles are separate because a Pi-targeted
+static selection intentionally refuses package-manager EXEC intent. Installation
+places declarations and can install packages when the operator grants package
+execution. It does not start services, build a graph, approve project resources or
+prove runtime readiness.
 
-## Ownership and static boundary
+## Delivered components
 
-- Operator owns binaries/dependencies/auth/containment and existing global policy.
-- Coordinator owns shared services, service descriptors, snapshots and expensive
-  indexing. No child starts/stops/retargets a shared server or changes its modes.
-- Research/spec/review/plan children own query clients and assigned outputs only.
-- Execution writers use local source reads unless private Serena/LSP has separately
-  approved exact-worktree ownership, resource admission and interactive Pi/MCP
-  approvals. Shared Graphify remains a main snapshot. Follow the manual procedures
-  below under their own grants; this static profile grants no lifecycle actions
-  and does not alter core role Markdown/settings.
+| Item | Pin | Owner after deployment |
+|---|---|---|
+| `pi-mcp-adapter` | `npm:pi-mcp-adapter@3.0.0` | Pi/npm |
+| `serena-runtime-pi` | Serena commit `7a2968335f2198b966864de1ce3655c8e485a653` | uv |
+| `graphify-runtime-pi` | `graphifyy[mcp]==0.9.31` | uv |
+| `serena-shared-pi` | `http://127.0.0.1:9121/mcp` | Patronus config leaf |
+| `graphify-shared-pi` | `http://127.0.0.1:9122/mcp` | Patronus config leaf |
 
-Static admission checks observable files/configuration/manifests/declarations and
-resolvable structured imports, not runtime callbacks or exhaustive registration.
-Extension entrypoints are not blanket blockers and need not be deactivated merely
-for dynamic uncertainty. Known static collisions, unsafe paths, malformed data,
-unreadable required static sources, ownership/drift and mixed-context consent
-still refuse the whole selection before writes. No npm/git resolver, Pi, extension,
-helper or MCP connection runs during static apply. Runtime-only global npm agent
-discovery stays visibly unverified: never run `npm root -g` for admission.
-`PI_OFFLINE` is not a production admission requirement or network sandbox.
+The adapter is a Pi package, not a copied extension file. Child roles leave their
+`extensions` and `subagentOnlyExtensions` overrides unset, so Pi's normal package
+discovery remains active. Because `tools` is a strict pi-subagents allowlist,
+adding `mcp` also makes it a required child tool. Every overlaid role must run as
+a background child with `async: true`; foreground children do not load ambient
+extensions and fail before their first model turn. This is a deliberate
+fail-closed constraint, not a source-read fallback.
 
-## Shared recipe/config contract
+The overlay changes only each core role's `tools` and `skills` leaves. Removal can
+therefore restore those leaves without replacing the role definition or containing
+`agentOverrides` object. These fields are complete replacement lists, not additive
+patches. Any core role tool or skill change requires a matching overlay update and
+SemVer bump; catalogue tests compare each list with current core frontmatter.
 
-The independent wire-only recipes `serena-shared-pi` and `graphify-shared-pi` merge
-only `mcpServers.<recipe-name>` HTTP `{url: ...}` records using D-04. No delivery,
-EXEC, credential header, server binary or resolver is supplied. Default endpoints
-are loopback ports 9121 and 9122 respectively, path `/mcp`. `wire.tools: [pi]`
-selects the default route for empty/all mechanism requests; it is **not** a hard
-allowlist against an explicit target. CLI selections still need explicit scope/
-target according to the delivery contract. Endpoint customization requires a
-reviewed local recipe/config selection; no magic environment interpolation.
+Install and review `code-intel-pi-runtime` without a target first. Then install
+`code-intel-pi` with `--target pi`. Use `--deploy --allow-package-installs` only
+after approving each plan. The delivered executables are prerequisites, not
+activation. Pi/npm and uv retain their native package lifecycle. Patronus must not
+delete their internal files directly.
 
-Global destination: effective `PI_CODING_AGENT_DIR/mcp-adapter.json`, otherwise
-`~/.pi/agent/mcp-adapter.json`. Local destination: the selected workspace's
-`.pi/mcp-adapter.json`. Patronus does not manage standard `.mcp.json`, user-global
-`.config/mcp/mcp.json` or legacy Pi `mcp.json` on their behalf. Compare canonical
-root and actual adapter override path with the preview before apply/readiness.
+## One shared service pair
 
-D's effective-source parser is `internal/scan/pi_discovery.go` (with command-layer
-preflight); it owns safe admission, not this skill. At the inspected adapter pin,
-normal file precedence is standard user config, `.agents/mcp.json`, nested
-`.agents/mcp/mcp.json`, Pi global override, opted-in ancestor standard/Pi configs,
-project `.mcp.json`, project `.pi/mcp-adapter.json`. Imports are expanded within
-active sources. Opted-in host discovery is a lower-precedence fallback. Package
-MCP defaults are below agent-plugin defaults, which are below explicit config;
-Claude-plugin defaults fill otherwise absent entries. Inventory every active
-source, not only the final winning value. Exclusive `PI_MCP_CONFIG_MODE` uses the
-selected global override plus imports and configured Claude-plugin defaults;
-it skips normal package/agent-plugin/host discovery and project sources. D refuses
-active unqualified plugin schemas/host discovery rather than executing them.
-Exclusive mode is operator-owned, not a way to waive known conflicts; a local
-managed destination inconsistent with it refuses. See [readiness](references/readiness.md).
+The coordinator owns exactly one Serena process and one Graphify MCP process for
+the selected root. Follow [shared service lifecycle](references/shared-services.md).
+Serena starts with an explicit project, loopback Streamable HTTP transport and a
+non-editing planning mode. Graphify starts against one explicit, provenance-bound
+`graph.json` using its HTTP transport. Both bind only to loopback by default.
 
-Same normalized name in another active source conflicts even when identical.
-Unreadable required sources, unknown precedence, symlink aliases or runtime config
-path mismatch prevent managed-write readiness. Owner resolves them externally;
-normal install must not adopt or overwrite them. Unknown runtime registrations
-are a separate visible limitation, not invented static names or a success claim.
+```
+  +-------------+   HTTP /mcp   +-------------------+
+  | coordinator | ============> | Serena :9121     |
+  +-------------+               +-------------------+
+          |       HTTP /mcp      +-------------------+
+          +====================> | Graphify :9122   |
+                                  +-------------------+
+          |
+          | native child launch
+          v
+  +-------------+   mcp gateway  +-------------------+
+  | core roles  | =============> | shared pair only |
+  +-------------+                +-------------------+
+```
 
-## Inert hardening example
+Children are query clients only. They never run `serena`, `graphify`,
+`graphify-mcp`, `uv`, `uvx`, package installers, graph builders, watchers or
+service stop/restart commands. Once a background child has successfully loaded
+the adapter, a missing or wrong shared endpoint produces a reported source-read
+fallback or a blocked MCP-dependent outcome. A missing adapter or foreground
+launch is an infrastructure failure before the child starts. Neither case produces
+a child-owned replacement.
 
-[shared-mcp.example.json](references/shared-mcp.example.json) uses 3.0.0 keys
-checked against the installed pin's `types.ts`, `config.ts` and consuming source;
-[SOURCE.md](SOURCE.md) records hashes. This is source/schema validation, **not** a
-runtime security qualification. Only the operator may preview and apply selected
-settings after accounting for existing users; never replace a whole existing
-config with the example. Template placement neither edits policy nor connects.
+## Pi configuration and core-role integration
 
-| Setting | Intended prerequisite |
-|---|---|
-| `allowInstall: false` | No agent install action persisting endpoints |
-| `hostConfigDiscovery: "off"`, `ancestorConfigRoots: []` | No broad host/ancestor discovery |
-| `projectServers: "ask"` | User-global policy; no blanket project-server auto-allow |
-| `sampling: false`, `samplingAutoApprove: false` | No model sampling |
-| `jev: false`, `scriptMode: false` | No external semantic search/script evaluation |
-| `autoAuth: false`, `elicitation: false` | No automatic authentication/elicitation flow |
-| `agentPluginPaths: []` | No plugin discovery from that setting |
+The wire recipes merge only these named URL leaves:
 
-These are not a complete environment sandbox. Inspect effective environment,
-imports, `claudePlugins`, package defaults, higher-precedence settings and built-in
-server defaults before connecting. No `requestHeadersCommand`, leading-`!` secret
-command values, credentials/headers, connect-time `npx`/`uvx` or other resolver is
-allowed in the selected shared definitions. There is no invented `disableSecrets`
-key: absence must be checked across effective sources. Omitted sources do not
-become disabled merely because the example omitted them. Do not log secret values.
-Project policy can only be set in user-global config; a local copy is insufficient.
+- global: effective `PI_CODING_AGENT_DIR/mcp-adapter.json`, otherwise
+  `~/.pi/agent/mcp-adapter.json`
+- local: `<workspace>/.pi/mcp-adapter.json`
 
-Recipes intentionally contain only URL leaves; policy belongs to the operator.
-Changes inside a Patronus-owned server leaf require the normal reviewed recipe/
-update ownership flow, not a manual edit disguised as unchanged ownership.
-The server must enforce a fixed read/navigation or query-only tool surface where
-supported. Modes and client filters are not an OS sandbox. Discover exact names;
-never assume a wildcard filter, skill name or cached alias enforces the boundary.
+They do not write `.mcp.json`, Pi's built-in `mcp.json`, credentials, headers or
+adapter-wide policy. The adapter's full effective-source precedence still applies.
+Inventory all active sources and imports before deployment. A same normalized
+name in another active source conflicts even when its value is identical.
+Malformed, unreadable or unsafe selected sources block the whole managed change.
+Readiness must also reject every active stdio or command-based Serena/Graphify
+entry, alias or unresolved import that could create a child-private process. The
+inert hardening example is not enforcement by itself.
 
-## Manual role augmentation and private writers
+Sixteen setting artifacts augment the eight roles inherited from
+`core-profile-pi`: one `tools` leaf and one `skills` leaf per role. Tool lists keep
+the complete core list and add only `mcp`. Skill lists keep the complete core list
+and add `pattern-mcp-pi`, `graphify-pi` and this skill. The web role keeps all four
+web tools and `web-research-pi`. The technical reviewer keeps both review skills.
+See [role integration](references/role-overrides.md). A completed readiness record
+plus explicit task authority satisfies the core-role clause requiring separately
+qualified configuration before optional MCP use.
 
-- [Role overrides](references/role-overrides.md), RO-1 through RO-5: one owner per
-  effective scope; inventory/preview/quiesce/record before manual changes; complete
-  base tools and mandatory skill union, provider loading, reload and child smoke.
-- [Role example](references/role-agentOverrides.example.json): inert field-level
-  `subagents.agentOverrides` examples, not ready-to-apply settings. Substitute
-  reviewed absolute extension paths before use. At the selected pins, retain the
-  `mcp` gateway in role tools; discover underlying server/tool names through that
-  gateway, not as direct role-tool substitutions. Read RO-2's query-only limits.
-- [Writer bootstrap](references/writer-bootstrap.md), WB-1 through WB-4: execution
-  grant, retained exact cwd allocation, RAM admission, separate interactive Pi
-  resource/MCP approvals and child-local initialization. Native automatic worktrees
-  remain source-read-only for symbols until prelaunch bootstrap is qualified.
-- [Private MCP example](references/private-mcp.example.json) and
-  [ownership descriptor](references/private-ownership.example.json): inert stdio
-  definition and external operator evidence, not installer state or deletion grant.
-- [Teardown](references/teardown.md), TD-1 through TD-4: actual settlement first,
-  unchanged record-backed field restoration, unrelated-data preservation, reload
-  and explicit research admission. Missing record/drift/unknown runs retain data.
+At the selected pins, roles use the generic `mcp` gateway. Do not replace it with
+raw server tool names or legacy `mcp:<server>` selectors. Discover the server and
+tool schemas through the gateway. Keep direct tool registration disabled for this
+route. The role allowlist is cooperative capability selection, not an operating
+system sandbox or a server-side authorization layer.
 
-C-class consistency only (no actual config writes or subprocess/server launch):
+Writers may query the shared Graphify snapshot and may query Serena only when its
+reported root and revision match the claim being checked. A shared main-root
+Serena never represents an unmerged writer worktree. Writers use local source
+reads for worktree-local symbols. This profile does not create private Serena or
+Graphify processes for writers.
+
+## Adapter hardening and readiness
+
+[shared-mcp.example.json](references/shared-mcp.example.json) is an inert policy
+example, not an installer input. Preserve unrelated policy and review effective
+imports before applying any values. The intended baseline disables connect-time
+installation, host and ancestor discovery, sampling, auto-auth, elicitation,
+external semantic execution and script mode. No leading-`!` secret commands,
+request-header commands, `npx`, `uvx` or other connect-time resolvers belong in
+the selected shared definitions.
+
+Use [readiness](references/readiness.md) after package installation, service
+startup and Pi reload. A pass requires:
+
+1. exact package and executable identities;
+2. MCP initialization for both shared entries;
+3. Serena initial instructions and canonical root match;
+4. one current definition and caller checked against source;
+5. one Graphify query bound to completed snapshot provenance;
+6. observed query-only or navigation-only child use; and
+7. a cold background core-role smoke with the effective `mcp` gateway.
+
+A listening socket, installed package, config leaf or tool count does not satisfy
+readiness. Pi trust, MCP approval, task authority and service ownership are
+independent gates.
+
+## Failures, resources and teardown
+
+Follow [failure and resource procedures](references/failure-matrix.md). Default to
+one readiness attempt. Record expected and observed identity, endpoint, root,
+revision, tool schema and error. Missing endpoint, provider, LSP, graph, approval
+or matching root does not authorize repair, retargeting or a private server.
+
+Graph construction and language-server startup can be expensive. The coordinator
+measures free and available RAM plus cgroup headroom, reserves 500 MB, and admits
+an expensive action only with at least 750 MiB headroom. Children never perform
+indexing or service lifecycle work even when resources are available.
+
+Follow [teardown](references/teardown.md). Settle every client before stopping the
+shared pair. Profile removal owns only unchanged Patronus role-setting leaves,
+MCP URL leaves and authored resources. It does not itself prove service exit,
+remove uv/npm package internals, delete graphs, credentials, caches, logs, outputs
+or worktrees. Package-manager removal and data deletion need their own reviewed
+plans and authority.
+
+## Qualification boundary
+
+The adjacent fixture checks delivered document and example consistency only:
 
 ```sh
 node --test artifacts/skills/code-intel-operations-pi/fixtures/manual-lifecycle.test.mjs
 ```
 
-Run from a source checkout; the distributed fixture can also run by its installed
-path. Its [independent models](fixtures/manual-lifecycle.test.mjs) are not shipped
-lifecycle enforcement or runtime qualification. I-T3 bootstrap is integration-only;
-I-T4/I-T6/I-T7 actual loading, restore and settlement observations remain QP-03.
-
-## Failure, resources and qualification handoff
-
-- [Failure matrix](references/failure-matrix.md), FM-1 through FM-4: one attempted
-  readiness sequence, expected/observed identity and disclosed source fallback;
-  bounded retries need owner budget. Pi trust and MCP approval failures remain
-  distinct. No automatic install, service launch, refresh or project/mode switch.
-- FM-3 defines the operator resource record: measured free/available RAM and
-  cgroup headroom, reserve/outstanding peaks, independent concurrent/total/worker/
-  deadline budgets. Low or unknown headroom blocks expensive work, not authorized
-  bounded source reads. A concurrency counter is not reserve. Subprocess/provider
-  graph work stays separately admitted and coordinator-only.
-- [Qualification handoff](references/qualification.md), QUAL-1 through QUAL-4:
-  exact-input evidence and all I-T1..I-T7 cases linked to OP-CODEINTEL, including
-  base/enabled/restored roles, private cwd/approval/settlement, shared-client exit,
-  interrupted reset and optional static removal. It separates generic D inverse
-  tests, C example consistency and later actual Q runtime observations, and lists
-  selected candidate gaps. Q owns the operational runbook and real execution.
-
-The fixture adds C resource/admission and interrupted-recovery models, not shipped
-policy or M/I proof. Operational release remains blocked until fresh selected
-OP evidence, independent review and owner acceptance. No test double establishes
-process settlement, shared-server survival, isolation or hard resource enforcement.
-
-## Records and acceptance
-
-- [Service descriptor](references/service-descriptor.example.json): one record per
-  service with root/revision/dirty state, pin, owner, endpoint, transport, observed
-  tools, restrictions and lifecycle/readiness evidence. Values are deliberately
-  unverified; substitute reviewed observations, not invented success.
-- [Snapshot provenance](references/snapshot-provenance.example.json): inventory,
-  hashes, untracked treatment, exact build commands/mode/model/tool versions,
-  exclusions and warnings. Copying a graph must retain its originating identity.
-- [Readiness procedure](references/readiness.md): initialize, root verification,
-  live definition/caller, graph query/provenance and effective restrictions.
-
-Loopback is local trust, not tenant isolation; container/remote namespaces may
-not reach it. No wildcard bind or remote auth design is authorized here. Missing
-endpoint/provider/LSP, wrong root, stale aliases or malformed/historical graph
-mean one attempted check then disclosed source reads/escalation. No install,
-refresh, process launch, project switch or silent mode/model/protocol fallback.
-
-Profile/item removal owns only unchanged Patronus static files and recipe leaves
-under D's inverse/drift rules. It does not kill services, remove operator binaries,
-credentials or caches, delete worktrees/outputs, or erase manual role overrides.
-Prototype aliases/configs remain externally owned. Settle dependent work and
-acknowledge client reload before separately authorized lifecycle changes. Unknown
-ownership/process state is retained and escalated, never treated as cleanup grant.
+It does not execute Pi, import the adapter, install packages, start services or
+qualify runtime behavior. [Qualification handoff](references/qualification.md)
+keeps actual cold-child, lifecycle, graph provenance, failure and removal evidence
+separate. Candidate dossiers still withhold full dependency closure, provenance,
+advisory, currency and platform claims. Static catalogue success must remain
+labeled `placed, runtime-unverified` until those observations exist.

@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: context
 name: code-intel-operations-pi
-description: "Inert MCP lifecycle, failure/resource procedures and qualification handoff"
-version: 1.0.1
+description: "Shared MCP runtime delivery, coordinator lifecycle, role integration and qualification handoff"
+version: 2.0.0
 entry: SKILL.md
 files: ["references", "fixtures/manual-lifecycle.test.mjs", "SOURCE.md", "NOTICE", "LICENSE"]
 targets: [pi]

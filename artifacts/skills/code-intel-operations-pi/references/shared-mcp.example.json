@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "serena-shared-pi": { "url": "http://127.0.0.1:9121/mcp" },
-    "graphify-shared-pi": { "url": "http://127.0.0.1:9122/mcp" }
+    "serena-shared-pi": { "url": "http://127.0.0.1:9121/mcp", "directTools": false },
+    "graphify-shared-pi": { "url": "http://127.0.0.1:9122/mcp", "directTools": false }
   },
   "settings": {
     "allowInstall": false,

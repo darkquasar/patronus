@@ -54,11 +54,11 @@ Q must provide actual mechanism evidence for M selectors or leave them blocked.
 |---|---|---|
 | I-T1, OP I-T1 | D's invented target/HTTP/discovery/no-write fixtures; reviewed readiness/config instructions | Actual MCP initialize, discovered Serena initial_instructions, matching canonical root, live known definition AND caller and shared graph query. Log actual schemas, effective tools/provider/source precedence and restrictions. Wrong root, stale alias/socket-only, same normalized name elsewhere (even equal), unreadable source and config-path mismatch must fail affected readiness without retarget/install/service mutation. Static-known conflicts cannot be waived as runtime-unverified. |
 | I-T2, linked to OP I-T1 | Snapshot provenance/source review plus D/Q-owned mechanism evidence; not a refresh | Record root/revision/hash/included inventory/dirty and untracked treatment, exclusions, commands/modes/providers. Compare changed revision, a relevant untracked input and excluded docs with the selected snapshot; label historical/coverage limits. Source-check consequential EXTRACTED and INFERRED edges; graph absence cannot prove code absence. Observe no child build/refresh. |
-| I-T3, OP I-T3 | WB checklist/examples are C consistency only, never bootstrap proof | In a separately allocated private cwd, independently preapprove Pi project resources AND exact effective MCP server before background child launch. Initialize local Serena and query a definition changed only in that worktree; compare root/cwd/base/branch/run. Distinct absent-Pi-trust and absent-MCP-approval cases deny MCP launch/use without global trust relaxation; source fallback only within grant. Never label shared-main symbols local. Native automatic cwd stays source-read-only unless exact-path prelaunch bootstrap is separately qualified. |
-| I-T4, OP I-T4 | RO example model plus base-role/catalog review; base Markdown unchanged | Observe base role without overlay, approved scoped override with full base+query tools/mandatory skill union and providers, reload/agentConfig and one actual background child capability smoke, then manual restore/reload and base behavior. Conflicting/higher-precedence override, drift, active/unknown run and call-level skill replacement losing required skills refuse. Unloaded provider and foreground MCP paths fail clearly. A tool name/frontmatter alone is not access. |
+| I-T3, OP I-T3 | WB shared-writer checklist is C consistency only | In a separately allocated writer cwd, show that the child uses the coordinator-owned HTTP pair and starts no Serena, Graphify, uv or uvx process. Compare shared root/snapshot revision with writer cwd/base/branch/run. A worktree-only symbol must be checked from local source and must not be attributed to shared-main Serena. Distinct absent-Pi-trust and absent-MCP-approval cases deny MCP use without trust relaxation. |
+| I-T4, OP I-T4 | Profile/catalog review verifies field-level setting declarations; base role Markdown remains unchanged | Observe a base core role, install the overlay, reload and inspect the complete tools/skills/provider plan, then run one background child capability smoke. Remove the overlay through the normal setting inverse, reload and observe base behavior. Conflicting or higher-precedence settings, drift, active or unknown runs and a replacement list that loses a core tool or skill must refuse. Unloaded packages/providers and foreground MCP paths fail clearly. A setting declaration alone is not runtime access. |
 | I-T5, linked across OP launch/settlement | FM-3 independent arithmetic model is C only; mechanism/enforcement evidence still owed by Q | Capture real free/available/cgroup headroom, reserve, outstanding/new peaks, concurrent/total/worker/deadline budgets at admission and through work. Under approved fault/measurement injection, low AND unknown memory deny expensive work while permitted source reads continue. Test each independent limit; a counter is not reserve. Coordinator-only subprocess/provider graph work needs separate admission. Do not exhaust a host to manufacture a negative. |
-| I-T6, OP I-T6 | D-owned generic inverse/removal mechanism using invented bytes; TD model is only C | With two approved HTTP clients and recorded shared-service identities, close one, then have the other perform a real query and verify the same shared server remains alive. Separately observe private adapter/stdin/stdout/LSP shutdown and descendants settled before reuse/deletion. Successful record-backed manual reset preserves unrelated config; missing record, edited managed bytes and unknown processes preserve work. Optional item uninstall removes only owned unchanged static resources; manually owned overrides/services/binaries/auth/output/spill/cache/worktree bytes survive. Sentinel tests alone never prove service survival. |
-| I-T7, OP I-T7 | TD/FM interrupted-reset and restoration examples; D drift/inverse evidence | Change only approved config, observe reload's effective definition/root/tool plan (not just disk). Interrupt reset in the disposable setup, retain prior/result records and current bytes, refuse blind replay, then owner-reconcile under renewed grant. Missing LSP/graph records expected/observed limitation with source fallback, no automatic install/index. Failed/unknown reload blocks research dispatch. |
+| I-T6, OP I-T6 | D-owned generic inverse/removal mechanism using invented bytes; TD checklist is C only | With two approved HTTP clients and recorded shared-service identities, close one, then have the other perform a real query and verify the same shared process remains alive. Settle all clients before supervisor-owned shutdown and observe Serena LSP descendants exit. Profile inverse preserves unrelated settings; adapter and uv package removal remain separate native-manager operations. Snapshots, auth, outputs, caches and worktrees survive. Sentinel tests alone never prove service survival. |
+| I-T7, OP I-T7 | TD/FM interrupted-inverse checklist; D drift/inverse evidence | Change only approved managed leaves, observe reload's effective definition/root/tool plan, then interrupt inverse or package removal in a disposable setup. Retain prior/result state and current bytes, refuse blind replay, and owner-reconcile under renewed grant. Missing LSP or graph records the expected and observed limitation with source fallback, not a child install or index. Failed or unknown reload blocks dispatch. |
 
 Every negative is an observed expected refusal/preservation, not a bypass relabeled
 pass. Use FM-1's single attempt and explicit retry budgets. Keep approval/tool/stage
@@ -77,8 +77,8 @@ and `pi_fixture_environment_test.go` verifies inherited agent-root isolation.
 These tests do not depend on shipped catalog identities. No D helper, installer
 branch or new profile lifetime mechanism is supplied by this skill.
 
-The adjacent fixture's RO/WB/TD/FM/QUAL groups are **C independent example and
-checklist consistency**, not installer, upstream or process tests. Generic catalog
+The adjacent fixture's RO/WB/TD/FM/QUAL groups are **C document and example
+consistency**, not installer, upstream or process tests. Generic catalog
 loaders validate actual declarations/links/sidecars; catalog identity/member
 counts are not application oracles. For source-checkout validation:
 
@@ -99,13 +99,12 @@ separately with the same resource policy. The distributed Node fixture may run b
 its installed path; Go checks require a source checkout. A bare passing example
 suite cannot qualify a runtime or prove containment.
 
-For real overlay removal, settle dependent work and restore any manual overrides
-that still require its skills, acknowledge reload, preview each item's owned
-inverse under DP-07, then apply only within the grant. If manual overrides are
-intentionally retained, report that cleanup obligation and do not dispatch roles
-whose skills were removed. Changed managed leaves survive with a conflict. No
-uninstall stops a server or prunes worktrees, caches or outputs. U-06 retention and
-separate deletion authority govern any later export/archive/cleanup.
+For real overlay removal, settle dependent work, acknowledge reload, preview each
+setting and MCP leaf inverse under DP-07, then apply only within the grant. Changed
+managed leaves survive with a conflict. Stop the shared pair separately through
+its recorded supervisor, and remove Pi/npm or uv packages only through their own
+reviewed native lifecycle. No uninstall prunes graphs, worktrees, caches or
+outputs. U-06 retention and separate deletion authority govern later cleanup.
 
 ## QUAL-4 — Candidate gaps and withheld claims
 

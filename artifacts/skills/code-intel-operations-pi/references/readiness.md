@@ -18,9 +18,12 @@ unverified, not a valid readiness pass. Retain failed evidence without credentia
    package defaults and plugin declarations; record exclusive-mode and explicit
    config-path overrides and effective agent root. Confirm path/precedence agrees
    with the intended target. Same normalized names in any other active source
-   conflict even if equal. Malformed/unreadable required sources or symlink aliases
-   stop managed writes. Runtime-only sources remain visibly unverified, not a
-   blanket extension-deactivation or `PI_OFFLINE` gate.
+   conflict even if equal. Inventory every active MCP entry and reject stdio/command
+   Serena or Graphify entries, alternate aliases, host-discovered entries and
+   unresolved imports that could start a private copy in a child. Malformed or
+   unreadable required sources and symlink aliases stop managed writes. Runtime-only
+   sources remain visibly unverified, not a blanket extension-deactivation or
+   `PI_OFFLINE` gate.
 3. **Check hardening before connecting.** Operator previews the selected settings
    from [the inert example](shared-mcp.example.json), preserving unrelated policy.
    Check effective imports/environment and higher-precedence overrides: install
@@ -47,8 +50,11 @@ unverified, not a valid readiness pass. Retain failed evidence without credentia
    [snapshot provenance record](snapshot-provenance.example.json). Require included
    inventory with relative paths/modes/sizes/hashes, root/revision, tracked dirty
    state, untracked policy/inventory, exact commands/cwd/mode/tool/model versions,
-   provider policy, graph hash/time, exclusions, failed inputs and warnings. Record
-   origin when copied. Inspect a representative relation and verify consequential
+   provider policy, generated and protected served paths, identical pre/post-copy
+   graph hashes, read-only served copy, graph time, exclusions, failed inputs and
+   warnings. The service must read the protected digest-named copy, never mutable
+   `graphify-out/graph.json`. Record origin when copied. Inspect a representative
+   relation and verify consequential
    EXTRACTED and INFERRED edges in current source. A historical snapshot may aid
    navigation but fails a claim of current matching readiness. Missing graph or
    excluded docs cannot prove code absence. Children never refresh it.
@@ -56,22 +62,27 @@ unverified, not a valid readiness pass. Retain failed evidence without credentia
    and fixed server read/navigation versus Graphify query-only surfaces, then the
    actual client/role tools, skills, provider and extension plan. Mode labels alone
    do not enforce read-only. No admin, build or project-switch operation belongs
-   in a child plan. Do not invoke a forbidden tool as a probe. A qualified native
-   background child capability smoke is needed before MCP-dependent fanout;
-   frontmatter/skill names and extension inheritance alone prove nothing. Preserve
-   core output/acceptance/no-nesting limits. Role augmentation is separately manual,
-   not implemented by this profile.
+   in a child plan. Do not invoke a forbidden tool as a probe. Every overlaid role
+   must launch with `async: true`: `mcp` is a strict required tool and foreground
+   children cannot load ambient extensions. A qualified native background child
+   capability smoke is needed before MCP-dependent fanout; frontmatter/skill names
+   and extension inheritance alone prove nothing. Preserve
+   core output, acceptance and no-nesting limits. Verify the profile-managed
+   field-level tools and skills overrides against the inherited core definitions.
 8. **Decide and retain.** Readiness passes only with MCP initialization, correct
    root, live definition/caller, graph query/matching provenance and effective
    restrictions, with timestamps/evidence and reload acknowledged. Missing endpoint,
    approval, provider/LSP, wrong root, stale alias, mismatched version or malformed
    graph fails the affected claim. Default is one attempt then disclosed source
-   reads/escalation; retry needs explicit coordinator budget. Never silently install,
-   switch protocol/model/mode, refresh or launch a replacement service.
+   reads/escalation; retry needs explicit coordinator budget. A foreground or
+   missing-adapter failure occurs before child fallback and remains infrastructure
+   failure. Never silently install, switch protocol/model/mode, refresh or launch a
+   replacement service.
 
 HTTP teardown closes the client's connection only. Stopping/restarting a shared
 service requires coordinator accounting for dependent clients. Profile removal
-restores/removes only unchanged owned leaves/static files under D's inverse rules;
-manual overrides, services, credentials, caches, outputs and worktrees survive.
+restores or removes only unchanged owned leaves and static files under D's inverse
+rules. Unrelated manual overrides, services, credentials, caches, outputs and
+worktrees survive.
 Static catalog validation and invented mechanism fixtures do not qualify these
 runtime observations; preserve that distinction in every acceptance record.

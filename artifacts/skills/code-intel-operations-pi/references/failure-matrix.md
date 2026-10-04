@@ -38,7 +38,7 @@ graph refresh, project/mode/model/protocol switch or alternate provider fallback
 | Missing endpoint / socket-only | Approved endpoint and namespace versus connection/initialize error or only a listening socket; service owner/identity unknown if unavailable | Fail affected readiness, report namespace/loopback limits; read local source, do not start a replacement. |
 | Missing provider / unloaded or foreground MCP | Required effective role gateway/provider/extensions versus actual registry/load error and launch mode | Infrastructure failure, not task success. Retain actual registry/agentConfig; no skill/tool-name substitution or alternate runner. |
 | Missing/broken LSP | Required language, executable/toolchain pin and known definition/caller versus initialization error or unsupported language | Report missing navigation; source reads permitted, no automatic language-server download/start/upgrade. Empty callers alone cannot prove absence. |
-| Wrong root / private cwd mismatch | Canonical allocated cwd/root/revision versus initialized server root | Stop symbol use; never switch shared project/modes or present main symbols as worktree-local. Escalate allocation/endpoint mismatch. |
+| Wrong root / writer cwd mismatch | Canonical selected root and writer cwd/revision versus initialized shared server root | Stop worktree-local symbol claims; never switch the shared project or present main-root symbols as writer-local. Use granted source reads and escalate the mismatch. |
 | Stale alias / effective config / reload | Approved source inventory/digests/definition and reload acknowledgement versus cached alias/path/transport/tools/root | Hold MCP dispatch, preserve both disk/effective evidence. Owner resolves/reloads with all-client accounting, not repeated writes. Same-name static conflicts still refuse. |
 | Missing/malformed graph | Expected graph format/hash/provenance versus absent/unreadable/invalid data | Do not query as valid evidence or infer code absence. Read source and report limitation, no rebuild/repair. |
 | Historical graph / untracked input / excluded docs | Expected root/revision/included inventory versus snapshot origin/hash and actual changed/untracked/excluded paths | Label historical/coverage-limited; verify consequential EXTRACTED and INFERRED edges in current source. Unchanged HEAD/tracked diff cannot establish freshness. No child refresh. |
@@ -129,18 +129,18 @@ ordinary bounded source reads already permitted by the task. The adjacent fixtur
 models these decisions in memory for **C-class checklist consistency only**, not
 M enforcement or measured host admission. Unknown runtime limits remain unknown.
 
-## FM-4 — Interrupted recovery preserves evidence
+## FM-4: interrupted recovery preserves evidence
 
-On interrupted manual reset retain original bytes/record, last-managed digests,
-per-field completion/result records and current bytes; hold dispatch. A partially
-restored field no longer matches the last-managed state, so blind replay is not
-admitted. Owner reconciles against TD-1 through TD-4 under a renewed exact-input
-grant, then observes reload and restored behavior. Edited config, missing record,
-unknown processes or failed reload preserve work rather than claiming cleanup.
+On interrupted profile inverse or package removal, retain Patronus state, original
+and current config bytes, package-manager output, service records and per-step
+results. A partially restored role or MCP leaf is not safe to replay blindly.
+The owner reconciles against TD-1 through TD-4 under a renewed exact-input grant,
+then observes reload and base-role behavior. Edited config, missing state, unknown
+processes or failed reload preserve work rather than claiming cleanup.
 
-Profile/item removal only inverses unchanged Patronus static ownership. Manual
-role overrides, external services/binaries/auth, snapshots/caches, worktrees,
-outputs/spill files and evidence remain. Archive/export/deletion needs the owner's
-U-06 retention policy and separate explicit grant. A file sentinel or test double
-cannot prove real teardown, shared-server survival or containment. Return actual
+Profile removal only inverses unchanged Patronus ownership. Service processes,
+Pi/npm and uv package internals, auth, snapshots, caches, worktrees, outputs and
+evidence remain under their recorded owners. Archive, export and deletion need the
+owner retention policy and separate authority. A file sentinel or test double
+cannot prove teardown, shared-server survival or containment. Return actual
 observations and withheld claims using [qualification](qualification.md).
