@@ -10,12 +10,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
+	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
+	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
@@ -70,6 +74,7 @@ func TestInstallMutuallyExclusiveScope(t *testing.T) {
 }
 
 func TestInstallProfileCloudflareDryRun(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("profile install failed: %v\n%s", err, errOut)
@@ -173,7 +178,7 @@ func TestRecordStateSplitsByScope(t *testing.T) {
 		{Path: filepath.Join(home, ".claude/skills/g/SKILL.md"), Action: diff.Create, After: []byte("g"), Artifact: "g", Tool: "claude", Scope: "global"},
 		{Path: filepath.Join(proj, ".claude/skills/l/SKILL.md"), Action: diff.Create, After: []byte("l"), Artifact: "l", Tool: "claude", Scope: "local"},
 	}
-	if err := recordState(applied, opts); err != nil {
+	if err := recordState(&diff.ChangeSet{Diffs: applied}, &install.Result{Applied: applied}, opts); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".patronus", "state.json")); err != nil {
@@ -227,6 +232,7 @@ func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 }
 
 func TestInstallRecipeFetchDryRun(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	// engram is a github-release recipe: FETCH the binary + MERGE per tool.
 	out, _, err := runInstall(t, "memory-engram", "--target", "all", "--global", "--dry-run")
 	if err != nil {
@@ -674,7 +680,7 @@ func TestMergeSourcedNamesPlugin(t *testing.T) {
 	}
 
 	cat := &registry.Catalog{}
-	names, err := mergeSourcedNames(context.Background(), cat, []string{"file:" + manifestPath}, t.TempDir())
+	names, err := mergeSourcedNames(context.Background(), cat, []string{"file:" + manifestPath}, t.TempDir(), false)
 	if err != nil {
 		t.Fatalf("mergeSourcedNames: %v", err)
 	}
@@ -753,5 +759,185 @@ func TestInstallProfileWiresBothMcpServers(t *testing.T) {
 		if _, ok := servers[want]; !ok {
 			t.Errorf("mcpServers.%s missing; a same-path sibling overwrote it:\n%s", want, raw)
 		}
+	}
+}
+
+func TestApplyLockPinsDirectoryRoles(t *testing.T) {
+	for _, role := range []manifest.Role{manifest.RoleSandbox, manifest.RoleOrchestration, manifest.RoleTools} {
+		t.Run(string(role), func(t *testing.T) {
+			f := newDirectoryFixture(t)
+			rec := f.recipe(t, "sample-replay", "1.0.0", "invented payload")
+			rec.Role = role
+			f.saveRecipe(t, rec)
+			pin := &lock.Lock{Version: 2, Profile: "sample-profile", Entries: []lock.Entry{{Name: rec.Name, Version: rec.Version, Kind: "recipe", Source: "registry", SHA256: "sha256:" + strings.Repeat("a", 64), Delivery: rec.Delivery}}}
+			path := filepath.Join(f.root, "patronus.lock")
+			if err := lock.Save(path, pin); err != nil {
+				t.Fatal(err)
+			}
+			before := mustRead(t, path)
+			newer := *rec
+			newer.Version = "2.0.0"
+			cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: &newer}}}
+			if err := applyLockPins(f.root, "sample-profile", "all", "", cat, nil); err != nil {
+				t.Fatal(err)
+			}
+			if got := cat.Recipes[0].Manifest; got.Version != "1.0.0" || got.Role != role || got.Delivery.Package.Name != rec.Delivery.Package.Name {
+				t.Fatalf("replayed recipe = %+v", got)
+			}
+			if !bytes.Equal(before, mustRead(t, path)) {
+				t.Fatal("pin replay rewrote legacy lock")
+			}
+			requireNoPackageWrites(t, f.home)
+			for _, tc := range []struct {
+				name   string
+				mutate func(*manifest.Recipe)
+			}{
+				{"role", func(r *manifest.Recipe) { r.Role = manifest.RoleMemory }},
+				{"local", func(r *manifest.Recipe) { r.Scope = &manifest.RecipeScope{Marker: ".sample"} }},
+				{"wire", func(r *manifest.Recipe) { r.Wire.Tools = []string{"pi"} }},
+				{"version", func(r *manifest.Recipe) { r.APIVersion = "patronus/v2" }},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					invalid := *rec
+					tc.mutate(&invalid)
+					cat.Recipes[0].Manifest = &invalid
+					if err := applyLockPins(f.root, "sample-profile", "all", "", cat, nil); err == nil {
+						t.Fatal("invalid catalog recipe accepted at pin replay")
+					}
+					if !bytes.Equal(before, mustRead(t, path)) {
+						t.Fatal("refused replay rewrote lock")
+					}
+					requireNoPackageWrites(t, f.home)
+				})
+			}
+			rec.Delivery.Assets[0].SHA256 = "corrupt"
+			if err := lock.Save(path, pin); err != nil {
+				t.Fatal(err)
+			}
+			cat.Recipes[0].Manifest = rec
+			if err := applyLockPins(f.root, "sample-profile", "all", "", cat, nil); err == nil {
+				t.Fatal("corrupt restored pin accepted")
+			}
+			requireNoPackageWrites(t, f.home)
+		})
+	}
+}
+
+func TestRecordStateSaveFailureIsOperationFailureForEveryTarget(t *testing.T) {
+	for _, tool := range []string{"pi", "claude", "codex"} {
+		t.Run(tool, func(t *testing.T) {
+			f := dp02Setup(t)
+			path := filepath.Join(f.home, "."+tool, "prompts", "fixture.md")
+			if tool == "pi" {
+				path = filepath.Join(f.home, ".pi/agent/prompts/fixture.md")
+			}
+			d := diff.FileDiff{Artifact: "fixture", Type: "command", Tool: tool, Scope: "global", Version: "1", Path: path, Action: diff.Create, After: []byte("initial fixture")}
+			opts := deployOptions{home: f.home, projectDir: f.root, force: true, yes: true}
+			res := toolpath.New(os.LookupEnv, f.home, f.root)
+			cmd := newInstallCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			if err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, res, opts); err != nil {
+				t.Fatal(err)
+			}
+			durablePath := statePath("global", opts)
+			before := mustRead(t, durablePath)
+			d.Before = d.After
+			d.After = []byte("updated fixture")
+			d.Action = diff.Conflict
+			d.Version = "2"
+			opts.saveState = func(string, *state.State) error { return errors.New("injected state persistence failure") }
+			err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, res, opts)
+			if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), path) {
+				t.Fatalf("missing failure/result diagnostic: %v", err)
+			}
+			if !bytes.Equal(before, mustRead(t, durablePath)) || !bytes.Equal(d.After, mustRead(t, path)) {
+				t.Fatal("failure lost durable state or committed bytes")
+			}
+			// A retry sees equality but cannot repair the stale ownership by adoption.
+			opts.saveState = nil
+			d.Before = d.After
+			d.Action = diff.Skip
+			if err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, res, opts); err == nil {
+				t.Fatal("equal retry adopted uncertain bytes")
+			}
+			loaded, err := state.Load(durablePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if loaded.Items[0].ItemVersion != "1" {
+				t.Fatal("uncertain install advanced version")
+			}
+		})
+	}
+}
+
+func TestPiOwnershipUnsupportedStateRefusesBeforeAnyWrite(t *testing.T) {
+	f := dp02Setup(t)
+	dp02Artifact(t, f.root, "fixture-prompt", "command", "Fixture prompt\n")
+	p := filepath.Join(f.home, ".patronus/state.json")
+	dp02File(t, p, `{"version":99,"items":[]}`)
+	before := dp02Snapshot(t, f.home, f.root)
+	if _, _, err := runInstall(t, "fixture-prompt", "--target", "pi", "--global", "--deploy", "--yes"); err == nil || !strings.Contains(err.Error(), "unsupported state version") {
+		t.Fatalf("unsupported state admitted: %v", err)
+	}
+	if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+		t.Fatal("refusal mutated files")
+	}
+}
+
+func TestPiOwnershipReplacementRefusesInvalidContinuity(t *testing.T) {
+	for _, fault := range []string{"changed absolute path", "changed structural path", "missing prior", "invalid prior", "overlap", "drift"} {
+		t.Run(fault, func(t *testing.T) {
+			f := dp02Setup(t)
+			path := filepath.Join(f.home, ".pi/agent/settings.json")
+			edit := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "fixture", ScalarValue: "old"}
+			before := []byte(`{"fixture":"old","user":"keep"}`)
+			d := diff.FileDiff{Artifact: "fixture-setting", Type: "setting", Tool: "pi", Scope: "global", Version: "1", Path: path, Action: diff.Merge, After: before, Setting: edit}
+			opts := deployOptions{home: f.home, projectDir: f.root, force: true, yes: true}
+			old := state.FromChangeSet([]diff.FileDiff{d}, "first")
+			switch fault {
+			case "changed absolute path":
+				d.Path = filepath.Join(f.home, ".pi/agent/other.json")
+			case "changed structural path":
+				copyEdit := *edit
+				copyEdit.Dotted = "other"
+				d.Setting = &copyEdit
+			case "invalid prior":
+				old[0].Files[0].Setting.PriorValue = "unproven"
+			case "overlap":
+				other := old[0]
+				other.Artifact = "other-owner"
+				old = append(old, other)
+			case "drift":
+				before = []byte(`{"fixture":"user edit","user":"keep"}`)
+			}
+			dp02File(t, path, string(before))
+			if err := state.Save(statePath("global", opts), &state.State{Version: state.Version, Items: old}); err != nil {
+				t.Fatal(err)
+			}
+			if fault == "missing prior" {
+				sp := statePath("global", opts)
+				raw := mustRead(t, sp)
+				raw = bytes.Replace(raw, []byte(`"PriorPresent": false`), []byte(`"MissingPrior": false`), 1)
+				dp02File(t, sp, string(raw))
+			}
+			d.Before = before
+			d.After = []byte(`{"fixture":"new","user":"keep"}`)
+			d.Version = "2"
+			copyEdit := *d.Setting
+			copyEdit.ScalarValue = "new"
+			d.Setting = &copyEdit
+			snapshot := dp02Snapshot(t, f.home, f.root)
+			cmd := newInstallCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			if err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, toolpath.New(os.LookupEnv, f.home, f.root), opts); err == nil {
+				t.Fatal("unsafe replacement admitted")
+			}
+			if !reflect.DeepEqual(snapshot, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("unsafe replacement mutated files")
+			}
+		})
 	}
 }

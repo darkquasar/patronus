@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/scan"
 	toml "github.com/pelletier/go-toml/v2"
 )
 
@@ -97,6 +98,12 @@ func ftOf(e *diff.SettingEdit) manifest.FileTarget {
 // edit onto an accumulated config so mixed list+scalar edits on one file all
 // survive — a scalar set no longer clobbers the hooks folded before it.
 func ApplySettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, error) {
+	if err := ValidateSettingEdit(e); err != nil {
+		return nil, err
+	}
+	if _, _, err := SettingStatus(existing, e); err != nil {
+		return nil, err
+	}
 	if e.IdentityKey == "" {
 		return MergeSettings(existing, ftOf(e), e.Dotted, e.ScalarValue)
 	}
@@ -106,9 +113,19 @@ func ApplySettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, error) {
 // RemoveSettingEdit reverses e from existing surgically — without restoring a
 // whole-file snapshot, which would clobber edits that folded in afterward. For a
 // LIST edit it strips the identified array element; for a SCALAR edit it restores
-// the per-key prior at Dotted, deleting the key when there was none. Reports
-// whether anything was removed.
+// the per-key prior at Dotted, deleting the key when there was none. A present
+// contribution must still equal its recorded value. Reports whether it was removed.
 func RemoveSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, error) {
+	present, equal, err := SettingStatus(existing, e)
+	if err != nil {
+		return nil, false, err
+	}
+	if !present {
+		return existing, false, nil
+	}
+	if !equal {
+		return nil, false, fmt.Errorf("setting %s: installed value changed; preserve for repair", e.Dotted)
+	}
 	if e.IdentityKey == "" {
 		return RemoveSettingScalar(existing, ftOf(e), e.Dotted, e.PriorValue, e.PriorPresent)
 	}
@@ -121,9 +138,8 @@ func RemoveSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, erro
 // null is reported as present with a nil value, which is what lets remove restore
 // a null rather than deleting the key.
 //
-// descendExisting normalizes intermediate maps as it walks (cur[p] = m). That
-// writes into the throwaway root parsed here and never reaches the caller's bytes,
-// so this stays a read despite the shared helper's mutation.
+// Missing ancestors mean absence; non-object ancestors are invalid structural
+// evidence, not absence. The parsed tree and the caller's bytes are never mutated.
 func ReadDotted(existing []byte, ft manifest.FileTarget, dotted string) (any, bool, error) {
 	if !ft.OK() {
 		return nil, false, fmt.Errorf("config: empty file target")
@@ -132,11 +148,19 @@ func ReadDotted(existing []byte, ft manifest.FileTarget, dotted string) (any, bo
 	if err != nil {
 		return nil, false, err
 	}
-	parent, leaf := descendExisting(root, dotted)
-	if parent == nil {
-		return nil, false, nil
+	parts := strings.Split(dotted, ".")
+	for _, part := range parts[:len(parts)-1] {
+		value, present := root[part]
+		if !present {
+			return nil, false, nil
+		}
+		child, ok := asStringMap(value)
+		if !ok {
+			return nil, false, fmt.Errorf("config: cannot descend into non-object key %q", part)
+		}
+		root = child
 	}
-	val, present := parent[leaf]
+	val, present := root[parts[len(parts)-1]]
 	return val, present, nil
 }
 
@@ -189,6 +213,9 @@ func parseConfig(existing []byte, format string) (map[string]any, error) {
 		if format == "jsonc" {
 			data = stripJSONComments(existing)
 		}
+		if _, err := scan.PiJSONObject(data); err != nil {
+			return nil, fmt.Errorf("config: parse json: %w", err)
+		}
 		if err := json.Unmarshal(data, &root); err != nil {
 			return nil, fmt.Errorf("config: parse json: %w", err)
 		}
@@ -239,6 +266,11 @@ func appendDotted(root map[string]any, dotted, identityKey string, elem map[stri
 	parent, leaf, err := descend(root, dotted)
 	if err != nil {
 		return err
+	}
+	if value, present := parent[leaf]; present {
+		if _, ok := value.([]any); !ok {
+			return fmt.Errorf("config: expected list at %s", dotted)
+		}
 	}
 	list := asAnyList(parent[leaf])
 	if i := indexByIdentity(list, identityKey, elem); i >= 0 {
@@ -423,4 +455,16 @@ func stripJSONComments(in []byte) []byte {
 		}
 	}
 	return out.Bytes()
+}
+
+// DeleteSettingEdit implements selected force deletion without restoring priors.
+// SettingStatus still rejects malformed structure and duplicate list identity.
+func DeleteSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, error) {
+	if _, _, err := SettingStatus(existing, e); err != nil {
+		return nil, false, err
+	}
+	if e.IdentityKey == "" {
+		return RemoveSettingScalar(existing, ftOf(e), e.Dotted, nil, false)
+	}
+	return RemoveSettingsList(existing, ftOf(e), e.Dotted, e.IdentityKey, e.Identity)
 }

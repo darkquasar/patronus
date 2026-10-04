@@ -52,6 +52,11 @@ func newDirectoryFixture(t *testing.T) directoryFixture {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("OPENCODE_CONFIG_DIR", filepath.Join(home, ".config", "opencode"))
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
+	t.Setenv("PI_PACKAGE_DIR", "")
+	t.Setenv("PI_SUBAGENT_EXTRA_AGENT_DIRS", "")
+	t.Setenv("PI_MCP_CONFIG_MODE", "")
+	t.Setenv("PI_OFFLINE", "true")
 	t.Chdir(root)
 	f := &directoryFixtureFetcher{bodies: map[string][]byte{}}
 	oldFetch, oldLook, oldRunner := directoryFetcherForDeploy, directoryLookPath, runnerForCommands
@@ -109,8 +114,28 @@ func (f directoryFixture) profile(t *testing.T, names ...string) {
 }
 func requireNoPackageWrites(t *testing.T, home string) {
 	t.Helper()
-	if _, err := os.Stat(filepath.Join(home, ".patronus")); !os.IsNotExist(err) {
-		t.Fatalf("unexpected package/state writes: %v", err)
+	root := filepath.Join(home, ".patronus")
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if os.IsNotExist(err) && path == root {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		switch path {
+		case root, filepath.Join(root, "package-state"):
+			if !d.IsDir() {
+				t.Fatalf("unexpected non-directory: %s", path)
+			}
+		case filepath.Join(root, "package-state/mutation.lock"):
+			dp05AssertCoordinationLock(t, path)
+		default:
+			t.Fatalf("unexpected package/state write: %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -134,6 +159,9 @@ func TestDirectoryInstallDryRunAndLocal(t *testing.T) {
 		if strings.Contains(out, "PATH readiness") || !strings.Contains(out, "SHA-256:") || !strings.Contains(out, "Package: pi-sandbox@1.0.0") {
 			t.Fatal(out)
 		}
+	}
+	if _, err := os.Lstat(filepath.Join(f.home, ".patronus")); !os.IsNotExist(err) {
+		t.Fatalf("dry run created coordination/state: %v", err)
 	}
 	if _, _, err := runInstall(t, "pi-sandbox", "--local", "--deploy"); err == nil {
 		t.Fatal("local directory install succeeded")
@@ -404,7 +432,7 @@ func TestDirectoryReferenceFailureIsFatalAndRepairable(t *testing.T) {
 	f.install(t, "pi-sandbox")
 }
 
-func TestDirectoryLegacyOnlyDeployDoesNotCreatePackageState(t *testing.T) {
+func TestDirectoryLegacyOnlyDeployCreatesOnlyCoordinationLock(t *testing.T) {
 	home := t.TempDir()
 	cs := &diff.ChangeSet{}
 	result, err := deployDirectories(context.Background(), home, cs, false)

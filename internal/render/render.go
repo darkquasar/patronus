@@ -240,7 +240,7 @@ func printProfileLayers(w io.Writer, m *manifest.Profile) {
 func PrintInventory(w io.Writer, inv *scan.Inventory) {
 	fmt.Fprintf(w, "Scanned project: %s\n", inv.ProjectDir)
 	fmt.Fprintf(w, "Home:            %s\n", inv.Home)
-	if e := inv.Env; e.CodexHome != "" || e.OpencodeConfigDir != "" || e.XDGConfigHome != "" {
+	if e := inv.Env; e.CodexHome != "" || e.OpencodeConfigDir != "" || e.XDGConfigHome != "" || e.PiCodingAgentDir != "" {
 		fmt.Fprintln(w, "Env overrides:")
 		if e.CodexHome != "" {
 			fmt.Fprintf(w, "  CODEX_HOME=%s\n", e.CodexHome)
@@ -250,6 +250,9 @@ func PrintInventory(w io.Writer, inv *scan.Inventory) {
 		}
 		if e.XDGConfigHome != "" {
 			fmt.Fprintf(w, "  XDG_CONFIG_HOME=%s\n", e.XDGConfigHome)
+		}
+		if e.PiCodingAgentDir != "" {
+			fmt.Fprintf(w, "  PI_CODING_AGENT_DIR=%s\n", e.PiCodingAgentDir)
 		}
 	}
 	fmt.Fprintln(w)

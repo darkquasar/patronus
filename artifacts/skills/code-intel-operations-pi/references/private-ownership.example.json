@@ -1,0 +1,66 @@
+{
+  "recordKind": "manual-private-ownership-example-not-installer-state",
+  "status": "unverified",
+  "owner": "<exclusive-scope-owner>",
+  "root": "/ABSOLUTE/APPROVED/PROJECT",
+  "cwd": "/ABSOLUTE/APPROVED/PROJECT",
+  "allocation": {
+    "kind": "coordinator-retained-exact-cwd",
+    "baseRef": "<named-base-ref>",
+    "baseCommit": "<full-base-commit>",
+    "headCommit": "<full-launch-commit>",
+    "branch": "<allocated-branch>",
+    "runId": "<writer-run-id>",
+    "sessionId": "<writer-session-id>",
+    "serverIdentity": "serena-writer-pi"
+  },
+  "grant": { "path": "grants/execution.json", "sha256": "<reviewed-grant-sha256>" },
+  "resetGrant": { "path": "grants/reset.json", "sha256": "<reviewed-reset-grant-sha256>" },
+  "evidenceRoot": "/ABSOLUTE/APPROVED/EVIDENCE",
+  "configurationInventory": { "path": "inventory.json", "sha256": "<all-active-sources-and-ceilings-sha256>" },
+  "originalFile": {
+    "path": "/ABSOLUTE/APPROVED/PROJECT/.pi/mcp-adapter.json",
+    "present": false,
+    "bytesBase64": null,
+    "sha256": null
+  },
+  "managedFields": [
+    {
+      "path": ["mcpServers", "serena-writer-pi"],
+      "original": { "present": false, "value": null },
+      "managedValue": {
+        "command": "/ABSOLUTE/APPROVED/EXECUTABLE/serena",
+        "args": ["start-mcp-server", "--project", "/ABSOLUTE/APPROVED/PROJECT", "--context", "ide", "--mode", "editing"],
+        "cwd": "/ABSOLUTE/APPROVED/PROJECT",
+        "inheritEnv": false,
+        "directTools": false,
+        "includeTools": ["<discovered-server-initial-instructions>", "<discovered-server-find-symbol>", "<discovered-server-find-referencing-symbols>"]
+      },
+      "managedSHA256": "<canonical-managed-value-sha256>"
+    }
+  ],
+  "approvals": {
+    "piProjectResources": "unverified",
+    "exactMCPServer": "unverified",
+    "interactiveEvidence": null
+  },
+  "memoryAdmission": {
+    "freeMiB": null,
+    "availableMiB": null,
+    "containerHeadroomMiB": null,
+    "estimatedAdditionalMiB": null,
+    "reserveMB": 500,
+    "minimumFreeAndAvailableMiB": 750,
+    "observedAt": null,
+    "decision": "unverified"
+  },
+  "settlement": {
+    "state": "unknown",
+    "runIds": [],
+    "processIdentities": [],
+    "unknownDescendants": true,
+    "logs": []
+  },
+  "reload": { "acknowledged": false, "effectivePlanEvidence": null },
+  "history": []
+}

@@ -3,7 +3,9 @@
 A directory recipe installs a verified tar.gz package once per host, at
 `~/.patronus/packages/<recipe>/`. It needs no installed agent and ignores runtime
 selection for delivery: `--target all` still installs one tree. Local scope is
-unsupported.
+unsupported. This lifecycle applies only to static directory recipes. For a
+`manager: pi` recipe, Pi/npm own package installation, update, removal and package
+files; the directory receipts described below do not apply.
 
 ```sh
 patronus install <recipe>                 # inspect the plan
@@ -75,6 +77,44 @@ cleanup, is reported as an error while keeping the committed installation.
 Retry installation after resolving the reported problem. Receipts remain the
 ownership authority if a concurrent legacy state write loses a discovery row;
 generic state writes are not globally serialized by the package lock.
+
+## Selective removal and recovery records
+
+`patronus remove <recipe> --deploy` removes unchanged owned files, retaining
+edited owned files and all unknown content. `--force` also selects edited owned
+files, but authorizes only their observed bytes and mode, never unknown children
+or subsequent edits. Empty owned directories are pruned; roots are not recursively
+deleted.
+
+New removals write one immutable `removal.json` in the recipe's transaction
+directory. It records the previous receipt, initially missing paths, and the
+ordered selected paths with their observed preimages. A schema-2
+`transaction.json` binds a random transaction ID, recipe, canonical root, and the
+SHA-256 of the canonical manifest JSON to a completed-prefix cursor and phase.
+The marker is published durably before any unlink. Older binaries reject this
+marker at the existing discovery location; retry with a supporting binary.
+Pending schema-1 journals retain their original recovery path.
+
+Every selected file still has a durable unlink intent, preimage/type/ancestry
+checks, unlink and parent-directory sync, then a durable completed-prefix
+checkpoint before the next file. Completed paths are excluded from replay even
+if recreated with identical bytes. A crash between unlink and durable completion
+retains the existing ambiguity for an identically recreated file; this is not a
+power-cut or hostile-concurrent-writer guarantee. Checkpoints reuse the atomic
+temp-write, file-sync, rename and parent-sync protocol, without batching.
+
+The receipt remains the last committed snapshot during removal, not a per-file
+ledger. `ReadTransaction` and inspection expose pending work and reconstruct its
+inventory view; `Load`/`List` alone do not prove a package is idle. Mutation must
+recover first. The remaining-files receipt is published once at finalization
+(or deleted when empty), then the committed journal remains until discovery is
+repaired and synced. Acknowledgement durably removes the marker before cleaning
+its manifest; a manifest without a marker authorizes nothing. All persistence
+errors stop further destructive work and require reopening validated evidence.
+
+The [removal measurement harness](../scripts/qualification/removal-performance/README.md)
+records synthetic overlay timings, recovery and binary-size comparisons. These
+are removal-service measurements, not installed web-payload or power-loss tests.
 
 ## Using the Pi kit
 

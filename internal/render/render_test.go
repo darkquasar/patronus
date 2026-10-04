@@ -210,3 +210,42 @@ func TestTruncateAndJoinList(t *testing.T) {
 		t.Errorf("joinList = %q, want 'a, b'", got)
 	}
 }
+
+func TestPrintInventoryPiOverride(t *testing.T) {
+	root := t.TempDir()
+	var buf bytes.Buffer
+	PrintInventory(&buf, &scan.Inventory{Env: scan.EnvSnapshot{PiCodingAgentDir: root}})
+	for _, want := range []string{"Env overrides:\n", "  PI_CODING_AGENT_DIR=" + root + "\n"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Fatalf("missing %q in %s", want, buf.String())
+		}
+	}
+}
+
+func TestPrintInventoryWithoutPiOverride(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		env  scan.EnvSnapshot
+		want string
+	}{
+		{"none", scan.EnvSnapshot{}, ""},
+		{"legacy overrides", scan.EnvSnapshot{CodexHome: "/sample/codex", OpencodeConfigDir: "/sample/opencode", XDGConfigHome: "/sample/config"}, "Env overrides:\n  CODEX_HOME=/sample/codex\n  OPENCODE_CONFIG_DIR=/sample/opencode\n  XDG_CONFIG_HOME=/sample/config\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			PrintInventory(&buf, &scan.Inventory{Env: tc.env})
+			got := buf.String()
+			if strings.Contains(got, "PI_CODING_AGENT_DIR") {
+				t.Fatalf("unset Pi override printed: %s", got)
+			}
+			if !strings.Contains(got, tc.want) {
+				t.Fatalf("legacy overrides changed: %s", got)
+			}
+		})
+	}
+	var buf bytes.Buffer
+	PrintInventory(&buf, &scan.Inventory{})
+	if strings.Contains(buf.String(), "Env overrides:") {
+		t.Fatalf("empty environment header printed: %s", buf.String())
+	}
+}

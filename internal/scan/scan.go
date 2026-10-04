@@ -1,4 +1,4 @@
-// Package scan detects which AI coding tools (Claude Code, Codex, OpenCode) are
+// Package scan detects which AI coding tools (Claude Code, Codex, OpenCode, Pi) are
 // present at global and local scope, driven by the adapters' detect: markers.
 package scan
 
@@ -26,11 +26,12 @@ type Options struct {
 
 // Inventory is the structured result of a scan.
 type Inventory struct {
-	Packages   []PackageStatus `json:"packages"`
-	ProjectDir string          `json:"projectDir"`
-	Home       string          `json:"home"`
-	Tools      []ToolStatus    `json:"tools"`
-	Env        EnvSnapshot     `json:"env"`
+	NativePackages []NativeStatus  `json:"nativePackages,omitempty"`
+	Packages       []PackageStatus `json:"packages"`
+	ProjectDir     string          `json:"projectDir"`
+	Home           string          `json:"home"`
+	Tools          []ToolStatus    `json:"tools"`
+	Env            EnvSnapshot     `json:"env"`
 }
 
 // ToolStatus reports detection for one tool across both scopes.
@@ -49,6 +50,7 @@ type Detection struct {
 
 // EnvSnapshot records the env overrides that influenced path resolution.
 type EnvSnapshot struct {
+	PiCodingAgentDir  string `json:"piCodingAgentDir,omitempty"`
 	CodexHome         string `json:"codexHome,omitempty"`
 	OpencodeConfigDir string `json:"opencodeConfigDir,omitempty"`
 	XDGConfigHome     string `json:"xdgConfigHome,omitempty"`
@@ -104,6 +106,7 @@ func Scan(opts Options) (*Inventory, error) {
 func envSnapshot(env EnvLookup) EnvSnapshot {
 	get := func(k string) string { v, _ := env(k); return v }
 	return EnvSnapshot{
+		PiCodingAgentDir:  get("PI_CODING_AGENT_DIR"),
 		CodexHome:         get("CODEX_HOME"),
 		OpencodeConfigDir: get("OPENCODE_CONFIG_DIR"),
 		XDGConfigHome:     get("XDG_CONFIG_HOME"),

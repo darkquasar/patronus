@@ -1,0 +1,13 @@
+Graphify
+Copyright 2026 Safi Shamsi and the Graphify contributors.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Portions of this software were contributed under the MIT License prior to the
+relicensing and remain available under those terms. The original MIT license
+text is retained in LICENSE-MIT.
+
+Patronus Pi adaptation (2026-10-02): SKILL.md and all eight references rewritten
+for query-only children and explicitly authorized coordinator operations.
+.graphify_version retained unchanged as source provenance, not runtime evidence.
+Source inventory: SOURCE.md. No Graphify runtime is redistributed here.

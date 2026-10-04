@@ -17,6 +17,25 @@ func transactionFixture(t *testing.T, home string) *Transaction {
 	base := filepath.Join(filepath.Dir(r.Root), ".txn", r.Recipe)
 	return &Transaction{SchemaVersion: 1, Recipe: r.Recipe, Root: r.Root, Stage: filepath.Join(base, "stage-123"), Backup: filepath.Join(base, "backup-123"), Phase: Prepared, Operation: "replace", Intent: "move-old", Candidate: r}
 }
+func TestTransactionScopedMemberRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	r := cp05ScopedReceipt(t, home)
+	tx := &Transaction{
+		SchemaVersion: 1, Recipe: r.Recipe, Root: r.Root,
+		Phase: RecoveryRequired, ResumePhase: Prepared, Operation: "remove", Intent: "unlink",
+		Previous: r, Observed: r.Files,
+		PendingRemove: []string{"node_modules/@example/tool/index.js"},
+		Removed:       []string{"node_modules/@example/tool/old.js"},
+	}
+	if err := WriteTransaction(home, tx); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadTransaction(home, tx.Recipe)
+	if err != nil || !reflect.DeepEqual(got, tx) {
+		t.Fatalf("scoped transaction: %#v, %v", got, err)
+	}
+}
+
 func TestTransactionRoundTrip(t *testing.T) {
 	home := t.TempDir()
 	tx := transactionFixture(t, home)

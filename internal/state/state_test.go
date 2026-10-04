@@ -264,3 +264,35 @@ func TestPackageReceiptReferenceRoundTrip(t *testing.T) {
 		t.Fatalf("JSON tag missing: %s", data)
 	}
 }
+
+func TestReconcileMergePreservesUntouchedPaths(t *testing.T) {
+	s := &State{Version: Version, Items: []Item{{Artifact: "fixture", Tool: "pi", Scope: "global", Files: []FileState{{Path: "/fixture/a"}, {Path: "/fixture/b"}}}}}
+	Merge(s, []Item{{Artifact: "fixture", Tool: "pi", Scope: "global", Files: []FileState{{Path: "/fixture/a", Checksum: "new"}}}})
+	if len(s.Items[0].Files) != 2 || s.Items[0].Files[0].Checksum != "new" {
+		t.Fatalf("sparse merge discarded ownership: %+v", s)
+	}
+}
+
+func TestPiOwnershipLoadRejectsUnsupportedVersionAndMissingPrior(t *testing.T) {
+	for _, data := range []string{
+		`{"version":99,"items":[]}`,
+		`{"version":-1,"items":[]}`,
+		`{"version":1,"items":[{"artifact":"fixture","tool":"pi","files":[{"path":"/fixture/settings.json","action":"MERGE"}]}]}`,
+		`{"version":1,"items":[{"artifact":"fixture","tool":"pi","files":[{"path":"/fixture/settings.json","action":"MERGE","setting":{"Target":{"File":"settings.json","Format":"json"},"Dotted":"owned","ScalarValue":true}}]}]}`,
+		`{"version":1,"items":[{"artifact":"fixture","tool":"pi","files":[{"path":"/fixture/settings.json","action":"MERGE","setting":{"Target":{"File":"settings.json","Format":"json"},"Dotted":"owned","ScalarValue":true,"PriorValue":null,"PriorPresent":null}}]}]}`,
+	} {
+		t.Run(data, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "state.json")
+			if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(path); err == nil {
+				t.Fatal("unsafe state accepted")
+			}
+			got, err := os.ReadFile(path)
+			if err != nil || string(got) != data {
+				t.Fatal("load mutated state")
+			}
+		})
+	}
+}

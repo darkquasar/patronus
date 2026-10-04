@@ -1,0 +1,16 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-workflow-security-reviewer-pi
+description: "Review authority lifecycle trust and failure boundaries without subject writes"
+version: 2.0.0
+entry: agent.md
+files: []
+targets: [pi]
+defaults:
+  scope: project
+requires:
+  - spec-review-pi
+  - verification-before-completion-pi
+  - pi-subagents

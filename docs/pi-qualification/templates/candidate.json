@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "kind": "candidate",
+  "example": true,
+  "status": "unknown",
+  "claim": "static-delivery",
+  "class": "C",
+  "source": {
+    "root": "/EXAMPLE/not-evidence",
+    "revision": "unknown",
+    "dirty_inventory": []
+  },
+  "inputs": [],
+  "outputs": [],
+  "environment": {
+    "platform": "unknown",
+    "pins": {
+      "interpreter": "unknown"
+    }
+  },
+  "grant": {
+    "version": 1,
+    "kind": "grant",
+    "example": true,
+    "status": "unknown",
+    "issuer": "unknown",
+    "issued_at": "2026-01-01T00:00:00Z",
+    "action": "qualification",
+    "roots": [
+      "."
+    ],
+    "outputs": [],
+    "inputs": [],
+    "expires_at": null,
+    "revalidation_trigger": "any changed input or scope",
+    "owner_verification": {
+      "owner": "unknown",
+      "result": "unknown",
+      "checked_at": "2026-01-01T00:00:00Z",
+      "action": "qualification",
+      "roots": [
+        "."
+      ],
+      "outputs": [],
+      "inputs": []
+    }
+  },
+  "invocation": {
+    "argv": [
+      "EXAMPLE-NOT-EXECUTED"
+    ],
+    "started_at": "2026-01-01T00:00:00Z",
+    "ended_at": "2026-01-01T00:00:00Z"
+  },
+  "result": "unknown",
+  "expected": "unknown",
+  "observation": "unknown",
+  "logs": [],
+  "exit_code": null,
+  "settlement": "unknown",
+  "review": {
+    "cycles": 0,
+    "reviewer": "unknown",
+    "reviewed": [],
+    "corrections": [],
+    "findings": [],
+    "disposition": "incomplete"
+  },
+  "gates": {
+    "required_tests": "unknown",
+    "authority": "unknown",
+    "release": "unknown"
+  },
+  "limitations": [
+    "EXAMPLE ONLY; never release evidence"
+  ],
+  "owner_acceptance": {
+    "owner": "unknown",
+    "result": "unknown",
+    "claim": "static-delivery",
+    "stage": "qualification",
+    "inputs": []
+  },
+  "identity": "EXAMPLE-NOT-A-PACKAGE",
+  "digest": null,
+  "retrieved_at": "2026-01-01T00:00:00Z",
+  "immutable_refs": [],
+  "dossier": {
+    "identity": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "version_ref": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "archive": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "installed_comparison": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "license_attribution": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "dependency_tree_sbom": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "lifecycle_build_scripts": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "provenance_signature": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "reachable_advisories": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "upstream_tests_ci": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "platform_runtime": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "privilege_network_credentials": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "update_remove_rollback": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "alternatives": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "residual_risks": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "approval": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    },
+    "delta_to_latest": {
+      "status": "unknown",
+      "value": null,
+      "references": []
+    }
+  }
+}

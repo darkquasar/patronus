@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: agents-spine-pi
+description: "Pi context discovery, authority and upstream-only delegation"
+version: 2.0.0
+entry: INSTRUCTIONS.md
+files: ["NOTICE", "SOURCE.md"]
+targets: [pi]
+defaults:
+  scope: project
+requires: ["pi-subagents"]
+attribution:
+  upstream: github.com/openai/agents.md
+  license: MIT
+  copyright: "Copyright (c) 2025 OpenAI"
+  commit: d1ac7f063d20e70015ed6732664049ae4ba9d74e
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."

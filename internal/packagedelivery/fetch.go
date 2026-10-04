@@ -57,37 +57,60 @@ func (f HTTPSFetcher) Open(ctx context.Context, address string) (io.ReadCloser, 
 	return response.Body, nil
 }
 func (s *Service) fetch(ctx context.Context, req Request) (*packagebundle.Bundle, error) {
-	fetcher := s.Fetcher
+	path, err := AcquireArchive(ctx, req, s.Fetcher)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return packagebundle.Decode(contextReader{ctx: ctx, reader: f}, req.Identity, packagebundle.DefaultLimits)
+}
+
+// AcquireArchive returns an operation-owned temporary archive only after bounded
+// digest and decoder validation. The caller must remove it; no journal or receipt
+// is created and no destination is touched.
+func AcquireArchive(ctx context.Context, req Request, fetcher Fetcher) (path string, err error) {
 	if fetcher == nil {
 		fetcher = HTTPSFetcher{}
 	}
 	body, err := fetcher.Open(ctx, req.URL)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer body.Close()
 	temp, err := os.CreateTemp("", "patronus-package-*")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	defer os.Remove(temp.Name())
+	defer func() {
+		if err != nil {
+			os.Remove(temp.Name())
+		}
+	}()
 	defer temp.Close()
 	hash := sha256.New()
 	limited := io.LimitReader(body, packagebundle.DefaultLimits.CompressedBytes+1)
 	n, err := io.Copy(io.MultiWriter(temp, hash), contextReader{ctx: ctx, reader: limited})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if n > packagebundle.DefaultLimits.CompressedBytes {
-		return nil, errors.New("compressed package exceeds limit")
+		return "", errors.New("compressed package exceeds limit")
 	}
 	if fmt.Sprintf("sha256:%x", hash.Sum(nil)) != req.SHA256 {
-		return nil, errors.New("package archive checksum mismatch")
+		return "", errors.New("package archive checksum mismatch")
 	}
 	if _, err := temp.Seek(0, io.SeekStart); err != nil {
-		return nil, err
+		return "", err
 	}
-	return packagebundle.Decode(contextReader{ctx: ctx, reader: temp}, req.Identity, packagebundle.DefaultLimits)
+	if _, err = packagebundle.Decode(contextReader{ctx: ctx, reader: temp}, req.Identity, packagebundle.DefaultLimits); err != nil {
+		return "", err
+	}
+	return temp.Name(), nil
 }
 
 type contextReader struct {

@@ -171,6 +171,12 @@ func (s *Service) Recover(ctx context.Context, recipe string) error {
 			return pendingError(recipe, []string{path}, err)
 		}
 	}
+	if tx.SchemaVersion == 2 {
+		manifest := filepath.Join(filepath.Dir(journal), "removal.json")
+		if err := s.stabilize(manifest); err != nil {
+			return pendingError(recipe, []string{manifest}, &packagestate.DurabilityError{Path: manifest, Stage: "recovery-sync", MayBeVisible: true, Err: err})
+		}
+	}
 	if err := s.stabilize(journal); err != nil {
 		return pendingError(recipe, []string{journal}, &packagestate.DurabilityError{Path: journal, Stage: "recovery-sync", MayBeVisible: true, Err: err})
 	}

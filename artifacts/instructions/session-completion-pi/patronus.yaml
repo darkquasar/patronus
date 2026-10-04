@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: session-completion-pi
+description: "Stage-bound verified handoff, no unconditional push or cleanup"
+version: 2.0.0
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md"]
+targets: [pi]
+defaults:
+  scope: project

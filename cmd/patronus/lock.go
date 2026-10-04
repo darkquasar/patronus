@@ -32,7 +32,10 @@ func newLockCmd() *cobra.Command {
 			"lock) is `install --profile` against a committed lock: it fetches each item at\n" +
 			"its locked version from the registry's immutable key and verifies the sha.",
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if err := dp06Target(tool); err != nil {
+				return err
+			}
 			if profileSel == "" {
 				return fmt.Errorf("--profile is required (a lock pins what a profile resolved to)")
 			}
@@ -40,6 +43,22 @@ func newLockCmd() *cobra.Command {
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
+			}
+			m, err := acquireMutation(homeDir(), filepath.Join(wd, "patronus.lock"))
+			if err != nil {
+				return err
+			}
+			defer m.close(&err)
+			prior, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+			if err != nil {
+				return err
+			}
+			if prior.Target == "pi" {
+				if !cmd.Flags().Changed("target") {
+					tool = "pi"
+				} else if tool != "pi" {
+					return fmt.Errorf("existing Pi lock target conflicts with --target %s; explicit migration required", tool)
+				}
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
@@ -61,6 +80,16 @@ func newLockCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if tool == "pi" {
+				if err := dp06ProfileComplete(res); err != nil {
+					return err
+				}
+				var old []string
+				for _, e := range prior.Entries {
+					old = append(old, e.Name)
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "Deliberate Pi lock regeneration; closure preview: pinned=%v selected=%v\n", old, res.Names())
+			}
 			for _, w := range res.Warnings {
 				warnf("%s", w)
 			}
@@ -81,7 +110,7 @@ func newLockCmd() *cobra.Command {
 			// The lock is the shared, committed spec, so it lives at the project root
 			// (cwd) — intentionally not the global/local split state.json uses.
 			path := filepath.Join(wd, "patronus.lock")
-			if err := lock.Save(path, l); err != nil {
+			if err := m.saveLock(path, l); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s (%d entries)\n", path, len(l.Entries))
@@ -90,7 +119,7 @@ func newLockCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&profileSel, "profile", "", "profile to lock (required)")
-	cmd.Flags().StringVar(&tool, "target", "all", "pin per-target flavours: claude|codex|opencode|all")
+	cmd.Flags().StringVar(&tool, "target", "all", "pin per-target flavours: claude|codex|opencode|pi|all")
 	addRegistryFlags(cmd, &regSel)
 	return cmd
 }

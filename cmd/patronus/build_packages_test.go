@@ -60,6 +60,31 @@ func TestBuildPackageBootstrap(t *testing.T) {
 	}
 }
 
+func TestBuildPackageScopedMemberRoundTrip(t *testing.T) {
+	root := packageFixture(t)
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+	path := "pi/node_modules/@example/tool/node_modules/@nested/helper/index.js"
+	packageWrite(t, root, "packages/kit/package.yaml", strings.ReplaceAll(testPackageDescriptor, "spec.yaml", path))
+	packageWrite(t, root, "packages/kit/"+path, "invented inert bytes")
+	t.Chdir(root)
+	out := t.TempDir()
+	if _, err := runBuild(t, "--package", "kit", "--out", out); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, "packages/kit/1.0.0/kit-1.0.0-darwin-arm64.tar.gz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := packagebundle.Identity{Name: "kit", Version: "1.0.0", OS: "darwin", Arch: "arm64"}
+	bundle, err := packagebundle.Decode(bytes.NewReader(data), id, packagebundle.DefaultLimits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bundle.Files) != 2 || bundle.Files[1].Path != path || bundle.Files[1].Mode != 0644 || string(bundle.Files[1].Data) != "invented inert bytes" {
+		t.Fatalf("unexpected scoped payload: %+v", bundle.Files)
+	}
+}
+
 func TestBuildPackageSixteenComponentPayload(t *testing.T) {
 	root := packageFixture(t)
 	path := strings.Repeat("dir/", 15) + "spec.yaml"

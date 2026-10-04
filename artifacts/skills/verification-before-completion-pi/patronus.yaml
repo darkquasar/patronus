@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: verification-before-completion-pi
+description: "Evidence before claims: run authorized verification and read fresh output before asserting success. Missing authority or unavailable checks mean unverified work, never assumed success. Advisory Pi guidance, not an execution grant or technical guard."
+version: 1.0.0
+entry: SKILL.md
+files: [NOTICE]
+targets: [pi]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Adapted from upstream skills/verification-before-completion/SKILL.md through Patronus verification-before-completion: rename for Pi and explicitly subordinate command execution to task authority while retaining the fresh-evidence gate."

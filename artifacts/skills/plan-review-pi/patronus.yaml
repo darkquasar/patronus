@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: plan-review-pi
+description: "Review exact plan coverage, ordering and interfaces before execution"
+version: 2.0.0
+entry: SKILL.md
+files: ["SOURCE.md", "plan-reviewer.md"]
+targets: [pi]
+defaults:
+  scope: project

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,12 +32,20 @@ func newScanCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "scan",
 		Short: "Detect installed AI coding tools and their configs",
-		Long:  "Detects Claude Code, Codex, and OpenCode at global and local scope using the repo's adapter detect: markers (honoring CODEX_HOME, OPENCODE_CONFIG_DIR, XDG_CONFIG_HOME).",
+		Long:  "Detects Claude Code, Codex, OpenCode, and Pi at global and local scope using the repo's adapter detect: markers (honoring CODEX_HOME, OPENCODE_CONFIG_DIR, XDG_CONFIG_HOME, PI_CODING_AGENT_DIR). Pi static inventory is runtime-unverified.",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
+			}
+			var mutation *mutation
+			if !jsonOutput {
+				mutation, err = beginMutation(homeDir(), wd)
+				if err != nil {
+					return err
+				}
+				defer mutation.close(&err)
 			}
 			// A checkout is a bonus, not a requirement: scan is the diagnostic you
 			// run on YOUR machine to see what is deployed into ~/.claude, and that
@@ -64,6 +71,10 @@ func newScanCmd() *cobra.Command {
 			// and the source the catalog holds now. It never fails the scan: an
 			// unreachable catalog degrades to reporting nothing.
 			findings := reconcileDrift(cmd.Context(), wd, inv, adapters, warnf)
+			inv.NativePackages, err = scanNativePackages(homeDir(), wd)
+			if err != nil {
+				return err
+			}
 
 			if jsonOutput {
 				return render.JSON(cmd.OutOrStdout(), struct {
@@ -72,6 +83,9 @@ func newScanCmd() *cobra.Command {
 				}{inv, findings})
 			}
 			render.PrintInventory(cmd.OutOrStdout(), inv)
+			for _, n := range inv.NativePackages {
+				fmt.Fprintf(cmd.OutOrStdout(), "Native %s at %s: %s %s; %s; %s; runtime loading and internal file edits unverified\n", n.Identity.Name, n.Identity.Root, n.Observation.Status, n.Observation.Version, n.Provenance, n.Error)
+			}
 			for _, pkg := range inv.Packages {
 				fmt.Fprintf(cmd.OutOrStdout(), "Package %s %s: %s (%s)\n", pkg.Recipe, pkg.Version, pkg.Status, pkg.Root)
 				for _, path := range pkg.Paths {
@@ -84,8 +98,12 @@ func newScanCmd() *cobra.Command {
 			// reads tools; it never writes tool state. A missing lock, an
 			// unavailable registry, or an unreachable tool CLI degrades gracefully
 			// (statuses that cannot be confirmed stay unverified).
-			reconcilePluginLock(cmd.Context(), wd, inv, pluginListerForScan, warnf)
-			return nil
+			for _, finding := range findings {
+				if finding.Verdict == settingConflict {
+					return nil
+				}
+			}
+			return reconcilePluginLockLocked(cmd.Context(), wd, inv, pluginListerForScan, warnf, mutation)
 		},
 	}
 }
@@ -128,20 +146,37 @@ func (execPluginLister) List(ctx context.Context, tool string) ([]byte, bool) {
 // them unverified). It is a no-op when there is no patronus.lock at wd, or the lock
 // tracks no plugins. The catalog is loaded to map each lock entry's name to its
 // per-tool "<plugin>@<marketplace>" id; if the catalog is unavailable, plugins are
-// left unverified (their ids cannot be resolved). It never fails the scan.
-func reconcilePluginLock(ctx context.Context, wd string, inv *scan.Inventory, lister pluginLister, warnf func(string, ...any)) {
+// left unchanged (their ids cannot be resolved). Lock contention, drift and
+// persistence failures are command errors, not a verified scan result.
+func reconcilePluginLock(ctx context.Context, wd string, inv *scan.Inventory, lister pluginLister, warnf func(string, ...any)) (err error) {
+	m, err := beginMutation(inv.Home, wd)
+	if err != nil {
+		return err
+	}
+	defer m.close(&err)
+	return reconcilePluginLockLocked(ctx, wd, inv, lister, warnf, m)
+}
+
+func reconcilePluginLockLocked(ctx context.Context, wd string, inv *scan.Inventory, lister pluginLister, warnf func(string, ...any), m *mutation) error {
 	lockPath := filepath.Join(wd, "patronus.lock")
 	l, err := lock.Load(lockPath)
-	if err != nil || len(l.Entries) == 0 {
-		return // no lock (or empty) → nothing to reconcile
+	if err != nil {
+		return fmt.Errorf("scan: load lock: %w", err)
+	}
+	if len(l.Entries) == 0 {
+		return nil // no lock (or empty) → nothing to reconcile
+	}
+	if l.Target == "pi" {
+		warnf("Pi lock target retained: static placement is runtime-unverified; scan never loads extensions or verifies runtime activation")
+		return nil
 	}
 	if !hasPluginEntry(l.Entries) {
-		return
+		return nil
 	}
 
 	cat := scanCatalogFn(ctx, wd, warnf)
 	if cat == nil {
-		return // cannot map entry names to ids; leave statuses as-is (unverified)
+		return nil // cannot map entry names to ids; leave statuses as-is (unverified)
 	}
 
 	// For each detected, plugin-capable tool with a reachable CLI, read its
@@ -149,6 +184,9 @@ func reconcilePluginLock(ctx context.Context, wd string, inv *scan.Inventory, li
 	idsByTool := map[string]map[string]bool{}
 	for _, ts := range inv.Tools {
 		tool := ts.Tool
+		if l.Target != "" && l.Target != tool {
+			continue
+		}
 		eco, capable := plugin.EcosystemFor(tool)
 		if !capable || !detected(ts) {
 			continue
@@ -181,9 +219,7 @@ func reconcilePluginLock(ctx context.Context, wd string, inv *scan.Inventory, li
 
 	reconciled := plugin.Reconcile(l.Entries, idsByTool)
 	l.Entries = reconciled
-	if err := lock.Save(lockPath, l); err != nil {
-		warnf("scan: writing reconciled lock: %v", err)
-	}
+	return m.saveLock(lockPath, l)
 }
 
 // hasPluginEntry reports whether any entry is a tracked plugin.
@@ -302,6 +338,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	var sectionRows []recordedSection
 	appendPath := map[string]bool{} // paths reconciled per-section, not whole-file
 	var mergeRows []recordedMerge
+	legacyMergeRows := map[string][]artifactInstallKey{}
 	mergePath := map[string]bool{} // paths reconciled per-setting, not whole-file
 	// Two sets, because they answer different questions. installedIdents is WHERE
 	// each artifact was installed — the recorded {artifact, tool, scope} triples we
@@ -325,7 +362,8 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		}
 		s, err := state.Load(filepath.Join(dir, ".patronus", "state.json"))
 		if err != nil {
-			continue // unreadable state: nothing recorded that we can reconcile
+			warnf("drift: invalid ownership state in %s: %v", dir, err)
+			return []drift.Finding{{Path: filepath.Join(dir, ".patronus", "state.json"), Verdict: settingConflict, Detail: err.Error()}}
 		}
 		for _, it := range s.Items {
 			// The identity this item's file rows reconcile against. Scope is taken
@@ -368,6 +406,9 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 					mergePath[f.Path] = true
 					continue
 				}
+				if f.Action == string(diff.Merge) {
+					legacyMergeRows[f.Path] = append(legacyMergeRows[f.Path], key)
+				}
 				rows[f.Path] = recordedFile{key: key, checksum: f.Checksum}
 			}
 		}
@@ -404,7 +445,11 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		idents = append(idents, k)
 	}
 	sortInstallKeys(idents)
-	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, idents, warnf)
+	var findings []drift.Finding
+	would, wouldSection := wouldDeploy(cat, inv, adapters, wd, idents, func(format string, args ...any) {
+		warnf(format, args...)
+		findings = append(findings, drift.Finding{Verdict: settingConflict, Detail: fmt.Sprintf(format, args...)})
+	})
 
 	// Recipe MERGE rows (MCP entries) are ownable bytes Patronus computes, but
 	// wouldDeploy is artifact-only — so add them here or Pass 1 misreads every
@@ -416,14 +461,18 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	sort.Strings(recNames)
 	if len(recNames) > 0 {
 		res := toolpath.New(os.LookupEnv, toolpath.HomeDir(os.LookupEnv), wd)
-		for path, w := range recipeMergeSources(cat, adapterMap(adapters), res, recNames, warnf) {
+		sources, err := recipeMergeSources(cat, adapterMap(adapters), res, recNames, warnf)
+		if err != nil {
+			warnf("drift: invalid recipe composition: %v", err)
+			findings = append(findings, drift.Finding{Verdict: settingConflict, Detail: err.Error()})
+		}
+		for path, w := range sources {
 			// A recipe has no artifact identity to plan at; its rows are found by the
 			// recipe NAME the state row carries, which is what lookupWould falls back to.
 			would[wouldKey{artifact: w.item, path: path}] = w
 		}
 	}
 
-	var findings []drift.Finding
 	recorded := map[string]bool{}
 
 	// PASS 1: state -> disk. Every file we RECORDED writing, reconciled against what
@@ -489,14 +538,36 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 	// composed config trades a false STALE for a false shadow.
 	for _, mr := range mergeRows {
 		recorded[mr.path] = true
-		current, exists := readIfExists(mr.path)
-		if !exists {
+		current, readErr := os.ReadFile(mr.path)
+		if readErr != nil && !os.IsNotExist(readErr) {
+			findings = append(findings, drift.Finding{Path: mr.path, Item: mr.key.artifact, Verdict: settingConflict, Detail: readErr.Error()})
+			continue
+		}
+		if os.IsNotExist(readErr) {
 			findings = append(findings, drift.Finding{
 				Path: mr.path, Item: mr.key.artifact, Verdict: drift.Missing, Detail: driftDetail(drift.Missing),
 			})
 			continue
 		}
-		v := classifySettingEdit(current, mr.edit)
+		v, err := classifySettingEdit(current, mr.edit)
+		if legacy := legacyMergeRows[mr.path]; len(legacy) > 0 {
+			err = fmt.Errorf("setting ownership conflict: legacy whole-file owner %s (%s/%s) lacks structural evidence", legacy[0].artifact, legacy[0].tool, legacy[0].scope)
+		}
+		owner := adapter.SettingOwner{Artifact: mr.key.artifact, Tool: mr.key.tool, Scope: mr.key.scope}
+		for _, other := range mergeRows {
+			if other.path != mr.path {
+				continue
+			}
+			otherOwner := adapter.SettingOwner{Artifact: other.key.artifact, Tool: other.key.tool, Scope: other.key.scope}
+			if pairErr := adapter.CheckSettingPair(mr.edit, owner, other.edit, otherOwner); pairErr != nil {
+				err = pairErr
+				break
+			}
+		}
+		if err != nil {
+			findings = append(findings, drift.Finding{Path: mr.path, Item: mr.key.artifact, Verdict: settingConflict, Detail: err.Error()})
+			continue
+		}
 		if v == drift.OK {
 			continue
 		}
@@ -785,7 +856,8 @@ func deployDiffs(cat *registry.Catalog, inv *scan.Inventory, adapters []*manifes
 				if warnf != nil {
 					warnf("drift: cannot resolve %s (%s/%s): %v", k.artifact, tool, k.scope, err)
 				}
-				continue
+				delete(out, k)
+				break
 			}
 			// Compute classifies Action against the real filesystem but never rewrites
 			// After — After stays the bytes the catalog WOULD write, which is exactly
@@ -878,78 +950,53 @@ func lookupWouldSection(sections map[sectionKey][]byte, k artifactInstallKey, pa
 // ORPHANED-STATE. FETCH/EXEC rows are skipped: a fetched binary has no
 // diffable source (classifyFetch verifies it against its pin) and an EXEC is an
 // advisory Patronus never ran.
-func recipeMergeSources(cat *registry.Catalog, adapters map[string]*manifest.Adapter, res toolpath.Resolver, names []string, warnf func(string, ...any)) map[string]wouldWrite {
-	out := map[string]wouldWrite{}
+func recipeMergeSources(cat *registry.Catalog, adapters map[string]*manifest.Adapter, res toolpath.Resolver, names []string, warnf func(string, ...any)) (map[string]wouldWrite, error) {
+	var raw []diff.FileDiff
 	for _, name := range names {
 		rec := findRecipe(cat, name)
 		if rec == nil {
 			continue
 		}
-		diffs, err := recipe.Compute(recipe.Request{
-			Recipe:   rec.Manifest,
-			Adapters: adapters,
-			Resolver: res,
-			Tool:     "all", // every wired tool; per-path dest keys keep tools distinct
-			Scope:    "global",
-			Warnf:    warnf,
-		})
+		diffs, err := recipe.Compute(recipe.Request{Recipe: rec.Manifest, Adapters: adapters, Resolver: res, Tool: "all", Scope: "global", Warnf: warnf})
 		if err != nil {
-			warnf("drift: cannot compute recipe %q source: %v", name, err)
-			continue
+			return nil, fmt.Errorf("recipe %s: %w", name, err)
 		}
 		for _, d := range diffs {
-			if d.Action == diff.Merge {
-				// Accumulate: two recipes merging into one config each contribute, and
-				// keeping only the last made the comparison source one recipe's
-				// standalone bytes. Fold each onto the previous result.
-				if prev, ok := out[d.Path]; ok && d.Setting != nil {
-					if folded, err := adapter.ApplySettingEdit(prev.source, d.Setting); err == nil {
-						out[d.Path] = wouldWrite{source: folded, item: prev.item}
-						continue
-					}
-				}
-				out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
+			if d.Action == diff.Merge || d.Setting != nil {
+				raw = append(raw, d)
 			}
 		}
 	}
-	return out
+	cs, err := plan.Finalize(raw, func(path string) ([]byte, bool, error) {
+		data, err := os.ReadFile(path)
+		if os.IsNotExist(err) {
+			return nil, false, nil
+		}
+		return data, err == nil, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]wouldWrite{}
+	for _, d := range cs.Diffs {
+		out[d.Path] = wouldWrite{source: d.After, item: d.Artifact}
+	}
+	return out, nil
 }
 
-// classifySettingEdit reconciles ONE contributor's edit against a composed config:
-// is its dotted path present, and does it hold the value the edit would write? A
-// sibling artifact's key on the same file is none of this contributor's business,
-// which is what makes this correct where a whole-file checksum is not.
-func classifySettingEdit(current []byte, e *diff.SettingEdit) drift.Verdict {
-	refolded, err := adapter.ApplySettingEdit(current, e)
-	if err != nil {
-		// An unparseable config is not this contributor's drift to report.
-		return drift.OK
-	}
-	if bytes.Equal(normalizeJSON(refolded), normalizeJSON(current)) {
-		// Re-applying our edit changes nothing: our claim is already satisfied.
-		return drift.OK
-	}
-	return drift.Stale
-}
+const settingConflict drift.Verdict = "CONFLICT"
 
-// normalizeJSON round-trips bytes through unmarshal/marshal so key ordering and
-// whitespace do not read as drift. Both sides of the compare need it, not just
-// one: ApplySettingEdit returns bytes that went through serializeConfig, while
-// the on-disk side is whatever is there. After a Patronus write those agree, but
-// after any user reformat they would not, and an unnormalized compare would then
-// report a permanent false STALE for exactly the reformat case this reconcile
-// exists to stop reporting. Bytes that do not parse as JSON pass through
-// unchanged (a TOML config compares literally, which is what it already did).
-func normalizeJSON(b []byte) []byte {
-	var v any
-	if err := json.Unmarshal(b, &v); err != nil {
-		return b
-	}
-	out, err := json.Marshal(v)
+// classifySettingEdit uses the same semantic predicate as install and removal.
+// Malformed evidence is a conflict, never an OK fallback after failed re-fold.
+func classifySettingEdit(current []byte, e *diff.SettingEdit) (drift.Verdict, error) {
+	present, equal, err := adapter.SettingStatus(current, e)
 	if err != nil {
-		return b
+		return settingConflict, err
 	}
-	return out
+	if present && equal {
+		return drift.OK, nil
+	}
+	return drift.Stale, nil
 }
 
 // readIfExists returns a file's bytes and whether it is there. An unreadable file

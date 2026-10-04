@@ -2,6 +2,9 @@ package install
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +66,7 @@ func TestApplyDeleteRemovesFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := &Applier{}
-	res, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Delete}))
+	res, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Delete, Before: []byte("x")}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,8 +103,8 @@ func TestApplyUnappendAndRestoreWriteAfter(t *testing.T) {
 	}
 	a := &Applier{}
 	_, err := a.Apply(cs(
-		diff.FileDiff{Path: up, Action: diff.Unappend, After: []byte("without section")},
-		diff.FileDiff{Path: rp, Action: diff.Restore, After: []byte("{}")},
+		diff.FileDiff{Path: up, Action: diff.Unappend, Before: []byte("with section"), After: []byte("without section")},
+		diff.FileDiff{Path: rp, Action: diff.Restore, Before: []byte(`{"merged":1}`), After: []byte("{}")},
 	))
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +175,7 @@ func TestApplyConflictForceOverwrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := &Applier{Force: true}
-	if _, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Conflict, After: []byte("new")})); err != nil {
+	if _, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Conflict, Before: []byte("original"), After: []byte("new")})); err != nil {
 		t.Fatal(err)
 	}
 	if read(t, p) != "new" {
@@ -191,7 +194,7 @@ func TestApplyConflictPromptOverwrite(t *testing.T) {
 		called = true
 		return Overwrite, nil
 	}}
-	if _, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Conflict, After: []byte("new")})); err != nil {
+	if _, err := a.Apply(cs(diff.FileDiff{Path: p, Action: diff.Conflict, Before: []byte("original"), After: []byte("new")})); err != nil {
 		t.Fatal(err)
 	}
 	if !called {
@@ -322,5 +325,163 @@ func TestApplyRejectsDirectoryPackage(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("directory applier wrote: %v", err)
+	}
+}
+
+func TestApplyFetchReadBackMismatchDoesNotRecordDigest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture-binary")
+	body := []byte("invented inert bytes")
+	d := diff.FileDiff{Artifact: "fixture", Action: diff.Fetch, Path: path, Fetch: &diff.FetchSpec{URL: "https://fixture.invalid/payload", Dest: path, SHA256: sha(body)}}
+	app := &Applier{Fetcher: fakeFetcher{bodies: map[string][]byte{d.Fetch.URL: body}}, readBack: func(string) ([]byte, error) { return []byte("concurrent writer"), nil }}
+	result, err := app.Apply(cs(d))
+	if err == nil || !strings.Contains(err.Error(), "write committed") || !strings.Contains(err.Error(), "ownership uncertain") {
+		t.Fatalf("missing uncertain committed-path diagnostic: %v", err)
+	}
+	if result.Failed == nil || result.Failed.Path != path || len(result.Applied) != 0 || d.Fetch.PlacedSHA256 != "" {
+		t.Fatalf("unverified fetch recorded: %+v", result)
+	}
+	if read(t, path) != string(body) {
+		t.Fatal("test did not exercise post-write failure")
+	}
+}
+
+func TestApplyRejectsEditDuringConflictConfirmation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture.json")
+	if err := os.WriteFile(path, []byte("prepared"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	a := &Applier{Conflict: func(diff.FileDiff) (Resolution, error) {
+		if err := os.WriteFile(path, []byte("external edit"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		return Overwrite, nil
+	}}
+	result, err := a.Apply(cs(diff.FileDiff{Path: path, Action: diff.Conflict, Before: []byte("prepared"), After: []byte("proposed")}))
+	if err == nil || !strings.Contains(err.Error(), "fresh preview") {
+		t.Fatalf("want stale preview error, got %v", err)
+	}
+	if read(t, path) != "external edit" || len(result.Applied) != 0 || result.Failed == nil {
+		t.Fatalf("external edit overwritten: %+v", result)
+	}
+}
+
+func TestApplyExistenceDriftIsNotEmptyEquality(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		before  []byte
+		present bool
+	}{
+		{"appeared empty", nil, true}, {"disappeared empty", []byte{}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "fixture")
+			if tc.present {
+				if err := os.WriteFile(path, nil, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			app := Applier{Force: true}
+			result, err := app.Apply(cs(diff.FileDiff{Path: path, Action: diff.Merge, Before: tc.before, After: []byte("proposed")}))
+			if err == nil || len(result.Applied) != 0 {
+				t.Fatalf("existence drift admitted: %+v %v", result, err)
+			}
+			_, err = os.Stat(path)
+			if (err == nil) != tc.present {
+				t.Fatal("changed existence")
+			}
+		})
+	}
+}
+
+func TestApplyRefusesRedirectedParent(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+	link := filepath.Join(dir, "redirect")
+	if err := os.Symlink(other, link); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(link, "fixture")
+	result, err := (&Applier{Force: true}).Apply(cs(diff.FileDiff{Path: path, Action: diff.Create, After: []byte("unsafe")}))
+	if err == nil || len(result.Applied) != 0 {
+		t.Fatalf("redirected write admitted: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(other, "fixture")); !os.IsNotExist(err) {
+		t.Fatal("wrote through symlink")
+	}
+}
+
+type dp05ProgressFunc func([]byte) (int, error)
+
+func (f dp05ProgressFunc) Write(p []byte) (int, error) { return f(p) }
+
+func TestApplySharedPathSkipRechecksVerifiedOwnWrite(t *testing.T) {
+	for _, edit := range []bool{false, true} {
+		t.Run(fmt.Sprint("external-edit=", edit), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "fixture.json")
+			before := []byte(`{"owned":"old","external":"keep"}`)
+			after := []byte(`{"owned":"new","external":"keep"}`)
+			if err := os.WriteFile(path, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			app := Applier{Progress: dp05ProgressFunc(func(p []byte) (int, error) {
+				if edit {
+					if err := os.WriteFile(path, []byte("external edit after readback"), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				return len(p), nil
+			})}
+			result, err := app.Apply(cs(
+				diff.FileDiff{Path: path, Action: diff.Merge, Before: before, After: after},
+				diff.FileDiff{Path: path, Action: diff.Skip, Before: before, After: before},
+			))
+			if len(result.Applied) != 1 {
+				t.Fatalf("lost verified partial effect: %+v", result)
+			}
+			if edit {
+				if err == nil || result.Failed == nil || len(result.Skipped) != 0 {
+					t.Fatalf("sibling SKIP trusted stale own write: %+v %v", result, err)
+				}
+				if read(t, path) != "external edit after readback" {
+					t.Fatal("clobbered edit")
+				}
+			} else {
+				if err != nil || len(result.Skipped) != 1 {
+					t.Fatalf("own write misidentified as drift: %+v %v", result, err)
+				}
+				if !bytes.Equal(result.Skipped[0].Before, before) {
+					t.Fatal("changed sibling ownership prior")
+				}
+			}
+		})
+	}
+}
+
+type dp05FetchFunc func(context.Context, string) (io.ReadCloser, error)
+
+func (f dp05FetchFunc) Fetch(ctx context.Context, url string) (io.ReadCloser, error) {
+	return f(ctx, url)
+}
+
+func TestApplyFetchRejectsEditDuringAcquisition(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture-bin")
+	before := []byte("previous payload")
+	payload := []byte("new inert bytes")
+	if err := os.WriteFile(path, before, 0600); err != nil {
+		t.Fatal(err)
+	}
+	app := Applier{Fetcher: dp05FetchFunc(func(context.Context, string) (io.ReadCloser, error) {
+		if err := os.WriteFile(path, []byte("external edit during fetch"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		return io.NopCloser(bytes.NewReader(payload)), nil
+	})}
+	d := diff.FileDiff{Path: path, Action: diff.Fetch, Before: before, Fetch: &diff.FetchSpec{Dest: path, URL: "https://fixture.invalid/data", SHA256: sha(payload)}}
+	result, err := app.Apply(cs(d))
+	if err == nil || len(result.Applied) != 0 || d.Fetch.PlacedSHA256 != "" {
+		t.Fatalf("stale fetch recorded: %+v %v", result, err)
+	}
+	if read(t, path) != "external edit during fetch" {
+		t.Fatal("overwrote editor")
 	}
 }

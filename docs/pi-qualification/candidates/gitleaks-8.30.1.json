@@ -1,0 +1,548 @@
+{
+  "version": 1,
+  "kind": "candidate",
+  "example": false,
+  "status": "proposed",
+  "claim": "core-exact-pin",
+  "class": "C",
+  "source": {
+    "root": "/home/agent/workspace/worktrees/patronus-pi-allocation/pi-worktree-963ee9a7-4644-4740-912c-df5fb4d089f8-s0-0",
+    "revision": "a51052be3bc93122912b2dad56eecfb56feda1af",
+    "dirty_inventory": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "path": "docs/pi-qualification/candidate-dispositions.md",
+      "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+    },
+    {
+      "path": "docs/pi-qualification/core-dependency-build-admission.md",
+      "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+    },
+    {
+      "path": "recipes/gitleaks.yaml",
+      "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+    }
+  ],
+  "outputs": [],
+  "environment": {
+    "platform": "Linux ARM64 planning baseline; not a new runtime observation",
+    "pins": {
+      "selected-package": "8.30.1",
+      "Pi": "0.87.1",
+      "Node": "22.22.1"
+    }
+  },
+  "grant": {
+    "version": 1,
+    "kind": "grant",
+    "example": false,
+    "status": "unknown",
+    "issuer": "unknown",
+    "issued_at": "2026-10-01T07:06:19Z",
+    "action": "qualification",
+    "roots": [
+      "."
+    ],
+    "outputs": [],
+    "inputs": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      },
+      {
+        "path": "recipes/gitleaks.yaml",
+        "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+      }
+    ],
+    "expires_at": null,
+    "revalidation_trigger": "Any changed input/source/config/pin/environment/scope; operational authority has not been supplied in this candidate.",
+    "owner_verification": {
+      "owner": "unknown",
+      "result": "unknown",
+      "checked_at": "2026-10-01T07:06:19Z",
+      "action": "qualification",
+      "roots": [
+        "."
+      ],
+      "outputs": [],
+      "inputs": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    }
+  },
+  "invocation": {
+    "native_tool": {
+      "name": "functions.read",
+      "arguments": {
+        "path": "/home/agent/workspace/worktrees/patronus-pi-allocation/pi-worktree-963ee9a7-4644-4740-912c-df5fb4d089f8-s0-0/recipes/gitleaks.yaml"
+      }
+    },
+    "started_at": "2026-10-01T07:06:19Z",
+    "ended_at": "2026-10-01T07:06:19Z"
+  },
+  "result": "unknown",
+  "expected": "Dated, honestly incomplete C dossier; operational qualification must refuse until affected gates are closed.",
+  "observation": "Local read and attribution only. See candidate-dispositions.md source register; no new acquisition, runtime test or owner operational approval.",
+  "logs": [],
+  "exit_code": null,
+  "settlement": "not-applicable",
+  "review": {
+    "cycles": 0,
+    "reviewer": "unknown",
+    "reviewed": [],
+    "corrections": [],
+    "findings": [],
+    "disposition": "incomplete"
+  },
+  "gates": {
+    "required_tests": "unknown",
+    "authority": "unknown",
+    "release": "unknown"
+  },
+  "limitations": [
+    "Candidate only; no qualified operational claim.",
+    "Current recipe1.0.0 differs from upstream8.30.1. Other OS/arch pins are not qualified here; release tag commit unresolved, tag immutability not assumed.",
+    "Historical latest observations cannot pass a fresh currency check. Summary references are not archive-byte verification."
+  ],
+  "owner_acceptance": {
+    "owner": "unknown",
+    "result": "unknown",
+    "claim": "core-exact-pin",
+    "stage": "qualification",
+    "inputs": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      },
+      {
+        "path": "recipes/gitleaks.yaml",
+        "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+      }
+    ]
+  },
+  "identity": "gitleaks/gitleaks",
+  "digest": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+  "retrieved_at": "2026-10-01T07:06:19Z",
+  "immutable_refs": [],
+  "dossier": {
+    "identity": {
+      "status": "observed",
+      "value": {
+        "package": "gitleaks/gitleaks",
+        "repository": "https://github.com/gitleaks/gitleaks",
+        "attribution": "TK/GITLEAKS current recipe",
+        "selected_use": "explicit scanner"
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "version_ref": {
+      "status": "observed",
+      "value": {
+        "version": "8.30.1",
+        "commit": null,
+        "tag": "v8.30.1",
+        "commit_verification": "unknown",
+        "recipe_version": "1.0.0",
+        "patronus_payload_version": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "archive": {
+      "status": "observed",
+      "value": {
+        "url": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz",
+        "sha256": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+        "sha512_integrity": null,
+        "newly_acquired_or_hashed": false,
+        "source": "historical WEB-SDK lock/ECO or current recipe; not archive bytes",
+        "metadata_url": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "installed_comparison": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "Current recipe declares Linux ARM64 release archive SHA-256, attributed there to release checksums.txt. No fresh download/binary-installed comparison performed.",
+        "actual_selected_payload_comparison": "unknown"
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "license_attribution": {
+      "status": "observed",
+      "value": {
+        "declared_license": "MIT (recipe declaration; upstream obligations not newly audited)",
+        "full_closure_license_review": "unknown",
+        "attribution_obligations": "Preserve upstream notices/licenses; review complete source/closure before distribution. No redistribution clearance is implied."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "dependency_tree_sbom": {
+      "status": "unknown",
+      "value": {
+        "full_locked_tree": null,
+        "production_sbom": null,
+        "historical_direct_dependencies": null,
+        "host_peers": null,
+        "note": "WEB-SDK combined historical lock available for investigation, not reviewed production closure; all platform/optional/transitive inputs need Q closure review."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "lifecycle_build_scripts": {
+      "status": "unknown",
+      "value": {
+        "partial_observation": "Compiled scanner source/module/build closure, release build scripts and binary provenance unknown. Static fetch must not execute scanner; explicit scanning is separately granted.",
+        "policy": "Deny root/transitive lifecycle scripts by default; exact isolated exceptions need separate grant. No scripts during static delivery."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "provenance_signature": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "No complete provenance/signature/builder verification established.",
+        "subject_verified": null,
+        "signature_verified": null,
+        "builder_verified": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "reachable_advisories": {
+      "status": "unknown",
+      "value": {
+        "assessment": null,
+        "partial_observation": "ECO checked GHSA-v63x-xc9j-hhvq (safer-eval <=1.3.6); no name among 62 readable installed manifests, but bundled/transitive reachability unproven. Not a package-specific clean bill of health. Full dated locked-closure assessment required."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "upstream_tests_ci": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "Upstream CI at release commit unknown; no scanner invocation in QP-02.",
+        "exact_selected_payload_local_results": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "platform_runtime": {
+      "status": "unknown",
+      "value": {
+        "historical_environment": "ECO/RUN: Linux ARM64, Node22.22.1; Go1.26.0/gopls0.20.0 where used. WEB-SDK: exact top-level versions only; no full platform qualification.",
+        "selected_python_services": "Serena and Graphify observed python3.14 paths, exact patch/interpreter digest/venv locks unknown. Required if selected.",
+        "qualification": null,
+        "specific": "Current recipe1.0.0 differs from upstream8.30.1. Other OS/arch pins are not qualified here; release tag commit unresolved, tag immutability not assumed."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "privilege_network_credentials": {
+      "status": "observed",
+      "value": {
+        "historical_surface": "Explicit scanner reads sensitive source/history; reports may contain secrets. Credential-safe logs/retention and permitted roots required. No automatic commit interception or comprehensive secret/security guarantee.",
+        "constraint": "Whole-process isolation, scope-specific grants and approved effective config required; no tool-allowlist or hash-based security certification."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "update_remove_rollback": {
+      "status": "proposed",
+      "value": {
+        "procedure": "docs/pi-qualification/core-dependency-build-admission.md sections 1–5",
+        "owner": "Operator owns host/optional services; Pi/npm own subagents/web package files; Patronus owns tk files plus exact refs and bounded lifecycle/profile state. Scanner checks selected Pi declarations and package identity.",
+        "steps": "Quiesce all consumers/descendants, retain outputs and old/new locks/digests/config priors; verify ownership/drift, explicitly deregister exact local source, replace/remove owned bytes only, manually activate and requalify. Unknown state preserves/escalates; no activation rollback journal."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "alternatives": {
+      "status": "proposed",
+      "value": {
+        "disposition": "Conditional explicit scanner use; defer automatic gitleaks guard and block-secrets enforcement. Pin is not security audit; optional omission only when no scanner support claim selected.",
+        "popularity": "Adoption only, not trust/security/compatibility evidence."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "residual_risks": {
+      "status": "observed",
+      "value": {
+        "gaps": "Full closure/SBOM/scripts/licenses, provenance/signatures, advisory reachability, fresh currency, installed comparison, exact runtime/lifecycle evidence and owner approval remain incomplete.",
+        "withheld_claims": [
+          "core-exact-pin"
+        ],
+        "scope": "Unselected optional service unknowns do not block independent no-MCP core. Required web cannot be omitted."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "approval": {
+      "status": "unknown",
+      "value": {
+        "operational_owner_decision": null,
+        "candidate_disposition": "conditional selected scanner",
+        "authoring_authority": "QP-02 task only; not authority to acquire/build/stage/activate/release."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    },
+    "delta_to_latest": {
+      "status": "unknown",
+      "value": {
+        "selected": "8.30.1",
+        "selected_commit": null,
+        "latest_observed": null,
+        "latest_observed_at": null,
+        "observation_precision": "See ECO historical retrieval window; not a new current lookup.",
+        "intervening_releases": null,
+        "intervening_security_compatibility_fixes": null,
+        "advisory_delta": null,
+        "reason_to_retain": "Agreed exact investigation baseline; current safety/currency not established. No upgrade authorized by evidence gathering.",
+        "refresh_policy": "Separately authorized bounded research, exact retrieval UTC and notes/advisories review; old observations cannot pass a new currency check.",
+        "special_case": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        },
+        {
+          "path": "recipes/gitleaks.yaml",
+          "sha256": "5fd0edd648ef06a42530bc1d3d6428e8572033ecc7e979bfaa70a8cbbabae530"
+        }
+      ]
+    }
+  },
+  "authored_at": "2026-10-01T07:06:19Z"
+}

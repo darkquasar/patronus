@@ -1,0 +1,190 @@
+{
+  "subagents": {
+    "agentOverrides": {
+      "patronus-plan-author-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "write",
+          "edit",
+          "mcp"
+        ],
+        "skills": [
+          "plan-writing-pi",
+          "writing-editorial-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-plan-reviewer-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "mcp"
+        ],
+        "skills": [
+          "plan-review-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-researcher-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "mcp"
+        ],
+        "skills": [
+          "research-team-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-spec-author-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "write",
+          "edit",
+          "mcp"
+        ],
+        "skills": [
+          "spec-brainstorming-pi",
+          "writing-editorial-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-technical-reviewer-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "mcp"
+        ],
+        "skills": [
+          "spec-review-pi",
+          "requesting-code-review-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-web-researcher-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "web_search",
+          "fetch_content",
+          "get_search_content",
+          "source_check",
+          "mcp"
+        ],
+        "skills": [
+          "research-team-pi",
+          "verification-before-completion-pi",
+          "web-research-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/web-provider.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-workflow-security-reviewer-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "mcp"
+        ],
+        "skills": [
+          "spec-review-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      },
+      "patronus-writer-pi": {
+        "tools": [
+          "read",
+          "bash",
+          "write",
+          "edit",
+          "mcp"
+        ],
+        "skills": [
+          "plan-execute-pi",
+          "tdd-pi",
+          "verification-before-completion-pi",
+          "pattern-mcp-pi",
+          "graphify-pi",
+          "code-intel-operations-pi"
+        ],
+        "extensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/model-provider.js",
+          "/ABSOLUTE/APPROVED/EXTENSIONS/required-runtime.js"
+        ],
+        "subagentOnlyExtensions": [
+          "/ABSOLUTE/APPROVED/EXTENSIONS/mcp-adapter.js"
+        ]
+      }
+    }
+  }
+}

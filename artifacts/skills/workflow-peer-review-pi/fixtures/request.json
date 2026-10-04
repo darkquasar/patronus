@@ -1,0 +1,81 @@
+{
+  "cwd": "/fixture/source",
+  "outputDir": "/fixture/evidence/run-one",
+  "sourceRevision": "fixture-revision-one",
+  "sourceRoots": [
+    "/fixture/source",
+    "/fixture/integration",
+    "/fixture/worktrees"
+  ],
+  "authorization": {
+    "parentVerified": true,
+    "evidence": "Invented scoped fixture grant",
+    "actions": [
+      "review"
+    ],
+    "files": [
+      "src/a.txt",
+      "src/b.txt",
+      "src/c.txt"
+    ]
+  },
+  "preflight": {
+    "pathsVerified": true,
+    "rolesVerified": true,
+    "evidence": "Invented canonical path and effective role observation",
+    "piVersion": "0.87.1",
+    "subagentsVersion": "0.72.1"
+  },
+  "tasks": [
+    {
+      "key": "subject",
+      "text": "Check the supplied fixture contract"
+    }
+  ],
+  "evidence": [
+    {
+      "label": "complete subject and rubric",
+      "text": "Invented fixture: a.txt must contain A; b.txt B; c.txt C. Review only these assertions. No credentials or live source."
+    }
+  ],
+  "roles": {
+    "peer": "patronus-technical-reviewer-pi",
+    "disposition": "patronus-plan-reviewer-pi"
+  },
+  "runners": {
+    "native": {
+      "status": "available",
+      "reason": "Invented fixture observation; not live qualification",
+      "executable": "/fixture/bin/pi",
+      "version": "0.87.1",
+      "checkedAt": "2026-10-03T18:00:00+10:00",
+      "contractVerified": true,
+      "authEvidence": "Invented pre-existing successful run receipt",
+      "allowUnverified": false
+    },
+    "claude-code": {
+      "status": "available",
+      "reason": "Invented fixture observation; not live qualification",
+      "executable": "/fixture/bin/claude",
+      "version": "fixture-qualified-version",
+      "checkedAt": "2026-10-03T18:00:00+10:00",
+      "contractVerified": true,
+      "authEvidence": "Invented pre-existing successful run receipt",
+      "allowUnverified": false
+    },
+    "codex-exec": {
+      "status": "available",
+      "reason": "Invented fixture observation; not live qualification",
+      "executable": "/fixture/bin/codex",
+      "version": "fixture-qualified-version",
+      "checkedAt": "2026-10-03T18:00:00+10:00",
+      "contractVerified": true,
+      "authEvidence": "Invented pre-existing successful run receipt",
+      "allowUnverified": false
+    }
+  },
+  "concurrency": 2,
+  "spawnLimit": 10,
+  "timeoutMs": 600000,
+  "allowReduced": false
+}

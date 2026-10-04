@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: go-style-uber-pi
+description: "Idiomatic Go conventions distilled from the Uber Go Style Guide — error handling, concurrency, struct/enum/slice discipline, naming, and performance, as compact decision/trigger rules. A skill: loads on relevance (writing or reviewing Go) via description dispatch."
+version: 1.0.0
+entry: SKILL.md
+files: [NOTICE, references/style.md, references/LICENSE]
+targets: [pi]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/uber-go/guide
+  license: Apache-2.0
+  copyright: "Copyright (c) Uber Technologies, Inc."
+  commit: 1d60a91aa5e87d443002e23c21903c49489dbde5
+  note: "SKILL.md reuses Patronus's distilled, paraphrased rules with Pi identity and relative reference links. references/style.md and references/LICENSE reproduce the full upstream files unchanged at the declared commit; use them for rationale, examples and license terms."

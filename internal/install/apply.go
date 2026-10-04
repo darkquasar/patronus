@@ -18,6 +18,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/archive"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/packagebundle"
 )
 
 // Fetcher downloads the bytes at a URL for a FETCH apply. It is consumer-defined
@@ -43,6 +44,9 @@ type ConflictFunc func(d diff.FileDiff) (Resolution, error)
 
 // Applier writes change sets to disk.
 type Applier struct {
+	// BeforeWrite revalidates command-level state/consent immediately before an
+	// affected write. The file snapshot check always runs afterwards, even with Force.
+	BeforeWrite func(diff.FileDiff) error
 	// Force overwrites conflicting files without prompting.
 	Force bool
 	// Conflict resolves CONFLICT actions when Force is false. nil => skip.
@@ -71,12 +75,18 @@ type Result struct {
 }
 
 // Apply writes cs to disk and returns what happened. On the first write error it
-// stops and returns the partial Result alongside the error, mirroring
-// Terraform: state reflects reality, re-running is safe (done files SKIP).
+// stops and returns the partial Result alongside the error. Successful writes
+// remain real; a verification/state failure needs a fresh preview and explicit
+// repair, not adoption of equal bytes on retry.
 func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 	res := &Result{}
+	verified := map[string][]byte{}
 	for i := range cs.Diffs {
 		d := cs.Diffs[i]
+		if d.Native != nil {
+			res.Failed = &d
+			return res, fmt.Errorf("native package %q requires the native lifecycle service", d.Artifact)
+		}
 		if d.Directory != nil {
 			res.Failed = &d
 			return res, fmt.Errorf("directory package %q requires the package delivery service", d.Artifact)
@@ -87,6 +97,14 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 
 		switch d.Action {
 		case diff.Skip:
+			expected := d.Before
+			if own, ok := verified[d.Path]; ok {
+				expected = own
+			}
+			if err := CheckUnchanged(d.Path, expected); err != nil {
+				res.Failed = &d
+				return res, err
+			}
 			res.Skipped = append(res.Skipped, d)
 			continue
 
@@ -98,10 +116,16 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 			continue
 
 		case diff.Fetch:
-			if err := a.applyFetch(d); err != nil {
+			if err := a.checkBeforeWrite(d); err != nil {
 				res.Failed = &d
 				return res, err
 			}
+			observed, err := a.applyFetch(d)
+			if err != nil {
+				res.Failed = &d
+				return res, err
+			}
+			verified[d.Path] = observed
 			a.note("FETCH %s", d.Path)
 			res.Applied = append(res.Applied, d)
 			continue
@@ -121,10 +145,22 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 		case diff.Delete:
 			// Inverse of CREATE/FETCH (Phase 8 remove): drop the file. A missing
 			// target is success — re-running a remove is idempotent.
+			if err := a.checkBeforeWrite(d); err != nil {
+				res.Failed = &d
+				return res, err
+			}
 			if err := os.Remove(d.Path); err != nil && !os.IsNotExist(err) {
 				res.Failed = &d
 				return res, fmt.Errorf("install: remove %s: %w", d.Path, err)
 			}
+			if _, err := os.Lstat(d.Path); !os.IsNotExist(err) {
+				res.Failed = &d
+				if err != nil {
+					return res, fmt.Errorf("install: delete committed, verify %s: %w; ownership uncertain", d.Path, err)
+				}
+				return res, fmt.Errorf("install: delete committed, verify %s: still present; ownership uncertain", d.Path)
+			}
+			verified[d.Path] = nil
 			a.note("DELETE %s", d.Path)
 			res.Applied = append(res.Applied, d)
 			continue
@@ -143,28 +179,22 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 		if d.Mode != 0 {
 			perm = d.Mode // e.g. 0o755 for an executable hook script
 		}
+		if err := a.checkBeforeWrite(d); err != nil {
+			res.Failed = &d
+			return res, err
+		}
 		if err := WriteFileAtomic(d.Path, d.After, perm); err != nil {
 			res.Failed = &d
 			return res, fmt.Errorf("install: write %s: %w", d.Path, err)
 		}
 		// Read back and verify. A mismatch means the bytes on disk are not the bytes
 		// we wrote: a filesystem lie or a concurrent writer, not a planning error. It
-		// is treated exactly like a write error, so state reflects reality and
-		// re-running is safe.
-		read := a.readBack
-		if read == nil {
-			read = os.ReadFile
-		}
-		onDisk, err := read(d.Path)
-		if err != nil {
+		// is unresolved ownership, even though the write already committed.
+		if err := a.verifyWritten(d.Path, d.After); err != nil {
 			res.Failed = &d
-			return res, fmt.Errorf("install: verify %s: %w", d.Path, err)
+			return res, err
 		}
-		if !bytes.Equal(onDisk, d.After) {
-			res.Failed = &d
-			return res, fmt.Errorf("install: verify %s: expected %s, observed %s",
-				d.Path, shortSHA(d.After), shortSHA(onDisk))
-		}
+		verified[d.Path] = d.After
 		a.note("%s %s", d.Action, d.Path)
 		res.Applied = append(res.Applied, d)
 	}
@@ -175,54 +205,66 @@ func (a *Applier) Apply(cs *diff.ChangeSet) (*Result, error) {
 // archive when needed, and places it at the destination with the executable bit.
 // A verify failure stops the apply Terraform-style — an unverified binary is
 // never placed.
-func (a *Applier) applyFetch(d diff.FileDiff) error {
+func (a *Applier) applyFetch(d diff.FileDiff) ([]byte, error) {
 	spec := d.Fetch
 	if spec == nil {
-		return fmt.Errorf("install: FETCH %s has no fetch spec", d.Path)
+		return nil, fmt.Errorf("install: FETCH %s has no fetch spec", d.Path)
 	}
 	if a.Fetcher == nil {
-		return fmt.Errorf("install: FETCH %s requires a fetcher (none configured)", d.Path)
+		return nil, fmt.Errorf("install: FETCH %s requires a fetcher (none configured)", d.Path)
 	}
 
 	ctx := a.Ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	body, err := a.Fetcher.Fetch(ctx, spec.URL)
+	data, err := AcquireFetch(ctx, spec, a.Fetcher)
 	if err != nil {
-		return fmt.Errorf("install: fetch %s: %w", spec.URL, err)
+		return nil, err
 	}
-	defer body.Close()
-
-	data, err := verifySHA256(body, spec.SHA256)
+	data, err = decodeFetch(data, spec)
 	if err != nil {
-		return fmt.Errorf("install: %s: %w", spec.Label, err)
+		return nil, err
 	}
 
-	// If the asset is an archive, extract the named binary member; otherwise the
-	// downloaded bytes are the binary.
-	if spec.Archive != "" {
-		bin, err := archive.ExtractFile(bytes.NewReader(data), spec.Archive, spec.BinaryPath)
-		if err != nil {
-			return fmt.Errorf("install: extract %s: %w", spec.Label, err)
-		}
-		data = bin
+	if spec.Dest != d.Path {
+		return nil, fmt.Errorf("install: FETCH destination differs from planned path %s", d.Path)
 	}
-
+	if err := a.checkBeforeWrite(d); err != nil {
+		return nil, err
+	}
 	if err := WriteFileAtomic(spec.Dest, data, 0o755); err != nil {
-		return fmt.Errorf("install: place %s: %w", spec.Dest, err)
+		return nil, fmt.Errorf("install: place %s: %w", spec.Dest, err)
+	}
+	if err := a.verifyWritten(spec.Dest, data); err != nil {
+		return nil, err
 	}
 	// Stamp the digest of the binary actually placed (the extracted member for an
 	// archive), so state records the on-disk binary's sha, not the archive's.
 	sum := sha256.Sum256(data)
 	spec.PlacedSHA256 = hex.EncodeToString(sum[:])
+	return data, nil
+}
+
+func (a *Applier) verifyWritten(path string, expected []byte) error {
+	read := a.readBack
+	if read == nil {
+		read = os.ReadFile
+	}
+	observed, err := read(path)
+	if err != nil {
+		return fmt.Errorf("install: write committed, verify %s: %w; ownership uncertain", path, err)
+	}
+	if !bytes.Equal(observed, expected) {
+		return fmt.Errorf("install: write committed, verify %s: expected %s, observed %s; ownership uncertain", path, shortSHA(expected), shortSHA(observed))
+	}
 	return nil
 }
 
 // verifySHA256 reads all of r and confirms its sha256 matches wantHex (optionally
 // "sha256:"-prefixed). Returns the verified bytes. A mismatch is an error.
 func verifySHA256(r io.Reader, wantHex string) ([]byte, error) {
-	data, err := io.ReadAll(r)
+	data, err := archive.ReadBounded(r, packagebundle.DefaultLimits.CompressedBytes)
 	if err != nil {
 		return nil, fmt.Errorf("read download: %w", err)
 	}
@@ -316,4 +358,73 @@ func WriteFileAtomic(path string, data []byte, perm fs.FileMode) error {
 	}
 	tmpName = "" // rename succeeded; don't remove the now-real file
 	return nil
+}
+
+// CheckUnchanged compares existence and bytes with a planning snapshot (nil
+// means absent, a non-nil empty slice means present-empty). It is a last-moment
+// advisory check, not atomic exclusion against noncooperating editors.
+func CheckUnchanged(path string, before []byte) error {
+	for p := filepath.Clean(path); ; p = filepath.Dir(p) {
+		info, err := os.Lstat(p)
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("check %s: %w; fresh preview required", p, err)
+		}
+		if err == nil && (info.Mode()&os.ModeSymlink != 0 || (p == path && !info.Mode().IsRegular()) || (p != path && !info.IsDir())) {
+			return fmt.Errorf("check %s: unsafe path/redirection; fresh preview required", p)
+		}
+		if filepath.Dir(p) == p {
+			break
+		}
+	}
+	observed, err := os.ReadFile(path)
+	exists := err == nil
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("check %s: %w; fresh preview required", path, err)
+	}
+	if exists != (before != nil) || !bytes.Equal(observed, before) {
+		return fmt.Errorf("external change at %s (existence or hash differs); fresh preview required", path)
+	}
+	return nil
+}
+
+func (a *Applier) checkBeforeWrite(d diff.FileDiff) error {
+	if a.BeforeWrite != nil {
+		if err := a.BeforeWrite(d); err != nil {
+			return err
+		}
+	}
+	return CheckUnchanged(d.Path, d.Before)
+}
+
+// AcquireFetch verifies bounded acquisition and the selected archive member
+// without writing destinations. The returned original bytes can be replayed by
+// the operation's temporary fetcher; apply repeats verification before writing.
+func AcquireFetch(ctx context.Context, spec *diff.FetchSpec, fetcher Fetcher) ([]byte, error) {
+	if spec == nil || fetcher == nil {
+		return nil, fmt.Errorf("FETCH requires a spec and fetcher")
+	}
+	body, err := fetcher.Fetch(ctx, spec.URL)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+	data, err := verifySHA256(body, spec.SHA256)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := decodeFetch(data, spec); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func decodeFetch(data []byte, spec *diff.FetchSpec) ([]byte, error) {
+	l := packagebundle.DefaultLimits
+	if spec.Archive == "" {
+		if int64(len(data)) > l.FileBytes {
+			return nil, fmt.Errorf("FETCH file limit exceeded")
+		}
+		return data, nil
+	}
+	return archive.ExtractFileBounded(bytes.NewReader(data), spec.Archive, spec.BinaryPath, archive.Limits{CompressedBytes: l.CompressedBytes, DecodedBytes: l.DecodedBytes, ExpandedBytes: l.ExpandedBytes, FileBytes: l.FileBytes, Entries: l.Entries})
 }

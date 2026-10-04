@@ -3,8 +3,11 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +20,7 @@ import (
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/profile"
@@ -32,18 +36,19 @@ import (
 
 func newInstallCmd() *cobra.Command {
 	var (
-		tool             string
-		global           bool
-		local            bool
-		deploy           bool
-		dryRun           bool
-		verbose          bool
-		force            bool
-		yes              bool
-		recipeSel        string
-		profileSel       string
-		allowPkgInstalls bool
-		regSel           registrySel
+		tool                          string
+		global                        bool
+		local                         bool
+		deploy                        bool
+		dryRun                        bool
+		verbose                       bool
+		force                         bool
+		yes                           bool
+		recipeSel                     string
+		profileSel                    string
+		trackExisting, allowPiProject bool
+		allowPkgInstalls              bool
+		regSel                        registrySel
 	)
 
 	cmd := &cobra.Command{
@@ -58,7 +63,7 @@ func newInstallCmd() *cobra.Command {
 			"SAFE BY DEFAULT: install is a dry run unless you pass --deploy. The absence of --deploy\n" +
 			"(or an explicit --dry-run) means nothing is written, fetched, or executed.",
 		Args: cobra.ArbitraryArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if global && local {
 				return fmt.Errorf("--global and --local are mutually exclusive")
 			}
@@ -97,7 +102,15 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 			home := toolpath.HomeDir(os.LookupEnv)
-			planned, err := planInstall(cmd, installPlanRequest{Names: names, Profile: profileSel, Tool: tool, Scope: scope, Home: home, ProjectDir: wd, Registry: regSel})
+			var mutation *mutation
+			if deploy && !jsonOutput {
+				mutation, err = beginMutation(home, wd)
+				if err != nil {
+					return err
+				}
+				defer mutation.close(&err)
+			}
+			planned, err := planInstall(cmd, installPlanRequest{Names: names, Profile: profileSel, Tool: tool, Scope: scope, Home: home, ProjectDir: wd, Registry: regSel, Force: force, Acquire: deploy && !jsonOutput})
 			if err != nil {
 				return err
 			}
@@ -117,6 +130,7 @@ func newInstallCmd() *cobra.Command {
 			if jsonOutput {
 				return render.JSON(cmd.OutOrStdout(), cs)
 			}
+			dp06PrintSelection(cmd, cs, planned.Target, res)
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
 
 			// Always-on package-install readiness: for every package-install item,
@@ -135,11 +149,11 @@ func newInstallCmd() *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runDeploy(cmd, cs, res, deployOptions{force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd})
+			return runDeployLocked(cmd, cs, res, deployOptions{trackExisting: trackExisting, allowPiProject: allowPiProject, profile: profileSel, mutation: mutation, target: planned.Target, globalPrerequisites: planned.GlobalPrerequisites, force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd}, runnerForCommands)
 		},
 	}
 
-	cmd.Flags().StringVar(&tool, "target", "", "target runtime: claude|codex|opencode|all (required for anything that wires to a runtime)")
+	cmd.Flags().StringVar(&tool, "target", "", "target runtime: claude|codex|opencode|pi|all (required for anything that wires to a runtime)")
 	cmd.Flags().BoolVar(&global, "global", false, "install at global (user) scope")
 	cmd.Flags().BoolVar(&local, "local", false, "install at project (local) scope")
 	cmd.Flags().BoolVar(&deploy, "deploy", false, "actually write changes to disk (default: dry run only)")
@@ -150,6 +164,8 @@ func newInstallCmd() *cobra.Command {
 	cmd.Flags().StringVar(&recipeSel, "recipe", "", "pick a specific recipe for a capability (e.g. memory-engram)")
 	cmd.Flags().StringVar(&profileSel, "profile", "", "install a curated bundle across layers (§5d)")
 	addRegistryFlags(cmd, &regSel)
+	cmd.Flags().BoolVar(&trackExisting, "track-existing", false, "enroll compatible external native packages for future forced removal")
+	cmd.Flags().BoolVar(&allowPiProject, "allow-pi-project-config", false, "authorize native Pi project configuration/trust at the selected cwd")
 	cmd.Flags().BoolVar(&allowPkgInstalls, "allow-package-installs", false,
 		"with --deploy: let Patronus run package-manager installs (npm/cargo/uv) non-interactively; all-or-nothing — errors if any required manager is absent")
 	return cmd
@@ -157,18 +173,25 @@ func newInstallCmd() *cobra.Command {
 
 // installPlanRequest separates planning from consent and deployment.
 type installPlanRequest struct {
+	Force                                  bool
 	Names                                  []string
 	Profile, Tool, Scope, Home, ProjectDir string
 	Registry                               registrySel
 	Catalog                                *registry.Catalog
+	Acquire                                bool
 }
 
 type plannedInstall struct {
-	Changes  *diff.ChangeSet
-	Resolver toolpath.Resolver
+	Changes             *diff.ChangeSet
+	Resolver            toolpath.Resolver
+	Target              string
+	GlobalPrerequisites []diff.FileDiff
 }
 
 func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, error) {
+	if err := dp06Target(req.Tool); err != nil {
+		return plannedInstall{}, err
+	}
 	names := append([]string(nil), req.Names...)
 	profileSel, tool, scope, home, wd, regSel := req.Profile, req.Tool, req.Scope, req.Home, req.ProjectDir, req.Registry
 	warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
@@ -178,6 +201,20 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		return plannedInstall{}, err
 	}
 
+	if profileSel != "" && tool == "" {
+		l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+		if err != nil {
+			return plannedInstall{}, err
+		}
+		if l.Profile == profileSel && l.Target != "" {
+			tool = l.Target
+		}
+	}
+	if tool == "pi" && !req.Acquire {
+		if rr, ok := reg.(*registry.RemoteRegistry); ok {
+			rr.Fetcher = dp06OfflineFetcher{}
+		}
+	}
 	// adapters/ comes from the checkout when local; loadAdapters falls back to
 	// the embedded adapters when root is "" (installed-binary / remote case).
 	adapters, err := loadAdapters(filepath.Join(root, "adapters"))
@@ -215,10 +252,18 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	// --profile expands to the profile's resolved item names, which then flow
 	// through the SAME artifact-vs-recipe dispatch a plain install uses.
 	if profileSel != "" {
+		if err := dp06CheckProfileLock(wd, profileSel, tool, cat, home, scope, cmd.OutOrStdout()); err != nil {
+			return plannedInstall{}, err
+		}
 		// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
 		res, err := profile.Resolve(cat, profileSel, tool)
 		if err != nil {
 			return plannedInstall{}, err
+		}
+		if tool == "pi" {
+			if err := dp06ProfileComplete(res); err != nil {
+				return plannedInstall{}, err
+			}
 		}
 		for _, w := range res.Warnings {
 			warnf("%s", w)
@@ -235,7 +280,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		if rr, ok := reg.(*registry.RemoteRegistry); ok {
 			base = rr.Base()
 		}
-		if err := applyLockPins(wd, profileSel, base, cat, warnf); err != nil {
+		if err := applyLockPins(wd, profileSel, tool, base, cat, warnf); err != nil {
 			return plannedInstall{}, err
 		}
 	}
@@ -247,6 +292,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	// pass through. Applies to BOTH the profile path (above) and a direct
 	// `install <name>`, since both converge on `names` here. The profile's own
 	// flavour/without selection has already run; requires works on base names.
+	requested := append([]string(nil), names...)
 	expanded := requires.Expand(names, cat.Deps)
 	if pulled := requires.Pulled(names, expanded); len(pulled) > 0 {
 		warnf("also installing required item(s): %s", strings.Join(pulled, ", "))
@@ -256,11 +302,22 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	// A positional name may be a sourced reference (file:, git:, https:, ...).
 	// Resolve any sourced entries into the catalog so they dispatch like an
 	// in-tree item; bare names are left untouched.
-	names, err = mergeSourcedNames(cmd.Context(), cat, names, home)
+	names, err = mergeSourcedNames(cmd.Context(), cat, names, home, tool == "pi" && !req.Acquire)
 	if err != nil {
 		return plannedInstall{}, err
 	}
 
+	if tool == "pi" && scope == "" {
+		scope, err = dp06DefaultPiScope(cat, names)
+		if err != nil {
+			return plannedInstall{}, err
+		}
+		out := cmd.OutOrStdout()
+		if jsonOutput {
+			out = cmd.ErrOrStderr()
+		}
+		fmt.Fprintf(out, "Pi resolved default scope: %s\n", scope)
+	}
 	// --target is required for anything that wires into a runtime. A
 	// purely-agnostic item (binary/package-only recipe) may omit it.
 	if tool == "" {
@@ -271,7 +328,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			}
 		}
 		if len(needing) > 0 {
-			return plannedInstall{}, fmt.Errorf("--target is required (one of claude|codex|opencode|all) for: %s", strings.Join(needing, ", "))
+			return plannedInstall{}, fmt.Errorf("--target is required (one of claude|codex|opencode|pi|all) for: %s", strings.Join(needing, ", "))
 		}
 	}
 
@@ -289,37 +346,56 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	env := os.LookupEnv
 	res := toolpath.New(env, home, wd)
 
+	var globalPrerequisites []diff.FileDiff
 	cs, err := computePlan(planInputs{
-		cat:      cat,
-		inv:      inv,
-		adapters: adapterMap(adapters),
-		res:      res,
-		names:    names,
-		tool:     tool,
-		scope:    scope,
-		warnf:    warnf,
+		cat:            cat,
+		inv:            inv,
+		adapters:       adapterMap(adapters),
+		res:            res,
+		names:          names,
+		tool:           tool,
+		scope:          scope,
+		warnf:          warnf,
+		verifiedGlobal: func(d diff.FileDiff) { globalPrerequisites = append(globalPrerequisites, d) },
 	})
 	if err != nil {
 		return plannedInstall{}, err
 	}
 
+	if err := staticPiSelection(cs, tool == "pi"); err != nil {
+		return plannedInstall{}, err
+	}
+	for i := range cs.Diffs {
+		if cs.Diffs[i].Native != nil && !contains(requested, cs.Diffs[i].Artifact) {
+			cs.Diffs[i].NativePrerequisite = true
+		}
+	}
+	if err := inspectNative(cs, home, wd, req.Force, nil); err != nil {
+		return plannedInstall{}, err
+	}
 	if err := inspectDirectoryPlan(home, cs); err != nil {
 		return plannedInstall{}, err
 	}
-	return plannedInstall{Changes: cs, Resolver: res}, nil
+	if reviews, err := piPreflightPlan(cs, res, home, wd); err != nil {
+		return plannedInstall{}, err
+	} else if len(reviews) > 0 {
+		warnf("Pi mixed-context conflict: operator-prepared combined file and separately scoped interactive consent required before any selected write")
+	}
+	return plannedInstall{Changes: cs, Resolver: res, Target: tool, GlobalPrerequisites: globalPrerequisites}, nil
 }
 
 // planInputs carries everything computePlan needs to build a change set across a
 // mix of artifact and recipe names.
 type planInputs struct {
-	cat      *registry.Catalog
-	inv      *scan.Inventory
-	adapters map[string]*manifest.Adapter
-	res      toolpath.Resolver
-	names    []string
-	tool     string
-	scope    string
-	warnf    func(string, ...any)
+	cat            *registry.Catalog
+	inv            *scan.Inventory
+	adapters       map[string]*manifest.Adapter
+	res            toolpath.Resolver
+	names          []string
+	tool           string
+	scope          string
+	warnf          func(string, ...any)
+	verifiedGlobal func(diff.FileDiff)
 
 	// pluginProbe decides executed-vs-advised for plugin installs; a test seam.
 	// Production leaves it nil → plugin.ExecProbe (real `<tool> plugin --help`).
@@ -352,6 +428,9 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	seenDirectories := map[string]bool{}
 	for _, name := range in.names {
 		if pl := findPlugin(in.cat, name); pl != nil {
+			if in.tool == "pi" {
+				return nil, fmt.Errorf("pi static selection cannot provision plugin %s", name)
+			}
 			// Resolve scope and the target tool list the same way artifacts do:
 			// an explicit flag wins, else the manifest's defaults; a bare --tool
 			// "all"/"" fans out to the plugin's own Targets so a plain install
@@ -366,23 +445,67 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 			continue
 		}
 		if rec := findRecipe(in.cat, name); rec != nil {
+			if in.tool == "pi" && rec.Manifest.Wire.Method == manifest.WireMerge {
+				ad := in.adapters["pi"]
+				if ad == nil || ad.Layout.Mcp == nil {
+					return nil, fmt.Errorf("pi MCP adapter layout absent")
+				}
+				scope := in.scope
+				if scope == "" {
+					scope = "global"
+				}
+				target, err := ad.Layout.Mcp.ResolveTarget(scope)
+				if err != nil {
+					return nil, err
+				}
+				if _, _, err := scan.ReadPiFile(in.res.ResolveMarker(target.File, "pi", scope)); err != nil {
+					return nil, err
+				}
+			}
 			if rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory" {
 				if seenDirectories[name] {
 					continue
 				}
 				seenDirectories[name] = true
 			}
+			recipeScope := in.scope
+			if in.tool == "pi" && in.scope == "local" && rec.Manifest.Delivery != nil && rec.Manifest.Delivery.Unpack == "directory" {
+				recipeScope = "global"
+			}
 			diffs, err := recipe.Compute(recipe.Request{
 				Recipe:       rec.Manifest,
 				Adapters:     in.adapters,
 				Resolver:     in.res,
 				Tool:         in.tool,
-				Scope:        in.scope,
+				Scope:        recipeScope,
 				PlacedDigest: placedDigestFromState(in.inv),
 				Warnf:        in.warnf,
 			})
 			if err != nil {
 				return nil, err
+			}
+			if in.tool == "pi" && len(diffs) == 0 {
+				return nil, fmt.Errorf("required recipe %s has no delivery outcome", name)
+			}
+			if in.tool == "pi" && in.scope == "local" {
+				var localDiffs []diff.FileDiff
+				for _, d := range diffs {
+					if d.Scope == "global" && d.Tool == recipe.TargetAgnostic {
+						if err := dp06VerifyGlobal(in.res.ExpandHome("~"), rec.Manifest.Version, d); err != nil {
+							return nil, err
+						}
+						if in.verifiedGlobal != nil {
+							d.Version = rec.Manifest.Version
+							in.verifiedGlobal(d)
+						}
+						if in.warnf != nil {
+							in.warnf("verified existing global prerequisite %s at %s; local selection makes no global writes", d.Artifact, d.Path)
+						}
+					} else {
+						localDiffs = append(localDiffs, d)
+					}
+				}
+				diffs = localDiffs
 			}
 			// Stamp each recipe diff with the recipe's own version so state records
 			// its ItemVersion — the same thing the adapter engine does for artifacts
@@ -419,7 +542,36 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cs, nil
+	// Structural ownership is independent of target selection: a row in the
+	// other scope may still claim this same absolute config path.
+	needsOwnership := in.tool == "pi"
+	for _, d := range cs.Diffs {
+		needsOwnership = needsOwnership || d.Setting != nil
+	}
+	if !needsOwnership {
+		return cs, nil
+	}
+	var owners []state.Item
+	roots := []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", "", "local")}
+	seen := map[string]bool{}
+	for _, root := range roots {
+		if root == "" || seen[root] {
+			continue
+		}
+		seen[root] = true
+		s, err := state.Load(filepath.Join(root, ".patronus", "state.json"))
+		if err != nil {
+			return nil, fmt.Errorf("read setting ownership in %s: %w", root, err)
+		}
+		owners = append(owners, s.Items...)
+	}
+	if in.tool == "pi" {
+		if err := dp06AdmitFetches(cs, owners); err != nil {
+			return nil, err
+		}
+	}
+	stampPiRoots(cs.Diffs, in.res.ExpandHome("~"), in.res.ResolveMarker(".", "pi", "local"))
+	return plan.AdmitSettings(cs, owners)
 }
 
 // planWarnings collects the distinct, non-empty advisories transforms attached to
@@ -444,10 +596,13 @@ func planWarnings(cs *diff.ChangeSet) []string {
 // into the catalog so it dispatches exactly like an in-tree item, and its dispatch
 // name becomes the resolved manifest's name. Names already present in the catalog
 // (the common case) take the registry path with zero overhead.
-func mergeSourcedNames(ctx context.Context, cat *registry.Catalog, names []string, home string) ([]string, error) {
+func mergeSourcedNames(ctx context.Context, cat *registry.Catalog, names []string, home string, offline bool) ([]string, error) {
 	rs := &source.Resolver{
 		Fetcher:  fetcherForCommands,
 		CacheDir: filepath.Join(home, ".patronus", "cache", "sources"),
+	}
+	if offline {
+		rs.Fetcher = dp06OfflineFetcher{}
 	}
 	out := make([]string, 0, len(names))
 	for _, n := range names {
@@ -505,22 +660,36 @@ func allSourced(names []string) bool {
 // It is a no-op when there's no lock, the lock is for a different profile, or an
 // item isn't pinned — those follow the index latest, unchanged. base is the
 // RemoteRegistry base URL (used to reconstruct the immutable item URL).
-func applyLockPins(wd, profileName, base string, cat *registry.Catalog, warnf func(string, ...any)) error {
+func applyLockPins(wd, profileName, target, base string, cat *registry.Catalog, warnf func(string, ...any)) error {
 	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
 	if err != nil {
 		return fmt.Errorf("read patronus.lock: %w", err)
 	}
-	if len(l.Entries) == 0 {
-		return nil
-	}
 	if l.Profile != "" && l.Profile != profileName {
 		return nil // an unrelated lock never silently pins this install
+	}
+	if l.Target != "" && l.Target != target {
+		return fmt.Errorf("patronus.lock target %s differs from requested %s", l.Target, target)
 	}
 	pin := make(map[string]lock.Entry, len(l.Entries))
 	for _, e := range l.Entries {
 		pin[e.Name] = e
 	}
 	for _, e := range l.Entries {
+		if e.NativeSource != "" {
+			rec := findRecipe(cat, e.Name)
+			if rec == nil || !manifest.IsPiDelivery(rec.Manifest.Delivery) {
+				return fmt.Errorf("native lock pin %s is inapplicable", e.Name)
+			}
+			pinned := *rec.Manifest
+			delivery := *pinned.Delivery
+			delivery.Install = []manifest.InstallCandidate{{Manager: manifest.PMPi, Ref: e.NativeSource}}
+			pinned.Version, pinned.Delivery = e.Version, &delivery
+			if err := manifest.ValidateRecipe(&pinned); err != nil {
+				return err
+			}
+			rec.Manifest = &pinned
+		}
 		if e.Delivery != nil {
 			rec := findRecipe(cat, e.Name)
 			if rec == nil || rec.Manifest.Delivery == nil || rec.Manifest.Delivery.Unpack != "directory" {
@@ -664,11 +833,18 @@ func adapterMap(adapters []*manifest.Adapter) map[string]*manifest.Adapter {
 
 // deployOptions carries the inputs runDeploy needs beyond the change set.
 type deployOptions struct {
-	force            bool
-	yes              bool
-	allowPkgInstalls bool   // --allow-package-installs: run package installs non-interactively, all-or-nothing
-	home             string // for ~/.patronus/state.json
-	projectDir       string // for <project>/.patronus/state.json
+	trackExisting, allowPiProject bool
+	profile                       string
+	globalPrerequisites           []diff.FileDiff // verified read-only dependencies for a local operation
+	target                        string          // requested runtime, even when all emitted rows are agnostic
+	mutation                      *mutation
+	saveState                     func(string, *state.State) error // nil uses atomic state.Save
+	piConsents                    []piContextConsent               // operation-local prepared-byte consent; never persisted
+	force                         bool
+	yes                           bool
+	allowPkgInstalls              bool   // --allow-package-installs: run package installs non-interactively, all-or-nothing
+	home                          string // for ~/.patronus/state.json
+	projectDir                    string // for <project>/.patronus/state.json
 }
 
 // commandRunner runs a self-wiring recipe's post-install command. The real impl
@@ -714,7 +890,42 @@ func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, op
 	return runDeployWith(cmd, cs, res, opts, runnerForCommands)
 }
 
-func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) error {
+func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) (err error) {
+	m, err := beginMutation(opts.home, opts.projectDir)
+	if err != nil {
+		return err
+	}
+	defer m.close(&err)
+	opts.mutation = m
+	return runDeployLocked(cmd, cs, res, opts, runner)
+}
+
+// runDeployLocked is called only by an owning command or runDeployWith.
+func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) error {
+	if err := staticPiSelection(cs, opts.target == "pi"); err != nil {
+		return err
+	}
+	// Read both ownership scopes before any mutation, including non-config Pi
+	// installs. Unsupported/insufficient state cannot be repaired by equality.
+	var owners []state.Item
+	for _, scope := range []string{"global", "local"} {
+		s, err := state.Load(statePath(scope, opts))
+		if err != nil {
+			return fmt.Errorf("load %s state: %w", scope, err)
+		}
+		owners = append(owners, s.Items...)
+	}
+	if err := preflightPiDeploy(cmd, cs, res, &opts); err != nil {
+		return err
+	}
+	admitted, err := plan.AdmitSettings(cs, owners)
+	if err != nil {
+		return err
+	}
+	cs = admitted
+	if err := opts.mutation.checkPlan(cs, opts.piConsents); err != nil {
+		return err
+	}
 	out := cmd.OutOrStdout()
 
 	consent := installConsent{
@@ -732,16 +943,71 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 		}
 	}
 
-	directoryResult, err := deployDirectories(cmd.Context(), opts.home, cs, opts.force)
+	var prepared *dp06Acquisition
+	piSelected := opts.target == "pi"
+	for _, d := range cs.Diffs {
+		piSelected = piSelected || d.Tool == "pi"
+	}
+	if piSelected {
+		if err := dp06AdmitFetches(cs, owners); err != nil {
+			return err
+		}
+		if err := preflightDirectories(opts.home, cs, opts.force); err != nil {
+			return err
+		}
+		prepared, err = dp06Acquire(cmd.Context(), cs)
+		if err != nil {
+			return err
+		}
+		defer prepared.close()
+		// Acquisition can take time; recheck all snapshots before the first write.
+		if err := opts.mutation.checkPlan(cs, opts.piConsents); err != nil {
+			return err
+		}
+	}
+	for _, d := range opts.globalPrerequisites {
+		if err := dp06VerifyGlobal(opts.home, d.Version, d); err != nil {
+			return err
+		}
+	}
+	if err := applyNative(cmd, cs, opts, nil); err != nil {
+		return err
+	}
+	if err := refreshNativeSettings(cs); err != nil {
+		return err
+	}
+	admitted, err = plan.AdmitSettings(cs, owners)
 	if err != nil {
 		return err
 	}
+	cs = admitted
+	var directoryResult directoryDeployResult
+	if prepared != nil {
+		directoryResult, err = deployDirectoriesLocked(cmd.Context(), opts.home, cs, opts.force, opts.mutation, prepared)
+	} else {
+		directoryResult, err = deployDirectoriesLocked(cmd.Context(), opts.home, cs, opts.force, opts.mutation, nil)
+	}
+	membershipErr := recordDirectoryProfile(cs, opts)
+	if err != nil || membershipErr != nil {
+		return errors.Join(err, membershipErr)
+	}
 	legacy := directoryResult.Legacy
+	var authored []diff.FileDiff
+	for _, d := range legacy.Diffs {
+		if d.Native == nil {
+			authored = append(authored, d)
+		}
+	}
+	legacy = &diff.ChangeSet{Diffs: authored, DryRun: legacy.DryRun}
 	app := &install.Applier{
-		Force:    opts.force,
-		Conflict: conflictPrompt(cmd, res, opts.yes),
-		Fetcher:  fetcherForDeploy,
-		Ctx:      cmd.Context(),
+		BeforeWrite: func(d diff.FileDiff) error { return opts.mutation.checkFile(d, opts.piConsents) },
+		Force:       opts.force,
+		Conflict:    conflictPrompt(cmd, res, opts.yes),
+		Fetcher:     fetcherForDeploy,
+		Ctx:         cmd.Context(),
+	}
+	if prepared != nil {
+		app.Fetcher = prepared
 	}
 	result, applyErr := app.Apply(legacy)
 
@@ -762,9 +1028,12 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 
 	// Record whatever succeeded BEFORE surfacing any error (state must reflect
 	// reality even on partial failure).
-	if stateErr := recordState(realized, opts); stateErr != nil {
-		// A state-write failure shouldn't mask an apply failure, but report it.
-		fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to write state: %v\n", stateErr)
+	recordedResult := *result
+	recordedResult.Applied = realized
+	if applyErr == nil || len(realized) > 0 {
+		if stateErr := recordStateLocked(legacy, &recordedResult, opts); stateErr != nil {
+			applyErr = errors.Join(applyErr, stateErr)
+		}
 	}
 
 	fmt.Fprintf(out, "\nApplied: %d written, %d skipped\n", len(result.Applied), len(result.Skipped))
@@ -773,7 +1042,10 @@ func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver
 		printDirectoryReadiness(out, cs)
 	}
 	if applyErr != nil {
-		return applyErr
+		return fmt.Errorf("%w; %s; re-preview current bytes before repair (equality is not adoption authority)", applyErr, resultDiagnostics(result))
+	}
+	if piSelected {
+		fmt.Fprintln(out, "Pi status: placed, runtime-unverified; eligible at next startup/reload (not proof of runtime registration).")
 	}
 	return nil
 }
@@ -853,33 +1125,76 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner, cons
 	return ran, nil
 }
 
-// recordState groups applied diffs by scope and upserts them into the matching
-// scope's state file (~/.patronus for global, <project>/.patronus for local).
-func recordState(applied []diff.FileDiff, opts deployOptions) error {
-	if len(applied) == 0 {
-		return nil
+// recordState reconciles complete desired sets against actual outcomes. Directory
+// receipt references are reloaded and preserved, never inferred from file diffs.
+func recordState(desired *diff.ChangeSet, result *install.Result, opts deployOptions) (err error) {
+	m, err := beginMutation(opts.home, opts.projectDir)
+	if err != nil {
+		return err
 	}
-	now := time.Now().UTC().Format(time.RFC3339)
+	defer m.close(&err)
+	opts.mutation = m
+	return recordStateLocked(desired, result, opts)
+}
 
+func recordStateLocked(desired *diff.ChangeSet, result *install.Result, opts deployOptions) error {
+	stampPiRoots(desired.Diffs, opts.home, opts.projectDir)
+	stampPiRoots(result.Applied, opts.home, opts.projectDir)
+	stampPiRoots(result.Skipped, opts.home, opts.projectDir)
+	now := time.Now().UTC().Format(time.RFC3339)
 	byScope := map[string][]diff.FileDiff{}
-	for _, d := range applied {
-		if d.Directory != nil {
+	var scopes []string
+	for _, d := range desired.Diffs {
+		if d.Directory != nil || d.Native != nil || d.IsDir {
 			continue
+		}
+		if _, ok := byScope[d.Scope]; !ok {
+			scopes = append(scopes, d.Scope)
 		}
 		byScope[d.Scope] = append(byScope[d.Scope], d)
 	}
-	for scope, diffs := range byScope {
+	save := opts.saveState
+	if save == nil {
+		save = state.Save
+	}
+	var outcomes []error
+	for _, scope := range scopes {
 		path := statePath(scope, opts)
+		if err := opts.mutation.check(path); err != nil {
+			return errors.Join(append(outcomes, fmt.Errorf("save state %s: %w; ownership uncertain; %s", path, err, resultDiagnostics(result)))...)
+		}
 		s, err := state.Load(path)
 		if err != nil {
-			return err
+			return errors.Join(append(outcomes, err)...)
 		}
-		state.Merge(s, state.FromChangeSet(diffs, now))
-		if err := state.Save(path, s); err != nil {
-			return err
+		qualifyPiOwnership(s, byScope[scope])
+		reconciled := state.Reconcile(state.ReconcileInput{Old: s.Items, Desired: byScope[scope], Result: *result, Now: now})
+		s.Items = reconciled.Items
+		if opts.target == "pi" {
+			state.EnrollProfile(s, opts.profile, opts.target, scope, piSelectedRoot(scope, opts.home, opts.projectDir), byScope[scope])
+		}
+		outcomes = append(outcomes, reconciled.Unresolved...)
+		if err := opts.mutation.saveState(path, s, save); err != nil {
+			outcomes = append(outcomes, fmt.Errorf("save state %s: %w; ownership uncertain; %s", path, err, resultDiagnostics(result)))
+			return errors.Join(outcomes...)
 		}
 	}
-	return nil
+	return errors.Join(outcomes...)
+}
+
+func resultDiagnostics(result *install.Result) string {
+	var applied, skipped []string
+	for _, d := range result.Applied {
+		applied = append(applied, string(d.Action)+" "+d.Path)
+	}
+	for _, d := range result.Skipped {
+		skipped = append(skipped, string(d.Action)+" "+d.Path)
+	}
+	failed := "none"
+	if result.Failed != nil {
+		failed = string(result.Failed.Action) + " " + result.Failed.Path + " (write outcome uncertain)"
+	}
+	return fmt.Sprintf("verified committed=%q skipped=%q failed=%s", applied, skipped, failed)
 }
 
 // statePath returns the state file for a scope.
@@ -960,4 +1275,217 @@ func conflictPrompt(cmd *cobra.Command, res toolpath.Resolver, yes bool) install
 			return install.Skip, nil
 		}
 	}
+}
+
+func dp06Target(target string) error {
+	switch target {
+	case "", "all", "claude", "codex", "opencode", "pi":
+		return nil
+	}
+	return fmt.Errorf("unknown target %q; use claude|codex|opencode|pi|all", target)
+}
+
+func dp06ProfileComplete(res *profile.Resolved) error {
+	for _, w := range res.Warnings {
+		if strings.Contains(w, "not resolvable") {
+			return fmt.Errorf("required profile member unavailable: %s", w)
+		}
+	}
+	return nil
+}
+
+// Legacy desired pins are not target provenance. Consistent installed rows can
+// establish Pi; otherwise regeneration is a separate deliberate lock command.
+func dp06CheckProfileLock(wd, profileName, target string, cat *registry.Catalog, home, scope string, out io.Writer) error {
+	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
+	if err != nil {
+		return err
+	}
+	if l.Profile != "" && l.Profile != profileName {
+		return nil
+	}
+	if l.Target != "" {
+		if l.Target != target {
+			return fmt.Errorf("patronus.lock target %s differs from requested %s", l.Target, target)
+		}
+		return nil
+	}
+	if target != "pi" || len(l.Entries) == 0 {
+		return nil
+	}
+	res, err := profile.Resolve(cat, profileName, "pi")
+	if err != nil {
+		return err
+	}
+	if scope == "" {
+		scope, err = dp06DefaultPiScope(cat, res.Names())
+		if err != nil {
+			return err
+		}
+	}
+	s, err := state.Load(removeStatePath(scope, home, wd))
+	if err != nil {
+		return err
+	}
+	proven := false
+	for _, it := range s.Items {
+		if !contains(res.Names(), it.Artifact) {
+			continue
+		}
+		if it.Tool != "pi" && it.Tool != recipe.TargetAgnostic {
+			proven = false
+			break
+		}
+		proven = proven || it.Tool == "pi"
+	}
+	if proven {
+		return nil
+	}
+	var old []string
+	for _, e := range l.Entries {
+		old = append(old, e.Name)
+	}
+	fmt.Fprintf(out, "Pi lock closure preview: pinned=%v selected=%v\n", old, res.Names())
+	return fmt.Errorf("target-less lock lacks consistent installed Pi provenance; review closure difference, then deliberately regenerate with lock --profile %s --target pi", profileName)
+}
+
+// FETCH planning equality is not replacement authority. Check the original
+// owned bytes independently of the selected payload, including agnostic rows.
+func dp06AdmitFetches(cs *diff.ChangeSet, owners []state.Item) error {
+	for i := range cs.Diffs {
+		d := &cs.Diffs[i]
+		if d.Fetch == nil || d.Directory != nil {
+			continue
+		}
+		owned := false
+		for _, it := range owners {
+			for _, f := range it.Files {
+				if f.Path != d.Path {
+					continue
+				}
+				if owned || it.Artifact != d.Artifact || it.Tool != d.Tool || it.Scope != d.Scope || f.Action != string(diff.Fetch) {
+					return fmt.Errorf("pi FETCH ownership conflict at %s; explicit migration required", d.Path)
+				}
+				if d.Before == nil || f.Checksum != fmt.Sprintf("sha256:%x", sha256.Sum256(d.Before)) {
+					return fmt.Errorf("pi owned FETCH drift at %s; preserve edits and resolve ownership before replacement", d.Path)
+				}
+				owned = true
+			}
+		}
+		if !owned && d.Before != nil && (d.Action != diff.Skip || d.Fetch.Archive != "") {
+			return fmt.Errorf("pi FETCH destination %s is unmanaged; explicit migration required", d.Path)
+		}
+		if d.Fetch.Archive != "" && d.Action == diff.Skip {
+			// An installed member digest proves neither the selected archive pin
+			// nor its member. Authorized apply must acquire and decode that pin.
+			d.Action = diff.Fetch
+			d.Note = "selected archive pin requires acquisition and member verification"
+		}
+	}
+	return nil
+}
+
+func dp06VerifyGlobal(home, version string, d diff.FileDiff) error {
+	refuse := func(reason string) error {
+		return fmt.Errorf("global prerequisite %s: %s; run a separate global install/update before local selection", d.Artifact, reason)
+	}
+	s, err := state.Load(filepath.Join(home, ".patronus/state.json"))
+	if err != nil {
+		return err
+	}
+	items := s.Find(d.Artifact, recipe.TargetAgnostic, "global")
+	if len(items) != 1 || items[0].ItemVersion != version {
+		return refuse("missing or stale owned state")
+	}
+	if d.Directory != nil {
+		req := directoryRequest(d.Directory)
+		in, err := (&packagedelivery.Service{Home: home}).Inspect(req)
+		if err != nil {
+			return refuse(err.Error())
+		}
+		r := in.Receipt
+		if items[0].PackageReceipt != d.Artifact || r == nil || in.Pending != nil || len(in.Changed)+len(in.Missing)+len(in.Unknown) > 0 {
+			return refuse("missing, drifted or unowned receipt")
+		}
+		if r.RecipeVersion != req.RecipeVersion || r.Identity != req.Identity || r.Root != req.Root || r.URL != req.URL || r.ArchiveSHA256 != req.SHA256 {
+			return refuse("incompatible receipt pin")
+		}
+		return nil
+	}
+	if d.Fetch != nil && d.Fetch.Archive != "" {
+		return fmt.Errorf("global prerequisite %s: legacy archive ownership records only member digest/version, not the selected archive pin; Pi-local reliance requires raw/directory delivery with pin evidence or a separately qualified migration (ordinary global reinstall cannot add this evidence)", d.Artifact)
+	}
+	if d.Fetch == nil || d.Action != diff.Skip {
+		return refuse("missing or incompatible pinned delivery")
+	}
+	for _, f := range items[0].Files {
+		if f.Path == d.Path && f.Action == string(diff.Fetch) && f.Checksum == fmt.Sprintf("sha256:%x", sha256.Sum256(d.Before)) {
+			if err := install.CheckUnchanged(d.Path, d.Before); err != nil {
+				return refuse(err.Error())
+			}
+			return nil
+		}
+	}
+	return refuse("missing ownership or changed installed digest")
+}
+
+func dp06Acknowledge(cmd *cobra.Command, operation string) {
+	fmt.Fprintf(cmd.OutOrStdout(), "Pi %s --deploy acknowledges: settle dependent work (all consumers for global changes); reload/restart is required. Loaded sessions may retain old bytes. Pi/npm exclusively manage native package declarations and files.\n", operation)
+}
+
+// No fallback: Pi dry previews can consume only already available source bytes.
+type dp06OfflineFetcher struct{}
+
+func (dp06OfflineFetcher) Fetch(context.Context, string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("pi dry preview is network-free; required source is not cached; acquire it in a separately authorized operation")
+}
+
+func dp06PrintSelection(cmd *cobra.Command, cs *diff.ChangeSet, target string, res toolpath.Resolver) {
+	pi := target == "pi"
+	for _, d := range cs.Diffs {
+		pi = pi || d.Tool == "pi"
+	}
+	if !pi {
+		return
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Pi selection: global root=%s; project root=%s; static resources become eligible at startup/reload, runtime-unverified.\n", res.ResolveMarker("~/.pi/agent", "pi", "global"), res.ResolveMarker(".pi", "pi", "local"))
+	for _, d := range cs.Diffs {
+		if d.Tool == recipe.TargetAgnostic {
+			fmt.Fprintf(cmd.OutOrStdout(), "Global shared dependency effect: %s %s at %s; no independent profile lifetime.\n", d.Action, d.Artifact, d.Path)
+		}
+	}
+}
+
+// Scope inference applies only to Pi with no explicit scope. Agnostic delivery
+// rows are prerequisites, not evidence that a local resource selection is global.
+func dp06DefaultPiScope(cat *registry.Catalog, names []string) (string, error) {
+	selected := ""
+	for _, name := range names {
+		scope := ""
+		for _, a := range cat.Artifacts {
+			if a.Manifest.Name == name {
+				scope = a.Manifest.Defaults.Scope
+				if scope == "" || scope == "project" {
+					scope = "local"
+				}
+			}
+		}
+		if rec := findRecipe(cat, name); rec != nil && rec.Manifest.Wire.Method == manifest.WireMerge {
+			scope = "global"
+		}
+		if scope == "" {
+			continue
+		}
+		if scope != "global" && scope != "local" {
+			return "", fmt.Errorf("invalid Pi default scope %q for %s", scope, name)
+		}
+		if selected != "" && selected != scope {
+			return "", fmt.Errorf("pi selection has mixed local/global resource defaults; select explicit --local or --global, or preview separate operations")
+		}
+		selected = scope
+	}
+	if selected == "" {
+		selected = "global"
+	}
+	return selected, nil
 }

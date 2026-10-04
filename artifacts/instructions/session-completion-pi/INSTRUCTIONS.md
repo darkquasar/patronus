@@ -1,0 +1,7 @@
+# Complete the authorized stage
+
+Reread the brief and native state, then report actual criteria and fresh verification. Settle every launched run/promise before transition/cleanup; retain failed/partial outputs and unknown process/owner state for escalation. Read saved bytes and structured acceptance, not a status-only claim. Include source root/revision/base/head, run/session/mission/latest attempt IDs, changed files, output hashes, commands/exits/logs, skipped checks, review dispositions, residual risks and next authorized action.
+
+Only the coordinator updates native mission state and lessons under its grant. Record follow-ups rather than letting them disappear. Keep evidence durable outside temporary runtime directories. A local commit/handoff completes a locally authorized stage without claiming remote publication.
+
+No unconditional pull, rebase, push, stash deletion, branch/worktree removal or prune. Integration, publication and discard each require separate authority. Native cleanup follows exact prelaunch allocation/capture/settlement consent; retained cwd needs its own grant. Failed capture or unknown descendants/ownership preserves work. Do not silently switch runner/model or extend review budgets. Use one independent review and at most one bounded correction/disposition; do not automatically start another wave. Required tests, authority, acceptance and release gates remain independent blockers.

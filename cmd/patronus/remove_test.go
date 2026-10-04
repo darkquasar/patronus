@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/state"
 )
@@ -52,7 +56,7 @@ func TestRemoveRevertsV1OrphanPluginMerge(t *testing.T) {
 // execRemove executes the remove command with args, returning stdout, stderr, err.
 func execRemove(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newRemoveCmd("remove", []string{"revert"})
+	cmd := newRemoveCmd([]string{"revert"})
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
@@ -251,13 +255,20 @@ func seedSharedSettings(t *testing.T, content []byte, items func(path string) []
 }
 
 func mcpStateItem(artifact, path, server string, installed []byte) state.Item {
+	var document struct {
+		Servers map[string]any `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(installed, &document); err != nil {
+		panic(err)
+	}
 	return state.Item{
 		Artifact: artifact, ItemVersion: "1.0.0", Tool: "claude", Scope: "local",
 		Files: []state.FileState{{
 			Path: path, Action: string(diff.Merge), Checksum: shaState(installed),
 			Setting: &diff.SettingEdit{
-				Target: diff.FileTargetRef{File: ".claude.json", Format: "json"},
-				Dotted: "mcpServers." + server,
+				Target:      diff.FileTargetRef{File: ".claude.json", Format: "json"},
+				Dotted:      "mcpServers." + server,
+				ScalarValue: document.Servers[server],
 			},
 		}},
 	}
@@ -486,7 +497,7 @@ func TestRemoveFooterCountsPluginUninstallExecs(t *testing.T) {
 		Exec: &diff.ExecSpec{Command: []string{"claude", "plugin", "uninstall", "demo-plugin"}, Display: "claude plugin uninstall demo-plugin"},
 	}}}
 
-	cmd := newRemoveCmd("remove", nil)
+	cmd := newRemoveCmd(nil)
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
@@ -500,5 +511,200 @@ func TestRemoveFooterCountsPluginUninstallExecs(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "1 undone") {
 		t.Errorf("an uninstall command that ran is work done; the footer must say so:\n%s", out.String())
+	}
+}
+
+func TestRemovePiPreparedCombinedContextPreservesMigration(t *testing.T) {
+	f := dp02Setup(t)
+	dp02Artifact(t, f.root, "fixture-context", "instruction", "Pi-owned contribution\n")
+	prepared := []byte("Operator-prepared shared instructions\n\nClaude-specific instructions and user content\n")
+	path := filepath.Join(f.root, "CLAUDE.md")
+	dp02File(t, path, string(prepared))
+	cmd := newInstallCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	planned, err := planInstall(cmd, installPlanRequest{Names: []string{"fixture-context"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviews, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	consents, err := confirmPiContexts(reviews, true, false, false, strings.NewReader("prepared combined file\n"), &bytes.Buffer{})
+	if err != nil || len(consents) != 1 {
+		t.Fatalf("consent: %v", err)
+	}
+	for _, d := range planned.Changes.Diffs {
+		if d.Path == path {
+			if err := validatePiConsentBytes(consents[0], path, d.Before, d.After); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	result, err := (&install.Applier{}).Apply(planned.Changes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := recordState(planned.Changes, result, deployOptions{home: f.home, projectDir: f.root}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := execRemove(t, "fixture-context", "--target", "pi", "--local", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(mustRead(t, path), prepared) {
+		t.Fatal("Pi inverse changed the operator-prepared Claude/user content")
+	}
+}
+
+func TestRemoveSaveFailureRetainsDurableOwnershipForEveryTarget(t *testing.T) {
+	for _, tool := range []string{"pi", "claude", "codex"} {
+		t.Run(tool, func(t *testing.T) {
+			f := dp02Setup(t)
+			path := filepath.Join(f.home, "fixture.txt")
+			if tool == "pi" {
+				path = filepath.Join(piSelectedRoot("global", f.home, f.root), "fixture.txt")
+			}
+			body := []byte("fixture")
+			dp02File(t, path, string(body))
+			d := diff.FileDiff{Artifact: "fixture", Tool: tool, Scope: "global", Version: "1", Path: path, Action: diff.Create, After: body}
+			original := &state.State{Version: state.Version, Items: state.FromChangeSet([]diff.FileDiff{d}, "first")}
+			sp := removeStatePath("global", f.home, f.root)
+			if err := state.Save(sp, original); err != nil {
+				t.Fatal(err)
+			}
+			durable := mustRead(t, sp)
+			inverse, err := remove.Compute(original.Items, func(path string) ([]byte, bool, error) { b, err := os.ReadFile(path); return b, err == nil, err }, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd := newRemoveCmd(nil)
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			err = runRemove(cmd, inverse.ChangeSet, inverse.Ledger, original.Items, map[string]*state.State{"global": original}, removeStateOpts{home: f.home, projectDir: f.root, saveState: func(string, *state.State) error { return errors.New("injected state-save failure") }})
+			if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), path) {
+				t.Fatalf("missing failure diagnostics: %v", err)
+			}
+			if !bytes.Equal(durable, mustRead(t, sp)) {
+				t.Fatal("durable ownership changed after failed save")
+			}
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				t.Fatal("expected real partial file deletion")
+			}
+			// Explicit removal after a fresh preview accounts for the already-absent path.
+			if _, _, err := execRemove(t, "fixture", "--target", tool, "--global", "--deploy"); err != nil {
+				t.Fatal(err)
+			}
+			loaded, err := state.Load(sp)
+			if err != nil || len(loaded.Items) != 0 {
+				t.Fatalf("explicit remove incomplete: %+v %v", loaded, err)
+			}
+		})
+	}
+}
+
+func TestRemovePiSharedPreparedContext(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		reverse bool
+		fault   string
+	}{
+		{name: "forward"}, {name: "reverse", reverse: true},
+		{name: "drift", fault: "drift"}, {name: "duplicate markers", fault: "duplicate"},
+		{name: "nested markers", fault: "nested"}, {name: "unselected owner overlap", fault: "overlap"},
+		{name: "mixed actions", fault: "mixed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := dp02Setup(t)
+			path := filepath.Join(f.home, ".pi/agent/CLAUDE.md")
+			prepared := []byte("Operator-prepared shared instructions\n\nClaude and user content\n")
+			first := adapter.AppendSection(prepared, "pi:first-fixture", []byte("First Pi section"))
+			current := adapter.AppendSection(first, "pi:second-fixture", []byte("Second Pi section"))
+			d := diff.FileDiff{Artifact: "first-fixture", Version: "1", Tool: "pi", Scope: "global", Type: "instruction", Path: path, Action: diff.Append, Before: prepared, After: current, Section: &diff.SectionEdit{Name: "pi:first-fixture"}, Contrib: []diff.SectionContrib{{Artifact: "second-fixture", Version: "1", Section: "pi:second-fixture", Prior: first}}}
+			items := state.FromChangeSet([]diff.FileDiff{d}, "installed")
+			switch tc.fault {
+			case "drift":
+				current = bytes.Replace(current, []byte("First Pi section"), []byte("Edited Pi section"), 1)
+			case "duplicate":
+				current = append(current, []byte("<!-- patronus:start pi:first-fixture -->\n")...)
+			case "nested":
+				current = bytes.Replace(current, []byte("First Pi section"), []byte("<!-- patronus:start user-section -->\nUser nested content\n<!-- patronus:end user-section -->"), 1)
+			case "overlap":
+				other := items[0]
+				other.Artifact = "unknown-owner"
+				items = append(items, other)
+			case "mixed":
+				items[1].Files[0].Action = string(diff.Create)
+			}
+			if tc.fault == "duplicate" || tc.fault == "nested" {
+				// Even a matching whole-file hash cannot make ambiguous marker ownership safe.
+				sum := sha256.Sum256(current)
+				for i := range items {
+					items[i].Files[0].Checksum = "sha256:" + hex.EncodeToString(sum[:])
+				}
+			}
+			dp02File(t, path, string(current))
+			sp := removeStatePath("global", f.home, f.root)
+			if err := state.Save(sp, &state.State{Version: state.Version, Items: items}); err != nil {
+				t.Fatal(err)
+			}
+			snapshot := dp02Snapshot(t, f.home, f.root)
+			names := []string{"first-fixture", "second-fixture"}
+			if tc.reverse {
+				names[0], names[1] = names[1], names[0]
+			}
+			out, _, err := execRemove(t, append(names, "--target", "pi", "--global", "--deploy", "--force")...)
+			if tc.fault != "" && tc.fault != "drift" {
+				if err == nil {
+					t.Fatal("unsafe group claimed removed")
+				}
+				if !reflect.DeepEqual(snapshot, dp02Snapshot(t, f.home, f.root)) {
+					t.Fatal("refused group changed context/state")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(mustRead(t, path), prepared) {
+				t.Fatal("shared inverse resurrected Pi content or erased prepared Claude/user text")
+			}
+			loaded, err := state.Load(sp)
+			if err != nil || len(loaded.Items) != 0 {
+				t.Fatalf("ledger failed to retire both sections: %+v %v", loaded, err)
+			}
+			if !strings.Contains(out, "2 undone") {
+				t.Fatalf("logical effects missing: %s", out)
+			}
+		})
+	}
+}
+
+func TestRemoveLastMomentEditPreservesBytesAndOwnership(t *testing.T) {
+	f := dp02Setup(t)
+	dp02Artifact(t, f.root, "fixture-prompt", "command", "Owned prompt\n")
+	if _, _, err := runInstall(t, "fixture-prompt", "--target", "pi", "--global", "--deploy", "--yes"); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(f.home, ".pi/agent/prompts/fixture-prompt.md")
+	sp := filepath.Join(f.home, ".patronus/state.json")
+	before := mustRead(t, sp)
+	cmd := newRemoveCmd(nil)
+	edited := false
+	cmd.SetOut(dp05WriterFunc(func(p []byte) (int, error) {
+		if !edited {
+			edited = true
+			dp02File(t, path, "External edit after removal plan\n")
+		}
+		return len(p), nil
+	}))
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"fixture-prompt", "--target", "pi", "--global", "--deploy", "--force"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "fresh preview") {
+		t.Fatalf("stale removal plan admitted: %v", err)
+	}
+	if !bytes.Equal(before, mustRead(t, sp)) || string(mustRead(t, path)) != "External edit after removal plan\n" {
+		t.Fatal("external bytes or ownership lost")
 	}
 }

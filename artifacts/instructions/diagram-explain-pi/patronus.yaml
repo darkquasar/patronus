@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: diagram-explain-pi
+description: "Accompany non-trivial explanations with a compact ASCII diagram (architecture, flow, or state) using a consistent charset when the user's format permits. Inline Pi context guidance."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+targets: [pi]
+defaults:
+  scope: global
+attribution:
+  upstream: github.com/tjboudreaux/cc-visualization-skills
+  license: MIT
+  copyright: "Copyright (c) 2026 TJ Boudreaux"
+  commit: 4513e46b4a1bccea0f5177b16a8ee069a4d01b30
+  note: "Adapted from Patronus diagram-explain for Pi with explicit user-format precedence and inline license preservation. Only ASCII charset/convention rules are borrowed from upstream tools-visual-ascii-arch, not its prose."

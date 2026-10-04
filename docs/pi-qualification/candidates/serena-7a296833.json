@@ -1,0 +1,472 @@
+{
+  "version": 1,
+  "kind": "candidate",
+  "example": false,
+  "status": "proposed",
+  "claim": "code-intel-exact-pin",
+  "class": "C",
+  "source": {
+    "root": "/home/agent/workspace/worktrees/patronus-pi-allocation/pi-worktree-963ee9a7-4644-4740-912c-df5fb4d089f8-s0-0",
+    "revision": "a51052be3bc93122912b2dad56eecfb56feda1af",
+    "dirty_inventory": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "path": "docs/pi-qualification/candidate-dispositions.md",
+      "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+    },
+    {
+      "path": "docs/pi-qualification/core-dependency-build-admission.md",
+      "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+    }
+  ],
+  "outputs": [],
+  "environment": {
+    "platform": "Linux ARM64 planning baseline; not a new runtime observation",
+    "pins": {
+      "selected-package": "2.0.0.dev0",
+      "Pi": "0.87.1",
+      "Node": "22.22.1",
+      "Python-service-patch-and-closure": "unknown",
+      "Go": "1.26.0",
+      "gopls": "0.20.0"
+    }
+  },
+  "grant": {
+    "version": 1,
+    "kind": "grant",
+    "example": false,
+    "status": "unknown",
+    "issuer": "unknown",
+    "issued_at": "2026-10-01T07:06:19Z",
+    "action": "qualification",
+    "roots": [
+      "."
+    ],
+    "outputs": [],
+    "inputs": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      }
+    ],
+    "expires_at": null,
+    "revalidation_trigger": "Any changed input/source/config/pin/environment/scope; operational authority has not been supplied in this candidate.",
+    "owner_verification": {
+      "owner": "unknown",
+      "result": "unknown",
+      "checked_at": "2026-10-01T07:06:19Z",
+      "action": "qualification",
+      "roots": [
+        "."
+      ],
+      "outputs": [],
+      "inputs": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    }
+  },
+  "invocation": {
+    "native_tool": {
+      "name": "functions.read",
+      "arguments": {
+        "path": "/home/agent/workspace/patronus/docs/specs/01-pi-harness-adapter/ecosystem-findings.md"
+      }
+    },
+    "started_at": "2026-10-01T07:06:19Z",
+    "ended_at": "2026-10-01T07:06:19Z"
+  },
+  "result": "unknown",
+  "expected": "Dated, honestly incomplete C dossier; operational qualification must refuse until affected gates are closed.",
+  "observation": "Local read and attribution only. See candidate-dispositions.md source register; no new acquisition, runtime test or owner operational approval.",
+  "logs": [],
+  "exit_code": null,
+  "settlement": "not-applicable",
+  "review": {
+    "cycles": 0,
+    "reviewer": "unknown",
+    "reviewed": [],
+    "corrections": [],
+    "findings": [],
+    "disposition": "incomplete"
+  },
+  "gates": {
+    "required_tests": "unknown",
+    "authority": "unknown",
+    "release": "unknown"
+  },
+  "limitations": [
+    "Candidate only; no qualified operational claim.",
+    "Exact Python patch/executable/venv lock unknown: observed path python3.14 is insufficient. GPL application conveyance/corresponding-source obligations require review before redistribution; SolidLSP MIT cannot replace the application license.",
+    "Historical latest observations cannot pass a fresh currency check. Summary references are not archive-byte verification."
+  ],
+  "owner_acceptance": {
+    "owner": "unknown",
+    "result": "unknown",
+    "claim": "code-intel-exact-pin",
+    "stage": "qualification",
+    "inputs": [
+      {
+        "path": "docs/pi-qualification/candidate-dispositions.md",
+        "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+      },
+      {
+        "path": "docs/pi-qualification/core-dependency-build-admission.md",
+        "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+      }
+    ]
+  },
+  "identity": "oraios/serena (serena-agent)",
+  "digest": null,
+  "retrieved_at": "2026-09-30T22:46:00Z",
+  "immutable_refs": [
+    {
+      "url": "https://github.com/oraios/serena/tree/7a2968335f2198b966864de1ce3655c8e485a653",
+      "ref": "7a2968335f2198b966864de1ce3655c8e485a653"
+    }
+  ],
+  "dossier": {
+    "identity": {
+      "status": "observed",
+      "value": {
+        "package": "oraios/serena (serena-agent)",
+        "repository": "https://github.com/oraios/serena",
+        "attribution": "Historical ecosystem-findings.md; candidate-dispositions.md defines source IDs",
+        "selected_use": "optional code-intel"
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "version_ref": {
+      "status": "observed",
+      "value": {
+        "version": "2.0.0.dev0",
+        "commit": "7a2968335f2198b966864de1ce3655c8e485a653",
+        "tag": null,
+        "commit_verification": "attributed evidence, not fresh VCS verification",
+        "recipe_version": null,
+        "patronus_payload_version": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "archive": {
+      "status": "unknown",
+      "value": {
+        "url": null,
+        "sha256": null,
+        "sha512_integrity": null,
+        "newly_acquired_or_hashed": false,
+        "source": "historical WEB-SDK lock/ECO or current recipe; not archive bytes",
+        "metadata_url": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "installed_comparison": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "ECO direct_url.json identifies installed VCS commit; no source/archive/full-installed-tree comparison established.",
+        "actual_selected_payload_comparison": "unknown"
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "license_attribution": {
+      "status": "observed",
+      "value": {
+        "declared_license": "Serena application GPL-3.0-or-later; SolidLSP MIT separately",
+        "full_closure_license_review": "unknown",
+        "attribution_obligations": "Preserve upstream notices/licenses; review complete source/closure before distribution. Serena GPL application and SolidLSP MIT must remain distinct; redistribution conclusion unknown."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "dependency_tree_sbom": {
+      "status": "unknown",
+      "value": {
+        "full_locked_tree": null,
+        "production_sbom": null,
+        "historical_direct_dependencies": null,
+        "host_peers": null,
+        "note": "WEB-SDK combined historical lock available for investigation, not reviewed production closure; all platform/optional/transitive inputs need Q closure review."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "lifecycle_build_scripts": {
+      "status": "unknown",
+      "value": {
+        "partial_observation": "Exact Python build backend, transitive wheels/sdists/build hooks and language-server acquisition/scripts unknown. Existing Go backend starts gopls; no uvx or gopls@latest repair allowed.",
+        "policy": "Deny root/transitive lifecycle scripts by default; exact isolated exceptions need separate grant. No scripts during static delivery."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "provenance_signature": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "No complete provenance/signature/builder verification established.",
+        "subject_verified": null,
+        "signature_verified": null,
+        "builder_verified": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "reachable_advisories": {
+      "status": "unknown",
+      "value": {
+        "assessment": null,
+        "partial_observation": "ECO checked GHSA-v63x-xc9j-hhvq (safer-eval <=1.3.6); no name among 62 readable installed manifests, but bundled/transitive reachability unproven. Not a package-specific clean bill of health. Full dated locked-closure assessment required."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "upstream_tests_ci": {
+      "status": "unknown",
+      "value": {
+        "historical_observation": "ECO observed pytest and CodeQL; pytest workflow installs gopls@latest, not qualification of Go1.26.0/gopls0.20.0.",
+        "exact_selected_payload_local_results": null
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "platform_runtime": {
+      "status": "unknown",
+      "value": {
+        "historical_environment": "ECO/RUN: Linux ARM64, Node22.22.1; Go1.26.0/gopls0.20.0 where used. WEB-SDK: exact top-level versions only; no full platform qualification.",
+        "selected_python_services": "Serena and Graphify observed python3.14 paths, exact patch/interpreter digest/venv locks unknown. Required if selected.",
+        "qualification": null,
+        "specific": "Exact Python patch/executable/venv lock unknown: observed path python3.14 is insufficient. GPL application conveyance/corresponding-source obligations require review before redistribution; SolidLSP MIT cannot replace the application license."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "privilege_network_credentials": {
+      "status": "observed",
+      "value": {
+        "historical_surface": "Service reads project source, starts language servers and may expose editing/process tools; only coordinator-selected navigation endpoints/tool allowlist intended. Loopback/planning mode are not OS isolation.",
+        "constraint": "Whole-process isolation, scope-specific grants and approved effective config required; no tool-allowlist or hash-based security certification."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "update_remove_rollback": {
+      "status": "proposed",
+      "value": {
+        "procedure": "docs/pi-qualification/core-dependency-build-admission.md sections 1–5",
+        "owner": "Operator owns host/optional services; Pi/npm own subagents/web package files; Patronus owns tk files plus exact refs and bounded lifecycle/profile state. Scanner checks selected Pi declarations and package identity.",
+        "steps": "Quiesce all consumers/descendants, retain outputs and old/new locks/digests/config priors; verify ownership/drift, explicitly deregister exact local source, replace/remove owned bytes only, manually activate and requalify. Unknown state preserves/escalates; no activation rollback journal."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "alternatives": {
+      "status": "proposed",
+      "value": {
+        "disposition": "Conditional optional live-symbol service; plain source reads allowed when unavailable. No shared-project retargeting/private service launch as fallback.",
+        "popularity": "Adoption only, not trust/security/compatibility evidence."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "residual_risks": {
+      "status": "observed",
+      "value": {
+        "gaps": "Full closure/SBOM/scripts/licenses, provenance/signatures, advisory reachability, fresh currency, installed comparison, exact runtime/lifecycle evidence and owner approval remain incomplete.",
+        "withheld_claims": [
+          "code-intel-exact-pin"
+        ],
+        "scope": "Unselected optional service unknowns do not block independent no-MCP core. Required web cannot be omitted."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "approval": {
+      "status": "unknown",
+      "value": {
+        "operational_owner_decision": null,
+        "candidate_disposition": "conditional optional; operational defer",
+        "authoring_authority": "QP-02 task only; not authority to acquire/build/stage/activate/release."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    },
+    "delta_to_latest": {
+      "status": "unknown",
+      "value": {
+        "selected": "2.0.0.dev0",
+        "selected_commit": "7a2968335f2198b966864de1ce3655c8e485a653",
+        "latest_observed": "1.7.0",
+        "latest_observed_at": "2026-09-30T22:43:00Z",
+        "observation_precision": "See ECO historical retrieval window; not a new current lookup.",
+        "intervening_releases": null,
+        "intervening_security_compatibility_fixes": null,
+        "advisory_delta": null,
+        "reason_to_retain": "Agreed exact investigation baseline; current safety/currency not established. No upgrade authorized by evidence gathering.",
+        "refresh_policy": "Separately authorized bounded research, exact retrieval UTC and notes/advisories review; old observations cannot pass a new currency check.",
+        "special_case": "Serena development commit is not ordered by latest stable release; Graphify GitHub latest is not PyPI latest."
+      },
+      "references": [
+        {
+          "path": "docs/pi-qualification/candidate-dispositions.md",
+          "sha256": "50e4670c680d4f6486715c1be7f9e6d21974c18520e6ff8d07f52d060f6a5230"
+        },
+        {
+          "path": "docs/pi-qualification/core-dependency-build-admission.md",
+          "sha256": "3b704a7e000bf32591d65029dac56fa7c10f8a73870ef30a983a3a9bf6876f6b"
+        }
+      ]
+    }
+  },
+  "authored_at": "2026-10-01T07:06:19Z"
+}

@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-writer-pi
+description: "Implement only the separately authorized task in its assigned worktree"
+version: 2.0.0
+entry: agent.md
+files: []
+targets: [pi]
+defaults:
+  scope: project
+requires:
+  - plan-execute-pi
+  - tdd-pi
+  - verification-before-completion-pi
+  - pi-subagents

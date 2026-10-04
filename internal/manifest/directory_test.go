@@ -189,3 +189,17 @@ func TestFileUnpackRejectsInvalidFields(t *testing.T) {
 		}
 	}
 }
+
+func TestDirectoryAdmittedRoles(t *testing.T) {
+	for _, role := range []string{"sandbox", "orchestration", "tools"} {
+		t.Run(role, func(t *testing.T) {
+			r, err := DecodeRecipe([]byte(strings.Replace(directoryYAML(), "role: sandbox", "role: "+role, 1)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateRecipe(r); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
