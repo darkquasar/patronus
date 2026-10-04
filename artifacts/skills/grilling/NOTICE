@@ -4,7 +4,7 @@ Vendored file (upstream path):
   - skills/productivity/grilling/SKILL.md
 
 SKILL.md is ADAPTED, not verbatim. Patronus re-coupled it into its own lifecycle
-(see .github/decisions/0001-profiles-recouple-plugins-stay-as-is.md) with one addition:
+(see docs/adr/0001-profiles-recouple-plugins-stay-as-is.md) with one addition:
 draw the structure under interrogation as an ASCII diagram before or alongside
 the question. The upstream interview discipline is otherwise unchanged.
 
