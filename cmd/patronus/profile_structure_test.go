@@ -18,7 +18,7 @@ import (
 // must guarantee is that resolution WORKS and leaves no declared layer empty —
 // which holds for every profile at once, with zero per-item test maintenance when
 // the catalog changes. (Supersedes the per-profile name-mirroring tests; see
-// .github/decisions/0002 and tasks/lessons.md L5.)
+// docs/adr/0002 and tasks/lessons.md L5.)
 
 // declaredLayers reports the identities the YAML names in each §1A layer.
 // Memory is a scalar; the rest are lists.

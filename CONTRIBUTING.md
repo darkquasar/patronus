@@ -169,7 +169,8 @@ the release handoff.
 Tracked `docs/` contains user-facing MDX pages and Mintlify's `docs.json`. Add new
 pages to its navigation. Keep test fixtures, evidence templates, validation
 procedures and results under `scripts/qualification/` or the owning package's
-`tests/` directory. Contributor decisions live under `.github/decisions/`.
+`tests/` directory. Contributor decisions stay tracked under `docs/adr/` and are excluded from
+Mintlify processing by `docs/.mintignore`.
 `docs/specs/` remains gitignored local planning state and is excluded from
 Mintlify processing by `docs/.mintignore`.
 
