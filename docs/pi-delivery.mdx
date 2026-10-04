@@ -1,0 +1,61 @@
+---
+title: "Pi package lifecycle"
+description: "Understand authored resource ownership and native extension delivery."
+---
+
+## Two delivery paths
+
+Patronus places authored skills, sidecars, prompts, agent roles and instruction
+sections. For extension recipes with `manager: pi`, Pi/npm own installation,
+dependency resolution and installed package files.
+
+```text
++----------+  authored files =>  +-------------------+
+| Patronus | =================> | Pi resource roots |
++----------+                    +-------------------+
+     |
+     | exact package ref =>
+     v
++----------+  install/update =>  +--------------------+
+| Pi / npm | =================> | Extension packages |
++----------+                    +--------------------+
+```
+
+## Exact references and scope
+
+The core recipes select `npm:pi-subagents@0.72.1` and
+`npm:pi-web-access@0.35.0`. Recipe versions and upstream npm versions are
+independent. Direct package pins do not freeze transitive dependencies.
+
+Use `--global` or `--local` consistently. Local package removal preserves the
+independent global installation. An already installed compatible package is not
+automatically enrolled into Patronus ownership.
+
+## Update and removal
+
+```sh
+patronus update pi-subagents --target pi --global
+patronus update pi-subagents --target pi --global --deploy --allow-package-installs
+patronus remove pi-web-access --target pi --local
+```
+
+Patronus delegates the selected package identity to Pi rather than deleting npm
+trees. It observes the selected declarations and package identity before settling
+an operation. Declaration drift, conflicting identities and unresolved prior
+outcomes can block changes.
+
+## Edited content and configuration
+
+Patronus protects detected edits to authored content. Pi scalar and MCP inverse
+operations restore owned values and preserve sibling configuration; formatting
+may change. Internal npm file edits are not checked, so native replacement or
+removal may discard them.
+
+## Locks and pending outcomes
+
+Pi authored-resource locks use v3; locks containing native package references use
+v4. Non-Pi locks retain v2. Use a Patronus binary that supports the selected format.
+
+A manager failure can leave partial effects. Preserve the reported pending state,
+resolve the error and retry the selected operation. Installing files does not
+approve project trust or start Pi; activation is a separate user action.

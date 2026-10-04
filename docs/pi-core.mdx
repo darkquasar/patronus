@@ -1,0 +1,70 @@
+---
+title: "Deploy the Pi core profile"
+description: "Install native roles, workflow skills and pinned Pi extensions."
+---
+
+`core-profile-pi` 2.0.0 combines development, planning, review, research and
+editorial skills with eight native roles and three workflow skills.
+
+## Prerequisites
+
+Install Pi and Node separately, and make Pi available on `PATH`. The selected
+extension sources are `npm:pi-subagents@0.72.1` and `npm:pi-web-access@0.35.0`.
+Pi/npm own the extension files; Patronus owns the authored resources it deploys.
+
+## Deploy globally
+
+```sh
+patronus install --profile core-profile-pi --target pi --global
+patronus install --profile core-profile-pi --target pi --global --deploy --allow-package-installs
+```
+
+The global root is `PI_CODING_AGENT_DIR` when set, otherwise `~/.pi/agent`.
+Native installation can execute npm lifecycle scripts. Review the package plan
+before granting package installation.
+
+## Deploy to a project
+
+First establish the compatible global extension packages, then run from the
+selected project:
+
+```sh
+patronus install --profile core-profile-pi --target pi --local
+patronus install --profile core-profile-pi --target pi --local --deploy --allow-package-installs --allow-pi-project-config
+```
+
+Local resources live under `.pi/`. Conflicting global and local authored identities
+must be resolved before deployment. Identical exact npm sources follow Pi's
+project precedence.
+
+The installation flag authorizes writing the selected project configuration.
+Pi runtime trust is separate: approve the project through Pi when needed, then
+restart or reload Pi to discover the installed resources.
+
+## Roles and workflows
+
+| Role | Purpose |
+|---|---|
+| patronus-researcher-pi | Source research |
+| patronus-web-researcher-pi | Web research |
+| patronus-spec-author-pi | Specification drafting |
+| patronus-plan-author-pi | Plan drafting |
+| patronus-plan-reviewer-pi | Plan review |
+| patronus-technical-reviewer-pi | Technical review |
+| patronus-workflow-security-reviewer-pi | Workflow security review |
+| patronus-writer-pi | Editorial writing |
+
+The workflow skills are `workflow-research-pi`, `workflow-implement-pi` and
+`workflow-peer-review-pi`. Read their installed skill instructions before launch;
+they describe required inputs, output placement and review steps.
+
+## Optional code intelligence
+
+```sh
+patronus install --profile code-intel-pi --target pi --global
+```
+
+Inspect that overlay's plan and its required services before deployment. It does
+not replace the core profile or grant access to external services.
+
+See [native package lifecycle](/pi-delivery) and [agent roles](/agent-artifacts).

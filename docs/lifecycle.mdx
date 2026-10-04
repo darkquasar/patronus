@@ -1,0 +1,56 @@
+---
+title: "Update and remove"
+description: "Manage installed versions, edits and ownership."
+---
+
+## Update installed content
+
+An update previews by default. Apply the selected changes with `--deploy`.
+
+```sh
+patronus update agent-principles
+patronus update agent-principles --deploy
+```
+
+For Pi, always select one explicit scope:
+
+```sh
+patronus update core-profile-pi --target pi --global
+patronus update core-profile-pi --target pi --global --deploy --allow-package-installs
+```
+
+Authored resources use catalogue versions. Native Pi recipes replace the selected
+exact npm reference through Pi's package manager. See [Pi package ownership](/pi-delivery).
+
+## Remove installed content
+
+```sh
+patronus remove agent-principles --local
+patronus remove agent-principles --local --deploy
+```
+
+`revert` is an alias for `remove`. Patronus uses installation records to undo its
+own changes. Appended instructions lose only their marked section. Pi scalar and
+MCP configuration restores owned values while preserving sibling entries.
+
+## Handle edits and sharing
+
+Patronus reports detected edits and skips protected content during ordinary
+removal. Profile-tracked or shared resources can also prevent ordinary removal.
+
+Use `--force` only after reviewing the selected paths and effects:
+
+```sh
+patronus remove agent-principles --local --deploy --force
+```
+
+Force can discard edits to selected owned content. It does not select unknown
+files or authorize deletion of unrelated trees. Native npm package internals are
+owned by Pi/npm; Patronus does not detect edits inside them.
+
+## Recover an interrupted operation
+
+Read the reported pending outcome before retrying. Resolve the reported filesystem
+or manager error, then retry the selected operation with a supporting Patronus
+binary. A failed operation may have partial effects; do not assume automatic
+rollback. Keep state and recovery records intact until the operation settles.

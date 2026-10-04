@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: web-research-pi
 description: "Required core DDG web research with inert conservative config"
-version: 2.0.2
+version: 2.0.3
 entry: SKILL.md
 files: ["SOURCE.md", "references/openai-current-model.example.json", "references/qualification.md", "references/runbook.md", "references/web-search.example.json"]
 targets: [pi]

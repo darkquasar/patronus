@@ -1,0 +1,43 @@
+---
+title: "Profiles and catalogue"
+description: "Select individual items or deploy an entire environment."
+---
+
+## Browse the catalogue
+
+```sh
+patronus list --artifacts
+patronus list --recipes
+patronus list --profiles --layers
+patronus list --json
+```
+
+The default public catalogue is `https://registry.patronus.quasarops.com`.
+Artifacts carry their own versions; the discovery index lists the latest
+published versions.
+
+## Install a profile
+
+Profiles combine instructions, capabilities, tools and other environment layers.
+
+```sh
+patronus install --profile core --target claude --local
+patronus install --profile core --target claude --local --deploy
+```
+
+Inspect the plan before applying it. A profile marked as a stub has unpopulated
+layers; only its populated selections are installed.
+
+For Pi, choose `core-profile-pi`. Add `code-intel-pi` when you want its optional
+code intelligence guidance. These are separate from the Claude core profile.
+
+## Pin a profile
+
+```sh
+patronus lock --profile core
+patronus lock --profile core-profile-pi --target pi
+```
+
+Commit `patronus.lock` when your project needs to share desired versions and
+artifact checksums. Pi locks include the target and exact direct npm references;
+those references do not lock npm's transitive dependency tree.

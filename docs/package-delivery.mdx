@@ -1,0 +1,36 @@
+---
+title: "Directory packages"
+description: "Install and manage verified standalone tool packages."
+---
+
+A directory recipe places a verified package under
+`~/.patronus/packages/<recipe>/`. Delivery is once per host and does not depend
+on the selected agent harness. Local scope is unsupported.
+
+```sh
+patronus install <recipe>
+patronus install <recipe> --deploy
+patronus update <recipe> --deploy
+patronus remove <recipe> --deploy
+```
+
+## Ownership
+
+The package's receipt records owned paths and their expected content. Installation
+verifies the archive before applying it. Unknown content is preserved.
+
+Removal selects unchanged owned files. Edited owned files are retained unless you
+explicitly pass `--force`; unknown children remain protected even with force.
+Empty owned directories can be pruned without recursively deleting the root.
+
+## Interrupted operations
+
+Resolve the reported error, then retry using a supporting Patronus version.
+Recovery records distinguish committed work from pending changes. Do not manually
+delete those records to suppress a recovery error.
+
+## Native Pi recipes
+
+This directory lifecycle applies to static directory recipes. For `manager: pi`
+recipes, Pi/npm own package installation, update, removal and installed files.
+Use the [Pi lifecycle guide](/pi-delivery) for those operations.

@@ -1,0 +1,41 @@
+---
+title: "Install Patronus"
+description: "Install the CLI on macOS, Linux or Windows."
+---
+
+## Release binary
+
+On macOS or Linux, the installer downloads the latest release, verifies its
+published SHA-256 checksum, and installs into `/usr/local/bin` when writable,
+otherwise `~/.local/bin`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh
+patronus --help
+```
+
+On Windows, use the PowerShell installer:
+
+```powershell
+irm https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.ps1 | iex
+patronus --help
+```
+
+You can also download the executable for your platform and `checksums.txt` from
+[GitHub Releases](https://github.com/darkquasar/patronus/releases).
+Add the installation directory to your `PATH` if needed.
+
+## Build from source
+
+Building the current source is useful when a harness capability has reached the
+catalogue before the next executable release. Use the Go version in `go.mod`.
+
+```sh
+git clone https://github.com/darkquasar/patronus.git
+cd patronus
+go build -o patronus ./cmd/patronus
+./patronus --help
+```
+
+Patronus does not install your agent harness. Install and configure Claude Code,
+Codex, OpenCode or Pi separately before using the delivered environment.
