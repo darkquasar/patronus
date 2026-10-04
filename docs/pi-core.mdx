@@ -60,11 +60,36 @@ they describe required inputs, output placement and review steps.
 
 ## Optional code intelligence
 
+`code-intel-pi` extends this profile. It keeps the core role definitions and
+workflow selections, then adds exact Pi MCP, Serena and Graphify runtime
+declarations, shared HTTP wiring and field-level tools/skills overrides for the
+inherited roles. Because the override makes `mcp` a strict required child tool,
+these augmented roles run as background children with `async: true`; foreground
+launches fail before the first model turn because they cannot load ambient
+extensions.
+
+Install the target-agnostic Python runtimes first, then the static Pi overlay.
+This split preserves Pi's fail-closed rule that a Pi-targeted selection contains
+no package-manager EXEC intent.
+
 ```sh
+patronus install --profile code-intel-pi-runtime --global
+patronus install --profile code-intel-pi-runtime --global --deploy --allow-package-installs
 patronus install --profile code-intel-pi --target pi --global
+patronus install --profile code-intel-pi --target pi --global --deploy --allow-package-installs
 ```
 
-Inspect that overlay's plan and its required services before deployment. It does
-not replace the core profile or grant access to external services.
+Review both plans before deployment. Together they select
+`npm:pi-mcp-adapter@3.0.0`, Serena commit
+`7a2968335f2198b966864de1ce3655c8e485a653` and
+`graphifyy[mcp]==0.9.31`. Pi/npm owns the adapter package and uv owns the Python
+tool environments.
+
+Deployment does not start services or build a graph. The coordinator starts one
+loopback Serena service and one loopback Graphify service for the selected root,
+then qualifies them before subagent use. Children query that shared pair and must
+not start private replacements. Readiness rejects active command-based Serena or
+Graphify aliases and serves Graphify from a protected digest-named snapshot, not
+the mutable build output.
 
 See [native package lifecycle](/pi-delivery) and [agent roles](/agent-artifacts).
