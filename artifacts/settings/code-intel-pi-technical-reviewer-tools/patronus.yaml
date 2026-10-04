@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: orchestration
+name: code-intel-pi-technical-reviewer-tools
+description: "Adds the MCP gateway to the core Pi technical-reviewer role without replacing other role overrides"
+version: 1.0.0
+entry: ""
+targets: [pi]
+defaults:
+  scope: global
+requires: [pi-subagents, pi-mcp-adapter, serena-shared-pi, graphify-shared-pi]
+setting:
+  path: subagents.agentOverrides.patronus-technical-reviewer-pi.tools
+  value: [read, bash, mcp]
