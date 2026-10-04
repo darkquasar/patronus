@@ -1,0 +1,8 @@
+# Local planning state is not documentation content.
+specs/
+local-specs/
+plans/
+superpowers/
+
+# Tracked architecture decisions remain source records, not published pages.
+adr/

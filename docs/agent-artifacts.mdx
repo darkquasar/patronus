@@ -1,127 +1,52 @@
 ---
-title: Agent artifacts and native adapters
-description: How Patronus agent artifacts map to harness-native definitions, with implemented static Pi delivery and unqualified runtime limits.
+title: "Agent roles"
+description: "Deploy role definitions into the selected harness."
 ---
 
-# Agent artifacts and native adapters
+Agent artifacts describe a role's instructions and target-specific settings.
+Patronus deploys those definitions; your harness supplies execution, model access
+and tool availability.
 
-**Status: Pi-native delivery implemented; runtime qualification remains separate.** Baseline `32741e687647e44c4aed071d90965f34d102de52` had no Pi adapter. The current implementation validates/copies finite Patronus-authored Pi resources while delegating exact native package lifecycle to Pi; invented mechanism fixtures cover lifecycle and refusals. Real core roles/content and selected Pi/extension runtime compatibility require separate catalog and deployment evidence. This Mintlify-ready page adds no site, dependency, build or publication. See the [delivery and migration runbook](pi-delivery.md).
+## Select a target
 
-## One artifact model, target-specific materialization
-
-```text
-versioned agent artifact + declared dependencies + source entry
-    -> selected target adapter and its native validation/rendering
-    -> owned native file (or explicitly supported configuration effect)
-    -> harness discovery, separate trust/loading and observed runtime use
+```sh
+patronus install patronus-researcher-pi --target pi --global
 ```
 
-Use the existing `family: artifact`, `type: agent`. A Patronus **profile** is a bundle of catalog items, not a runtime persona. Catalog **role** is an installable's classification layer, not an agent's prompt or native invocation mode. A **runtime agent profile** is the native definition a harness consumes. Markdown, TOML and JSON encodings do not by themselves justify another install lifecycle family.
-
-Artifact identity/version/requirements, adapter layout/validation and runtime semantics are separate. Independently maintained native definitions can have target-specific identities and versions; a genuinely portable source can use tested existing transformations. Selection flavors filter catalog identity, not magically swap source bodies. There is no universal model/provider, context/skills, tool/permission or parent-role inheritance translation.
-
-## Target-specific support and native evidence
-
-Evidence was retrieved2026-10-01. Rolling docs are not pinned installed runtimes; native documentation does not prove that Patronus currently implements all those features.
-
-| Harness / native evidence | Native representation and discovery | Baseline Patronus behavior | Current implementation / remaining scope |
-|---|---|---|---|
-| Claude: rolling official docs; v2.1.286 example; installed runtime unknown | Markdown/frontmatter in `.claude/agents/` or `~/.claude/agents/`; native name is identity. Plugin/session/managed profiles have distinct semantics. | Markdown/YAML parse and reserialization. It is not byte passthrough; Markdown artifact Overrides are ignored. | Preserve legacy bytes/behavior. No new advanced Claude translation or qualification. |
-| Codex: rolling guide/current release unknown; rust-v0.114.0 registered-role source | Current guide has standalone `.codex/agents/` and `~/.codex/agents/` TOML with name/description/developer_instructions. Registered `agents.<name>.config_file` remains documented. | Converts Markdown/frontmatter/body into TOML, then applies per-tool Overrides. A TOML entry is not native passthrough. | No new registration/discovery implementation; coexistence/precedence of versioned native forms remains unknown. |
-| OpenCode: current docs and v2.0.20 agents document; runtime untested | Markdown in preferred `agents/` directories, legacy singular `agent/` compatible; or shared JSON/JSONC `agent` map. Filename identifies Markdown agent. | Singular directory and allowlisted frontmatter/body-to-prompt reshaping; other fields can be dropped. | Preserve baseline. No modern native parity claim or shared-config agent-map writer. |
-| Pi0.87.1 with exact `npm:pi-subagents@0.72.1` selected package | Pi core owns context/skills/prompts/extensions/themes. The extension owns Markdown agent discovery and separately exposes executable runtime registration. | No Pi adapter at baseline. Generic YAML reshaping is not equivalent to this parser. | Implemented explicit native dialect, exact-byte static files and finite validation, exercised with invented fixtures. Real role content and actual loading still require separate qualification. |
-
-Native semantics remain native. Claude tool availability differs from permissionMode and memory can enable writes. Codex role sandbox defaults can be superseded by live parent settings. OpenCode mode/permission ordering and direct user invocation differ from Task dispatch. Pi omission/empty lists, inheritance, provider loading and operator-owned `agentOverrides` matter independently. A role called researcher or a read-only prompt is not OS containment; bash and executable extensions remain powerful.
-
-## Implemented Pi adapter contract
-
-Reuse `AgentLayout.Format` with `pi-subagents-markdown`, selected only by the Pi adapter. No new manifest field, family, schema version or controller is required. The native validation/copy branch runs **before** general YAML parsing. Require exact `targets: [pi]`, an explicit safe relative Markdown entry, matching catalog identity/native name/deployed filename stem, required native description and nonempty prompt. The entry can be `agent.md`; it need not share the deployed filename.
-
-The layout has no BodyIs or Frontmatter policy. Reject nonempty supporting `Files` and **any nonempty artifact Overrides**, including another target's override, rather than silently ignoring them. One existing CREATE effect contains exactly the validated source bytes. Missing/legacy/unknown Pi agent format, incompatible layout or native-format/non-Pi pairing fails before the whole selection writes. Existing non-Pi renderers and adapter definitions remain unchanged. Future native targets require an explicit qualified handler, not an unchecked generic raw-file mode.
-
-### Selected Pi native agent subset
-
-This is a deliberately finite Patronus admission contract for pi-subagents0.72.1 on Pi0.87.1, not a universal YAML schema or a reimplementation of the whole upstream loader. All keys outside this table are unsupported in this initial native branch, even where upstream supports them. No default is inserted: omission remains omission, and every admitted source byte is retained.
-
-| Admitted frontmatter keys | Accepted native shape / meaning boundary |
-|---|---|
-| name, description | Required nonempty single-line native strings; name equals manifest identity and deployed filename stem. Description is native source data, not synthesized from the manifest. |
-| model, output | Optional nonempty single-line native strings; model/provider selection and output resolution remain upstream semantics. Core roles omit both: model is inherited and the launcher supplies the exclusive output path. |
-| tools, excludeTools, skills | Optional simple unquoted CSV or indented `- item` block lists; an explicitly empty `key:` has zero items, omission stays absent. No flow-list syntax, quoted/escaped list tokens, null/~ tokens or commas within an item. Selected named skills require catalog closure; tools/excludeTools accept ordinary registry names only: reject slash/backslash tokens, .js/.ts suffixes (including bare helper.js/helper.ts), and mcp: direct selectors. Path/module spellings can request executable extensions upstream; that route and static direct-MCP selection are deferred. Named tools do not provision providers or grant OS permission. Optional MCP capabilities remain separately qualified operator-owned native agentOverrides, not an exception to this static-file refusal. |
-| extensions, subagentOnlyExtensions, skillPath, defaultReads | Same omitted/empty/list distinction. Any nonempty resource reference must be an absolute path, with no relative/dot-segment, home-expansion or template spelling. Relative references are rejected, not relocated or installed. Initial seven roles omit these fields; launchers supply resolved reads and separately qualified operator-owned overrides enable optional capabilities. Admission never proves that an absolute resource exists, is trusted or is loadable. |
-| inheritProjectContext, inheritGlobalContext, inheritSkills, allowNestedSubagents, async, defaultProgress | Literal true/false only; global context true requires project context true. Core explicitly enables the three inheritance fields and sets allowNestedSubagents:false; tool restrictions/prose remain cooperative, not a sandbox. |
-| systemPromptMode | replace or append; selected upstream prompt semantics, no parent-role inheritance synthesis. |
-| defaultContext | fresh or fork; core/review defaults remain fresh. |
-| outputMode | inline or file-only; distinct from an output JSON schema. |
-| acceptanceRole | read-only or writer; core writer uses writer, other roles read-only or omit under the core role contract. Native host verification remains separately configured. |
-| timeoutMs, toolTimeoutMs | Unquoted positive decimal integers no greater than2147483647 (a conservative admitted subset); not proof of descendant settlement or total cost bounds. |
-| maxSubagentDepth | Unquoted nonnegative decimal integer no greater than2147483647; no automatic delegation authority. |
-| outputSchema, toolBudget | Unquoted single-line JSON object after the colon; parse as JSON object, not YAML mapping. Reject arrays, null, malformed JSON and duplicate JSON members. Output-schema/tool-budget operational validity is the selected upstream consumer's separate qualification, not a new general schema engine. Core does not need these fields. |
-
-The source is one UTF-8 Markdown file with exact opening/closing `---` delimiter lines, LF or CRLF, unique top-level keys and a nonempty prompt body. Scalar strings may be plain or one matching pair of simple quotes, without escape processing or embedded delimiter quotes; reject ambiguous escape/multiline scalar forms. Block-list items must be contiguous: reject indented comments or blank lines inside a list, and reject any resumed indented item after a column-zero comment/blank separator. Column-zero comments/blanks are allowed only between complete entries, before the first key or after a completed value with no later continuation; after a separator the next nonseparator must be a new top-level key or the closing delimiter. An empty key remains empty when followed by such a separator, never a resumed block. Comments are not transparent YAML whitespace; unsupported continuations, inline comments, anchors/tags, nested maps, folded/literal scalars and malformed delimiters fail rather than silently become prompt text. List items use ordinary nonempty tokens and consistent space indentation. The validator recognizes only these admitted forms; it does not run JavaScript, import upstream modules or serialize general YAML. The native loader may normalize body whitespace/line endings in memory; delivered bytes remain exact.
-
-Named unsupported examples are aliases/package identity, runner/external executables, permission/permissions, nested acceptance/memory, thinking/fast/interactive, fallbackModels and settings-only defaultProvider. Diagnose artifact identity, target, field/line and unsupported/malformed reason with remediation; do not strip, coerce, ignore or claim equivalent permissions. Unknown keys and duplicates fail the whole selected plan before writes. Requalifying an additional native field is explicit future scope, not a new family or universal translation.
+Inspect the plan, then add `--deploy` to place the role. Different harnesses have
+different role formats and supported settings; select content intended for your
+target rather than assuming every role is portable.
 
 ## Pi role example
 
-This documents the implemented static role shape; it is not an installed artifact or a launch command. The manifest excerpt omits ordinary required version/role/description fields; a real catalog manifest must satisfy the existing complete manifest schema.
-
-```yaml
-family: artifact
-type: agent
-targets: [pi]
-entry: agent.md
-files: []
-# No artifact Overrides. Identity/version/requires live in the ordinary manifest.
-```
-
-Example native `agent.md` for the implemented local-source researcher role:
+Pi roles deploy to `<agent-dir>/agents/<identity>.md` globally or
+`.pi/agents/<identity>.md` locally. Core roles use `npm:pi-subagents@0.72.1`.
+A representative native definition looks like:
 
 ```markdown
 ---
 name: patronus-researcher-pi
-description: Investigate local source and return attributed findings
-tools: read, bash
-skills: research-team-pi, verification-before-completion-pi
-inheritProjectContext: true
-inheritGlobalContext: true
-inheritSkills: true
-allowNestedSubagents: false
-defaultContext: fresh
-acceptanceRole: read-only
+description: Research source code and return grounded findings.
+tools: read, grep, find, ls
 ---
-Read the assigned brief and source. Return evidence, limitations and an acceptance
-report to the exclusive runtime-bound output. Do not edit source or delegate.
+Read relevant sources and report findings with references.
 ```
 
-In the implemented workflow, the runtime can persist the result without granting write/edit tools. Bash is still powerful: this is cooperative source-read-only scope, not an isolation proof. Actual manifest requirements include both named skills and `pi-subagents`. The seven local-source identities are `patronus-researcher-pi`, `patronus-spec-author-pi`, `patronus-technical-reviewer-pi`, `patronus-workflow-security-reviewer-pi`, `patronus-plan-author-pi`, `patronus-plan-reviewer-pi` and `patronus-writer-pi`. They do not replace upstream builtins. The current core profile also requires a web-researcher role and pi-web-access; web is not optional core functionality. Optional MCP remains separately qualified. Intended model inheritance is not a provider-availability guarantee.
+Installed core role definitions include their own skill and tool selections.
+Inspect the effective role in Pi before launching it, especially when you use
+operator overrides. A read-only prompt or role name does not create operating
+system containment.
 
-Pi global agents resolve beneath `PI_CODING_AGENT_DIR`, otherwise `~/.pi/agent`; local agents go under the explicitly selected workspace `.pi/agents`. Static discovery inspects qualified user/project/local-package/builtin declarations, so placement requires collision checks, not merely writing a file. Executable callbacks and runtime registrations remain visibly runtime-unverified; configured extensions alone are not blanket blockers. Patronus does not run npm root -g; uninspected global npm discovery is runtime-unverified, and PI_OFFLINE is not a mandatory admission gate or network sandbox. Catalog/runtime identity and deployed filename are intentionally equal for these artifacts even where upstream allows otherwise.
+## Updates and removal
 
-## Static ownership, update and removal
+Use explicit scope for Pi role lifecycle operations:
 
-Static role delivery uses ordinary owned-file state/checksums. Preview is read-only. Invalid/unsupported selected definitions refuse the whole apply before destination/state/lock writes; no partial skip silently weakens a profile. Update/remove use recorded paths, not a newly changed environment variable. Preserve drifted or unknown files under existing ownership rules; deleting an owned definition is not authority to delete sessions, outputs, memory or shared agent directories. A lower-priority native definition can become visible after removal, so runtime inventory/reload checks remain necessary.
+```sh
+patronus update patronus-researcher-pi --target pi --global
+patronus remove patronus-researcher-pi --target pi --global
+```
 
-The initial Pi agent branch owns no shared registration/config key. Operator-owned Pi `agentOverrides` is separate from artifact Overrides and can change effective resources/model/context; static validation does not govern those settings. Reversible manual changes require original-byte/config evidence, scope/trust and drift checks. Any later adapter that needs configuration registration must explicitly own its structural leaf/inverse and preserve siblings; this page does not authorize that implementation.
+Apply with `--deploy` after reviewing the plan. Ordinary removal preserves edited
+or profile-tracked content. Review sharing before using `--force`.
 
-Required core delivery includes real versioned `tk` plus exact `pi-subagents` and `pi-web-access` npm refs, not dependency advice alone; this page does not certify upstream package bytes. Pi host remains external. Pi/npm own package installation, update, removal and package files. Patronus records the exact ref, scope, bounded pending intent and observed selected package metadata, and refuses missing, stale, ambiguous or conflicting dependencies before unrelated local writes. Local removal leaves compatible globals intact. Pi updates require exactly one explicit `--local` or `--global` scope; omission or both flags refuses, while unflagged legacy non-Pi updates retain baseline behavior. Local updates verify global dependencies but never upgrade them; global updates preserve local items. Quiesce all consumers before replacement or removal, delegate the operation to Pi, then confirm the selected declaration/package state before settling intent. Unknown ownership or consumers retain/escalate. No npm-file fingerprint ledger, packages-array controller or reference-counted profile lifetime is implied.
-
-## Declarative roles are not executable extensions
-
-JS/TS modules that register handlers/tools or call `pi-subagents/agents` `registerAgent` execute code. Their registration is process-local, disposable and not automatically inherited by children. This is not native discovery of `agents/researcher.ts`. Deliver and qualify them through existing appropriate recipe/package/plugin lifecycles, including locked dependencies, host peers, trust, loading, quiescence and teardown; never reinterpret them as a static Markdown agent because they define a persona. Opaque delivery does not certify safety or supply missing dependency installation.
-
-## Validation and support claims
-
-D mechanism tests exercise exact-byte copy, finite syntax/refusals, whole-selection no-write failure, owned-file lifecycle and unchanged legacy renderer goldens: see [native parser fixtures](../internal/adapter/pi_agent_test.go), [legacy renderers](../internal/adapter/agent_test.go) and [delivery integration](../cmd/patronus/pi_delivery_integration_test.go). The finite subset above is the D-02 admission contract, implemented in [pi_agent.go](../internal/adapter/pi_agent.go), not upstream execution. C separately checks real role/dependency closure and content using generic catalog validation and review, not hardcoded catalog membership/count assertions. Q must qualify actual selected-parser interpretation and cold/background loading, including omitted/empty lists, quoting, JSON fields, providers and effective overrides. No runtime reproduction or upstream parser execution is claimed here. Future status updates require actual M/C/I evidence, not documentation alone; parsed-only results are not operational loading or OS safety.
-
-Current claims remain bounded to the evidence above. No Claude/Codex/OpenCode parity implementation, sidecar installer, universal policy translator, new package controller, site build or publication is authorized here.
-
-## Sources
-
-- [Patronus baseline agent transform](https://github.com/darkquasar/patronus/blob/32741e687647e44c4aed071d90965f34d102de52/internal/adapter/agent.go) and [layout](https://github.com/darkquasar/patronus/blob/32741e687647e44c4aed071d90965f34d102de52/internal/manifest/layout.go).
-- [Claude native subagents](https://code.claude.com/docs/en/sub-agents.md), [plugin differences](https://code.claude.com/docs/en/plugins/components.md), [v2.1.286 example](https://raw.githubusercontent.com/anthropics/claude-code/v2.1.286/plugins/feature-dev/agents/code-explorer.md).
-- [Codex current guide](https://developers.openai.com/codex/multi-agent.md), [config reference](https://developers.openai.com/codex/config-reference.md), [rust-v0.114.0 role implementation](https://github.com/openai/codex/blob/rust-v0.114.0/codex-rs/core/src/agent/role.rs).
-- [OpenCode agents](https://opencode.ai/docs/agents/), [config](https://opencode.ai/docs/config/), [v2.0.20 agent documentation](https://github.com/anomalyco/opencode/blob/v2.0.20/packages/web/src/content/docs/agents.mdx).
-- [Selected Pi source](https://github.com/earendil-works/pi/tree/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent), [selected pi-subagents source](https://github.com/nicobailon/pi-subagents/tree/fece3cea193f47593685668b3969167a09cdf60c), especially src/agents/frontmatter.js, agents.js and runtime-agent-registry.js.
-
-Dates/versions above qualify these sources; current upstream versions, scanner collisions and runtime behavior not directly verified remain unknown. Local research reports preserve full source distinctions; this public page is self-contained and does not require ignored effort files to be published.
+For the complete role set and required extensions, see [Pi core](/pi-core).

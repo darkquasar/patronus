@@ -1,0 +1,40 @@
+---
+title: "Harnesses and scope"
+description: "Choose the destination for your agent resources."
+---
+
+Use `--target` to select a harness and `--global` or `--local` to select its scope.
+Global content belongs to your user environment; local content belongs to the
+current project.
+
+```sh
+patronus install agent-principles --target claude --local
+patronus install agent-principles --target codex --local
+patronus install agent-principles --target opencode --local
+```
+
+## Default skill destinations
+
+| Harness | Global | Project |
+|---|---|---|
+| Claude Code | `~/.claude/skills/` | `.claude/skills/` |
+| Codex | `~/.codex/skills/` | `.agents/skills/` |
+| OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` |
+| Pi | `~/.pi/agent/skills/` | `.pi/skills/` |
+
+Global environment overrides such as `CODEX_HOME`, `OPENCODE_CONFIG_DIR` and
+`PI_CODING_AGENT_DIR` can change the selected root. Inspect the preview for actual
+paths before deployment.
+
+## Target-specific support
+
+Harnesses differ in agent-role formats, settings, hooks and prompt support.
+Patronus adapts supported content to the selected layout; it does not supply a
+universal tool or permission model. An artifact's declared targets determine where
+it can be installed.
+
+Use `patronus scan` to inspect detected harnesses, then choose the target explicitly
+when you need a predictable destination. Restart or reload the harness as needed
+for new content. Project trust and provider authentication remain harness settings.
+
+For Pi-native extensions, roles and workflows, follow the [Pi guide](/pi-core).
