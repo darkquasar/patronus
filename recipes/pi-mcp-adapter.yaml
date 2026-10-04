@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+kind: Recipe
+name: pi-mcp-adapter
+version: 1.0.0
+family: recipe
+role: tools
+description: Native Pi MCP gateway installed from an exact npm source
+deliver:
+  via: package-manager
+  install:
+    - manager: pi
+      ref: npm:pi-mcp-adapter@3.0.0
