@@ -26,9 +26,11 @@
 # Patronus CI output (published to GitHub Releases)
 /registry/
 
-# Go build artifacts
+# Go and Python build/test artifacts
 /patronus
 /dist/
+__pycache__/
+*.py[cod]
 
 # Local planning/design docs — kept out of version control. The canonical home is
 # docs/specs/NN-slug/ (per-feature folders, the convention the skills write to) and

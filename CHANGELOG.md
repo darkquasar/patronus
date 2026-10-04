@@ -3,6 +3,21 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## Unreleased
+
+### Catalogue: Pi code intelligence
+
+`core-profile-pi` supplies Pi roles, development/review/research skills and three
+workflow skills, with exact `pi-subagents@0.72.1` and `pi-web-access@0.35.0`
+references. Optional code intelligence now uses an ordered pair:
+`code-intel-pi-runtime` delivers pinned Serena and Graphify uv tools, then
+`code-intel-pi` adds `pi-mcp-adapter@3.0.0`, shared HTTP wiring and reversible
+core-role augmentation. The split keeps generic package-manager execution out of
+the statically admitted Pi selection. Augmented roles require background
+`async:true` launches because foreground children do not load ambient MCP
+extensions. These catalogue selections are available independently of the binary
+release; installing them for Pi requires the new target support above.
+
 ## v2.5.0
 
 The binary release adds Pi as a first-class deployment target and the lifecycle
