@@ -1,11 +1,18 @@
-# CI — runs on every push and pull request: build, vet, lint, and test the whole
-# repo. This is the gate that keeps main green; the release pipeline assumes it has
-# already passed.
+# CI — runs on every push and pull request. Two independent gates:
+#   test             application contract: gofmt/vet/race tests on a scratch copy
+#                    WITHOUT artifacts/ and profiles/ (synthetic catalogs only)
+#   catalog-contract real catalog: public build, catalog-check tool, public-CLI
+#                    lock cases, placeholders/gate intent/versions, publication
+#                    contract suites and Pi static evidence checks
+# Neither gate runs shipped guard/supervisor programs, fake harnesses, native CLIs
+# or SDKs; artifact behaviour is deferred and NOT RUN. CONTRIBUTING.md maps each
+# failure to its job and the local one-command invocation.
 name: ci
 
 on:
+  # Every push and every pull request, with no paths filter: a Go-only change still
+  # runs the catalog gate and a content-only change still runs the application gate.
   push:
-    branches: [main]
   pull_request:
 
 # The test job runs on EVERY pull_request, INCLUDING from forks, and `go test`
@@ -35,36 +42,38 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-      - name: gofmt
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "These files are not gofmt-clean:"; echo "$unformatted"; exit 1
-          fi
-      - name: go vet
-        run: go vet ./...
-      - name: check catalog publication guard
-        run: bash scripts/tests/check-catalog-publication-test.sh
-      - name: check immutable package publication
-        run: bash scripts/tests/publish-packages-test.sh
-      - name: test
-        run: go test -race ./...
-      - name: check Pi qualification evidence
-        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_pi_*.py' -v
-      # Substitution leaves unknown braces alone by design, so a typo like
-      # {skilDir} would ship as a literal and fail only when a user runs the
-      # skill. Unlike version-bump this needs no base ref, so it runs on every
-      # push rather than only on PRs. (pat-twgb)
-      - name: check skill placeholders
-        run: go run ./cmd/patronus check-placeholders
+      # The scratch copy proves application tests need no production catalog.
+      - name: application contract gate
+        run: bash scripts/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
 
-      # A hook that BLOCKS the agent (a bundled script that exits 2, or a command
-      # running an allowlisted blocking binary) must declare intent: gate, or it is
-      # a silent no-op on tools that key wiring on intent (opencode → permission
-      # deny). Like check-placeholders this is a whole-tree check needing no base
-      # ref, so it runs on every push. (pat-8jow)
-      - name: check gate intent
-        run: go run ./cmd/patronus check-gate-intent
+  # Stable status name: catalog-contract. Requiring it in branch protection is a
+  # separate maintainer settings action. Fork PRs run it secret-free (contents:read).
+  catalog-contract:
+    name: catalog-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.25"
+      - name: Select version base
+        id: base
+        env:
+          PR_BASE: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PR_BASE:-}" ]; then
+            echo "rev=origin/$PR_BASE" >> "$GITHUB_OUTPUT"
+          elif [ -n "${BEFORE:-}" ] && git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
+            echo "rev=$BEFORE" >> "$GITHUB_OUTPUT"
+          else
+            echo "rev=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: catalog contract gate
+        run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
 
   # Enforces CONTRIBUTING.md's version-bump rule on every pull_request: an artifact
   # whose CONTENT changed must also bump its patronus.yaml version:. Runs only on PRs

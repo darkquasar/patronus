@@ -1,0 +1,80 @@
+---
+title: "Add a target harness"
+description: "Extend adapters and catalog data while preserving Patronus's shared install spine."
+---
+
+A harness is a target of the shared installer. Profiles expand catalog names;
+adapters translate portable artifacts into target-specific files and structured
+config edits. Recipes supply fetched binaries or integration wiring. Ownership,
+admission, persistence and lifecycle stay shared.
+
+```text
++-----------------+  names   +-----------------------+  raw diffs  +---------------+
+| profile.Resolve | ======> | plan.Compute          | ==========> | plan.Finalize |
++-----------------+         | or recipe.Compute     |             +---------------+
+                            +-----------------------+                     |
+                                                                  admitted v
+                            +-----------------------+              +--------------------+
+                            | install.Applier.Apply | <=========== | diff.ChangeSet     |
+                            +-----------------------+              +--------------------+
+                                       |
+                             ownership v
+                            +-----------------------+
+                            | shared state and lock |
+                            +-----------------------+
+```
+
+## Do not fork install
+
+Enter through `patronus install <item>` or ordinary profile installation. Do not
+add `install-codex`, a target-only planner/applier, a new state format or another
+lock writer. The existing artifact/recipe dispatcher consumes names from
+`profile.Resolve`; it converges through `plan.Compute` or `recipe.Compute`,
+`plan.Finalize`, `plan.AdmitSettings`, mutation checks,
+`install.Applier.Apply`, and normal state and lock persistence. Tests should
+exercise that path, including a mixed artifact/recipe `diff.ChangeSet`.
+
+## Add the target seams
+
+1. Add `adapters/<target>.yaml` and the corresponding embedded copy under
+   `internal/adapter/builtin/`. Record effective global/project roots and
+   environment overrides. Test both copies against the same root contract.
+2. Author an explicit target profile. Audit its full `requires` closure and record
+   each baseline member as a port, unchanged reuse or omission in a compatibility
+   ledger. A declared multi-target manifest is not a body/sidecar/handoff audit.
+3. Add target-specific artifacts, recipes or plugin dialects. Match skill
+   directory and frontmatter identities, declare every sidecar and retain
+   attribution. Version new artifacts and profiles at `1.0.0`; bump changed
+   artifacts so updates can find them.
+4. If needed, add a small read-only preflight that consumes an already computed
+   `diff.ChangeSet`. It may reject or warn about roots, collisions, ownership,
+   trust prerequisites or unsupported selection. It must not plan writes,
+   provision dependencies or bypass the shared applier.
+5. Represent managed config through adapter transforms and structured
+   `diff.SettingEdit` evidence. Preserve user-owned auth and sibling fields;
+   raw TOML patches lose the removal/ownership contract.
+6. Test install preview, target admission, lock coexistence, update/reinstall and
+   conservative removal with invented data. Keep fixture tests independent of
+   paid model calls, personal auth, installs and developer-global state.
+
+## Separate delivery from qualification
+
+A placed file proves delivery only. Native discovery, fuzzy routing, explicit
+skill invocation, cross-skill handoffs, worker tools/auth, hook registration,
+trust and event semantics need their own observations. Test fresh sessions after
+install/update/remove and retain sanitized version/platform/scope-bound evidence.
+
+When another harness shares a discovery root or instruction file, inventory
+co-visible resources and ownership before writes. Unknown mixed ownership,
+shadowed context, same-name collisions and cross-target lock overwrite must stop
+admission. Preserve old resources when migration cannot prove ownership and
+checksums; do not infer deletion rights from path names.
+
+Publish user-facing MDX pages through `docs/docs.json`. Keep fixtures, evidence
+formats, qualification procedures and results under `scripts/qualification/` or
+an owning package's tests. Local `docs/specs/` remains ignored. Record omissions
+and runtime-pending gates so contributors can extend the foundation without
+mistaking it for native release evidence.
+
+The Codex example is [core-profile-cx](/codex-core). Its migration, isolated
+writer helper and native hook/guard qualification remain explicit follow-ups.

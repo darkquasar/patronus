@@ -1,0 +1,177 @@
+---
+title: "Codex core lane"
+description: "Preview the explicit Codex profile, migrate owned roots safely and distinguish local checks from native qualification."
+---
+
+`core-profile-cx` 1.1.0 selects Codex-specific planning, research, diagnosis,
+design, testing, review and execution skills, seven advisory instructions,
+three audited neutral context skills, two write/commit guard scripts and the
+`context7`, `github` and `gitleaks` recipes. Membership is explicit: it does not
+extend legacy `core` or a Pi profile.
+
+The source lane includes a scoped migration command and a bundled isolated-worker
+supervisor. Local fixtures do not qualify native Codex loading, routing,
+authentication, hook trust or platform behavior. The release contract is
+`docs/compatibility/core-codex.yaml`; each legacy core member has an explicit
+disposition, endpoints, outcome, reason and evidence state.
+
+## Prerequisites and roots
+
+Install Patronus and Codex separately. The root decision uses historical
+observations of Codex CLI `0.149.1` on Linux arm64, not a qualified runtime matrix.
+The retained native CLI smoke failed authentication with401 and was stopped.
+Owner-managed auth and fresh native acceptance remain separate gates. Native Pi
+provider responses used during development do not establish Codex CLI readiness.
+Patronus does not transfer credentials from other CLIs.
+
+| Surface | Global | Project |
+|---|---|---|
+| Skills | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+| Config and hook scripts | `$CODEX_HOME`, otherwise `~/.codex` | `.codex` |
+| Instructions | `$CODEX_HOME/AGENTS.md`, otherwise `~/.codex/AGENTS.md` | `AGENTS.md` |
+
+The skill root is independent of `CODEX_HOME`. Preview with the environment and
+project directory intended for deployment. Admission inspects legacy and native
+roots, same-name resources, instruction shadows and both ownership scopes.
+Unknown ownership, edited files and collisions block writes. `--force` is not
+migration consent or permission to overwrite user content.
+
+Pi and Codex may see the same `.agents/skills` and `AGENTS.md`. Separate `-cx`
+names reduce collisions but do not prove safe co-visibility. Use separate project
+roots when ownership cannot be established. Do not silently replace a project's
+lock with another target's closure.
+
+## Preview and deploy
+
+Global scope:
+
+```sh
+patronus install --profile core-profile-cx --target codex --global --dry-run
+# Only after reviewing and authorizing the exact preview:
+patronus install --profile core-profile-cx --target codex --global --deploy
+```
+
+Project scope, from the selected project:
+
+```sh
+patronus install --profile core-profile-cx --target codex --local --dry-run
+# Only after reviewing and authorizing the exact preview:
+patronus install --profile core-profile-cx --target codex --local --deploy
+```
+
+Deployment can fetch the pinned `gitleaks` binary. Hosted MCP recipes own transport
+leaves, not user bearer/header/env children. Explicit missing environment references
+produce advisory prerequisite warnings on stderr during install/update; this is
+not an initialization attempt or an authentication pass. Set-but-empty variables
+count as present. Establish native per-server auth separately.
+
+```sh
+patronus lock --profile core-profile-cx --target codex
+```
+
+Use the explicit Codex target. The CLI refuses this profile with `all`, `claude`,
+`opencode` or `pi`; the shared resolver remains harness-neutral.
+
+## Migrate recorded legacy skill roots
+
+Ordinary install/update preflight still refuses legacy ownership. Migration is an
+explicit separate operation, never an automatic fallback:
+
+```sh
+patronus migrate codex-skills --global
+patronus migrate codex-skills --local
+# Authorize only the inspected scope and exact preview before applying:
+patronus migrate codex-skills --global --deploy
+```
+
+Preview makes no writes. Deploy requires an explicit `--global` or `--local`;
+there is no force/adopt flag. Migration proves recorded identity, whole-file
+checksums, regular files, complete owned sidecars, destination admission and
+both-scope conflicts. Global sources include `~/.codex/skills` and
+`$CODEX_HOME/skills`; the destination remains `~/.agents/skills`. No skill is
+renamed into its `-cx` sibling, and no MCP/instruction ownership is converted.
+
+```text
++------------------+  verify writes  +------------------+  persist ownership  +------------------+
+| proven source    | ==============> | new destination  | ==================> | retire old source|
++------------------+                  +------------------+                    +------------------+
+```
+
+Verified destination writes and staged ownership persistence precede retirement.
+Partial write/retirement keeps unresolved sources and verified ownership facts.
+A failed staged-state save leaves written destinations unrecorded, reports them,
+retains old data/ownership and refuses automatic resume until manual reconciliation.
+Locks are advisory; noncooperating edits remain a race limitation. Empty-directory
+pruning is best effort, not recursive deletion or general cleanup permission.
+
+## Installed routes and worker boundaries
+
+Read each exact installed `SKILL.md` before invocation. Planning retains ADR-0003:
+`docs/specs/NN-slug/`, folder-level `meta.yaml`, one research synthesis and a
+spec/plan pair per stream. Local specs stay outside public navigation.
+
+```text
++------------------+  findings  +-----------------------+  reviewed spec  +-----------------+
+| research-team-cx | =========> | spec-brainstorming-cx | ===============> | plan-writing-cx |
++------------------+            +-----------------------+                  +-----------------+
+```
+
+Use `spec-review-cx` and `plan-review-cx` at their gates. `plan-execute-cx` requires
+`requesting-code-review-cx`. Diagnosis/TDD route to `codebase-design-cx`; worktree
+allocation and branch completion preserve separate Git/stage grants. Meta-skill
+audits require separately authorized bounded work. Cloudflare sidecars are
+local-first; unavailable remote capabilities block that path and their numeric
+platform assumptions are unverified.
+
+`plan-execute-parallel-cx` bundles a Python-stdlib supervisor, request schema and
+fake-worker fixtures. The fixture results are historical; the current
+development gates do not run them. It binds roots/base/brief/owned paths/results, bounds
+concurrency/timeouts/retries, orders predecessors and retains failed attempts.
+Supervisor faults/interruption attempt bounded settlement of every started
+worker; unknown stop blocks capture, retry, integration and cleanup. Integration
+is disabled by default and needs a separate explicit grant.
+
+This is cooperative Git/process isolation, not an OS filesystem sandbox. Processes
+outside both group/cwd boundaries are invisible; cwd discovery is Linux-only.
+SIGKILL/host loss cannot run settlement, and repeated interruptions or indefinitely
+stalled external operations remain unqualified. Native Codex worker behavior is
+still Partial/runtime-pending. Never fall back to concurrent lead-checkout writers.
+
+## Guards and lifecycle
+
+`block-secrets-cx` and `gitleaks-guard-cx` select script placement and registration.
+Retained invented write/apply_patch/Write-alias and Bash/staged-diff fixtures
+recorded local behavior only. Those results are historical and not run in the
+current development gates. Secret guarding is best effort at write/commit time, not read-and-leak
+prevention or guaranteed detection. Actual native event shapes, matcher semantics,
+trust and fresh-session nonces require separate qualification. Patronus must not
+write native trust internals. Dispatch/heartbeat/reground/language SessionStart
+hooks remain omitted; advisory instructions do not substitute for callbacks.
+
+```sh
+patronus update plan-execute-cx --target codex --dry-run
+patronus remove plan-execute-cx --target codex --global --dry-run
+patronus remove plan-execute-cx --target codex --local --dry-run
+```
+
+Inspect selected scope/state before adding `--deploy`. Removal selects explicit
+items, not an inverse profile lifetime. Shared-section removal preserves surviving
+instructions/prose; transport-leaf removal preserves user auth/env and sibling TOML
+fields. Existing metadata cannot prove whether an empty server table predated the
+managed leaves, so removal can prune that empty server table; other empty user
+containers are preserved. Unknown whole-map/old-prior metadata remains refused.
+Restart Codex after install/update/remove: retained sessions may hold old bytes.
+
+## Release limits
+
+Claude usage reporting/statusline are N/A. Editorial loading/port is explicitly
+excluded by owner direction; inline punctuation mechanics remain. Neutral reuse
+is limited to the three audited context skills and the audited recipes.
+
+Procedures, acceptance matrix and inert record template live under
+`scripts/qualification/codex-core-lane/`. Every native row remains runtime-pending:
+no qualified Codex version/platform pair, native MCP/auth/trust pass or deployment
+is asserted. Local tests and independent source review cannot replace those gates.
+Publication and cleanup require their own grants.
+
+See [adding a harness](/harness-extension) for the shared installer contract.

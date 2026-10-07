@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: pattern-cloudflare-cx
+description: "Codex only: Use when considering Cloudflare Workers design patterns (Queues, Workflows, D1, testing, OpenAPI, MCP debugging). Load this index first to route to the full pattern file(s) for the task at hand."
+version: 1.0.0
+entry: SKILL.md
+files: ["LICENSE", "NOTICE", "SOURCE.md", "patterns/pattern-001.md", "patterns/pattern-002.md", "patterns/pattern-003.md", "patterns/pattern-004.md", "patterns/pattern-005.md", "patterns/pattern-006.md", "patterns/pattern-007.md"]
+targets: [codex]
+defaults:
+  scope: project
+requires: ["codebase-design-cx", "diagnosing-bugs-cx", "tdd-cx", "pattern-mcp-cx"]
+attribution:
+  upstream: github.com/darkquasar/patronus
+  license: GPL-3.0
+  copyright: "Patronus contributors"
+  commit: 63abfb1d9f3e3445ec9ea3f99551069a7b251911
+  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."

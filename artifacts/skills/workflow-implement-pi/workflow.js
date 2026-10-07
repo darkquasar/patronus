@@ -34,19 +34,23 @@ keys(args, ['cwd','outputDir','sourceRevision','sourceRoots','authorization','pr
 requireThat(absolute(args.cwd) && absolute(args.outputDir) && text(args.sourceRevision, 200), 'canonical absolute paths and source revision required');
 requireThat(list(args.sourceRoots, 1, 16) && args.sourceRoots.every(absolute) && args.sourceRoots.some(r => within(args.cwd, r)), 'source/integration/worktree roots required');
 requireThat(args.sourceRoots.every(r => !within(args.outputDir, r) && !within(r, args.outputDir)), 'output must be outside source/integration/worktrees');
-for (const [name, max] of [['concurrency',2],['spawnLimit',12],['timeoutMs',3600000]]) requireThat(Number.isSafeInteger(args[name]) && args[name] > 0 && args[name] <= max, 'invalid ' + name);
+for (const [name, max] of [['concurrency',10],['spawnLimit',12],['timeoutMs',3600000]]) requireThat(Number.isSafeInteger(args[name]) && args[name] > 0 && args[name] <= max, 'invalid ' + name);
 keys(args.authorization, ['parentVerified','evidence','actions','files']);
 requireThat(args.authorization.parentVerified === true && text(args.authorization.evidence) && list(args.authorization.actions,1,8) && args.authorization.actions.every(v => text(v,100)) && actions.every(a => args.authorization.actions.includes(a)), 'missing actual stage/action grant');
 requireThat(list(args.authorization.files,0,64) && args.authorization.files.every(relative), 'invalid authorized files');
 keys(args.preflight, ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion']);
 requireThat(args.preflight.pathsVerified === true && args.preflight.rolesVerified === true && text(args.preflight.evidence) && args.preflight.piVersion === '0.87.1' && args.preflight.subagentsVersion === '0.72.1', 'parent path/role/version preflight required');
-requireThat(list(args.tasks,1,4) && list(args.evidence,1,8), 'bounded tasks/evidence required');
+requireThat(list(args.tasks,1,10) && list(args.evidence,1,8), 'bounded tasks/evidence required');
 for (const e of args.evidence) { keys(e,['label','text']); requireThat(text(e.label,100) && text(e.text,8192),'invalid inline evidence'); }
 requireThat(utf8Bytes(JSON.stringify(args.evidence)) <= 8192, 'inline evidence exceeds 8192 UTF-8 JSON bytes');
 const taskKeys = new Set();
 for (const t of args.tasks) {
-  keys(t, ['key','text',...taskFields]);
+  keys(t, ['key','text',...taskFields,'model'], ['key','text',...taskFields]);
   requireThat(text(t.key,40) && /^[a-z][a-z0-9-]*$/.test(t.key) && !taskKeys.has(t.key) && text(t.text), 'invalid/duplicate task key or text'); taskKeys.add(t.key);
+  if (Object.hasOwn(t,'model')) {
+    requireThat(t.engine === 'native', 'model override requires a native writer');
+    requireThat(text(t.model,200) && /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*(?::(?:off|minimal|low|medium|high|xhigh|max))?$(?![\s\S])/.test(t.model), 'native model must be provider/id with an optional supported thinking suffix');
+  }
 }
 keys(args.roles, Object.keys(roleAgents));
 for (const [role, agent] of Object.entries(args.roles)) requireThat(roleAgents[role].includes(agent), 'invalid effective role: ' + role);
@@ -87,7 +91,7 @@ const bindings = new Map();
 const seenRuns = new Set();
 function child(key, agent, task, options = {}) {
   const launch = { key, label: key, agent, task: task + leaf + inline, cwd: args.cwd, output: args.outputDir + '/' + key + '.md', outputMode:'file-only', timeoutMs: args.timeoutMs, ...options };
-  pending.push({key,agent,output:launch.output});
+  pending.push({key,agent,output:launch.output,requestedModel:launch.model || null});
   return launch;
 }
 function native(key, role, task, options = {}) { return child(key,args.roles[role],task,{context:'fresh', ...options}); }
@@ -119,7 +123,7 @@ function completed(r, expected) {
       provenance = 'pi-subagents-0.72.1-external-save-summary-with-structured-terminal-evidence';
     } else if (r.outputReference !== expected.output) return false;
   } else if (r.outputReference !== expected.output) return false;
-  bindings.set(r.key,{outputReference:expected.output,provenance,filesystemVerified:false,metadataPersistence:external ? 'unverified-runtime-field-not-forwarded' : 'not-asserted'});
+  bindings.set(r.key,{outputReference:expected.output,provenance,filesystemVerified:false,requestedModel:expected.requestedModel,metadataPersistence:external ? 'unverified-runtime-field-not-forwarded' : 'not-asserted'});
   seenRuns.add(r.runId);
   return true;
 }
@@ -147,7 +151,7 @@ for (const t of args.tasks) {
 }
 const writers = await runs.all(args.tasks.map(t => {
   const task = 'Implement only this approved task in your allocated worktree: ' + t.text + '\nEXCLUSIVE FILE CLAIMS: ' + JSON.stringify(t.files) + '\nDo not allocate worktrees or integrate. Leave no staged files. Return exact changed files, base/head, tests and limitations. Native integration/validation owns final tests; Claude writer has no Bash. Preserve upstream patch/handoff evidence.';
-  const options = {worktree:true,baseRef:args.baseRef};
+  const options = {worktree:true,baseRef:args.baseRef,...(Object.hasOwn(t,'model') ? {model:t.model} : {})};
   return t.engine === 'native' ? native('writer-' + t.key,'writer',task,options) : child('writer-' + t.key,t.engine,task,options);
 }));
 function handoffCandidate(r) {

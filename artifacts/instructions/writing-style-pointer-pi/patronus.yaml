@@ -3,11 +3,11 @@ family: artifact
 type: instruction
 role: instruction
 name: writing-style-pointer-pi
-description: "Inline house style with Pi editorial skill read"
-version: 1.0.1
+description: "Inline house punctuation rules"
+version: 2.0.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md"]
 targets: [pi]
 defaults:
   scope: project
-requires: ["writing-editorial-pi"]
+requires: []

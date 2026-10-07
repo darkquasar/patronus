@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: agents-spine-cx
+description: "Codex only: Scoped discovery, stage authority and lead/worker ownership."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
+targets: [codex]
+defaults:
+  scope: project
+attribution:
+  upstream: "github.com/openai/agents.md"
+  license: "MIT"
+  copyright: "Copyright (c) 2025 OpenAI"
+  commit: "d1ac7f063d20e70015ed6732664049ae4ba9d74e"
+  note: "Codex behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Static guidance, runtime-unverified."

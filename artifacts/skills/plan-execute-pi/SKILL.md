@@ -10,6 +10,25 @@ Coordinator routing only. Leaves execute their assigned task and never delegate.
 ## Scope and recovery
 
 Act only within the task's current grant. Research, authorship, review, planning, execution, integration, publication and cleanup are separate actions. Existing explicit approval remains valid within its recorded root, outputs and revalidation conditions; do not ask again merely because the stage changed. Changed scope or destructive actions need revalidation. Before work and after compaction, reread the mandatory brief, native mission state, latest decisions and project instructions, then inspect current artifacts. A leaf never delegates, mutates native mission state or writes lessons. Only the coordinator does so when authorized. Use contact_supervisor need_decision/interview_request for a material unresolved choice and wait for the actual reply; steering delivery is not consent. Do not switch model, provider, protocol or isolation on failure.
+## Select testing before implementation
+
+Record `critical-tdd` or `focused-postcheck` in the existing task brief, separately
+from execution mode. New or changed auth/secrets, migration/removal, ownership,
+concurrency/settlement/isolation behavior and reproducible behavior bugs require
+`critical-tdd` and an actual read of tdd-pi. Use short public-behavior slices:
+observe the intended invented-data failure, implement minimally, then run green
+and relevant negative/legacy regressions. Explicit test-first requests and
+project-required checks govern.
+
+Routine prose/manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`: exact diff inspection, positive/negative cases and approved
+focused checks after editing. Preserve existing safety tests. Do not invent red
+cycles or prose-substring tests. Missing or ambiguous strategy, including a legacy
+brief without one, stops for a coordinator decision before implementation.
+
+Neither strategy waives required fresh independent whole-change implementation
+review. Mode selection grants no additional checks or mutation authority.
+
 ## Step 2: Resolve the mode
 
 Apply these rules **in order**. The first one that fires decides.
@@ -34,8 +53,9 @@ Hard triggers:
 - compatibility contract (public API, wire format, persisted format, CLI compatibility)
 - weak verification: important behaviour the plan cannot cover with deterministic
   automated tests
-- high blast radius: shared framework, installer, profile resolver, or code with several
-  independent consumers
+- high blast radius: a changed safety/compatibility invariant in a shared framework,
+  installer, profile resolver or code with several independent consumers. Using an
+  existing shared framework alone is insufficient
 
 **Rule 3: two or more soft signals select `sdd`**, but only if the plan has at least two
 implementation tasks. An implementation task changes source; docs-only and scaffolding
@@ -76,7 +96,7 @@ choose the other mode.
 
 ## Record and execute
 
-Cite the actual plan sections that triggered each risk, selected mode, authority and budgets. Read [solo.md](solo.md) or [sdd.md](sdd.md), not both by default. An existing execution grant permits continuation; a mode decision does not grant delegation, worktree deletion or integration. Both modes retain required independent whole-branch review under requesting-code-review-pi, with budgets allocated before launch. Hybrid means isolated independent lanes plus serial contract/integration gates, not overlapping writers or task-by-task silent mode switching.
+Cite the actual plan sections that triggered each risk, selected mode, authority and budgets. Read [solo.md](solo.md) or [sdd.md](sdd.md), not both by default. An existing execution grant permits continuation; a mode decision does not grant delegation, worktree deletion or integration. Both modes retain required fresh independent whole-change implementation review under requesting-code-review-pi, with budgets allocated before launch. Small change size is no exemption; only the owner may explicitly waive this gate. Hybrid means isolated independent lanes plus serial contract/integration gates, not overlapping writers or task-by-task silent mode switching.
 
 Before launch read using-git-worktrees-pi. Bind exclusive report paths; record run/session/mission/attempt lineage, source/output hashes, owners, open asks and budgets. Every promise must settle before transition or cleanup; await dependent runs.run and ordered runs.all results. Child async receipts are not completion. A missing tool/output or infrastructure failure preserves evidence and stops the lane for same-protocol recovery, never inline/model/provider fallback.
 

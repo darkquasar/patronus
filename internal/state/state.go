@@ -116,7 +116,8 @@ func Load(path string) (*State, error) {
 	if s.Version != Version {
 		return nil, fmt.Errorf("unsupported state version %d (supported: %d)", s.Version, Version)
 	}
-	// Pi has no legacy whole-file inverse. Require explicitly serialized prior
+	// Pi and Codex require structural ownership, not a legacy whole-file inverse.
+	// Require explicitly serialized prior
 	// evidence: decoding an omitted bool as false would fabricate an absent prior.
 	var evidence struct {
 		Items []struct {
@@ -138,7 +139,7 @@ func Load(path string) (*State, error) {
 				return nil, fmt.Errorf("malformed native ownership for %s", it.Artifact)
 			}
 		}
-		if it.Tool != "pi" {
+		if it.Tool != "pi" && it.Tool != "codex" {
 			continue
 		}
 		for j, f := range it.Files {

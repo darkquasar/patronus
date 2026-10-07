@@ -2,7 +2,6 @@ package registry
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"os"
@@ -309,26 +308,13 @@ func cp00CatalogInventory(root string) (map[string][]byte, error) {
 	return members, err
 }
 
-func TestPiContentCatalogInventory(t *testing.T) {
-	root := repoRoot(t)
-	members, err := cp00CatalogInventory(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(members) == 0 {
-		t.Fatal("no distributed artifact files")
-	}
-	for name, data := range members {
-		if err := cp00DistributedReferences(root, name, data, members); err != nil {
-			t.Error(err)
-		}
-	}
-}
-
 // Machine lint checks concrete Markdown links and author-machine path leaks.
 // Plain prose invocations, optional capabilities and historical quotations still
 // need the C-owned review inventory; this is not a general Markdown parser.
-func cp00DistributedReferences(root, name string, data []byte, members map[string][]byte) error {
+// Exercised on invented members only. Shipped-catalog reference existence and
+// any documented legacy compatibility exceptions belong to tools/catalog-check;
+// the first argument is retained for caller compatibility and is unused.
+func cp00DistributedReferences(_, name string, data []byte, members map[string][]byte) error {
 	authorPath := regexp.MustCompile("(?m)(^|[\\s\"'`(=])(?:/(?:Users|home|root|workspace|workspaces|repo|repos)/|[A-Za-z]:[\\\\/](?:Users|repos)[\\\\/])[^\\s\"'`<>)]*")
 	if match := authorPath.Find(data); match != nil {
 		return fmt.Errorf("%s: author-home/repository absolute path %q; use /ABSOLUTE/APPROVED/PROJECT in inert templates", name, match)
@@ -372,90 +358,25 @@ func cp00DistributedReferences(root, name string, data []byte, members map[strin
 				continue
 			}
 			target, _, _ = strings.Cut(target, "#")
-			if cp00UpstreamOnlyLink(name, target, string(data)) {
-				continue
-			}
 			resolved := path.Join(path.Dir(name), target)
+			if strings.HasPrefix(target, "{skillDir}/") || strings.HasPrefix(target, "{skillsDir}/") {
+				skillRoot := path.Dir(name)
+				if relative, ok := strings.CutPrefix(name, "artifacts/skills/"); ok {
+					skill, _, _ := strings.Cut(relative, "/")
+					skillRoot = path.Join("artifacts/skills", skill)
+				}
+				if relative, ok := strings.CutPrefix(target, "{skillDir}/"); ok {
+					resolved = path.Join(skillRoot, relative)
+				} else {
+					resolved = path.Join(path.Dir(skillRoot), strings.TrimPrefix(target, "{skillsDir}/"))
+				}
+			}
 			if _, ok := members[resolved]; !ok {
-				allowed, err := cp00LegacyDistributionDebt(root, name, target, data)
-				if err != nil {
-					return err
-				}
-				if !allowed {
-					return fmt.Errorf("%s: missing distributed reference %q", name, target)
-				}
+				return fmt.Errorf("%s: missing distributed reference %q", name, target)
 			}
 		}
 	}
 	return nil
-}
-
-func cp00UpstreamOnlyLink(source, target, body string) bool {
-	// Reviewed pre-existing classification, not inherited by new Pi siblings.
-	if source != "artifacts/skills/writing-skills/SKILL.md" ||
-		!strings.Contains(body, "`../using-superpowers/references/*-tools.md` runtime tool-mapping files are\n> upstream-only") {
-		return false
-	}
-	switch target {
-	case "../using-superpowers/references/claude-code-tools.md",
-		"../using-superpowers/references/codex-tools.md",
-		"../using-superpowers/references/copilot-tools.md",
-		"../using-superpowers/references/gemini-tools.md":
-		return true
-	}
-	return false
-}
-
-// Known baseline delivery defects, explicitly accepted for CP-00 by the
-// coordinator. These are NOT claims that the sidecars ship. Bind both manifest
-// (including version) and entry bytes; no changed artifact or Pi sibling inherits
-// this debt. Remediation needs separately versioned legacy content, not this gate.
-func cp00LegacyDistributionDebt(root, source, target string, body []byte) (bool, error) {
-	rules := []cp00DistributionDebt{
-		{"artifacts/skills/research-team/SKILL.md", "053e8927d68e6a4827c1ef1c6e06b9f6d1a9e9a6f150f466968b7faddfd98525", []string{"RESEARCHER-TEMPLATE.md", "DELIVERABLE-TEMPLATES.md", "LESSONS-FORMAT.md"}},
-		{"artifacts/skills/plan-execute-parallel/SKILL.md", "41f296d52c6d2cdfe8723894d1b021850b578e832fa743d6d96ded0038e4420b", []string{"PROVENANCE-GUIDE.md", "TEAMMATE-TEMPLATE.md"}},
-	}
-	for _, rule := range rules {
-		ok, err := rule.check(root, source, target, body)
-		if ok || err != nil {
-			return ok, err
-		}
-	}
-	return false, nil
-}
-
-type cp00DistributionDebt struct {
-	source  string
-	digest  string // SHA-256(manifest bytes || entry bytes)
-	targets []string
-}
-
-func (d cp00DistributionDebt) check(root, source, target string, body []byte) (bool, error) {
-	if source != d.source {
-		return false, nil
-	}
-	matched := false
-	for _, allowed := range d.targets {
-		matched = matched || target == allowed
-	}
-	if !matched {
-		return false, nil
-	}
-	manifestBytes, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path.Dir(source)), "patronus.yaml"))
-	if err != nil {
-		return false, err
-	}
-	if fmt.Sprintf("%x", sha256.Sum256(append(manifestBytes, body...))) != d.digest {
-		return false, fmt.Errorf("%s: legacy distribution debt no longer matches immutable manifest/content", source)
-	}
-	info, err := os.Lstat(filepath.Join(root, filepath.FromSlash(path.Dir(source)), target))
-	if err != nil {
-		return false, fmt.Errorf("%s: missing legacy reference source %q: %w", source, target, err)
-	}
-	if !info.Mode().IsRegular() {
-		return false, fmt.Errorf("%s: unsafe legacy reference source %q", source, target)
-	}
-	return true, nil
 }
 
 func cp00WriteFixture(t *testing.T, root, name, body string) {
@@ -683,6 +604,7 @@ func TestPiContentReferencePolicy(t *testing.T) {
 	members := map[string][]byte{"references/.fixture": []byte("invented")}
 	for _, tc := range []struct{ name, body string }{
 		{"declared-dotfile", "Read [reference](references/.fixture)."},
+		{"declared-skill-placeholder", "Read [reference]({skillDir}/references/.fixture)."},
 		{"external", "See [upstream](https://example.invalid/reference) and [section](#local)."},
 		{"inert-approved-project", "root: /ABSOLUTE/APPROVED/PROJECT"},
 		{"variable-not-author-home", `HOME="$SANDBOX/home"`},
@@ -697,6 +619,8 @@ func TestPiContentReferencePolicy(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, body, diagnostic string }{
 		{"missing-active-link", "Read [required](missing.md).", "missing distributed reference"},
+		{"missing-skill-placeholder", "Read [required]({skillDir}/missing.md).", "missing distributed reference"},
+		{"misspelled-skill-placeholder", "Read [required]({skilDir}/references/.fixture).", "missing distributed reference"},
 		{"angle-link", "Read [required](<missing.md>).", "missing distributed reference"},
 		{"missing-after-example", "````markdown\n[example](example.md)\n```\n````\n[required](missing.md)", "missing distributed reference"},
 		{"shell-not-markdown-example", "```sh\n# Read [required](missing.md)\n```", "missing distributed reference"},
@@ -713,59 +637,17 @@ func TestPiContentReferencePolicy(t *testing.T) {
 	}
 }
 
-func TestPiContentUpstreamLinkClassification(t *testing.T) {
-	source := "artifacts/skills/writing-skills/SKILL.md"
-	target := "../using-superpowers/references/claude-code-tools.md"
-	note := "`../using-superpowers/references/*-tools.md` runtime tool-mapping files are\n> upstream-only"
-	if !cp00UpstreamOnlyLink(source, target, note) {
-		t.Fatal("documented upstream-only link rejected")
+func TestPiContentNestedSkillPlaceholderReferences(t *testing.T) {
+	members := map[string][]byte{
+		"artifacts/skills/invented/SKILL.md":  []byte("invented entry"),
+		"artifacts/skills/companion/SKILL.md": []byte("invented companion"),
 	}
-	for _, tc := range []struct{ source, target, body string }{
-		{source, target, "classification removed"},
-		{source + "-pi", target, note},
-		{source, "../using-superpowers/references/invented-tools.md", note},
-	} {
-		if cp00UpstreamOnlyLink(tc.source, tc.target, tc.body) {
-			t.Fatal("classification escaped its exact source/target/note")
-		}
+	body := []byte("Read [own]({skillDir}/SKILL.md) and [companion]({skillsDir}/companion/SKILL.md).")
+	if err := cp00DistributedReferences(t.TempDir(), "artifacts/skills/invented/references/nested.md", body, members); err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestPiContentLegacyDistributionDebt(t *testing.T) {
-	root := t.TempDir()
-	source := "artifacts/skills/invented/SKILL.md"
-	metadata := "version: 1.0.0\nfiles: []\n"
-	body := []byte("Read [sidecar](sidecar.md).")
-	cp00WriteFixture(t, root, "artifacts/skills/invented/patronus.yaml", metadata)
-	cp00WriteFixture(t, root, "artifacts/skills/invented/sidecar.md", "invented sidecar")
-	rule := cp00DistributionDebt{source: source, digest: fmt.Sprintf("%x", sha256.Sum256(append([]byte(metadata), body...))), targets: []string{"sidecar.md"}}
-	ok, err := rule.check(root, source, "sidecar.md", body)
-	if err != nil || !ok {
-		t.Fatalf("unchanged debt: ok=%v err=%v", ok, err)
-	}
-	t.Run("changed-source", func(t *testing.T) {
-		ok, err := rule.check(root, "artifacts/skills/invented-pi/SKILL.md", "sidecar.md", body)
-		if err != nil || ok {
-			t.Fatalf("Pi sibling inherited legacy debt: ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("changed-content", func(t *testing.T) {
-		_, err := rule.check(root, source, "sidecar.md", []byte("changed"))
-		cp00WantDiagnostic(t, err, "no longer matches")
-	})
-	t.Run("changed-version", func(t *testing.T) {
-		cp00WriteFixture(t, root, "artifacts/skills/invented/patronus.yaml", "version: 1.0.1\nfiles: []\n")
-		_, err := rule.check(root, source, "sidecar.md", body)
-		cp00WantDiagnostic(t, err, "no longer matches")
-		cp00WriteFixture(t, root, "artifacts/skills/invented/patronus.yaml", metadata)
-	})
-	t.Run("missing-source", func(t *testing.T) {
-		if err := os.Remove(filepath.Join(root, "artifacts/skills/invented/sidecar.md")); err != nil {
-			t.Fatal(err)
-		}
-		_, err := rule.check(root, source, "sidecar.md", body)
-		cp00WantDiagnostic(t, err, "missing legacy reference source")
-	})
+	delete(members, "artifacts/skills/companion/SKILL.md")
+	cp00WantDiagnostic(t, cp00DistributedReferences(t.TempDir(), "artifacts/skills/invented/references/nested.md", body, members), "missing distributed reference")
 }
 
 func TestPiContentAttributionNotice(t *testing.T) {
@@ -800,30 +682,6 @@ func TestPiContentMissingCatalogManifest(t *testing.T) {
 	cp00WriteFixture(t, root, "artifacts/skills/invented/SKILL.md", "Invented orphan body")
 	_, err := cp00CatalogInventory(root)
 	cp00WantDiagnostic(t, err, "missing artifact manifest")
-}
-
-// Native role syntax and selected skill references are catalog data. These
-// checks discover subjects rather than encoding any shipped role membership.
-func TestPiContentNativeAgents(t *testing.T) {
-	cat, err := NewLocalRegistry(repoRoot(t)).Catalog(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range cat.Artifacts {
-		art := entry.Manifest
-		if art.Type != manifest.TypeAgent || !cp03Contains(art.Targets, "pi") {
-			continue
-		}
-		t.Run(art.Name, func(t *testing.T) {
-			raw, err := os.ReadFile(filepath.Join(entry.Source.LocalDir, art.Entry))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := cp03NativeAgentReferences(cat, art, raw); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
 }
 
 func cp03Contains(values []string, value string) bool {

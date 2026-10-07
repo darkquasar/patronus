@@ -21,10 +21,8 @@ const patronusHookID = "patronusId"
 // transformHook registers a hook artifact into the agent's settings file. The
 // hook is one element appended to the array at hooks.{event}; its identity (a
 // digest of artifact+matcher+command) makes the append idempotent and the
-// removal surgical. Tools whose hook surface is unmodeled (Codex, OpenCode today)
-// carry a null Hook layout target — for them a hook artifact is a no-op rather
-// than an error, so a cross-tool profile installs cleanly and only the tools
-// that support hooks get them.
+// removal surgical. Codex script hooks must have both placement and registration
+// targets. Other tools retain their existing unsupported-surface behavior.
 func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, scope, srcDir string, readExisting ReadExisting) ([]diff.FileDiff, error) {
 	if ad.Layout.Hook == nil {
 		return nil, fmt.Errorf("adapter %q: no Hook layout", ad.Tool)
@@ -46,16 +44,16 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 
 	target := ad.Layout.Hook.ForScope(scope)
 	if !target.OK() {
-		return nil, nil // tool models no hook surface at this scope — honest skip
+		if ad.Tool == "codex" && spec.Script != "" {
+			return nil, fmt.Errorf("adapter codex: script hook %q has no %s registration target", art.Name, scope)
+		}
+		return nil, nil
 	}
 
-	// A script-bearing hook can only wire on a tool that has somewhere to put the
-	// script. A tool with a hook surface but NO hook-script dir (Codex references an
-	// absolute command; it places no bundled script) is an honest skip for such a
-	// hook, not an error — a cross-tool profile installs cleanly and the hook lands
-	// only where its script can. A hook that inlines its command (no script) still
-	// wires everywhere.
 	if spec.Script != "" && !ad.Layout.Hook.ScriptDirFor(scope).OK() {
+		if ad.Tool == "codex" {
+			return nil, fmt.Errorf("adapter codex: hook %q ships a script but has no %s hook-script dir", art.Name, scope)
+		}
 		return nil, nil
 	}
 
@@ -87,15 +85,20 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 		return nil, fmt.Errorf("adapter: wire hook %q: %w", art.Name, err)
 	}
 
+	var warning string
+	if ad.Tool == "codex" {
+		warning = "Codex static hook script placement and structured registration only: event/matcher/payload semantics and native trust remain runtime-unverified; Patronus does not write trust internals"
+	}
 	return append(diffs, diff.FileDiff{
-		Path:   path,
-		Action: diff.Merge,
-		Before: existing,
-		After:  after,
-		Tool:   ad.Tool,
-		Scope:  scope,
-		Role:   string(art.Role),
-		Note:   "hook " + spec.Event + ": " + art.Name,
+		Warning: warning,
+		Path:    path,
+		Action:  diff.Merge,
+		Before:  existing,
+		After:   after,
+		Tool:    ad.Tool,
+		Scope:   scope,
+		Role:    string(art.Role),
+		Note:    "hook " + spec.Event + ": " + art.Name,
 		Setting: &diff.SettingEdit{
 			Target:      diff.FileTargetRef{File: target.File, Format: target.Format},
 			Dotted:      dotted,

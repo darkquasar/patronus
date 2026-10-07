@@ -9,6 +9,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/registry"
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 // This is the §6b acceptance gate for P7.5.1 (the settings-merge primitive): it
@@ -173,12 +174,60 @@ func TestHookArtifactMergesIntoClaudeSettings(t *testing.T) {
 	}
 }
 
-// TestNudgeHookPerToolNativeVsFallback proves the per-tool divergence of a nudge
-// hook: Codex wires it natively (config.toml merge); OpenCode has no nudge surface,
-// so installing the same hook there is a clean no-op (the paired instruction carries
-// it) rather than an error.
+// TestCodexGuardInstallScriptAndRegistration drives the shared installer using
+// only a scratch catalog/HOME. It proves delivery, not native Codex activation.
+func TestCodexInertGuardInstallScriptAndRegistration(t *testing.T) {
+	for _, scope := range []string{"global", "local"} {
+		t.Run(scope, func(t *testing.T) {
+			root := fixtureCatalog(t)
+			name := "fix-hook-2"
+			home, config := t.TempDir(), t.TempDir()
+			t.Setenv("HOME", home)
+			t.Setenv("CODEX_HOME", config)
+			t.Setenv("PATRONUS_REGISTRY_URL", "")
+			t.Chdir(root)
+			out, errOut, err := runInstall(t, name, "--target", "codex", "--"+scope, "--deploy", "--yes")
+			if err != nil {
+				t.Fatalf("install: %v\n%s\n%s", err, out, errOut)
+			}
+			base := config
+			if scope == "local" {
+				base = filepath.Join(root, ".codex")
+			}
+			script := filepath.Join(base, "hooks", name+".sh")
+			info, err := os.Stat(script)
+			if err != nil || info.Mode().Perm() != 0755 {
+				t.Fatalf("placed executable: %v %v", info, err)
+			}
+			var settings map[string]any
+			if err := toml.Unmarshal(mustRead(t, filepath.Join(base, "config.toml")), &settings); err != nil {
+				t.Fatal(err)
+			}
+			groups := settings["hooks"].(map[string]any)["PreToolUse"].([]any)
+			if len(groups) != 1 {
+				t.Fatalf("registration: %#v", groups)
+			}
+			group := groups[0].(map[string]any)
+			handler := group["hooks"].([]any)[0].(map[string]any)
+			if handler["command"] != script || group["matcher"] != "Edit|Write" {
+				t.Fatalf("registration: %#v", group)
+			}
+			if string(mustRead(t, script)) != string(mustRead(t, filepath.Join(root, "artifacts/hooks/fix-hook-2/fix-hook-2.sh"))) {
+				t.Fatal("inert script bytes changed")
+			}
+
+			out, errOut, err = runInstall(t, name, "--target", "codex", "--"+scope, "--dry-run")
+			if err != nil || !strings.Contains(out, "SKIP") {
+				t.Fatalf("reinstall: %v\n%s\n%s", err, out, errOut)
+			}
+		})
+	}
+}
+
+// TestNudgeHookPerToolNativeVsFallback checks static Codex registration and
+// OpenCode's instruction fallback. Native Codex semantics remain runtime-pending.
 func TestNudgeHookPerToolNativeVsFallback(t *testing.T) {
-	t.Run("codex wires natively", func(t *testing.T) {
+	t.Run("codex static registration", func(t *testing.T) {
 		home := serveHookFixture(t)
 		out, errOut, err := runInstall(t, "smoke-hook", "--target", "codex", "--global", "--deploy", "--yes")
 		if err != nil {
