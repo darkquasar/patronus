@@ -42,11 +42,11 @@ func declaredLayers(p *manifest.Profile) map[string][]string {
 }
 
 // TestEveryProfileResolves is the base structural guarantee: every profile in the
-// real catalog resolves without error for every tool. A dangling item name, a
+// invented catalog resolves without error for every tool. A dangling item name, a
 // broken extends:, or an unresolved slot surfaces here — for ALL profiles — instead
 // of only where a hand-written per-profile test happened to look.
 func TestEveryProfileResolves(t *testing.T) {
-	cat := realCatalog(t)
+	cat := fixtureApplicationCatalog(t)
 	for _, pe := range cat.Profiles {
 		name := pe.Manifest.Name
 		for _, tool := range []string{"claude", "codex", "opencode", "pi", "all"} {
@@ -68,7 +68,7 @@ func TestEveryProfileResolves(t *testing.T) {
 // design. Bare declarations may be reached anywhere; flavoured declarations
 // must be reached for their named target, not rescued by another target.
 func TestNoProfileLayerResolvesEmpty(t *testing.T) {
-	cat := realCatalog(t)
+	cat := fixtureApplicationCatalog(t)
 	for _, pe := range cat.Profiles {
 		name := pe.Manifest.Name
 		if pe.Manifest.Status == "stub" {

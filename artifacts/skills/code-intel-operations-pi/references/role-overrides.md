@@ -35,8 +35,8 @@ members.
   `code-intel-operations-pi`.
 - The web role retains `web_search`, `fetch_content`, `get_search_content`,
   `source_check` and `web-research-pi`.
-- The technical reviewer retains `spec-review-pi` and
-  `requesting-code-review-pi`.
+- The technical reviewer retains `verification-before-completion-pi`; its
+  specification and code-review rubrics remain selected by task mode.
 - Author and writer roles retain their existing write tools. Read-only roles do
   not gain write tools.
 

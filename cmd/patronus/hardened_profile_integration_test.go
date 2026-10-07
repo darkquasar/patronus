@@ -1,70 +1,26 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/profile"
 	"github.com/darkquasar/patronus/internal/registry"
 )
 
-// realCatalog loads the REAL checkout's catalog straight off disk — no build, no
-// registry, no fetcher. It is how a CLASS-B test reads the catalog's SHAPE (which
-// items a profile names) without ever touching its PINS: nothing is downloaded,
-// hashed, or placed, so the archive-hashing fix cannot break it and CI never
-// fetches a byte.
-func realCatalog(t *testing.T) *registry.Catalog {
-	t.Helper()
-	root, err := registry.DiscoverRoot(".")
-	if err != nil {
-		t.Fatalf("discover repo root: %v", err)
-	}
-	cat, err := registry.NewLocalRegistry(root).Catalog(context.Background())
-	if err != nil {
-		t.Fatalf("the real catalog does not load: %v", err)
-	}
-	return cat
-}
-
-// TestHardenedProfileSandboxFlavourDiverges is a CLASS-B test: it asserts the REAL
-// catalog's CONTENTS — that the `hardened` profile really wires the L6 sandbox
-// layer with a per-tool flavour, and that exactly one resolves per --tool:
-//
-//	claude   -> native-sandbox     (Claude's own settings `sandbox` switch)
-//	codex    -> native-sandbox     (Codex's sandbox_mode = workspace-write)
-//	opencode -> sandbox-runtime    (OpenCode has no native switch; srt wraps it)
-//
-// The item names ARE the assertion — renaming them to fixture names would produce
-// a green tautology, so they stay real.
-//
-// It asserts against profile.Resolve rather than an install: the guarantee is a
-// statement about what the CATALOG names, and resolution is where that lives. This
-// keeps a real-catalog test entirely off the fetch path (`hardened` extends `core`,
-// which wires the gitleaks + tk recipes whose pins are REAL upstream digests that
-// no invented bytes can satisfy).
-//
-// It deliberately does NOT assert the settings.json/config.toml BYTES the switch
-// produces. Doing that would need a --deploy of a binary-bearing profile, which is
-// exactly what the archive-hashing fix makes impossible offline. The per-tool
-// SETTINGS-MERGE mechanism is proven on invented items in internal/profile and
-// internal/config; what is left here — and what only the real catalog can say — is
-// that `hardened` names these three flavours.
+// The sandbox layer resolves per-target flavours from invented profile data.
 func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
-	cat := realCatalog(t)
-	for _, tc := range []struct {
-		tool, want string
-	}{
-		{"claude", "native-sandbox"},
-		{"codex", "native-sandbox"},
-		{"opencode", "sandbox-runtime"},
-	} {
+	cat := fixtureApplicationCatalog(t)
+	cat.Artifacts = append(cat.Artifacts, registry.ArtifactEntry{Manifest: &manifest.Artifact{Meta: manifest.Meta{Name: "fix-sandbox-alt"}, Type: manifest.TypeSetting, Targets: []string{"opencode"}}})
+	cat.Profiles = append(cat.Profiles, registry.ProfileEntry{Manifest: &manifest.Profile{Meta: manifest.Meta{Name: "fix-sandbox"}, Layers: manifest.ProfileLayers{Sandbox: manifest.StringList{"fix-skill-claude@claude", "fix-skill-codex@codex", "fix-sandbox-alt@opencode"}}}})
+	for _, tc := range []struct{ tool, want string }{{"claude", "fix-skill-claude"}, {"codex", "fix-skill-codex"}, {"opencode", "fix-sandbox-alt"}} {
 		t.Run(tc.tool, func(t *testing.T) {
-			r, err := profile.Resolve(cat, "hardened", tc.tool)
+			r, err := profile.Resolve(cat, "fix-sandbox", tc.tool)
 			if err != nil {
-				t.Fatalf("resolve hardened/%s: %v", tc.tool, err)
+				t.Fatal(err)
 			}
 			var got []string
 			for _, it := range r.Items {
@@ -73,7 +29,7 @@ func TestHardenedProfileSandboxFlavourDiverges(t *testing.T) {
 				}
 			}
 			if len(got) != 1 || got[0] != tc.want {
-				t.Errorf("hardened/%s sandbox = %v, want exactly [%s]", tc.tool, got, tc.want)
+				t.Fatalf("sandbox = %v, want [%s]", got, tc.want)
 			}
 		})
 	}

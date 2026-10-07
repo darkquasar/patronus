@@ -11,7 +11,6 @@
         ],
         "skills": [
           "plan-writing-pi",
-          "writing-editorial-pi",
           "verification-before-completion-pi",
           "pattern-mcp-pi",
           "graphify-pi",
@@ -77,7 +76,6 @@
         ],
         "skills": [
           "spec-brainstorming-pi",
-          "writing-editorial-pi",
           "verification-before-completion-pi",
           "pattern-mcp-pi",
           "graphify-pi",
@@ -98,8 +96,6 @@
           "mcp"
         ],
         "skills": [
-          "spec-review-pi",
-          "requesting-code-review-pi",
           "verification-before-completion-pi",
           "pattern-mcp-pi",
           "graphify-pi",
@@ -171,7 +167,6 @@
         ],
         "skills": [
           "plan-execute-pi",
-          "tdd-pi",
           "verification-before-completion-pi",
           "pattern-mcp-pi",
           "graphify-pi",

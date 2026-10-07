@@ -3,8 +3,9 @@ title: "Deploy the Pi core profile"
 description: "Install native roles, workflow skills and pinned Pi extensions."
 ---
 
-`core-profile-pi` 2.0.0 combines development, planning, review, research and
-editorial skills with eight native roles and three workflow skills.
+`core-profile-pi` 3.0.0 combines development, planning, review and research
+skills with eight native roles and three workflow skills. Editorial skills are
+excluded from this core profile.
 
 ## Prerequisites
 
@@ -57,6 +58,23 @@ restart or reload Pi to discover the installed resources.
 The workflow skills are `workflow-research-pi`, `workflow-implement-pi` and
 `workflow-peer-review-pi`. Read their installed skill instructions before launch;
 they describe required inputs, output placement and review steps.
+
+`workflow-implement-pi` accepts 1–10 writer tasks and concurrency of 1–10.
+Set the outer `globalConcurrencyLimit` to the request's `concurrency`, and
+reserve two spawns for integration and validation: ten writers need
+`spawnLimit: 12`. Choose useful independent lanes within measured resource
+and provider limits; keep expensive tests serialized under the project lock.
+The model-free fixtures exercise a scheduler peak of ten. Live provider and
+host capacity require separate qualification.
+
+Native writer tasks may set `model` to an exact `provider/id` from
+`subagent({action:"models"})`, optionally with a supported thinking suffix.
+For example, independent `engine:"native"` tasks can select
+`anthropic/claude-opus-4-8` and `openai-codex/gpt-6.1-sol` while using the same
+writer role. The parent must verify model access, authorization and budget.
+Omitting `model` preserves role defaults; integration and validation keep their
+own defaults. External CLI tasks reject this field. Native model access and
+Claude/Codex CLI runtime qualification are separate gates.
 
 ## Optional code intelligence
 

@@ -18,6 +18,9 @@ on:
       - "go.mod"
       - "go.sum"
       - "scripts/**"
+      # The catalog gate builds this nested tool and reads the compatibility data.
+      - "tools/**"
+      - "docs/compatibility/**"
       - ".golangci.yml"
       - ".github/workflows/publish-catalog.yml"
 
@@ -36,38 +39,42 @@ jobs:
       publish: ${{ steps.guard.outputs.publish }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # check-versions needs the previous commit as its base.
+          fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-      - name: gofmt
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "$unformatted"
-            exit 1
-          fi
-      - name: go vet
-        run: go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
-      - name: test
-        run: go test -race ./...
-      - name: Publication contract tests
+      # gofmt, vet and race tests on a scratch copy without artifacts/ or profiles/.
+      - name: Application contract gate
+        run: bash scripts/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
+      - name: Select version base
+        id: base
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
-          bash scripts/tests/check-catalog-publication-test.sh
-          bash scripts/tests/publish-packages-test.sh
-      - name: Build registry
-        run: go run ./cmd/patronus build --out registry/
+          set -euo pipefail
+          if [ -n "${BEFORE:-}" ] && git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
+            echo "rev=$BEFORE" >> "$GITHUB_OUTPUT"
+          else
+            echo "rev=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+          fi
+      # This job's OWN registry: built, structurally checked, public-CLI locked and
+      # publication-contract tested BEFORE the activation guard and any upload.
+      - name: Catalog contract gate
+        run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
       - name: Check catalog publication activation
         id: guard
         env:
           DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
-        run: bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
+        run: bash scripts/check-catalog-publication.sh "$RUNNER_TEMP/catalog-gate/registry" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: registry
-          path: registry/
+          path: ${{ runner.temp }}/catalog-gate/registry/
           if-no-files-found: error
 
   publish:

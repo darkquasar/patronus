@@ -1,0 +1,27 @@
+{
+  "templateOnly": true,
+  "schemaVersion": 1,
+  "profile": "core-profile-cx",
+  "source": { "root": "", "base": "", "head": "", "patchSha256": "", "profileSha256": "", "ledgerSha256": "", "closureHashes": {} },
+  "grant": { "reference": "", "actions": [], "roots": [], "budget": "" },
+  "environment": { "codexVersion": "", "executableSha256": "", "platform": "", "architecture": "", "scope": "", "home": "", "codexHome": "", "project": "", "authStatus": "not-run", "trustStatus": "not-run" },
+  "observations": [
+    {
+      "caseId": "CX-N02",
+      "status": "not-run",
+      "expectation": "Exact -cx invocation in a fresh session, including absent-name negative control",
+      "observed": "",
+      "commands": [],
+      "sessionId": "",
+      "nonce": "",
+      "beforeHashes": {},
+      "afterHashes": {},
+      "logs": [],
+      "blocker": "Native qualification remains pending; retained CLI authentication attempt failed401 and was stopped"
+    }
+  ],
+  "review": { "reviewer": "", "report": "", "reportSha256": "", "ownerDisposition": "" },
+  "qualifiedVersionPlatforms": [],
+  "limitations": ["Source migration, guards and twelve historical (NOT RUN in current gates) fake-worker cases do not establish native runtime readiness", "No qualified Codex version/platform/scope pair", "SessionStart hooks omitted; editorial loading/port explicitly excluded", "Cooperative isolation, advisory locks, staged-save failure and empty-server-table proof limits require owner disposition"],
+  "releaseAccepted": false
+}

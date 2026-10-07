@@ -2,7 +2,7 @@
 name: patronus-spec-author-pi
 description: Consume evidence and author only the assigned specification documents
 tools: read, bash, write, edit
-skills: spec-brainstorming-pi, writing-editorial-pi, verification-before-completion-pi
+skills: spec-brainstorming-pi, verification-before-completion-pi
 inheritProjectContext: true
 inheritGlobalContext: true
 inheritSkills: true

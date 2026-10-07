@@ -1,0 +1,39 @@
+# Admitted static lock/delivery cases for the catalog-contract gate.
+#
+# Every source profile under profiles/ must appear here with a nonempty target
+# list. Each pair is one case: the catalog gate runs the public CLI
+# `patronus lock --profile <profile> --target <target> --local-registry` in an
+# isolated scratch copy and HOME, and keeps `<profile>--<target>.lock`.
+#
+# A listed target means "the public CLI must resolve and lock this profile for
+# this target with no unresolved-item warning". It is static delivery evidence
+# only. It does not claim native harness support, loading, trust or behaviour.
+#
+# Legacy profiles list their documented baseline delivery target (claude).
+# Lane profiles list only their own lane target; the CLI refuses other targets,
+# and the gate checks that a lane-only profile refuses `--target claude`.
+# Adding a profile means adding its entry here; no Go or shell change is needed.
+schema_version: 1
+profiles:
+  ai-memory: {targets: [claude]}
+  cloudflare: {targets: [claude]}
+  code-intel: {targets: [claude]}
+  code-intel-pi: {targets: [pi]}
+  code-intel-pi-runtime: {targets: [claude]}
+  core: {targets: [claude]}
+  core-profile-cx: {targets: [codex]}
+  core-profile-pi: {targets: [pi]}
+  data: {targets: [claude]}
+  eval: {targets: [claude]}
+  golang: {targets: [claude]}
+  hard-isolation: {targets: [claude]}
+  hardened: {targets: [claude]}
+  lean-code: {targets: [claude]}
+  python: {targets: [claude]}
+  quiet: {targets: [claude]}
+  safe-git: {targets: [claude]}
+  tdd-enforced: {targets: [claude]}
+  terse: {targets: [claude]}
+  visual: {targets: [claude]}
+  web-dev: {targets: [claude]}
+  writing: {targets: [claude]}

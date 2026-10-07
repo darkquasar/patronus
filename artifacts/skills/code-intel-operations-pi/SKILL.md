@@ -96,7 +96,7 @@ Sixteen setting artifacts augment the eight roles inherited from
 `core-profile-pi`: one `tools` leaf and one `skills` leaf per role. Tool lists keep
 the complete core list and add only `mcp`. Skill lists keep the complete core list
 and add `pattern-mcp-pi`, `graphify-pi` and this skill. The web role keeps all four
-web tools and `web-research-pi`. The technical reviewer keeps both review skills.
+web tools and `web-research-pi`. The technical reviewer keeps its verification skill and selects review rubrics by task mode.
 See [role integration](references/role-overrides.md). A completed readiness record
 plus explicit task authority satisfies the core-role clause requiring separately
 qualified configuration before optional MCP use.

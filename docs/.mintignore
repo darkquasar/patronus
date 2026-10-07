@@ -6,3 +6,6 @@ superpowers/
 
 # Tracked architecture decisions remain source records, not published pages.
 adr/
+
+# Contributor acceptance procedures are not published user-facing pages.
+acceptance/

@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-parallel-pi
 description: "Execute independent file-owning lanes with serial consumption barriers"
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: ["PROVENANCE-GUIDE.md", "SOURCE.md", "TEAMMATE-TEMPLATE.md"]
 targets: [pi]
