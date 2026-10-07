@@ -19,6 +19,7 @@ profiles:
   cloudflare: {targets: [claude]}
   code-intel: {targets: [claude]}
   code-intel-pi: {targets: [pi]}
+  code-intel-pi-runtime: {targets: [claude]}
   core: {targets: [claude]}
   core-profile-cx: {targets: [codex]}
   core-profile-pi: {targets: [pi]}

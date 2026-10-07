@@ -5,9 +5,10 @@ Inventory captured before adaptation on 2026-10-02. Source labels below are
 provenance, not executable paths or active invocation aliases. All inspected
 source members were regular files, with no symlinks; hidden members are included.
 
-Original static guidance from the approved I-01 through I-04 contract, aligned
-with D-04 and the static-admission amendment. No executable helper or external
-code is copied. The repository license is included as LICENSE.
+Original guidance from the approved I-01 through I-04 contract, aligned with
+D-04 and the static-admission amendment. Version 2 adds catalogue declarations
+for native package delivery and field-level role settings, but copies no external
+runtime code into this artifact. The repository license is included as LICENSE.
 
 ## Distributed inventory and links
 
@@ -60,13 +61,51 @@ explicit routing. These references explain existing mechanisms, not new helpers.
 
 ## Reviewed overlay composition (catalog data, not an application test)
 
-The profile extends core-profile-pi without modifying it and adds the pointer,
-pattern-mcp-pi, graphify-pi, this operations skill, and the two shared HTTP recipes.
-The pointer requires all three skills. With the amended core's required web
-content/dependencies, source review yields 44 inherited items plus 6 additions,
-50 unique items; the older 40/46 figures are superseded. Profile YAML remains the
-authoritative membership, not an executable name/count oracle. Core has no
-reverse dependency on the optional overlay. Legacy Serena/Graphify recipes are
-unchanged. No runtime redistribution or server/license qualification is implied.
+The `code-intel-pi` profile extends `core-profile-pi` without changing the core
+profile or its role Markdown. It adds the pointer, three skills, exact
+`pi-mcp-adapter`, two shared HTTP recipes and sixteen field-level setting artifacts
+covering tools and skills for all eight inherited roles. The target-agnostic
+`code-intel-pi-runtime` companion selects the Serena and Graphify uv recipes.
+This split preserves Patronus's fail-closed static Pi admission, which rejects
+package-manager EXEC intent in a Pi-targeted selection. The shared recipes require
+the adapter sibling when selected directly. Profile YAML remains the authoritative
+membership, not a name/count oracle. Core has no reverse dependency on either
+optional profile.
+
+The runtime recipes delegate installation to Pi/npm or uv. They do not copy
+third-party package bytes into this artifact and do not start a service. Actual
+package closure, license obligations, platform compatibility, service lifecycle
+and qualification remain separate evidence gates.
+
+## Immutable source command contract
+
+On 2026-10-05, read-only raw-source inspection checked the published service argv
+against immutable upstream revisions. The machine-readable record is
+`references/runtime-command-contract.json`; its Git blob SHA-1 values come from
+the repositories' commit trees and bind each inspected file inside the selected
+revision.
+
+- Serena commit `7a2968335f2198b966864de1ce3655c8e485a653`,
+  `src/serena/cli.py` blob `63d49c151cc0c67f216d401dc730bf14af976cdc`:
+  the CLI declares `--version`, `start-mcp-server`, transport value
+  `streamable-http`, `--host`, `--port`, `--project`, `--context`, repeated
+  `--mode`, and explicit boolean-valued dashboard options. Its `planning.yml`
+  blob `a24d0dfb150bc3c10b0c16be8c15014297cc6687` describes read-only planning
+  and excludes the listed edit and shell tools.
+- Graphify commit `4fe11092ccbe9f543608f140c790f68d5d83cae4`,
+  `pyproject.toml` blob `619f00af51506898f74738e95dc99a532ad2adf5`,
+  `graphify/__main__.py` blob `924ae986d3a8e2b7c38154a5f4d32dff07d21a2f`
+  and `graphify/serve.py` blob `1a44c781d5db84703f4965414da3c162b11efc10`:
+  the package version is 0.9.31, declares both `graphify` and `graphify-mcp`
+  console scripts, supports `graphify --version`, and the MCP parser accepts a
+  positional graph path, `--transport http`, `--host`, `--port`, `--path` and
+  `--stateless`.
+
+This is source-contract evidence, not an installed-executable or service-start
+observation. Deployment still records both executable probes and live help before
+using the commands. The candidate dossier records digest
+`b0d47f823f924e7f89acfee390b9f18dc3410917617c5f6f2731bd2642abf16f` but does
+not establish a fresh selected-wheel byte comparison; full package closure and
+archive provenance remain incomplete.
 
 Repository LICENSE copied unchanged: SHA-256 `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`.

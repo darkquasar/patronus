@@ -1,0 +1,10 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: code-intel-pi-runtime
+version: 1.0.0
+summary: "Target-agnostic pinned Serena and Graphify runtime delivery for code-intel-pi. Install this companion profile before the Pi static overlay because Pi selections intentionally refuse package-manager EXEC intent."
+layers:
+  context:
+    - serena-runtime-pi
+    - graphify-runtime-pi

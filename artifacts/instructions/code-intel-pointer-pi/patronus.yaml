@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: code-intel-pointer-pi
 description: "Read optional Pi code-intelligence guidance before queries"
-version: 1.0.0
+version: 2.0.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [pi]
