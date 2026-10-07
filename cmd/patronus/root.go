@@ -43,6 +43,7 @@ prove the archive pin; use supported delivery or separately qualify a migration.
 	root.AddCommand(newCheckGateIntentCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newRemoveCmd([]string{"revert"}))
+	root.AddCommand(newMigrateCmd())
 	addStubCommands(root)
 	return root
 }

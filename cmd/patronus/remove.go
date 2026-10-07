@@ -283,6 +283,9 @@ func newRemoveCmd(aliases []string) *cobra.Command {
 
 			env := os.LookupEnv
 			res := toolpath.New(env, home, wd)
+			if err := codexPreflightPlan(cs, res, home, wd); err != nil {
+				return err
+			}
 			if jsonOutput {
 				if len(packagePlans) == 0 {
 					return render.JSON(cmd.OutOrStdout(), cs)
@@ -452,6 +455,9 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 }
 
 func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
+	if err := codexPreflightPlan(cs, toolpath.New(os.LookupEnv, opts.home, opts.projectDir), opts.home, opts.projectDir); err != nil {
+		return err
+	}
 	piSelected := false
 	for _, item := range selected {
 		piSelected = piSelected || item.Tool == "pi"
@@ -620,7 +626,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 				settledFiles = append(settledFiles, f)
 			}
 		}
-		if !fullyUndone && len(settledFiles) > 0 && it.Tool == "pi" {
+		if !fullyUndone && len(settledFiles) > 0 && (it.Tool == "pi" || it.Tool == "codex") {
 			state.ForgetEffects(loaded[it.Scope], it, settledFiles)
 			dirty[it.Scope] = true
 		}
@@ -629,8 +635,8 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 			for _, f := range it.Files {
 				shared = shared || sharedProfileEffect(loaded[it.Scope], it, f, opts.profiles)
 			}
-			if it.Tool == "pi" || shared {
-				applyErr = errors.Join(applyErr, fmt.Errorf("removal conflict unresolved: %s (pi/%s); ownership retained", it.Artifact, it.Scope))
+			if it.Tool == "pi" || it.Tool == "codex" || shared {
+				applyErr = errors.Join(applyErr, fmt.Errorf("removal conflict unresolved: %s (%s/%s); ownership retained", it.Artifact, it.Tool, it.Scope))
 			}
 			continue
 		}
@@ -655,7 +661,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s (%s): %s\n", w.Item, w.Path, w.Message)
 		}
 		if s := loaded[it.Scope]; s != nil {
-			if it.Tool == "pi" {
+			if it.Tool == "pi" || it.Tool == "codex" {
 				state.ForgetEffects(s, it, it.Files)
 			} else {
 				s.Remove(it.Artifact, it.Tool, it.Scope)
@@ -665,6 +671,9 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 	}
 
 	for scope, s := range loaded {
+		if state.RefreshSectionChecksums(s.Items, result.Applied) {
+			dirty[scope] = true
+		}
 		if len(opts.profiles) > 0 {
 			settleProfiles(s, opts.profiles)
 			dirty[scope] = true

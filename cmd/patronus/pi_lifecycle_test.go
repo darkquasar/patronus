@@ -407,8 +407,14 @@ func TestPiLifecycleLegacyTargetsAndScopeRefusal(t *testing.T) {
 			definition := func(version string) string {
 				return fmt.Sprintf("apiVersion: patronus/v2\nfamily: artifact\nname: fixture-legacy\nversion: %s\nrole: capability\ndescription: Invented legacy\ntype: skill\nentry: SKILL.md\ntargets: [%s]\n", version, tool)
 			}
+			body := func(heading string) string {
+				if tool == "codex" {
+					return "---\nname: fixture-legacy\ndescription: Invented legacy\n---\n# " + heading + "\n"
+				}
+				return "# " + heading + "\n"
+			}
 			dp06Write(t, path, definition("1.0.0"))
-			dp06Write(t, filepath.Join(filepath.Dir(path), "SKILL.md"), "# Invented legacy\n")
+			dp06Write(t, filepath.Join(filepath.Dir(path), "SKILL.md"), body("Invented legacy"))
 			for _, scope := range []string{"global", "local"} {
 				if _, _, err := runInstall(t, "fixture-legacy", "--target", tool, "--"+scope, "--deploy"); err != nil {
 					t.Fatal(err)
@@ -421,7 +427,7 @@ func TestPiLifecycleLegacyTargetsAndScopeRefusal(t *testing.T) {
 			}
 			dp06SameSnapshot(t, home, before)
 			dp06Write(t, path, definition("2.0.0"))
-			dp06Write(t, filepath.Join(filepath.Dir(path), "SKILL.md"), "# Invented legacy v2\n")
+			dp06Write(t, filepath.Join(filepath.Dir(path), "SKILL.md"), body("Invented legacy v2"))
 			if _, _, err := runUpdate(t, "fixture-legacy", "--deploy"); err != nil {
 				t.Fatal(err)
 			}

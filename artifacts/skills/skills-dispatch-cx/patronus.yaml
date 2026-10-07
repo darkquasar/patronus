@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: skills-dispatch-cx
+description: "Codex only: Exact installed skill reads and Codex workflow routes."
+version: 1.1.0
+entry: SKILL.md
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
+targets: [codex]
+defaults:
+  scope: project
+attribution:
+  upstream: "github.com/obra/superpowers"
+  license: "MIT"
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: "896224c4b1879920ab573417e68fd51d2ccc9072"
+  note: "Codex behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Static guidance, runtime-unverified."

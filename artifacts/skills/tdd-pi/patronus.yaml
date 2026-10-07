@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: tdd-pi
 description: "Pi-scoped tdd discipline"
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
 targets: [pi]

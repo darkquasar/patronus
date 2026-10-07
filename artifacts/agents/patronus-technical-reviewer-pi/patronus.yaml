@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-technical-reviewer-pi
 description: "Review source-backed specifications or exact implementation changes"
-version: 2.0.0
+version: 2.1.0
 entry: agent.md
 files: []
 targets: [pi]

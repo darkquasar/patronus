@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: tdd-cx
+description: "Codex only: Test-first public-behavior slices for critical-tdd tasks or explicit test-first requests; routine prose/manifests use focused postchecks."
+version: 1.1.0
+entry: SKILL.md
+files: ["LICENSE", "NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
+targets: [codex]
+defaults:
+  scope: project
+requires: ["codebase-design-cx"]
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."

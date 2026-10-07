@@ -2,7 +2,7 @@
 name: patronus-plan-author-pi
 description: Write authorized requirement-covered implementation plans
 tools: read, bash, write, edit
-skills: plan-writing-pi, writing-editorial-pi, verification-before-completion-pi
+skills: plan-writing-pi, verification-before-completion-pi
 inheritProjectContext: true
 inheritGlobalContext: true
 inheritSkills: true

@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-writer-pi
 description: "Implement only the separately authorized task in its assigned worktree"
-version: 2.0.0
+version: 2.1.0
 entry: agent.md
 files: []
 targets: [pi]

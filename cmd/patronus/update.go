@@ -69,6 +69,11 @@ func newUpdateCmd() *cobra.Command {
 			if err := dp06Target(target); err != nil {
 				return err
 			}
+			for _, name := range args {
+				if err := codexProfileTarget(name, target); err != nil {
+					return err
+				}
+			}
 			if target == "pi" && local == global {
 				return fmt.Errorf("pi update scope requires exactly one of --local or --global")
 			}
@@ -81,6 +86,11 @@ func newUpdateCmd() *cobra.Command {
 				return err
 			}
 			home := homeDir()
+			if target != "" {
+				if err := codexCheckLock(wd, target); err != nil {
+					return err
+				}
+			}
 			var mutation *mutation
 			if deploy && !jsonOutput && (len(args) > 0 || all) {
 				mutation, err = beginMutation(home, wd)

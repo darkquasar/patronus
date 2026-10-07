@@ -133,6 +133,11 @@ func (m *mutation) checkFile(d diff.FileDiff, consents []piContextConsent) error
 			return err
 		}
 	}
+	if d.Tool == "codex" {
+		if err := scan.CodexSafePath(d.Path); err != nil {
+			return err
+		}
+	}
 	if d.Tool == "pi" {
 		if err := scan.PiSafePath(d.Path); err != nil {
 			return err

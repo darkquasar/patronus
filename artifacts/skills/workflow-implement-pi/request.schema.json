@@ -128,6 +128,13 @@
               "codex-exec-writer"
             ]
           },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*(?::(?:off|minimal|low|medium|high|xhigh|max))?$(?![\\s\\S])",
+            "description": "Native writers only: exact provider/id from the live Pi registry, optionally followed by a supported thinking suffix. Omit to retain the role default. Parent verifies model availability and authorization before dispatch."
+          },
           "files": {
             "type": "array",
             "items": {
@@ -146,11 +153,23 @@
           "engine",
           "files"
         ],
+        "allOf": [
+          {
+            "if": {
+              "required": ["model"]
+            },
+            "then": {
+              "properties": {
+                "engine": {"const": "native"}
+              }
+            }
+          }
+        ],
         "additionalProperties": false,
         "maxProperties": 16
       },
       "minItems": 1,
-      "maxItems": 4
+      "maxItems": 10
     },
     "evidence": {
       "type": "array",
@@ -509,7 +528,7 @@
     "concurrency": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 2
+      "maximum": 10
     },
     "spawnLimit": {
       "type": "integer",

@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: using-git-worktrees-cx
+description: "Codex only: Use when feature work needs an isolated Git workspace or an approved plan assigns worktree ownership."
+version: 1.0.0
+entry: SKILL.md
+files: ["LICENSE", "NOTICE", "SOURCE.md"]
+targets: [codex]
+defaults:
+  scope: project
+requires: []
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."

@@ -2,8 +2,6 @@ package main
 
 import (
 	"testing"
-
-	"github.com/darkquasar/patronus/internal/registry"
 )
 
 // TestCheckPlaceholdersFlags: the malformed shapes the guard exists to catch.
@@ -92,13 +90,10 @@ func TestCheckPlaceholdersSkipsNonUTF8(t *testing.T) {
 	}
 }
 
-// TestCheckPlaceholdersRealCatalogIsClean is the guard actually guarding: every shipped
-// artifact body must be free of malformed placeholders.
-func TestCheckPlaceholdersRealCatalogIsClean(t *testing.T) {
-	root, err := registry.DiscoverRoot(".")
-	if err != nil {
-		t.Fatal(err)
-	}
+// The scanner's tree traversal is tested on invented input; the catalog gate
+// invokes the public command against delivered artifacts.
+func TestCheckPlaceholdersFixtureCatalogIsClean(t *testing.T) {
+	root := fixtureCatalog(t)
 	bad, err := scanArtifactPlaceholders(root)
 	if err != nil {
 		t.Fatal(err)

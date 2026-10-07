@@ -109,14 +109,17 @@ func TestLayoutDecodeCodexShapeByKey(t *testing.T) {
 		}
 	}
 
-	// Codex ships Claude-style hooks: config.toml merged at hooks.{event}, with no
-	// hook-script dir (a Codex hook references an absolute command).
+	// Static Codex registration uses the shared structured TOML merger.
+	// Script placement does not establish native event or trust semantics.
 	if ad.Layout.Hook == nil || ad.Layout.Hook.Global.File != "~/.codex/config.toml" ||
 		ad.Layout.Hook.Global.Format != "toml" || ad.Layout.Hook.Global.Path != "hooks.{event}" {
 		t.Errorf("Codex Hook.global = %+v, want config.toml/toml/hooks.{event}", ad.Layout.Hook)
 	}
-	if ad.Layout.Hook.GlobalScriptDir.Set {
-		t.Error("Codex should have no hook-script dir")
+	if got := ad.Layout.Hook.GlobalScriptDir; !got.Set || got.Path != "~/.codex/hooks/" {
+		t.Errorf("Codex Hook.globalScriptDir = %+v, want ~/.codex/hooks/", got)
+	}
+	if got := ad.Layout.Hook.ProjectScriptDir; !got.Set || got.Path != ".codex/hooks/" {
+		t.Errorf("Codex Hook.projectScriptDir = %+v, want .codex/hooks/", got)
 	}
 
 	// OutputStyle on Codex is the APPEND flavour: AGENTS.md, action appendSection.

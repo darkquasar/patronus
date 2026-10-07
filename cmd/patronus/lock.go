@@ -53,12 +53,18 @@ func newLockCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if prior.Target == "pi" {
+			if prior.Target == "pi" || prior.Target == "codex" {
 				if !cmd.Flags().Changed("target") {
-					tool = "pi"
-				} else if tool != "pi" {
-					return fmt.Errorf("existing Pi lock target conflicts with --target %s; explicit migration required", tool)
+					tool = prior.Target
+				} else if tool != prior.Target {
+					return fmt.Errorf("existing lock target %s conflicts with --target %s; explicit migration required", prior.Target, tool)
 				}
+			}
+			if err := codexProfileTarget(profileSel, tool); err != nil {
+				return err
+			}
+			if err := codexLockTarget(prior, tool); err != nil {
+				return err
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
 
@@ -105,6 +111,10 @@ func newLockCmd() *cobra.Command {
 			l, err := lock.FromResolved(cat, res, now)
 			if err != nil {
 				return err
+			}
+
+			if tool == "codex" {
+				l.Version, l.Target = lock.TargetVersion, "codex"
 			}
 
 			// The lock is the shared, committed spec, so it lives at the project root
