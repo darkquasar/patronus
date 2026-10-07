@@ -3,7 +3,59 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
-## Unreleased
+## v2.6.0
+
+The binary release adds Codex skill-root migration, deployment admission and
+lifecycle fixes. Codex and Pi profile/skill content publishes through the
+catalogue independently; the binary tag does not republish that content.
+Native Codex loading, authentication, hook trust and worker qualification remain
+pending.
+
+### Added
+
+- **Migrate recorded Codex skills explicitly.** `patronus migrate codex-skills`
+  previews relocation of owned skills and sidecars from legacy `.codex/skills`
+  roots into `.agents/skills`. Deploy with exactly one selected scope:
+  `--global --deploy` or `--local --deploy`. Destination writes and ownership are
+  verified before old sources are retired; failures preserve recorded progress.
+- **Check Codex ownership before mutation.** Install, update and removal reject
+  incompatible skill identities, instruction shadows, mixed ownership, path
+  aliases and edited or unowned destinations. `--force` does not bypass these
+  checks or consent to migration.
+- **Report configured MCP authentication prerequisites.** Codex install/update
+  warns when an explicitly referenced environment variable is absent. Patronus
+  does not copy credentials or attempt native authentication.
+
+### Changed
+
+- **Global Codex skills install under `~/.agents/skills`.** Project skills remain
+  under `.agents/skills`; config, instructions and hook scripts still use their
+  Codex roots and honor `CODEX_HOME` where applicable. Existing managed legacy
+  skill roots require the explicit migration above before new skill deployment.
+  Edited, colliding or ambiguous legacy payloads require reconciliation first.
+
+### Fixed
+
+- **Codex script hooks are placed as well as registered.** Bundled scripts are
+  copied into the selected Codex hook directory. A script-bearing hook with no
+  placement or registration target now reports an error instead of silently
+  skipping delivery. Native event, payload and trust behavior still needs
+  qualification.
+- **MCP lifecycle preserves user authentication and environment fields.** Codex
+  recipes own individual transport leaves. Update/removal preserves unrelated
+  server children and prunes a server table only when it becomes empty.
+- **Instruction removal preserves sibling sections.** Multiple managed sections
+  for a selected Pi or Codex target are removed in one physical write. Sibling
+  checksums are reconciled; ambiguous ownership or malformed markers block
+  removal rather than restoring stale content.
+
+### Catalogue: Codex core
+
+`core-profile-cx` selects Codex planning, research, design, diagnosis, testing,
+review and execution artifacts, advisory instructions and write/commit guards.
+It includes an isolated-worker helper and a compatibility ledger. Static delivery
+and packaging checks do not establish native runtime readiness. Editorial skills
+are excluded from the profile.
 
 ### Catalogue: Pi code intelligence
 
@@ -16,7 +68,7 @@ core-role augmentation. The split keeps generic package-manager execution out of
 the statically admitted Pi selection. Augmented roles require background
 `async:true` launches because foreground children do not load ambient MCP
 extensions. These catalogue selections are available independently of the binary
-release; installing them for Pi requires the new target support above.
+release; Pi deployment support was introduced in the v2.5.0 binary.
 
 ## v2.5.0
 
