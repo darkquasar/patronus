@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 
@@ -176,7 +177,42 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 			out.Items[idx].InstalledAt = in.Now
 		}
 	}
+	RefreshSectionChecksums(out.Items, in.Result.Applied)
 	return out
+}
+
+// RefreshSectionChecksums refreshes surviving section checksums after verified
+// shared-file appends or removals. Only same-runtime ownership whose checksum
+// proves Before and whose section survived unchanged is refreshed. Identity,
+// version, timestamps and pre-management baselines remain untouched.
+// The return value reports whether ownership changed and needs persistence.
+func RefreshSectionChecksums(items []Item, applied []diff.FileDiff) bool {
+	changed := false
+	for _, d := range applied {
+		if d.Section == nil || (d.Action != diff.Append && d.Action != diff.Unappend) || (d.Action == diff.Unappend && d.Tool != "pi" && d.Tool != "codex") {
+			continue
+		}
+		for i := range items {
+			it := &items[i]
+			if it.Tool != d.Tool || it.Scope != d.Scope || it.Root != d.Root {
+				continue
+			}
+			for j := range it.Files {
+				f := &it.Files[j]
+				if f.Path != d.Path || f.Section == "" || f.Setting != nil || verifyOwned(*f, d.Before) != nil {
+					continue
+				}
+				before, wasPresent := adapter.SectionBody(d.Before, f.Section)
+				after, isPresent := adapter.SectionBody(d.After, f.Section)
+				if wasPresent && isPresent && bytes.Equal(before, after) {
+					next := checksum(d.After)
+					changed = changed || f.Checksum != next
+					f.Checksum = next
+				}
+			}
+		}
+	}
+	return changed
 }
 
 func resultDiff(diffs []diff.FileDiff, desired diff.FileDiff) (diff.FileDiff, bool) {

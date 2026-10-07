@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,30 +29,23 @@ func TestLockRequiresProfile(t *testing.T) {
 }
 
 func TestLockRejectsPositionalArgs(t *testing.T) {
-	_, _, err := runLock(t, "extra", "--profile", "cloudflare")
+	_, _, err := runLock(t, "extra", "--profile", "fix-all")
 	if err == nil {
 		t.Fatal("expected error for positional args")
 	}
 }
 
-// TestLockBuildsFromRealCatalog drives the lock machinery against the real repo
+// TestLockBuildsFromFixtureCatalog drives the lock machinery against the real repo
 // catalog (resolved from this package's dir) and writes to a temp path, mirroring
 // the install deploy tests that exercise machinery directly rather than the cwd
 // write the cobra command performs.
-func TestLockBuildsFromRealCatalog(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := registry.DiscoverRoot(wd)
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestLockBuildsFromFixtureCatalog(t *testing.T) {
+	root := fixtureCatalog(t)
 	cat, err := registry.NewLocalRegistry(root).Catalog(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := profile.Resolve(cat, "cloudflare", "all")
+	res, err := profile.Resolve(cat, "fix-all", "all")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +73,7 @@ func TestLockBuildsFromRealCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Profile != "cloudflare" || len(got.Entries) != len(l.Entries) {
+	if got.Profile != "fix-all" || len(got.Entries) != len(l.Entries) {
 		t.Fatalf("round trip mismatch: %+v", got)
 	}
 }

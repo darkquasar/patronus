@@ -28,7 +28,22 @@ Claiming work is complete without verification is dishonesty, not efficiency.
 NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
 ```
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+Freshness follows the checked inputs, command and acceptance scope, not the message
+boundary. A later status report may cite an observed run only when all relevant
+identity still matches:
+
+- exact checked file bytes, including relevant dirty and untracked inputs;
+- the full command and its options;
+- relevant dependency, tool and environment identity;
+- the claim's acceptance scope; and
+- readable saved output and the actual exit status.
+
+HEAD equality alone is insufficient. Consequential drift, changed acceptance,
+missing logs or unknown identity invalidates reuse: run the authorized check
+again or report it blocked. Cite the run, hashes, scope, logs and exit when reusing
+it. Final aggregate verification at the delivery boundary stays fresh, even when
+narrower task evidence was reused. This rule preserves mandatory initial and
+post-compaction brief, native-state and instruction reads.
 
 ## The Gate Function
 
@@ -36,8 +51,9 @@ If you haven't run the verification command in this message, you cannot claim it
 BEFORE claiming any status or expressing satisfaction:
 
 1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
+2. BIND: Compare the complete evidence identity above; if it does not match,
+   RUN the FULL authorized command. Run final aggregate checks freshly.
+3. READ: Full saved output and actual exit status, including reported failures
 4. VERIFY: Does output confirm the claim?
    - If NO: State actual status with evidence
    - If YES: State claim WITH evidence
@@ -50,11 +66,11 @@ Skip any step = lying, not verifying
 
 | Claim | Requires | Not Sufficient |
 |-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Tests pass | Complete test output and exit status bound to matching inputs/scope | Unbound previous run, "should pass" |
 | Linter clean | Linter output: 0 errors | Partial check, extrapolation |
 | Build succeeds | Build command: exit 0 | Linter passing, logs look good |
 | Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Regression test works | Red-green cycle verified | Test passes once |
+| Critical-TDD regression works | Intended behavioral red, minimal change, green and relevant regressions | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
 
@@ -67,32 +83,34 @@ Skip any step = lying, not verifying
 - Relying on partial verification
 - Thinking "just this once"
 - Tired and wanting work over
-- **ANY wording implying success without having run verification**
+- **ANY wording implying success without identity-bound observed verification**
 
 ## Rationalization Prevention
 
 | Excuse | Reality |
 |--------|---------|
-| "Should work now" | RUN the verification |
+| "Should work now" | Verify against identity-bound observations |
 | "I'm confident" | Confidence ≠ evidence |
 | "Just this once" | No exceptions |
 | "Linter passed" | Linter ≠ compiler |
 | "Agent said success" | Verify independently |
 | "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
+| "Partial check is enough" | A narrow check proves only its checked scope |
 | "Different words so rule doesn't apply" | Spirit over letter |
 
 ## Key Patterns
 
 **Tests:**
 ```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
+✅ [Run authorized tests or read matching saved run] [See: 34/34 pass, exit 0]
+   "The checked tests pass" [cite inputs, command, scope and log]
 ❌ "Should pass now" / "Looks correct"
 ```
 
 **Regression tests (TDD Red-Green):**
 ```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+✅ Public-behavior test → Run (intended failure) → Minimal fix → Run (pass)
+   → Relevant regressions (pass)
 ❌ "I've written a regression test" (without red-green verification)
 ```
 
@@ -113,6 +131,16 @@ Skip any step = lying, not verifying
 ✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
 ❌ Trust agent report
 ```
+
+## Testing strategy
+
+Use the task brief's selected `critical-tdd` or `focused-postcheck` strategy and
+project-required checks. Critical TDD needs observed intended behavioral red/green
+slices and relevant regressions. Routine prose, manifests or mechanical wiring
+without a changed safety invariant use focused postchecks; do not invent a red
+cycle for them. Explicit test-first requests govern. Missing or ambiguous strategy
+stops for a coordinator decision before implementation. Evidence reuse waives no
+required tests, acceptance criteria or fresh independent whole-change review.
 
 ## Why This Matters
 
@@ -143,6 +171,7 @@ From 24 failure memories:
 
 **No shortcuts for verification.**
 
-Run the command. Read the output. THEN claim the result.
+Bind the evidence identity. Run when it does not match, and always run fresh final
+aggregate checks. Read the output and exit status. THEN state the bounded result.
 
 This is non-negotiable.

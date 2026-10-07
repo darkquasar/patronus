@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: research-team-cx
+description: "Codex only: Bounded read-only research and lead-written synthesis."
+version: 1.0.0
+entry: SKILL.md
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
+targets: [codex]
+defaults:
+  scope: project
+requires: ["dispatching-parallel-agents-cx"]
+attribution:
+  upstream: "github.com/darkquasar/patronus"
+  license: "GPL-3.0"
+  copyright: "Patronus contributors"
+  commit: "46247c13c3de38008c59995c5b1b697f78d3f9e5"
+  note: "Codex behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Static guidance, runtime-unverified."

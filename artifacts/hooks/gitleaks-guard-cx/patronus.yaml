@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: gitleaks-guard-cx
+description: "Best-effort Codex Bash commit guard scanning the staged diff with gitleaks. Missing prerequisites and scanner errors block with diagnostics. Does not prevent read-and-leak or guarantee detection. Native registration and trust remain runtime-pending. Requires Python 3 and Git."
+version: 1.0.0
+entry: ""
+files: [gitleaks-guard.py]
+targets: [codex]
+defaults:
+  scope: project
+requires: [gitleaks]
+hook:
+  event: PreToolUse
+  matcher: Bash
+  intent: gate
+  command: '"{script}"'
+  script: gitleaks-guard.py

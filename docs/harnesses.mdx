@@ -18,13 +18,14 @@ patronus install agent-principles --target opencode --local
 | Harness | Global | Project |
 |---|---|---|
 | Claude Code | `~/.claude/skills/` | `.claude/skills/` |
-| Codex | `~/.codex/skills/` | `.agents/skills/` |
+| Codex | `~/.agents/skills/` | `.agents/skills/` |
 | OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` |
 | Pi | `~/.pi/agent/skills/` | `.pi/skills/` |
 
-Global environment overrides such as `CODEX_HOME`, `OPENCODE_CONFIG_DIR` and
-`PI_CODING_AGENT_DIR` can change the selected root. Inspect the preview for actual
-paths before deployment.
+`CODEX_HOME` changes Codex config/instruction/hook roots, not its skill root.
+`OPENCODE_CONFIG_DIR` and `PI_CODING_AGENT_DIR` can change their selected roots.
+Inspect the preview before deployment. Recorded legacy Codex skill roots require
+a separately authorized `patronus migrate codex-skills` preview/deploy, not force.
 
 ## Target-specific support
 
@@ -38,3 +39,5 @@ when you need a predictable destination. Restart or reload the harness as needed
 for new content. Project trust and provider authentication remain harness settings.
 
 For Pi-native extensions, roles and workflows, follow the [Pi guide](/pi-core).
+For explicit Codex source routes and native qualification limits, choose
+`core-profile-cx` and follow the [Codex guide](/codex-core).

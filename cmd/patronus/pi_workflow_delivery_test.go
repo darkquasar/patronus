@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -21,10 +20,7 @@ type workflowDeliveryFixture struct {
 // are authored here; no package fixtures, registry pins or native installs apply.
 func newWorkflowDeliveryFixture(t *testing.T, location string) workflowDeliveryFixture {
 	t.Helper()
-	source, err := registry.DiscoverRoot(".")
-	if err != nil {
-		t.Fatal(err)
-	}
+	source := applicationSourceRoot(t)
 	f := workflowDeliveryFixture{root: t.TempDir(), home: t.TempDir(), scope: "global"}
 	dp06Write(t, filepath.Join(f.root, "adapters/pi.yaml"), string(mustRead(t, filepath.Join(source, "adapters/pi.yaml"))))
 	f.agentDir = filepath.Join(f.home, ".pi/agent")

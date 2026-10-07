@@ -80,8 +80,107 @@ test('bounded task inventory variation is not a hardcoded demonstration',async()
   const h=harness();const r=await execute(a,h.runs);assert.equal(r.verdict,'ready-for-parent');assert.ok(h.calls.some(c=>c.task.includes('Independent varied task')));
 });
 test('malformed inputs, actual-grant assertion, effective roles and caps fail before dispatch',async()=>{
-  for(const mutate of [a=>{delete a.authorization},a=>{a.authorization.parentVerified=false},a=>{a.authorization.actions=[]},a=>{a.preflight.rolesVerified=false},a=>{a.preflight.pathsVerified=false},a=>{a.runners.native.version='0.88.0'},a=>{a.preflight.subagentsVersion='0.74.0'},a=>{a.roles[Object.keys(a.roles)[0]]='worker'},a=>{a.unrecognized=true},a=>{a.evidence=[]},a=>{a.evidence[0].text='x'.repeat(16001)},a=>{a.tasks[0].key='../escape'},a=>{a.tasks.push(a.tasks[0])},a=>{a.spawnLimit=1},a=>{a.spawnLimit=13},a=>{a.concurrency=3},a=>{a.concurrency=0},a=>{a.timeoutMs=0},a=>{a.timeoutMs=3600001}]) await rejected(mutate);
+  for(const mutate of [a=>{delete a.authorization},a=>{a.authorization.parentVerified=false},a=>{a.authorization.actions=[]},a=>{a.preflight.rolesVerified=false},a=>{a.preflight.pathsVerified=false},a=>{a.runners.native.version='0.88.0'},a=>{a.preflight.subagentsVersion='0.74.0'},a=>{a.roles[Object.keys(a.roles)[0]]='worker'},a=>{a.unrecognized=true},a=>{a.evidence=[]},a=>{a.evidence[0].text='x'.repeat(16001)},a=>{a.tasks[0].key='../escape'},a=>{a.tasks.push(a.tasks[0])},a=>{a.spawnLimit=1},a=>{a.spawnLimit=13},a=>{a.concurrency=kind==='implement'?11:3},a=>{a.concurrency=0},a=>{a.timeoutMs=0},a=>{a.timeoutMs=3600001}]) await rejected(mutate);
 });
+function tenWriterRequest(count = 10) {
+  const a=fresh();
+  a.tasks=Array.from({length:count},(_,i)=>({key:'lane-'+i,text:'Independent native writer '+i,engine:'native',files:['src/lane-'+i+'.txt']}));
+  a.authorization.files=a.tasks.flatMap(t=>t.files);
+  a.concurrency=10;
+  a.spawnLimit=12;
+  return a;
+}
+if(kind==='implement') {
+  function mixedNativeRequest() {
+    const a=fresh();
+    a.tasks=a.tasks.slice(0,2).map((t,i)=>({...t,engine:'native',model:['anthropic/claude-opus-4-8','openai-codex/gpt-6.1-sol:low'][i]}));
+    return a;
+  }
+  test('per-writer native models forward exactly without changing role or stage defaults',async()=>{
+    const a=mixedNativeRequest();const h=harness();const result=await execute(a,h.runs);
+    assert.equal(result.verdict,'ready-for-parent');assert.deepEqual(result.selected,['native']);
+    assert.deepEqual(h.calls.slice(0,2).map(c=>c.model),a.tasks.map(t=>t.model));
+    assert.ok(h.calls.every(c=>c.agent.startsWith('patronus-')),'native model selection must not launch CLI engines');
+    for(const c of h.calls.slice(0,2)) {
+      assert.equal(c.agent,a.roles.writer);assert.equal(c.worktree,true);assert.equal(c.baseRef,a.baseRef);assert.equal(c.context,'fresh');
+      assert.equal(result.results.find(r=>r.key===c.key).outputBinding.requestedModel,c.model);
+    }
+    assert.ok(h.calls.slice(2).every(c=>!Object.hasOwn(c,'model')),'writer models leaked to integration/validation');
+    const legacy=harness();const unchanged=await execute(fresh(),legacy.runs);
+    assert.equal(unchanged.verdict,'ready-for-parent');
+    assert.ok(legacy.calls.every(c=>!Object.hasOwn(c,'model')),'omitted models must preserve role defaults and external contracts');
+    assert.ok(unchanged.results.every(r=>r.outputBinding.requestedModel===null));
+    const failed=harness(r=>{if(r.key==='writer-native'){r.ok=false;r.error='invented selected-model authentication failure';}});
+    const blocked=await execute(a,failed.runs);
+    assert.equal(blocked.verdict,'blocked');assert.equal(blocked.phase,'writers');
+    assert.equal(failed.calls.length,2,'failed selected model was retried/replaced or advanced dependencies');
+    assert.deepEqual(failed.calls.map(c=>c.model),a.tasks.map(t=>t.model));
+  });
+  test('native model syntax and external model rejection agree with schema before dispatch',async()=>{
+    const item=JSON.parse(schemaText).properties.tasks.items;
+    assert.ok(!item.required.includes('model'));assert.equal(item.properties.model.maxLength,200);
+    assert.deepEqual(item.allOf,[{if:{required:['model']},then:{properties:{engine:{const:'native'}}}}]);
+    const pattern=new RegExp(item.properties.model.pattern);
+    for(const model of ['openai-codex/gpt-6.1-sol','anthropic/claude-opus-4-8:high','huggingface/owner/model']) {
+      assert.ok(pattern.test(model));
+      const a=fresh();a.tasks[0].model=model;const h=harness();assert.equal((await execute(a,h.runs)).verdict,'ready-for-parent');assert.equal(h.calls[0].model,model);
+    }
+    for(const model of ['',' ','inherit','gpt-6.1-sol','/id','provider/','provider//id','provider/id:unsupported','provider/id:high:low','provider/id\n',' provider/id','provider/id ','provider/id with spaces','provider/'+'x'.repeat(192)]) {
+      if(model.length<=200)assert.equal(pattern.test(model),false,JSON.stringify(model));
+      await rejected(a=>{a.tasks[0].model=model;});
+    }
+    for(const model of [null,false,3,{},[]])await rejected(a=>{a.tasks[0].model=model;});
+    for(const engine of ['claude-code-writer','codex-exec-writer'])await rejected(a=>{a.tasks[0].engine=engine;a.tasks[0].model='anthropic/claude-opus-4-8';});
+    await rejected(a=>{a.tasks.at(-1).model='anthropic/claude-opus-4-8';});
+  });
+  test('real pinned sandbox keeps mixed native models per writer and model failures block dependencies',{skip:!packageDir},async()=>{
+    const {validateWorkflowScript,runWorkflowScript}=await import(pathToFileURL(join(packageDir,'src/workflows/scripted-workflow.js')));
+    assert.deepEqual(validateWorkflowScript(script).errors,[]);
+    const a=mixedNativeRequest();
+    for(const failure of [false,true]) {
+      const h=harness(r=>{if(failure&&r.key==='writer-native'){r.ok=false;r.error='invented model unavailable';}});
+      const result=await runWorkflowScript({script,args:normalized(a),globalConcurrencyLimit:2,timeoutMs:10000,launch:h.runs.run,status:async()=>{throw new Error('unexpected polling')}});
+      assert.equal(result.value.verdict,failure?'blocked':'ready-for-parent');
+      assert.deepEqual(h.calls.slice(0,2).map(c=>c.model),a.tasks.map(t=>t.model));
+      assert.equal(h.calls.length,failure?2:4);assert.equal(result.children.length,h.calls.length);
+      assert.ok(h.calls.slice(2).every(c=>!Object.hasOwn(c,'model')));
+    }
+    const bad=mixedNativeRequest();bad.tasks[1].engine='claude-code-writer';const denied=harness();
+    await assert.rejects(runWorkflowScript({script,args:normalized(bad),globalConcurrencyLimit:2,timeoutMs:10000,launch:denied.runs.run,status:async()=>{throw new Error('unexpected polling')}}),/model override requires a native writer/);
+    assert.equal(denied.calls.length,0);
+  });
+  test('ten writer ceiling matches schema and reserves integration and validation',async()=>{
+    const schema=JSON.parse(schemaText);
+    assert.equal(schema.properties.concurrency.maximum,10);
+    assert.equal(schema.properties.tasks.maxItems,10);
+    const a=tenWriterRequest();const h=harness();const result=await execute(a,h.runs);
+    assert.equal(result.verdict,'ready-for-parent');
+    assert.equal(result.limits.concurrency,10);
+    assert.equal(h.waves[0].length,10);
+    assert.equal(h.calls.length,12);
+    assert.deepEqual(h.calls.slice(-2).map(c=>c.key),['integration','validation']);
+    for(const mutate of [a=>{a.concurrency=11},a=>{a.spawnLimit=11},a=>{a.tasks=tenWriterRequest(11).tasks;a.authorization.files=a.tasks.flatMap(t=>t.files)}]) {
+      const bad=tenWriterRequest();mutate(bad);const denied=harness();
+      await assert.rejects(execute(bad,denied.runs));assert.equal(denied.calls.length,0);
+    }
+    const failed=harness(r=>{if(r.key==='writer-lane-8')r.ok=false});
+    assert.equal((await execute(a,failed.runs)).verdict,'blocked');
+    assert.equal(failed.calls.length,10,'failed writer must not advance dependent stages');
+  });
+  test('real pinned sandbox admits ten concurrent writers without changing the stage barriers',{skip:!packageDir},async()=>{
+    const {validateWorkflowScript,runWorkflowScript}=await import(pathToFileURL(join(packageDir,'src/workflows/scripted-workflow.js')));
+    assert.deepEqual(validateWorkflowScript(script).errors,[]);
+    const a=tenWriterRequest();const h=harness();let active=0,peak=0;
+    const result=await runWorkflowScript({script,args:normalized(a),globalConcurrencyLimit:a.concurrency,timeoutMs:10000,
+      launch:async(key,p)=>{
+        if(key==='integration'||key==='validation')assert.equal(active,0,'dependent stage overlapped writers');
+        active++;peak=Math.max(peak,active);
+        try {await new Promise(resolve=>setTimeout(resolve,5));return await h.runs.run(key,p);} finally {active--;}
+      },status:async()=>{throw new Error('unexpected polling')}});
+    assert.equal(result.value.verdict,'ready-for-parent');assert.equal(peak,10);
+    assert.equal(result.children.length,12);assert.equal(active,0);
+  });
+}
 test('source-root, integration-root and lexical unsafe output rejection',async()=>{
   for(const output of ['/fixture/source/report','/fixture/integration/report','/fixture/worktrees/report','/fixture','relative','/fixture/evidence/../source/out','/fixture//out','/fixture/./out','/fixture/out/','/fixture/out\\bad']) await rejected(a=>{a.outputDir=output});
   await rejected(a=>{a.sourceRoots=[]});

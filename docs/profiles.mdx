@@ -32,15 +32,21 @@ For Pi, choose `core-profile-pi`. Optional code intelligence is one ordered,
 two-profile delivery: install target-agnostic `code-intel-pi-runtime` first, then
 install the `code-intel-pi` static overlay with `--target pi`. The overlay alone
 adds the adapter, shared URLs and role policy but does not deliver the Serena or
-Graphify executables. See [Pi core profiles](/pi-core#optional-code-intelligence-overlay)
+Graphify executables. See [Pi core profiles](/pi-core#optional-code-intelligence)
 for the commands and runtime qualification boundary. These profiles are separate
 from the Claude core profile.
+
+For Codex, choose `core-profile-cx` with explicit `--target codex`, not legacy
+`core` or a Pi profile. It includes standalone Codex skills, advisory instructions
+and source guard/helper payloads; native runtime/auth/trust remain unqualified.
+See the [Codex guide](/codex-core) for both scopes and safe legacy-root migration.
 
 ## Pin a profile
 
 ```sh
 patronus lock --profile core
 patronus lock --profile core-profile-pi --target pi
+patronus lock --profile core-profile-cx --target codex
 ```
 
 Commit `patronus.lock` when your project needs to share desired versions and

@@ -313,3 +313,75 @@ func TestTransformHookPlacesScript(t *testing.T) {
 func existingBytes(b []byte) ReadExisting {
 	return func(string) ([]byte, bool, error) { return b, true, nil }
 }
+
+func TestCodexHookPlacesScriptAndRegistration(t *testing.T) {
+	home, project, config, src := t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "guard.sh"), []byte("#!/bin/sh\nexit 0\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	env := func(k string) (string, bool) {
+		if k == "CODEX_HOME" {
+			return config, true
+		}
+		return "", false
+	}
+	eng := New(toolpath.New(env, home, project))
+	for _, scope := range []string{"global", "local"} {
+		t.Run(scope, func(t *testing.T) {
+			art := hookArtifact("fixture-guard-cx", "PreToolUse", "Write", "sh {script}")
+			art.Hook.Script = "guard.sh"
+			prior := []byte("model = 'user-model'\n")
+			ds, err := eng.Transform(art, loadAdapter(t, "codex"), scope, src, func(string) ([]byte, bool, error) { return prior, true, nil })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ds) != 2 {
+				t.Fatalf("selected script hook emitted %d diffs, want 2", len(ds))
+			}
+			base := config
+			if scope == "local" {
+				base = filepath.Join(project, ".codex")
+			}
+			if ds[0].Path != filepath.Join(base, "hooks/fixture-guard-cx.sh") || ds[0].Mode != 0755 {
+				t.Fatalf("script placement: %+v", ds[0])
+			}
+			reg := ds[1]
+			if !strings.Contains(reg.Warning, "runtime-unverified") {
+				t.Fatal("static hook was presented without runtime qualification limit")
+			}
+			if reg.Path != filepath.Join(base, "config.toml") || reg.Setting == nil || reg.Setting.Dotted != "hooks.PreToolUse" || reg.Setting.Identity == "" {
+				t.Fatalf("structured registration: %+v", reg)
+			}
+			target := loadAdapter(t, "codex").Layout.Hook.ForScope(scope)
+			value, _, err := ReadDotted(reg.After, target, "model")
+			if err != nil || value != "user-model" {
+				t.Fatalf("lost user model: %v %v", value, err)
+			}
+			if !strings.Contains(string(reg.After), ds[0].Path) {
+				t.Fatalf("command not resolved: %s", reg.After)
+			}
+		})
+	}
+}
+
+func TestCodexScriptHookCannotBeSkippedSilently(t *testing.T) {
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := hookArtifact("fixture-cx", "PreToolUse", "Write", "sh {script}")
+	art.Hook.Script = "guard.sh"
+	for _, scope := range []string{"global", "local"} {
+		t.Run(scope, func(t *testing.T) {
+			ad := loadAdapter(t, "codex")
+			ad.Layout.Hook.GlobalScriptDir = manifest.PathTarget{}
+			ad.Layout.Hook.ProjectScriptDir = manifest.PathTarget{}
+			if ds, err := eng.Transform(art, ad, scope, "", noExisting); err == nil {
+				t.Fatalf("missing directory silently skipped: %+v", ds)
+			}
+			ad = loadAdapter(t, "codex")
+			ad.Layout.Hook.Global = manifest.FileTarget{}
+			ad.Layout.Hook.Project = manifest.FileTarget{}
+			if ds, err := eng.Transform(art, ad, scope, "", noExisting); err == nil {
+				t.Fatalf("missing registration silently skipped: %+v", ds)
+			}
+		})
+	}
+}

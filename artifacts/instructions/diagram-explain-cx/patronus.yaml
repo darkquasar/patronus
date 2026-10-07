@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: instruction
+role: instruction
+name: diagram-explain-cx
+description: "Codex only: Compact advisory ASCII explanations within user format."
+version: 1.0.0
+entry: INSTRUCTIONS.md
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
+targets: [codex]
+defaults:
+  scope: global
+attribution:
+  upstream: "github.com/tjboudreaux/cc-visualization-skills"
+  license: "MIT"
+  copyright: "Copyright (c) 2026 TJ Boudreaux"
+  commit: "4513e46b4a1bccea0f5177b16a8ee069a4d01b30"
+  note: "Codex behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Static guidance, runtime-unverified."
