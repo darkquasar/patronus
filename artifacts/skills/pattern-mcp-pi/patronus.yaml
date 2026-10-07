@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: context
 name: pattern-mcp-pi
-description: "Pi MCP transport, identity and stage-aware query guidance"
-version: 1.0.0
+description: "Pi MCP transport, shared-service identity and stage-aware query guidance"
+version: 2.0.0
 entry: SKILL.md
 files: ["patterns", "SOURCE.md", "NOTICE", "LICENSE"]
 targets: [pi]

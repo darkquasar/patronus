@@ -1,85 +1,54 @@
-# Settlement, manual reset and retention
+# Shared-service settlement and overlay removal
 
-This is an operator checklist, not a process controller or config mutator. These
-steps apply to private MCP leaves and manual role fields. Installing/removing a
-profile does not run them or grant cleanup authority.
+Installation and removal do not silently control service processes. Use these
+steps under explicit lifecycle and package-manager grants.
 
-## TD-1 — Prove successful settlement first
+## TD-1: settle every consumer
 
-Coordinator accounts for every affected run/session, descendant, client and
-output, including all consumers of a global change. Require successful settlement
-and readable hash-bound results/logs before research reset or removal. Active,
-unknown or failed status, missing rows, unknown descendants and unacknowledged
-cancellation mean **retain resources and escalate**. Cooperative cancellation is
-not proof of exit; use approved deadlines, recorded process identity (including
-start identity to avoid PID reuse), adapter/runtime evidence and bounded owner
-observations. Do not kill by guessed PID or infer exit from a marker.
+Account for all parent sessions, background children, external clients, outputs
+and descendants. Require terminal status and readable hash-bound results. Active,
+unknown or failed consumers retain the shared pair and block update or shutdown.
+Closing an HTTP client does not stop Serena, Graphify or Serena's language-server
+descendants.
 
-An HTTP client closes only its connection. It does not stop shared Serena,
-Graphify or their language servers; shared lifecycle belongs to the coordinator
-with all-client accounting. A private stdio server/LSP belongs to that writer's
-adapter/runtime, which owns shutdown. Observe actual shutdown/descendant settlement
-before checkout deletion or reuse. Unknown status retains the worktree, config,
-logs and process evidence. The example model cannot prove any of these events.
+## TD-2: identify owned state
 
-## TD-2 — Check record, grant, scope and unchanged fields
+Inventory the exact profile lock/state, each role tools/skills setting leaf, the
+two MCP URL leaves, Pi package declaration, uv package records, service process
+records, logs and graph provenance. Compare Patronus-owned leaves with their last
+managed values. Drift blocks inverse for that leaf. Do not adopt or erase same-name
+entries from another source.
 
-Require the original ownership record and bytes, exact root/run/owner, matching
-current reset grant, full active-source inventory and successful TD-1 evidence.
-An absent record/marker, missing grant, different owner, higher-precedence source,
-unreadable config, unknown original baseline or changed managed field/hash blocks
-**the whole proposed reset before any write**. Compare every selected current
-value with its last recorded managed value/digest. Re-read just before mutation;
-retain/report conflicts, do not adopt them. Unrelated changes alone are preserved,
-not rolled back from a whole-file backup. Newly discovered consumers block reset.
+Patronus owns authored resources and unchanged config leaves. Pi/npm owns the
+adapter package files. uv owns Serena and Graphify tool environments. The
+coordinator owns service processes and runtime records. Snapshot and cache owners
+remain as recorded by the task.
 
-Explicitly reject the installed prototype helper's **reset-without-marker**
-behavior: removing a matching Serena entry despite a missing ownership record is
-unsafe, even if its command/project appears familiar. Do not invoke or advertise
-that helper as safe cleanup. A marker alone also cannot prove unchanged bytes,
-settlement or deletion authority. The delivered descriptor is external operations
-evidence, not new installer state or a trust bypass.
+## TD-3: restore config and remove packages separately
 
-## TD-3 — Restore only recorded unchanged fields manually
+Preview normal Patronus removal first. It restores or deletes only the unchanged
+managed role and MCP leaves, preserving sibling role fields, unrelated server
+entries and settings added later. Apply after review, then reload Pi and verify the
+base core role definitions no longer request `mcp` or overlay skills.
 
-After all checks pass, preview restoration per field. `original.present:true`
-restores its exact JSON value, **including null**; `original.present:false` deletes
-only that field. Preserve unrelated roles, settings and MCP entries, including
-entries added since bootstrap. Keep original file bytes as evidence, not a blanket
-restore command that discards unrelated edits. Empty parent objects may remain;
-do not remove a file/directory just because the originally absent leaf was removed.
+Package removal is a separate operation. Delegate the adapter removal to Pi and
+Serena/Graphify removal to uv only after all consumers are settled and the package
+plan names the exact selected identities. Never delete npm or uv internal
+directories directly. A package removal does not delete credentials, logs, graphs
+or project files.
 
-Same-owner updates must have carried the first baseline forward with history,
-never rebased it onto a prior managed value. Check last managed digests, restore
-first originals. Record resulting bytes/hashes and per-field completion in history
-without discarding the baseline/last-managed evidence. If interrupted, retain both
-records and current bytes, hold dispatch and have the owner reconcile which fields
-changed; never blindly replay reset, infer success or erase the record.
+## TD-4: stop services and retain evidence
 
-## TD-4 — Reload, verify research state and retain evidence
+Stop each service through its recorded supervisor identity after all clients have
+settled. Do not kill by guessed PID or port. Verify process start identity, exit,
+Serena language-server descendants and endpoint closure. Unknown descendants or a
+PID identity mismatch retain the process record and block cleanup.
 
-Reload/restart all affected clients and acknowledge the actual effective config
-and role/tool/skill/provider plan. Observe restored base behavior and absence of
-the private override from every active source before research dispatch. Failed or
-unknown reload keeps the worktree blocked for research. Stale clients are not
-restored merely because disk bytes changed. Preserve receipts, original backups,
-digest/history, outputs and settlement logs under the owner's retention policy.
+Preserve install plans, exact package observations, service descriptors, logs,
+snapshot provenance, outputs and removal results according to the owner retention
+policy. Graph deletion, cache deletion, worktree cleanup and log deletion each
+need separate authority. Profile removal alone grants none of them.
 
-Profile/item uninstall removes only unchanged Patronus-owned static artifacts and
-recipe leaves under normal drift rules. It cannot kill services, remove operator
-binaries/auth/caches, erase manual settings or delete worktrees/spill files. Manual
-overrides survive profile uninstall pending explicit cleanup; settle and reset
-before removing skills those roles still require. Worktree/data deletion needs a
-separate owner retention/export/deletion grant after these checks. No automatic
-prune, inverse profile-lifetime controller or deletion from a marker alone.
-
-## Example checks versus runtime evidence
-
-The adjacent `fixtures/manual-lifecycle.test.mjs` loads delivered examples and
-binds assertions to RO/WB/TD step IDs. Its in-memory operations are **independent
-example models**, not shipped enforcement, installer tests or upstream tests. It
-uses invented values/runs/grants and writes no configs or processes. It checks
-absence/null/present restoration, baseline-carrying updates, preservation and
-blocked ambiguity; it cannot establish actual process settlement, approval,
-provider loading or hard containment. I-T4/I-T6/I-T7 runtime observations and
-integration-only I-T3 remain separately granted QP-03 work.
+The adjacent fixture checks that this contract remains present in distributed
+content. It cannot observe real process settlement, package removal, reload or
+retention.

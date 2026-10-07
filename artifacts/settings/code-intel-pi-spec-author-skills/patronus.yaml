@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: orchestration
+name: code-intel-pi-spec-author-skills
+description: "Adds code-intelligence guidance to the core Pi spec-author role without replacing other role overrides"
+version: 1.1.0
+entry: ""
+targets: [pi]
+defaults:
+  scope: global
+requires: [pattern-mcp-pi, graphify-pi, code-intel-operations-pi]
+setting:
+  path: subagents.agentOverrides.patronus-spec-author-pi.skills
+  value: [spec-brainstorming-pi, verification-before-completion-pi, pattern-mcp-pi, graphify-pi, code-intel-operations-pi]

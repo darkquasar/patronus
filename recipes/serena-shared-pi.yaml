@@ -1,13 +1,15 @@
 apiVersion: patronus/v2
 family: recipe
 name: serena-shared-pi
-version: 1.0.0
+version: 1.1.0
 role: context
-summary: "Shared Serena HTTP client wiring only; operator-provisioned server identity and read/navigation restrictions require readiness checks."
+summary: "Shared Serena HTTP client wiring backed by the pinned Pi adapter and Serena runtime; coordinator-owned service startup, identity and navigation restrictions still require readiness checks."
 upstream: github.com/oraios/serena
-license: GPL-3.0
+license: GPL-3.0-or-later
+requires: [pi-mcp-adapter]
 # Application license, not the obsolete MIT claim from the legacy recipe.
-# No server code, dependency resolver or credentials are delivered.
+# The sibling recipes deliver the adapter and executable, while this recipe owns
+# only the HTTP config leaf. Service startup and credentials are not install effects.
 # wire.tools is the default route, not an explicit-target allowlist.
 wire:
   method: merge

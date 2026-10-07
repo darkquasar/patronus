@@ -24,8 +24,12 @@ dependency resolution and installed package files.
 ## Exact references and scope
 
 The core recipes select `npm:pi-subagents@0.72.1` and
-`npm:pi-web-access@0.35.0`. Recipe versions and upstream npm versions are
-independent. Direct package pins do not freeze transitive dependencies.
+`npm:pi-web-access@0.35.0`. The optional `code-intel-pi` overlay also selects
+`npm:pi-mcp-adapter@3.0.0`. Its target-agnostic `code-intel-pi-runtime` companion
+selects the Serena and Graphify uv tools in a separate plan. Pi-targeted static
+selections intentionally reject package-manager EXEC intent. Recipe versions and
+upstream package versions are independent. Direct pins do not freeze transitive
+dependencies.
 
 Use `--global` or `--local` consistently. Local package removal preserves the
 independent global installation. An already installed compatible package is not
@@ -39,10 +43,12 @@ patronus update pi-subagents --target pi --global --deploy --allow-package-insta
 patronus remove pi-web-access --target pi --local
 ```
 
-Patronus delegates the selected package identity to Pi rather than deleting npm
-trees. It observes the selected declarations and package identity before settling
-an operation. Declaration drift, conflicting identities and unresolved prior
-outcomes can block changes.
+Patronus delegates the selected Pi package identity to Pi rather than deleting
+npm trees. Non-Pi package-manager recipes, including the optional Serena and
+Graphify uv tools, remain native manager operations shown in the plan. It observes
+selected declarations and package identity before settling supported operations.
+Declaration drift, conflicting identities and unresolved prior outcomes can block
+changes.
 
 ## Edited content and configuration
 

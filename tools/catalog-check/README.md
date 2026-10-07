@@ -56,7 +56,9 @@ profiles nor scans prose for forbidden phrases or inferred runtime behavior.
 Literal distributed Markdown links are structural file claims, checked against bundle
 members with supported source-root placeholders. Literal Markdown examples and external
 links are not file claims. Native Pi agent `skills:` selections must be declared in
-`requires` and resolve to Pi-compatible skills; no harness invocation is performed.
+`requires` and resolve to Pi-compatible skills. Native role tools/skills overlays
+preserve the complete ordered base list, and extra skills must be declared
+Pi-compatible dependencies; no harness invocation is performed.
 
 `docs/compatibility/distributed-reference-exceptions.yaml` may retain reviewed legacy
 link debt with `schema_version: 1` and rows containing `source`,

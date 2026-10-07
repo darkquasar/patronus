@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -536,13 +537,13 @@ func checkBundle(root string, it *item, entry indexEntry) error {
 	var total int64
 	for {
 		h, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
 			return fmt.Errorf("archive: %w", err)
 		}
-		if !safeRelative(h.Name) || (h.Typeflag != tar.TypeReg && h.Typeflag != tar.TypeRegA) {
+		if !safeRelative(h.Name) || (h.Typeflag != tar.TypeReg && h.Typeflag != '\x00') {
 			return fmt.Errorf("archive unsafe/nonregular member %q", h.Name)
 		}
 		if _, exists := members[h.Name]; exists {

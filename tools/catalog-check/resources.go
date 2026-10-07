@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -149,7 +150,79 @@ func (c *catalog) checkDistributedResources() error {
 			}
 		}
 	}
-	return c.checkAgentSelections()
+	if err := c.checkAgentSelections(); err != nil {
+		return err
+	}
+	return c.checkAgentOverlays()
+}
+
+// Native role overrides replace entire lists. Preserve the base role's ordered
+// selection and require added skills to be declared Pi-compatible dependencies.
+func (c *catalog) checkAgentOverlays() error {
+	for name, it := range c.items {
+		if text(it.manifest, "type") != "setting" {
+			continue
+		}
+		targets, err := stringList(it.manifest["targets"])
+		if err != nil {
+			return err
+		}
+		setting := object(it.manifest, "setting")
+		parts := strings.Split(text(setting, "path"), ".")
+		if !contains(targets, "pi") || len(parts) != 4 || parts[0] != "subagents" || parts[1] != "agentOverrides" || (parts[3] != "skills" && parts[3] != "tools") {
+			continue
+		}
+		role := c.items[parts[2]]
+		if role == nil || text(role.manifest, "type") != "agent" {
+			return fmt.Errorf("%s: override refers to missing native agent %s", name, parts[2])
+		}
+		raw := bytes.ReplaceAll(role.payload[text(role.manifest, "entry")], []byte("\r\n"), []byte("\n"))
+		if !bytes.HasPrefix(raw, []byte("---\n")) {
+			return fmt.Errorf("%s: missing agent frontmatter", parts[2])
+		}
+		end := bytes.Index(raw[4:], []byte("\n---"))
+		if end < 0 {
+			return fmt.Errorf("%s: unterminated agent frontmatter", parts[2])
+		}
+		front, err := decodeYAML(raw[4 : 4+end])
+		if err != nil {
+			return err
+		}
+		var base []string
+		for _, value := range strings.Split(text(front, parts[3]), ",") {
+			if value = strings.TrimSpace(value); value != "" {
+				base = append(base, value)
+			}
+		}
+		values, err := stringList(setting["value"])
+		if err != nil {
+			return fmt.Errorf("%s: override list: %w", name, err)
+		}
+		if len(values) < len(base) || !slices.Equal(values[:len(base)], base) {
+			return fmt.Errorf("%s: override must preserve the complete ordered %s list of %s", name, parts[3], parts[2])
+		}
+		if parts[3] == "tools" {
+			continue
+		}
+		requires, err := stringList(it.manifest["requires"])
+		if err != nil {
+			return err
+		}
+		for _, selected := range values[len(base):] {
+			skill := c.items[selected]
+			if !contains(requires, selected) || skill == nil || text(skill.manifest, "type") != "skill" {
+				return fmt.Errorf("%s: added skill %q must be a declared skill dependency", name, selected)
+			}
+			skillTargets, err := stringList(skill.manifest["targets"])
+			if err != nil {
+				return err
+			}
+			if len(skillTargets) != 0 && !contains(skillTargets, "pi") {
+				return fmt.Errorf("%s: added skill %q is not Pi-compatible", name, selected)
+			}
+		}
+	}
+	return nil
 }
 
 func (c *catalog) checkAgentSelections() error {
