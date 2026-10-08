@@ -18,6 +18,12 @@ legacy brief without one) blocks implementation for a coordinator decision. A
 focused-postcheck task is not defective for lacking invented red evidence; do not
 require prose-substring tests or one red cycle per file/task.
 
+Review task decomposition by observable behavior rather than file count. Every task must have one outcome, one owner, one interface seam, one acceptance point, owned paths, predecessor input identities, bounded initial context, a testing strategy with authorized initial checks, stop and non-prescriptive return conditions, and a durable successor handoff. Reject a split justified only by a schema property, function, file, unit test, manifest bump, or same-behavior documentation. Reject coordination-heavy parallel splits that share paths, unresolved decisions, a seam, or repeated partial-state exchange. Also reject an oversized task that hides independently ownable outcomes.
+
+Verify that initial context references the approved spec section, predecessor interfaces, source anchors, project instructions, acceptance point, and authorized commands without copying an accumulated transcript or predicting every possible read. Reject packet loaders, global read/skill tables, per-child `requiredSkills`, read-key graphs, rubric hashes, and perfect-context predictors.
+
+Every stop or shortfall must be non-prescriptive. It may state observations, evidence attempted, unresolved questions, newly discovered requirements, confidence, and consequences. It must not suggest, request, name, initiate, or semantically prefer paths, commands, context, budget, scope, specialist, model, provider, or escalation/remedy/package. Treat a named remedy or next-action package as a contract violation even when field names look harmless.
+
 Retain required fresh independent whole-change implementation review even for
 small deliveries; only the owner may explicitly waive it. Preserve Pi's ban on
 task-by-task two-cycle review rituals.

@@ -1,16 +1,21 @@
 # Isolated Pi lane brief
 
 Coordinator fills this before launch, with actual paths/IDs rather than unresolved placeholders:
-- Logical task key, objective, mission/session/run and attempt lineage.
-- Exact cwd/source root, branch, named base and baseCommit; owned files/contracts.
-- Mandatory resolved brief, native state, project instructions and selected SKILL.md reads (acknowledge after initial read and reread after compaction).
-- Exact global constraints and consumed predecessor interfaces, not accumulated transcripts.
+- Stable logical task key, exactly one observable outcome, and its acceptance point at one interface seam.
+- One owner; exact cwd/source root, branch, named base and baseCommit; owned paths/contracts or read-only subject.
+- Mission/session/run/attempt lineage and exact subject identity.
+- Consumed predecessor interfaces and artifact identities plus the durable handoff expected by successors.
+- Bounded initial context: approved spec section, predecessor interfaces, relevant source anchors, project instructions, and selected current SKILL.md reads. Do not copy an accumulated transcript or predict every future read.
 - Grant issuer/time, execution actions/outputs, revalidation/expiry conditions; explicit exclusions for native mission state, other writers, integration/publication/cleanup.
-- Acceptance criteria; selected `critical-tdd` or `focused-postcheck` testing strategy and rationale in the existing brief; authorized commands, memory/concurrency/deadline budgets and log destination.
-- Exclusive runtime output binding and complete report contract.
+- Selected `critical-tdd` or `focused-postcheck` strategy and rationale; authorized initial commands, memory/concurrency/deadline budgets, and log destination.
+- Exclusive runtime output binding, complete report contract, and stop plus non-prescriptive return conditions.
+
+This brief must not introduce a packet loader, global read/skill table, `requiredSkills` array, read-key graph, rubric hashes, or a perfect-context predictor. Reference shared approved evidence by identity instead of duplicating it.
 
 You are a leaf and sole writer for the assigned boundary. No children or shared-state/ticket/lessons writes. Validate prerequisite source before mutation. Follow the existing code and approved plan; do not invent product/API decisions or weaken regressions. Select `critical-tdd` for new or changed auth/secrets, migration/removal, ownership, concurrency/settlement/isolation behavior and reproducible behavior bugs. Read tdd-pi when selected; observe an intended invented-data public-behavior failure, implement minimally, then run green and relevant negative/legacy regressions in short slices. Routine prose/manifests/mechanical wiring without a changed safety invariant use `focused-postcheck`: inspect exact diff and positive/negative cases, then run approved focused checks. Explicit test-first requests and project-required checks govern. Preserve existing safety tests; do not invent red cycles per task/file or prose-substring tests. Missing or ambiguous strategy, including a legacy brief without one, stops for a coordinator decision before implementation. Previously approved plan/interface choices remain valid. Commit only under the task's Git grant after actual successful checks. A reviewer is separate; your self-review is not independent acceptance. Required fresh independent whole-change implementation review remains required for small deliveries; only the owner may explicitly waive it.
 
-Contact the supervisor with need_decision/interview_request for an unapproved decision or infrastructure failure, preserve partial evidence and wait for a real answer. No silent fallback runner/model/protocol. Report exact base/head/cwd, changed files, source/output hashes, commands with exits/results/readable log paths, selected strategy/rationale and applicable red/green or focused-postcheck evidence, skipped checks, residual risks and next step. Return structured acceptance plus complete report if write is absent; when file-only mode returns a pointer the coordinator must read it. Do not claim DONE on a dispatch receipt, unrun test or unread report.
+Stop when the behavior cannot be completed within its interface, owned paths, bounded context, authority, or budget. Return only observations, evidence attempted, unresolved questions or shortfalls, newly discovered requirements, confidence, and consequences or risk if unresolved. Do not suggest, request, name, initiate, or semantically prefer paths, commands, context, budget, scope, specialist, model, provider, or escalation/remedy/package. The coordinator alone decides any later action.
+
+Contact the supervisor with need_decision/interview_request for an unapproved decision or infrastructure failure, preserve partial evidence and wait for a real answer. No silent fallback runner/model/protocol. Report exact base/head/cwd, changed files, source/output hashes, commands with exits/results/readable log paths, selected strategy/rationale and applicable red/green or focused-postcheck evidence, skipped checks and residual risks. Return structured acceptance plus complete report if write is absent; when file-only mode returns a pointer the coordinator must read it. Do not claim DONE on a dispatch receipt, unrun test or unread report.
 
 The coordinator assigns the exact component task and predecessor artifacts; you never self-claim native workflow work or merge a peer branch. Return a durable commit/captured patch plus report. Parent owns integration and shared provenance.

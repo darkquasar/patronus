@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-writing-pi
 description: "Write authorized, requirement-covered implementation plans"
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]
