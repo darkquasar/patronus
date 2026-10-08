@@ -93,6 +93,128 @@
         },
         "subagentsVersion": {
           "const": "0.72.1"
+        },
+        "snapshotUse": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "snapshotId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^/"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "environmentIdentitySha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "observedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$",
+              "maxLength": 100
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "snapshotId",
+            "path",
+            "sha256",
+            "environmentIdentitySha256",
+            "observedAt"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16
+        },
+        "liveChecks": {
+          "type": "object",
+          "properties": {
+            "checkedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$",
+              "maxLength": 100
+            },
+            "authorityEvidenceSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "resourceEvidenceSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "outputClaimEvidenceSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "settlementEvidenceSha256": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "selectedCapabilities": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "runtime",
+                      "runner",
+                      "role",
+                      "tool",
+                      "provider"
+                    ]
+                  },
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "evidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "key",
+                  "evidenceSha256"
+                ],
+                "additionalProperties": false,
+                "maxProperties": 16
+              }
+            }
+          },
+          "required": [
+            "checkedAt",
+            "authorityEvidenceSha256",
+            "resourceEvidenceSha256",
+            "outputClaimEvidenceSha256",
+            "settlementEvidenceSha256",
+            "selectedCapabilities"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16
         }
       },
       "required": [
@@ -173,10 +295,7 @@
           ]
         }
       },
-      "required": [
-        "peer",
-        "disposition"
-      ],
+      "required": [],
       "additionalProperties": false,
       "maxProperties": 16
     },
@@ -475,11 +594,7 @@
           ]
         }
       },
-      "required": [
-        "native",
-        "claude-code",
-        "codex-exec"
-      ],
+      "required": [],
       "additionalProperties": false,
       "maxProperties": 16
     },
@@ -500,6 +615,145 @@
     },
     "allowReduced": {
       "type": "boolean"
+    },
+    "reviewSelection": {
+      "type": "object",
+      "properties": {
+        "riskRationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "reviewers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "engine": {
+                "enum": [
+                  "native",
+                  "claude-code",
+                  "codex-exec"
+                ]
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "independence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "policy": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "const": "read-only"
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "additionalProperties": false,
+                "maxProperties": 16
+              }
+            },
+            "required": [
+              "key",
+              "engine",
+              "purpose",
+              "independence",
+              "policy"
+            ],
+            "additionalProperties": false,
+            "maxProperties": 16
+          }
+        },
+        "disposition": {
+          "enum": [
+            "parent",
+            "native"
+          ]
+        },
+        "reducedReviewEvidence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "validationEvidence": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^/"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "subjectSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "kind": {
+              "const": "parent-validation"
+            }
+          },
+          "required": [
+            "path",
+            "sha256",
+            "subjectSha256",
+            "kind"
+          ],
+          "additionalProperties": false,
+          "maxProperties": 16
+        }
+      },
+      "required": [
+        "riskRationale",
+        "reviewers",
+        "disposition"
+      ],
+      "additionalProperties": false,
+      "maxProperties": 16,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reviewers": {
+                "maxItems": 1
+              }
+            },
+            "required": [
+              "reviewers"
+            ]
+          },
+          "then": {
+            "required": [
+              "reducedReviewEvidence"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "reducedReviewEvidence"
+              ]
+            }
+          }
+        }
+      ]
     }
   },
   "required": [
@@ -515,9 +769,128 @@
     "runners",
     "concurrency",
     "spawnLimit",
-    "timeoutMs",
-    "allowReduced"
+    "timeoutMs"
   ],
   "additionalProperties": false,
-  "maxProperties": 16
+  "maxProperties": 16,
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "reviewSelection"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "allowReduced"
+          ]
+        },
+        "properties": {
+          "preflight": {
+            "required": [
+              "pathsVerified",
+              "rolesVerified",
+              "evidence",
+              "piVersion",
+              "subagentsVersion",
+              "snapshotUse",
+              "liveChecks"
+            ]
+          },
+          "roles": {
+            "required": [
+              "peer"
+            ]
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "allowReduced"
+        ],
+        "properties": {
+          "preflight": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "snapshotUse"
+                  ]
+                },
+                {
+                  "required": [
+                    "liveChecks"
+                  ]
+                }
+              ]
+            }
+          },
+          "roles": {
+            "required": [
+              "peer",
+              "disposition"
+            ]
+          },
+          "runners": {
+            "required": [
+              "native",
+              "claude-code",
+              "codex-exec"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reviewSelection": {
+            "properties": {
+              "disposition": {
+                "const": "native"
+              }
+            },
+            "required": [
+              "disposition"
+            ]
+          }
+        },
+        "required": [
+          "reviewSelection"
+        ]
+      },
+      "then": {
+        "properties": {
+          "roles": {
+            "required": [
+              "peer",
+              "disposition"
+            ]
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "required": [
+            "reviewSelection"
+          ]
+        },
+        "then": {
+          "properties": {
+            "roles": {
+              "required": [
+                "peer"
+              ],
+              "not": {
+                "required": [
+                  "disposition"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
