@@ -11,6 +11,28 @@ const schemaText = await readFile(join(dir,'../request.schema.json'),'utf8');
 const fixture = JSON.parse(await readFile(join(dir,'request.json'),'utf8'));
 const kind = fixture.reconcile !== undefined ? 'research' : fixture.baseRef ? 'implement' : 'peer-review';
 const fresh = () => structuredClone(fixture);
+const hash = 'a'.repeat(64);
+function optIn(lanes = ['local']) {
+  const args=fresh();
+  args.mode='research-only';
+  args.tasks=args.tasks.filter(t=>lanes.includes(t.lane));
+  args.authorization.actions=['research'];
+  args.roles=Object.fromEntries(lanes.map(lane=>[lane,fixture.roles[lane]]));
+  args.reconcile=false;
+  args.spawnLimit=args.tasks.length;
+  args.preflight.snapshotUse={schemaVersion:1,snapshotId:'a'.repeat(32),path:'/fixture/state/capability-snapshot-v1.json',sha256:hash,environmentIdentitySha256:hash,observedAt:'2026-10-03T08:00:00Z'};
+  const selectedCapabilities=[
+    {kind:'runtime',key:'pi',evidenceSha256:hash},
+    {kind:'runner',key:'native',evidenceSha256:hash},
+    ...lanes.map(lane=>({kind:'role',key:args.roles[lane],evidenceSha256:hash}))
+  ];
+  if(lanes.includes('web')) selectedCapabilities.push(
+    {kind:'provider',key:'pi-web-access',evidenceSha256:hash},
+    ...['web_search','fetch_content','get_search_content','source_check'].map(key=>({kind:'tool',key,evidenceSha256:hash}))
+  );
+  args.preflight.liveChecks={checkedAt:'2026-10-03T08:01:00Z',authorityEvidenceSha256:hash,resourceEvidenceSha256:hash,outputClaimEvidenceSha256:hash,settlementEvidenceSha256:null,selectedCapabilities};
+  return args;
+}
 const packageDir=process.env.PI_SUBAGENTS_PACKAGE;
 const upstreamArgs=packageDir ? await import(pathToFileURL(join(packageDir,'src/workflows/workflow-resources.js'))) : null;
 function normalized(args) {
@@ -48,6 +70,13 @@ test('actual shipped body has portable sandbox syntax and explicit bindings', ()
   assert.doesNotMatch(script,/\b(?:require|import|process|Buffer)\b|runs\.host|async\s+(?:function|\()/);
   assert.ok(JSON.parse(schemaText).required.includes('authorization'));
 });
+test('request schema and workflow body agree on legacy and opt-in shapes',{skip:!packageDir},async()=>{
+  const {default:Ajv2020}=await import(pathToFileURL(join(packageDir,'..','ajv','dist','2020.js')));
+  const validate=new Ajv2020({strict:false}).compile(JSON.parse(schemaText));
+  for(const args of [fresh(),optIn(['local']),optIn(['web']),optIn(['local','web'])]) assert.equal(validate(args),true,JSON.stringify(validate.errors));
+  const explicit=optIn(['local','web']);explicit.mode='pipeline';explicit.authorization.actions=[...fixture.authorization.actions];explicit.roles={...fixture.roles};explicit.reconcile=true;explicit.spawnLimit=10;explicit.preflight.liveChecks.selectedCapabilities.push(...['spec','plan','review','security'].map(role=>({kind:'role',key:explicit.roles[role],evidenceSha256:hash})));assert.equal(validate(explicit),true,JSON.stringify(validate.errors));
+  for(const mutate of [a=>{delete a.preflight.snapshotUse},a=>{a.roles.web=fixture.roles.web},a=>{a.authorization.actions.push('plan')},a=>{a.reconcile=true}]) {const a=optIn(['local']);mutate(a);assert.equal(validate(a),false);}
+});
 test('all stages execute with stable keys, durable evidence and parameter variation',async()=>{
   for (const suffix of ['one','two']) {
     const args=fresh();args.outputDir='/fixture/evidence/'+suffix;args.sourceRevision='revision-'+suffix;args.tasks[0].text='varied question '+suffix;
@@ -67,6 +96,74 @@ test('all stages execute with stable keys, durable evidence and parameter variat
     }
     if(kind==='peer-review') assert.deepEqual(h.waves,[['peer-native','peer-claude-code','peer-codex-exec']]);
   }
+});
+test('research-only local request launches one findings lane and no downstream stage',async()=>{
+  const args=optIn(['local']);const h=harness();const r=await execute(args,h.runs);
+  assert.equal(r.verdict,'awaiting-parent-synthesis');
+  assert.deepEqual(h.calls.map(c=>c.key),['research-local']);
+  assert.deepEqual(r.lifecycle.achieved.map(x=>x.kind),['findings-produced']);
+  assert.deepEqual(r.lifecycle.pendingParent.map(x=>x.kind),['synthesis']);
+});
+test('research-only web and mixed requests select only requested lanes and preserve exact bindings',async()=>{
+  for(const lanes of [['web'],['local','web']]) {
+    const args=optIn(lanes);const h=harness();const r=await execute(args,h.runs);
+    assert.equal(r.verdict,'awaiting-parent-synthesis');
+    assert.deepEqual(h.calls.map(c=>c.key),args.tasks.map(t=>'research-'+t.key));
+    assert.deepEqual(r.preflight.snapshotUse,args.preflight.snapshotUse);
+    assert.deepEqual(r.preflight.liveChecks,args.preflight.liveChecks);
+    assert.equal(r.preflightVerifiedByParent,true);assert.equal(r.parentRereadEvidenceSha256,hash);
+    assert.equal(r.lifecycle.settled.length,args.tasks.length);
+    assert.ok(r.lifecycle.settled.every(x=>x.outcome==='completed' && x.outputReference));
+    assert.ok(!h.calls.some(c=>['spec','spec-and-plan','review-plan','review-security','reconciliation'].includes(c.key)));
+  }
+});
+test('research-only lifecycle retains completed siblings and exact failure unions',async()=>{
+  const cases=[
+    ['timeout',r=>{r.terminalOutcome={state:'partial',reason:'timeout'}},'timeout','saved'],
+    ['stopped',r=>{r.stopped=true},'stopped','saved'],
+    ['save',r=>{r.outputSaveError='invented save failure';delete r.outputReference},'save-failure','missing'],
+    ['partial',r=>{r.state='running'},'partial','saved'],
+    ['runtime',r=>{r.ok=false;r.error='invented runtime failure'},'runtime-error','saved'],
+    ['identity',r=>{r.agent='wrong-agent'},'wrong-identity','saved']
+  ];
+  for(const [name,fault,failureKind,outputState] of cases) {
+    const h=harness(r=>{if(r.key==='research-local')fault(r)});const r=await execute(optIn(['local','web']),h.runs);
+    assert.equal(r.verdict,'blocked',name);assert.equal(h.calls.length,2);assert.equal(r.lifecycle.started.length,2);
+    assert.equal(r.lifecycle.settled.length,2);assert.equal(r.lifecycle.achieved.length,0);
+    const failed=r.lifecycle.settled.find(x=>x.key==='research-local');assert.equal(failed.outcome,'failed');assert.equal(failed.failureKind,failureKind);assert.equal(failed.outputState,outputState);
+    assert.ok(r.lifecycle.settled.some(x=>x.key==='research-web'&&x.outcome==='completed'));
+  }
+});
+test('research-only saved shortfall and malformed final result never become achieved findings',async()=>{
+  const shortfall=harness(r=>{if(r.key==='research-web')r.observation='shortfall'});const s=await execute(optIn(['local','web']),shortfall.runs);
+  assert.equal(s.verdict,'blocked');assert.equal(s.lifecycle.settled.at(-1).outcome,'shortfall');assert.equal(s.lifecycle.achieved.length,0);assert.deepEqual(s.lifecycle.pendingParent.map(x=>x.kind),['shortfall-decision']);
+  const malformed=harness(r=>{if(r.key==='research-web')delete r.runId});const m=await execute(optIn(['local','web']),malformed.runs);
+  assert.equal(m.verdict,'blocked');assert.equal(m.lifecycle.started.length,1);assert.equal(m.lifecycle.settled.length,1);assert.equal(m.lifecycle.settled[0].outcome,'completed');assert.ok(m.lifecycle.omitted.some(x=>x.key==='research-web'&&/no run identity/.test(x.reason)));assert.equal(m.lifecycle.achieved.length,0);
+});
+test('research-only validates every final entry and selected-only role/action/capability matrix before dispatch',async()=>{
+  for(const mutate of [
+    a=>{a.tasks.at(-1).extra=true},a=>{delete a.roles.local},a=>{a.roles.web=fixture.roles.web},
+    a=>{a.authorization.actions.push('author')},a=>{a.reconcile=true},a=>{a.spawnLimit=0},
+    a=>{a.preflight.liveChecks.selectedCapabilities=a.preflight.liveChecks.selectedCapabilities.filter(c=>c.kind!=='role')},
+    a=>{a.preflight.liveChecks.selectedCapabilities.push({kind:'tool',key:'web_search',evidenceSha256:hash})},
+    a=>{delete a.preflight.snapshotUse},a=>{a.mode='unknown'}
+  ]) {const a=optIn(['local']);mutate(a);const h=harness();await assert.rejects(execute(a,h.runs));assert.equal(h.calls.length,0);}
+  const web=optIn(['web']);web.preflight.liveChecks.selectedCapabilities=web.preflight.liveChecks.selectedCapabilities.filter(c=>c.key!=='source_check');const h=harness();await assert.rejects(execute(web,h.runs));assert.equal(h.calls.length,0);
+  const legacy=fresh();legacy.preflight.snapshotUse=optIn().preflight.snapshotUse;legacy.preflight.liveChecks=optIn().preflight.liveChecks;const l=harness();await assert.rejects(execute(legacy,l.runs));assert.equal(l.calls.length,0);
+});
+test('explicit pipeline opts into bindings while omission preserves legacy request bytes and graph',async()=>{
+  const before=JSON.stringify(fixture);const legacy=fresh();const old=harness();const oldResult=await execute(legacy,old.runs);
+  assert.equal(JSON.stringify(fixture),before);assert.equal(Object.hasOwn(oldResult,'lifecycle'),false);
+  const explicit=optIn(['local','web']);explicit.mode='pipeline';explicit.authorization.actions=[...fixture.authorization.actions];explicit.roles={...fixture.roles};explicit.reconcile=true;explicit.spawnLimit=10;
+  explicit.preflight.liveChecks.selectedCapabilities.push(...['spec','plan','review','security'].map(role=>({kind:'role',key:explicit.roles[role],evidenceSha256:hash})));
+  const current=harness();const result=await execute(explicit,current.runs);
+  assert.deepEqual(current.calls.map(c=>c.key),old.calls.map(c=>c.key));assert.equal(result.verdict,oldResult.verdict);
+  assert.equal(result.lifecycle.settled.length,current.calls.length);assert.deepEqual(result.preflight.snapshotUse,explicit.preflight.snapshotUse);
+});
+test('largest research-only packet crosses the real normalizer and envelope boundaries remain closed',{skip:!packageDir},async()=>{
+  const a=optIn(['local','web']);a.tasks=[...a.tasks,{key:'local-two',text:'Second invented local question',lane:'local'},{key:'web-two',text:'Second invented web question',lane:'web'}];a.spawnLimit=4;
+  assert.ok(upstreamArgs.normalizeWorkflowArgs(a).args);const h=harness();assert.equal((await execute(a,h.runs)).verdict,'awaiting-parent-synthesis');assert.equal(h.calls.length,4);
+  const malformed=structuredClone(a);malformed.tasks.at(-1).text='';assert.match(upstreamArgs.normalizeWorkflowArgs(malformed).error,/empty/);assert.equal(harness().calls.length,0);
 });
 test('durable native verdict stages do not combine structured output with file-only persistence',async()=>{
   const h=harness();await execute(fresh(),h.runs);
