@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-pi
 description: "Execute an approved plan with proportionate solo or independent task review"
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "fixtures/01-hard-trigger-one-task.md", "fixtures/02-one-soft-signal.md", "fixtures/03-two-soft-signals.md", "fixtures/04-twenty-mechanical-tasks.md", "fixtures/05-risky-coupled-multimodule.md", "fixtures/06-qualitative-with-oracle.md", "fixtures/07-lexical-false-positive.md", "fixtures/08-override-to-solo.md", "fixtures/09-override-to-sdd.md", "fixtures/README.md", "fixtures/RESULTS.md", "fixtures/helpers.test.mjs", "implementer-prompt.md", "scripts/review-package", "scripts/sdd-workspace", "scripts/task-brief", "sdd.md", "solo.md", "task-reviewer-prompt.md"]
 targets: [pi]

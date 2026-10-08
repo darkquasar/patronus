@@ -44,6 +44,17 @@ async function rejected(mutate) {
   const args=fresh();mutate(args);const h=harness();
   await assert.rejects(execute(args,h.runs));assert.equal(h.calls.length,0,'invalid request spawned children');
 }
+function optIn(operation='validate',level='parent-direct') {
+  const a=fresh();
+  a.preflight.snapshotUse={schemaVersion:1,snapshotId:'1'.repeat(32),path:'/fixture/capability-snapshot-v1.json',sha256:'2'.repeat(64),environmentIdentitySha256:'3'.repeat(64),observedAt:'2026-10-08T00:00:00Z'};
+  a.preflight.liveChecks={checkedAt:'2026-10-08T00:01:00Z',authorityEvidenceSha256:'4'.repeat(64),resourceEvidenceSha256:'5'.repeat(64),outputClaimEvidenceSha256:'6'.repeat(64),settlementEvidenceSha256:'7'.repeat(64),selectedCapabilities:[{kind:'runtime',key:'native',evidenceSha256:'8'.repeat(64)}]};
+  delete a.baseRef;delete a.integrationCwd;delete a.validationCommands;
+  a.tasks=[];a.roles={};a.authorization.actions=['validate'];a.authorization.files=[];a.runners={native:a.runners.native};a.spawnLimit=1;
+  const evidenceRef=(kind='target-delivery')=>({path:'/fixture/evidence/'+kind+'.json',sha256:'9'.repeat(64),subjectSha256:'a'.repeat(64),kind});
+  const predecessor={key:'integrated',runId:'fixture-integration',agent:'patronus-writer-pi',report:evidenceRef('report'),handoff:evidenceRef('handoff'),delivery:evidenceRef()};
+  a.execution={operation, integrationCwd:'/fixture/integration', predecessors:[predecessor], validation:{level,risk:{changedBehavior:'workflow admission',falsePassConsequence:'dependent work may start',determinism:'fixture exact',novelty:'new route',blastRadius:'workflow callers',costJustification:'existing seam'},question:'Does the exact subject pass?',acceptancePoint:'all checks pass',subjectContext:'invented exact subject',checks:[{key:'fixture',argv:['node','--test','fixture'],kind:'command'}]}};
+  return a;
+}
 test('actual shipped body has portable sandbox syntax and explicit bindings', () => {
   assert.doesNotMatch(script,/\b(?:require|import|process|Buffer)\b|runs\.host|async\s+(?:function|\()/);
   assert.ok(JSON.parse(schemaText).required.includes('authorization'));
@@ -91,6 +102,32 @@ function tenWriterRequest(count = 10) {
   return a;
 }
 if(kind==='implement') {
+  test('parent-direct opt-in stops pending at the delivery barrier with zero validator launches',async()=>{
+    const a=optIn();const h=harness();const result=await execute(a,h.runs);
+    assert.equal(result.verdict,'awaiting-parent-validation');
+    assert.equal(result.phase,'parent-direct');
+    assert.equal(h.calls.length,0);
+    assert.deepEqual(result.lifecycle.started,[]);
+    assert.ok(result.lifecycle.pendingParent.some(x=>x.kind==='validation'));
+    assert.deepEqual(result.preflight.snapshotUse,a.preflight.snapshotUse);
+    assert.deepEqual(result.preflight.liveChecks,a.preflight.liveChecks);
+  });
+  test('opt-in operations are phase-separated and child validation receives only the bounded brief',async()=>{
+    const write=optIn();write.execution={operation:'write',baseRef:'refs/tags/v2.6.0',predecessors:[]};write.tasks=[{key:'one',text:'Implement one behavior',engine:'native',files:['src/a.txt']}];write.roles={writer:fixture.roles.writer};write.authorization.actions=['implement','managed-cleanup'];write.authorization.files=['src/a.txt'];
+    const wh=harness();const wr=await execute(write,wh.runs);assert.equal(wr.verdict,'awaiting-parent-target-delivery');assert.deepEqual(wh.calls.map(c=>c.key),['writer-one']);assert.equal(wr.lifecycle.pendingParent[0].kind,'target-delivery');
+    const integrate=optIn();integrate.execution.operation='integrate';integrate.execution.baseRef='refs/tags/v2.6.0';delete integrate.execution.validation;integrate.roles={integrator:fixture.roles.integrator};integrate.authorization.actions=['integrate'];
+    const ih=harness();const ir=await execute(integrate,ih.runs);assert.equal(ir.verdict,'awaiting-parent-target-delivery');assert.deepEqual(ih.calls.map(c=>c.key),['integration']);
+    for(const level of ['bounded-child','deep']) {
+      const a=optIn('validate',level);a.roles={validator:fixture.roles.validator};if(level==='deep'){a.execution.validation.priorShortfall={path:'/fixture/shortfall.json',sha256:'b'.repeat(64),subjectSha256:'a'.repeat(64),kind:'shortfall'};a.execution.validation.approvalEvidence='owner approved exact deep question';}
+      const h=harness();const r=await execute(a,h.runs);assert.equal(r.verdict,'ready-for-parent');assert.deepEqual(h.calls.map(c=>c.key),['validation']);assert.match(h.calls[0].task,/Execute only this bounded validation brief/);assert.doesNotMatch(h.calls[0].task,/authorization|runners/);assert.equal(r.lifecycle.achieved[0].kind,'validation');
+    }
+  });
+  test('opt-in matrices, delivery references and shortfalls fail closed before successors',async()=>{
+    for(const mutate of [a=>{a.baseRef='refs/tags/v2.6.0'},a=>{delete a.preflight.snapshotUse},a=>{a.execution.predecessors[0].delivery.kind='report'},a=>{a.execution.validation.level='deep'},a=>{a.execution.validation.approvalEvidence='approval only'},a=>{a.roles={validator:fixture.roles.validator}},a=>{a.execution.validation.checks.at(-1).surprise=true}]) {
+      const a=optIn();mutate(a);const h=harness();await assert.rejects(execute(a,h.runs));assert.equal(h.calls.length,0);
+    }
+    const a=optIn('validate','bounded-child');a.roles={validator:fixture.roles.validator};const h=harness(r=>{if(r.key==='validation')r.structuredOutput={outcome:'shortfall',observations:['invented'],evidenceAttempted:['fixture'],unresolved:['identity'],newRequirements:['compatibility evidence'],confidence:'low',consequences:'false pass risk'};});const result=await execute(a,h.runs);assert.equal(result.verdict,'awaiting-parent-shortfall');assert.equal(result.lifecycle.settled[0].outcome,'shortfall');assert.equal(result.lifecycle.achieved.length,0);assert.equal(h.calls.length,1);
+  });
   function mixedNativeRequest() {
     const a=fresh();
     a.tasks=a.tasks.slice(0,2).map((t,i)=>({...t,engine:'native',model:['anthropic/claude-opus-4-8','openai-codex/gpt-6.1-sol:low'][i]}));
