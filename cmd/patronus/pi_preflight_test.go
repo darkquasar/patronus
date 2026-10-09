@@ -309,18 +309,24 @@ func TestPiContextConsent(t *testing.T) {
 		path          string
 		prior, result []byte
 	}{{path + ".other", prior, review.Proposed}, {path, []byte("changed"), review.Proposed}, {path, prior, []byte("changed result")}} {
-		if err := validatePiConsentBytes(consents[0], args.path, args.prior, args.result); err == nil {
-			t.Fatal("consent not bound to exact path/prior/result")
+		err := validatePiConsentBytes(consents[0], args.path, args.prior, args.result)
+		if err == nil || err.Error() != "pi mixed-context consent stale for "+args.path+"; new interactive preview required" {
+			t.Fatalf("consent not bound to exact path/prior/result: %v", err)
 		}
 	}
+	// Harness characterization (HS-R1): the exact refusal texts are pinned so the
+	// consent path can move behind the Pi validator unchanged.
+	const headlessRefusal = "pi mixed-context conflict: only a separate interactive confirmation of an operator-prepared combined file can consent; --yes/--force/headless cannot"
+	const declinedRefusal = "pi mixed-context consent declined; whole selection refused"
 	for _, tc := range []struct {
 		name                    string
 		interactive, yes, force bool
-		answer                  string
-	}{{"decline", true, false, false, "no\n"}, {"ordinary yes", true, false, false, "yes\n"}, {"headless", false, false, false, "prepared combined file\n"}, {"yes flag", true, true, false, "prepared combined file\n"}, {"force", true, false, true, "prepared combined file\n"}} {
+		answer, want            string
+	}{{"decline", true, false, false, "no\n", declinedRefusal}, {"ordinary yes", true, false, false, "yes\n", declinedRefusal}, {"headless", false, false, false, "prepared combined file\n", headlessRefusal}, {"yes flag", true, true, false, "prepared combined file\n", headlessRefusal}, {"force", true, false, true, "prepared combined file\n", headlessRefusal}} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := confirmPiContexts(reviews, tc.interactive, tc.yes, tc.force, strings.NewReader(tc.answer), &bytes.Buffer{}); err == nil {
-				t.Fatal("invalid consent accepted")
+			_, err := confirmPiContexts(reviews, tc.interactive, tc.yes, tc.force, strings.NewReader(tc.answer), &bytes.Buffer{})
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("invalid consent accepted or wrong text: %v", err)
 			}
 		})
 	}
