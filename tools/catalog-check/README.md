@@ -88,12 +88,26 @@ metadata author and verified by the public CLI, not inferred from names or from
 a second resolver. CI invokes isolated public `lock --profile ... --target ...
 --local-registry` cases and preserves their results.
 
+A profile manifest may declare its own optional `targets:` list. When it does,
+the sorted list must equal the profile's `profile-targets.yaml` entry; a
+mismatch fails with `profile cases: <profile>: manifest declares targets [...]
+but profile-targets.yaml admits [...]`. The field is read from the profile's own
+document only: a profile that `extends:` a declaring profile without its own
+`targets:` is not declaring and is not checked. `profile-targets.yaml` remains
+the source of admitted cases; the agreement check only refuses contradiction.
+
 ## Ledgers and supplied closures
 
 YAML documents in `docs/compatibility/` with `profile` or `entries` fields are
 profile ledgers. Their schema requires `schema_version: 1`, explicit
-`baseline_profile` and `baseline_target`, and the existing `core_item`,
-`disposition`, `codex_items`, `outcome`, `reason`, `evidence` row contract.
+`baseline_profile` and `baseline_target`, a ledger-level `target:` (one public
+adapter tool, not `all`) and `item_suffix:` (one `[a-z0-9]+` component), and the
+`core_item`, `disposition`, `<target>_items`, `outcome`, `reason`, `evidence`
+row contract. A ledger without both fields fails with `ledger requires target:
+and item_suffix:`. Rows read their endpoints from `<target>_items` (so a
+`target: codex` ledger keeps `codex_items`) and dispositions are
+`port-<item_suffix>`, `reuse-unsuffixed` or `omit` (so `item_suffix: cx` keeps
+`port-cx`); a disposition for another suffix is unsupported.
 Baseline coverage uses direct declared layer members, retaining qualified literal
 keys, not transitive dependencies. Selected direct members need mapped endpoint
 or companion evidence. Generic endpoint existence and status vocabulary checks
@@ -101,6 +115,14 @@ are structural evidence only. Outcome labels are `Equivalent`, `Partial`, `N/A`
 and `EnvironmentBlocked`; evidence labels are `static-confirmed`, `runtime-pass`,
 `runtime-pending`, `environment-blocked`, `historical` and `not-run`. Labels are
 not verified native receipts.
+
+An optional `additional_items:` list admits lane items that have no baseline
+core member. Each row carries `items`, `outcome`, `reason` and `evidence` with
+the same vocabulary as entries: `reason` is required, every item must be an
+existing non-profile catalog item, and `Equivalent` with no items is refused.
+Additional items count as mapped endpoints, so they satisfy direct-member
+evidence and must appear in every supplied closure for the ledger profile.
+`entries[].core_item` still requires a baseline member.
 
 `--closures DIR` requires every enumerated `<profile>--<target>.lock` file. It
 accepts public JSON locks (also YAML), checks profile/target identities, nonempty

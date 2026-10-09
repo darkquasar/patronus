@@ -1,6 +1,8 @@
 # Release evidence contract, not a task tracker or native qualification receipt.
 schema_version: 1
 profile: core-profile-cx
+target: codex
+item_suffix: cx
 # Baseline coverage: every direct declared member of this profile/target must
 # have an entry below. Selected endpoints are checked against the public CLI
 # closure lock core-profile-cx--codex.lock produced by the catalog gate.

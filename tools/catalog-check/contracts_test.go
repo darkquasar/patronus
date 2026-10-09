@@ -166,7 +166,7 @@ func TestProfileCasesRejectUnresolvedMetadata(t *testing.T) {
 	}
 }
 
-const _validLedger = "schema_version: 1\nprofile: invented\nbaseline_profile: invented\nbaseline_target: toy\nentries:\n  - core_item: sample\n    disposition: reuse-unsuffixed\n    codex_items: [sample]\n    outcome: Partial\n    reason: Invented structural evidence only\n    evidence: runtime-pending\n"
+const _validLedger = "schema_version: 1\nprofile: invented\nbaseline_profile: invented\nbaseline_target: toy\ntarget: toy\nitem_suffix: tz\nentries:\n  - core_item: sample\n    disposition: port-tz\n    toy_items: [sample]\n    outcome: Partial\n    reason: Invented structural evidence only\n    evidence: runtime-pending\n"
 const _validLock = "version: 3\nprofile: invented\ntarget: toy\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"
 
 func TestLedgerConsumesPublicClosures(t *testing.T) {
@@ -187,7 +187,7 @@ func TestLedgerConsumesPublicClosures(t *testing.T) {
 	}
 }
 func TestLedgerRejectsMissingMappingAndUnsupportedLabels(t *testing.T) {
-	for _, bad := range []string{strings.ReplaceAll(_validLedger, "core_item: sample", "core_item: absent"), strings.ReplaceAll(_validLedger, "outcome: Partial", "outcome: Guaranteed"), strings.ReplaceAll(_validLedger, "evidence: runtime-pending", "evidence: assumed"), strings.ReplaceAll(_validLedger, "codex_items: [sample]", "codex_items: [absent]")} {
+	for _, bad := range []string{strings.ReplaceAll(_validLedger, "core_item: sample", "core_item: absent"), strings.ReplaceAll(_validLedger, "outcome: Partial", "outcome: Guaranteed"), strings.ReplaceAll(_validLedger, "evidence: runtime-pending", "evidence: assumed"), strings.ReplaceAll(_validLedger, "toy_items: [sample]", "toy_items: [absent]")} {
 		f := newFixture(t)
 		writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(bad))
 		code, _, diagnostic := f.check(t)
@@ -195,6 +195,89 @@ func TestLedgerRejectsMissingMappingAndUnsupportedLabels(t *testing.T) {
 			t.Fatalf("bad ledger accepted: %s", diagnostic)
 		}
 	}
+}
+func TestLedgerTargetVocabularyIsDataDriven(t *testing.T) {
+	cases := []struct {
+		name, ledger, want string
+	}{
+		{"missing-target", strings.ReplaceAll(_validLedger, "\ntarget: toy\n", "\n"), "ledger requires target: and item_suffix:"},
+		{"missing-item-suffix", strings.ReplaceAll(_validLedger, "item_suffix: tz\n", ""), "ledger requires target: and item_suffix:"},
+		{"unknown-target", strings.ReplaceAll(_validLedger, "\ntarget: toy\n", "\ntarget: absent\n"), "unknown ledger target absent"},
+		{"all-is-not-a-target", strings.ReplaceAll(_validLedger, "\ntarget: toy\n", "\ntarget: all\n"), "unknown ledger target all"},
+		{"unsafe-item-suffix", strings.ReplaceAll(_validLedger, "item_suffix: tz\n", "item_suffix: T-Z\n"), "unsafe item_suffix"},
+		{"foreign-port-disposition", strings.ReplaceAll(_validLedger, "disposition: port-tz", "disposition: port-cx"), "unsupported disposition"},
+		{"foreign-items-key", strings.ReplaceAll(_validLedger, "toy_items: [sample]", "codex_items: [sample]"), "missing endpoints"},
+		{"additional-unknown-item", _validLedger + "additional_items:\n  - items: [absent]\n    outcome: Partial\n    reason: invented\n    evidence: not-run\n", "additional_items[0]: missing endpoint absent"},
+		{"additional-missing-reason", _validLedger + "additional_items:\n  - items: [sample]\n    outcome: Partial\n    evidence: not-run\n", "additional_items[0]: missing reason"},
+		{"additional-equivalent-without-items", _validLedger + "additional_items:\n  - outcome: Equivalent\n    reason: invented\n    evidence: not-run\n", "additional_items[0]: Equivalent requires items"},
+		{"additional-bad-outcome", _validLedger + "additional_items:\n  - items: [sample]\n    outcome: Guaranteed\n    reason: invented\n    evidence: not-run\n", "additional_items[0]: unsupported outcome"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(tc.ledger))
+			code, _, diagnostic := f.check(t)
+			if code == 0 || !strings.Contains(diagnostic, tc.want) {
+				t.Fatalf("code=%d diagnostic=%q want=%q", code, diagnostic, tc.want)
+			}
+		})
+	}
+}
+func TestLedgerAdditionalItemsCountAsClosureEndpoints(t *testing.T) {
+	f := newFixture(t)
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(strings.ReplaceAll(_validLedger, "toy_items: [sample]", "toy_items: [sample]\n    # mapped below instead")+"additional_items:\n  - items: [sample]\n    outcome: Partial\n    reason: invented lane item\n    evidence: not-run\n"))
+	dir := filepath.Join(f.root, "closures")
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(_validLock))
+	code, out, diagnostic := f.check(t, "--closures", dir)
+	if code != 0 || !strings.Contains(out, "checked from supplied") {
+		t.Fatalf("code=%d out=%s diagnostic=%s", code, out, diagnostic)
+	}
+	// An additional item absent from the supplied closure fails coverage.
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte("version: 3\nprofile: invented\ntarget: toy\nentries:\n  - name: other\n    kind: artifact\n    version: 1.0.0\n"))
+	code, _, diagnostic = f.check(t, "--closures", dir)
+	if code == 0 || !strings.Contains(diagnostic, "closure") {
+		t.Fatalf("closure without the additional item accepted: %s", diagnostic)
+	}
+}
+func TestProfileCasesAgreeWithDeclaredManifestTargets(t *testing.T) {
+	const declaring = "apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: invented\nversion: 1.0.0\ntargets: [%s]\nlayers:\n  capabilities: [sample]\n"
+	const extending = "apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: child\nversion: 1.0.0\nextends: invented\nlayers:\n  capabilities: [sample]\n"
+	cases := []struct {
+		name, profile, metadata string
+		wantCode                int
+		want                    string
+	}{
+		{"declared-agrees", fmt.Sprintf(declaring, "toy"), "schema_version: 1\nprofiles:\n  invented: {targets: [toy]}\n  child: {targets: [toy]}\n", 0, `[{"profile":"child","target":"toy"},{"profile":"invented","target":"toy"}]`},
+		{"declared-mismatch", fmt.Sprintf(declaring, "other"), "schema_version: 1\nprofiles:\n  invented: {targets: [toy]}\n  child: {targets: [toy]}\n", 1, "profile cases: invented: manifest declares targets [other] but profile-targets.yaml admits [toy]"},
+		{"extends-without-own-targets-is-not-declaring", fmt.Sprintf(declaring, "toy"), "schema_version: 1\nprofiles:\n  invented: {targets: [toy]}\n  child: {targets: [other]}\n", 0, `[{"profile":"child","target":"other"},{"profile":"invented","target":"toy"}]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			writeFixtureFile(t, filepath.Join(f.root, "adapters/other.yaml"), []byte("tool: other\nfamily: adapter\n"))
+			writeFixtureFile(t, filepath.Join(f.root, "profiles/invented.yaml"), []byte(tc.profile))
+			writeFixtureFile(t, filepath.Join(f.root, "profiles/child.yaml"), []byte(extending))
+			writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/profile-targets.yaml"), []byte(tc.metadata))
+			rewriteIndex(t, f, func(ix map[string]any) {
+				ix["profiles"] = []any{
+					map[string]any{"manifest": profileDocument(t, tc.profile)},
+					map[string]any{"manifest": profileDocument(t, extending)},
+				}
+			})
+			code, out, diagnostic := f.check(t, "--profile-cases")
+			if code != tc.wantCode || !strings.Contains(strings.TrimSpace(out)+diagnostic, tc.want) {
+				t.Fatalf("code=%d out=%s diagnostic=%q want=%q", code, out, diagnostic, tc.want)
+			}
+		})
+	}
+}
+func profileDocument(t *testing.T, body string) map[string]any {
+	t.Helper()
+	m, err := decodeYAML([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return map[string]any(m)
 }
 func TestSchema2AndSourceOnlyPlugins(t *testing.T) {
 	legacy := document{"family": "recipe", "kind": "Recipe", "version": "1.0.0"}

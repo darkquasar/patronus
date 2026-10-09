@@ -17,6 +17,12 @@ type Profile struct {
 	Without StringList    `yaml:"without,omitempty" json:"without,omitempty"` // base names to SUBTRACT from the composed layers (the relaxation-overlay operator, symmetric to extends-append)
 	Layers  ProfileLayers `yaml:"layers" json:"layers"`
 	Todo    []string      `yaml:"todo,omitempty" json:"todo,omitempty"`
+	// Targets optionally declares the lock targets this profile admits. It is
+	// read from the profile's own document only: `extends:` composes layers
+	// (internal/profile.mergeLayers) and never inherits Targets, so a child
+	// without its own `targets:` is not a declaring profile. Empty means
+	// undeclared; older binaries ignore the field.
+	Targets StringList `yaml:"targets,omitempty" json:"targets,omitempty"`
 }
 
 // Header returns the profile's shared identity header (implements Installable).

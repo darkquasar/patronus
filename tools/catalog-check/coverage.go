@@ -6,9 +6,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
+
+// Ledger item_suffix values are one safe lowercase alphanumeric component: the
+// disposition `port-<item_suffix>` must stay a plain literal.
+var _itemSuffixPattern = regexp.MustCompile(`^[a-z0-9]+$`)
 
 type profileCase struct {
 	Profile string `json:"profile"`
@@ -48,6 +54,9 @@ func (c *catalog) cases() ([]profileCase, error) {
 			seen[target] = true
 			cases = append(cases, profileCase{Profile: name, Target: target})
 		}
+		if err := agreeDeclaredTargets(c.items[name].manifest, targets); err != nil {
+			return nil, fmt.Errorf("profile cases: %s: %w", name, err)
+		}
 	}
 	for name := range profiles {
 		if it := c.items[name]; it == nil || text(it.manifest, "family") != "profile" {
@@ -58,6 +67,26 @@ func (c *catalog) cases() ([]profileCase, error) {
 		return nil, fmt.Errorf("profile cases: empty selection")
 	}
 	return cases, nil
+}
+
+// agreeDeclaredTargets requires a profile manifest that declares its own
+// `targets:` to admit exactly the profile-targets.yaml set. A profile without
+// the field (including one that only `extends:` a declaring profile) is not
+// declaring and is skipped; profile-targets.yaml stays the admitted-case source.
+func agreeDeclaredTargets(m document, admitted []string) error {
+	declared, err := stringList(m["targets"])
+	if err != nil {
+		return fmt.Errorf("manifest targets: %w", err)
+	}
+	if len(declared) == 0 {
+		return nil
+	}
+	declared = slices.Clone(declared)
+	sort.Strings(declared)
+	if !slices.Equal(declared, admitted) {
+		return fmt.Errorf("manifest declares targets %v but profile-targets.yaml admits %v", declared, admitted)
+	}
+	return nil
 }
 func (c *catalog) writeCases(w io.Writer) error {
 	cases, err := c.cases()
@@ -177,6 +206,17 @@ func (c *catalog) checkLedger(m document, locks map[profileCase]map[string]bool)
 	if !c.targets[baselineTarget] {
 		return fmt.Errorf("missing/unknown baseline_target")
 	}
+	target, suffix := text(m, "target"), text(m, "item_suffix")
+	if target == "" || suffix == "" {
+		return fmt.Errorf("ledger requires target: and item_suffix:")
+	}
+	if target == "all" || !c.targets[target] {
+		return fmt.Errorf("unknown ledger target %s", target)
+	}
+	if !_itemSuffixPattern.MatchString(suffix) {
+		return fmt.Errorf("unsafe item_suffix %q", suffix)
+	}
+	itemsKey, portDisposition := target+"_items", "port-"+suffix
 	members, err := directMembers(base.manifest)
 	if err != nil {
 		return err
@@ -213,7 +253,7 @@ func (c *catalog) checkLedger(m document, locks map[profileCase]map[string]bool)
 		default:
 			return fmt.Errorf("%s: unsupported evidence label", core)
 		}
-		endpoints, err := stringList(row["codex_items"])
+		endpoints, err := stringList(row[itemsKey])
 		if err != nil {
 			return err
 		}
@@ -222,25 +262,24 @@ func (c *catalog) checkLedger(m document, locks map[profileCase]map[string]bool)
 			if len(endpoints) != 0 || text(row, "outcome") == "Equivalent" {
 				return fmt.Errorf("%s: invalid omit", core)
 			}
-		case "port-cx", "reuse-unsuffixed":
+		case portDisposition, "reuse-unsuffixed":
 			if len(endpoints) == 0 {
 				return fmt.Errorf("%s: missing endpoints", core)
 			}
 		default:
 			return fmt.Errorf("%s: unsupported disposition", core)
 		}
-		for _, endpoint := range endpoints {
-			it := c.items[endpoint]
-			if it == nil || text(it.manifest, "family") == "profile" {
-				return fmt.Errorf("%s: missing endpoint %s", core, endpoint)
-			}
-			mapped[endpoint] = true
+		if err := c.mapEndpoints(core, endpoints, mapped); err != nil {
+			return err
 		}
 	}
 	for member := range baselineSet {
 		if !seen[member] {
 			return fmt.Errorf("missing mapping for %s", member)
 		}
+	}
+	if err := c.checkAdditionalItems(m, mapped); err != nil {
+		return err
 	}
 	companions, err := stringList(m["companion_items"])
 	if err != nil {
@@ -282,6 +321,64 @@ func (c *catalog) checkLedger(m document, locks map[profileCase]map[string]bool)
 	}
 	if count == 0 {
 		return fmt.Errorf("no supplied closure for ledger profile %s", profile)
+	}
+	return nil
+}
+
+// mapEndpoints records existing non-profile catalog items as mapped ledger
+// endpoints; label is the row identity used in diagnostics.
+func (c *catalog) mapEndpoints(label string, endpoints []string, mapped map[string]bool) error {
+	for _, endpoint := range endpoints {
+		it := c.items[endpoint]
+		if it == nil || text(it.manifest, "family") == "profile" {
+			return fmt.Errorf("%s: missing endpoint %s", label, endpoint)
+		}
+		mapped[endpoint] = true
+	}
+	return nil
+}
+
+// checkAdditionalItems validates the optional `additional_items:` rows (lane
+// items with no baseline core member) with the entry vocabulary and counts
+// their items as mapped endpoints for closure coverage.
+func (c *catalog) checkAdditionalItems(m document, mapped map[string]bool) error {
+	raw, present := m["additional_items"]
+	if !present || raw == nil {
+		return nil
+	}
+	rows, ok := raw.([]any)
+	if !ok {
+		return fmt.Errorf("additional_items: expected list, got %T", raw)
+	}
+	for i, value := range rows {
+		row, ok := asDocument(value)
+		if !ok {
+			return fmt.Errorf("additional_items[%d]: malformed row", i)
+		}
+		label := fmt.Sprintf("additional_items[%d]", i)
+		if strings.TrimSpace(text(row, "reason")) == "" {
+			return fmt.Errorf("%s: missing reason", label)
+		}
+		switch text(row, "outcome") {
+		case "Equivalent", "Partial", "N/A", "EnvironmentBlocked":
+		default:
+			return fmt.Errorf("%s: unsupported outcome", label)
+		}
+		switch text(row, "evidence") {
+		case "static-confirmed", "runtime-pass", "runtime-pending", "environment-blocked", "historical", "not-run":
+		default:
+			return fmt.Errorf("%s: unsupported evidence label", label)
+		}
+		items, err := stringList(row["items"])
+		if err != nil {
+			return fmt.Errorf("%s: %w", label, err)
+		}
+		if len(items) == 0 && text(row, "outcome") == "Equivalent" {
+			return fmt.Errorf("%s: Equivalent requires items", label)
+		}
+		if err := c.mapEndpoints(label, items, mapped); err != nil {
+			return err
+		}
 	}
 	return nil
 }

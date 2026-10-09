@@ -109,10 +109,10 @@ for case in cases:
 with open(sys.argv[2], 'w') as f:
     for case in cases:
         f.write('%s\t%s\n' % (case['profile'], case['target']))
-# Lane-only profiles (admitted only for codex and/or pi) must refuse claude.
+# Lane-only profiles (admitted targets exclude claude) must refuse claude.
 with open(sys.argv[3], 'w') as f:
     for p in sorted(targets):
-        if targets[p] <= {'codex', 'pi'}:
+        if 'claude' not in targets[p]:
             f.write(p + '\n')
 PY
 
@@ -128,8 +128,9 @@ run_lock() { # profile target -> exit status; logs and project under the case na
   home=$out/home/$c
   project=$out/source/.patronus-cases/$c
   mkdir -p "$home" "$project"
-  (cd "$project" && env HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" \
+  (cd "$project" && env -u OPENCODE_CONFIG HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" \
      XDG_DATA_HOME="$home/.local/share" CODEX_HOME="$home/.codex" \
+     OPENCODE_CONFIG_DIR="$home/.config/opencode" PI_CODING_AGENT_DIR="$home/.pi/agent" \
      "$patronus" lock --profile "$p" --target "$t" --local-registry \
      >"$out/logs/lock-$c.out" 2>"$out/logs/lock-$c.err")
 }
