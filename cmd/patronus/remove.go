@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/packagedelivery"
 	"github.com/darkquasar/patronus/internal/packagestate"
@@ -29,7 +30,7 @@ import (
 // spine — delete CREATEs, un-APPEND sections by marker, restore MERGEs to their
 // pre-install bytes. Safe by default: a dry run unless --deploy. User edits since
 // install are detected by the recorded checksum and skipped unless --force.
-func newRemoveCmd(aliases []string) *cobra.Command {
+func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 	var (
 		tool           string
 		global         bool
@@ -59,7 +60,7 @@ func newRemoveCmd(aliases []string) *cobra.Command {
 			"unrelated roots/configuration remain unchanged.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(tool); err != nil {
+			if err := dp06Target(reg, tool); err != nil {
 				return err
 			}
 			if global && local {
@@ -328,7 +329,7 @@ func newRemoveCmd(aliases []string) *cobra.Command {
 				}
 				loaded["global"] = refreshed
 			}
-			return runRemoveLocked(cmd, cs, ledger, selected, loaded, removeStateOpts{retained: retainedShared, allowPiProject: allowPiProject, profiles: selectedProfiles, mutation: mutation, home: home, projectDir: wd, force: force})
+			return runRemoveLocked(cmd, cs, ledger, selected, loaded, removeStateOpts{retained: retainedShared, allowPiProject: allowPiProject, profiles: selectedProfiles, mutation: mutation, home: home, projectDir: wd, force: force, Harness: reg})
 		},
 	}
 
@@ -436,6 +437,7 @@ type removeStateOpts struct {
 	home           string
 	projectDir     string
 	force          bool
+	Harness        *harness.Registry // injected target registry
 }
 
 // runRemove applies the inverse change set and, on success, drops the fully-undone
@@ -484,7 +486,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 	// In particular, do not let an early singleton removal or authored revert land
 	// before a later selected native member fails admission.
 	if len(natives) > 0 {
-		if err := applyNative(cmd, &diff.ChangeSet{Diffs: natives}, deployOptions{mutation: opts.mutation, saveState: opts.saveState, home: opts.home, projectDir: opts.projectDir, force: opts.force, allowPiProject: opts.allowPiProject}, opts.profiles); err != nil {
+		if err := applyNative(cmd, &diff.ChangeSet{Diffs: natives}, deployOptions{mutation: opts.mutation, saveState: opts.saveState, home: opts.home, projectDir: opts.projectDir, force: opts.force, allowPiProject: opts.allowPiProject, Harness: opts.Harness}, opts.profiles); err != nil {
 			return errors.Join(nativeErr, err)
 		}
 	}

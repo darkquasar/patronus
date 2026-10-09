@@ -68,13 +68,13 @@ func TestPiPackageInstallWithoutSbx(t *testing.T) {
 	if len(diffs) != 1 || diffs[0].Directory == nil || diffs[0].Exec != nil {
 		t.Fatalf("unexpected plan: %+v", diffs)
 	}
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetContext(context.Background())
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetErr(&output)
 	runner := &fakeRunner{}
-	if err := runDeployWith(cmd, &diff.ChangeSet{Diffs: diffs}, res, deployOptions{home: f.home, projectDir: f.root}, runner); err != nil {
+	if err := runDeployWith(cmd, &diff.ChangeSet{Diffs: diffs}, res, deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root}, runner); err != nil {
 		t.Fatal(err)
 	}
 	if len(runner.ran) != 0 || f.fetcher.calls != 1 || lookups != 1 {

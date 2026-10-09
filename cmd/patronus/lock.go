@@ -8,11 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/profile"
 )
 
-func newLockCmd() *cobra.Command {
+func newLockCmd(reg *harness.Registry) *cobra.Command {
 	var (
 		profileSel string
 		tool       string
@@ -33,7 +34,7 @@ func newLockCmd() *cobra.Command {
 			"its locked version from the registry's immutable key and verifies the sha.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(tool); err != nil {
+			if err := dp06Target(reg, tool); err != nil {
 				return err
 			}
 			if profileSel == "" {
@@ -60,10 +61,10 @@ func newLockCmd() *cobra.Command {
 					return fmt.Errorf("existing lock target %s conflicts with --target %s; explicit migration required", prior.Target, tool)
 				}
 			}
-			if err := codexProfileTarget(profileSel, tool); err != nil {
+			if err := codexProfileTarget(reg, profileSel, tool); err != nil {
 				return err
 			}
-			if err := codexLockTarget(prior, tool); err != nil {
+			if err := codexLockTarget(reg, prior, tool); err != nil {
 				return err
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }

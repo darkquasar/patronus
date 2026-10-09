@@ -239,3 +239,30 @@ func ResourceConflict(resources []Resource, selected Resource, policy DuplicateP
 func genericConflict(name string, a, b Resource) error {
 	return fmt.Errorf("%s %q conflicts at %s and %s; incompatible same-name resources cannot be shadowed", a.Kind, name, a.Path, b.Path)
 }
+
+// CodexDiscoveryRoots returns CodexSkillRoots as shared skill roots carrying the
+// Codex walk rules.
+func CodexDiscoveryRoots(home, project, config string) []SkillRoot {
+	roots := CodexSkillRoots(home, project, config)
+	out := make([]SkillRoot, 0, len(roots))
+	for _, root := range roots {
+		out = append(out, codexSkillRoot(root))
+	}
+	return out
+}
+
+// PiSkillDiscoveryRoots returns the skill roots of PiResourceRoots as shared
+// skill roots carrying the Pi walk rules (agent and command roots excluded).
+func PiSkillDiscoveryRoots(home, project, agentRoot string, env EnvLookup, warnings ...func(string)) ([]SkillRoot, error) {
+	roots, err := PiResourceRoots(home, project, agentRoot, false, env, warnings...)
+	if err != nil {
+		return nil, err
+	}
+	var out []SkillRoot
+	for _, root := range roots {
+		if root.Kind == "skill" {
+			out = append(out, piSkillRoot(root))
+		}
+	}
+	return out, nil
+}

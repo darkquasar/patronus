@@ -447,7 +447,7 @@ func TestDirectoryPlanCatalogSnapshotIsCloned(t *testing.T) {
 	rec := f.recipe(t, "pi-sandbox", "1.0.0", "kit")
 	cat := &registry.Catalog{Recipes: []registry.RecipeEntry{{Manifest: rec}}}
 	cmd := &cobra.Command{}
-	p, err := planInstall(cmd, installPlanRequest{Names: []string{rec.Name, rec.Name}, Home: f.home, ProjectDir: f.root, Catalog: cat})
+	p, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{rec.Name, rec.Name}, Home: f.home, ProjectDir: f.root, Catalog: cat})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -709,7 +709,7 @@ func TestDirectorySelectedSnapshotPinsWithoutRegistryFetch(t *testing.T) {
 	if err := lock.Save(filepath.Join(project, "patronus.lock"), l); err != nil {
 		t.Fatal(err)
 	}
-	p, err := planInstall(&cobra.Command{}, installPlanRequest{Profile: "directory-test", Home: f.home, ProjectDir: project, Catalog: cat})
+	p, err := planInstall(&cobra.Command{}, installPlanRequest{Harness: testRegistry(t), Profile: "directory-test", Home: f.home, ProjectDir: project, Catalog: cat})
 	if err != nil {
 		t.Fatal(err)
 	}

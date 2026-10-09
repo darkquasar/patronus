@@ -479,8 +479,8 @@ func TestHarnessOwnerLoadWrapping(t *testing.T) {
 		}
 		t.Cleanup(func() { var cerr error; m.close(&cerr) })
 		cs := &diff.ChangeSet{Diffs: harnessExpandDiffs([]diff.FileDiff{piSkillDiff()}, home, project)}
-		cmd := newInstallCmd()
-		err = runDeployLocked(cmd, cs, res, deployOptions{home: home, projectDir: project, mutation: m, target: "pi"}, &fakeRunner{})
+		cmd := newInstallCmd(testRegistry(t))
+		err = runDeployLocked(cmd, cs, res, deployOptions{Harness: testRegistry(t), home: home, projectDir: project, mutation: m, target: "pi"}, &fakeRunner{})
 		if got := harnessErr(err); !strings.HasPrefix(got, "load global state: ") {
 			t.Fatalf("runDeployLocked wrap: %q", got)
 		}

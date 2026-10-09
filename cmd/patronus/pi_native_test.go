@@ -585,8 +585,8 @@ func TestPiNativeRemoveBatchProbeFailureMutatesNothing(t *testing.T) {
 	previous := nativeRunner
 	nativeRunner = runner
 	t.Cleanup(func() { nativeRunner = previous })
-	cmd := newRemoveCmd(nil)
-	if err := runRemove(cmd, cs, nil, nil, map[string]*state.State{"global": s}, removeStateOpts{home: home, projectDir: project}); err == nil || !strings.Contains(err.Error(), "second probe failure") {
+	cmd := newRemoveCmd(nil, testRegistry(t))
+	if err := runRemove(cmd, cs, nil, nil, map[string]*state.State{"global": s}, removeStateOpts{Harness: testRegistry(t), home: home, projectDir: project}); err == nil || !strings.Contains(err.Error(), "second probe failure") {
 		t.Fatalf("missing batch probe failure: %v", err)
 	}
 	if runner.operations != 0 {

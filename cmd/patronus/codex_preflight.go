@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/scan"
@@ -267,40 +268,30 @@ func codexContextAdmission(d diff.FileDiff, owners []state.Item) error {
 	return nil
 }
 
-func codexProfileTarget(profile, target string) error {
-	if profile == "core-profile-cx" && target != "codex" {
-		return fmt.Errorf("core-profile-cx requires --target codex (got %q)", target)
-	}
-	return nil
+// codexProfileTarget delegates the profile-to-target binding to the registry
+// (no declared manifest targets at this call; text unchanged).
+func codexProfileTarget(reg *harness.Registry, profile, target string) error {
+	return reg.ProfileTarget(profile, nil, target)
 }
 
-// Codex uses the existing target-bearing lock schema. An ambiguous legacy lock
-// cannot authorize crossing into Codex, even when the desired profile differs.
-func codexLockTarget(prior *lock.Lock, target string) error {
-	if prior.Target != "codex" && target != "codex" {
-		return nil
-	}
-	if prior.Target != "" && prior.Target != target {
-		return fmt.Errorf("existing lock target %s conflicts with --target %s; use separate project roots or explicit migration", prior.Target, target)
-	}
-	if prior.Target == "" && (prior.Profile != "" || len(prior.Entries) > 0) {
-		return fmt.Errorf("existing legacy lock target is unknown; preserve patronus.lock and reconcile provenance before Codex migration")
-	}
-	return nil
+// codexLockTarget delegates the lock coexistence rule to the registry, whose
+// LockCoexistence flag keeps today's Codex-only trigger.
+func codexLockTarget(reg *harness.Registry, prior *lock.Lock, target string) error {
+	return reg.LockTarget(prior, target)
 }
 
-func codexCheckLock(project, target string) error {
+func codexCheckLock(reg *harness.Registry, project, target string) error {
 	prior, err := lock.Load(filepath.Join(project, "patronus.lock"))
 	if err != nil {
 		return err
 	}
-	return codexLockTarget(prior, target)
+	return codexLockTarget(reg, prior, target)
 }
 
 // Target-free requests are exempt only after the complete dependency plan
 // proves every operation is runtime-agnostic. A missing target for a runtime
 // selection is not consent to cross an existing Codex lock.
-func codexCheckComputedLock(project, target string, cs *diff.ChangeSet) error {
+func codexCheckComputedLock(reg *harness.Registry, project, target string, cs *diff.ChangeSet) error {
 	prior, err := lock.Load(filepath.Join(project, "patronus.lock"))
 	if err != nil {
 		return err
@@ -314,7 +305,7 @@ func codexCheckComputedLock(project, target string, cs *diff.ChangeSet) error {
 			return nil
 		}
 	}
-	return codexLockTarget(prior, target)
+	return codexLockTarget(reg, prior, target)
 }
 
 // Shared remove emits inverse diffs, with the structural evidence retained in

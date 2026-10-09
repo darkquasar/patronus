@@ -12,7 +12,7 @@ import (
 
 func runLock(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newLockCmd()
+	cmd := newLockCmd(testRegistry(t))
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)

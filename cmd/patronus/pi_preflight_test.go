@@ -245,7 +245,7 @@ func TestPiPreflightMixedWholeSelection(t *testing.T) {
 			dp02File(t, filepath.Join(f.home, ".patronus/state.json"), `{"version":1,"items":[]}`)
 			dp02File(t, filepath.Join(f.root, "patronus.lock"), `{"version":2,"entries":[]}`)
 			before := dp02Snapshot(t, f.home, f.root)
-			cmd := newInstallCmd()
+			cmd := newInstallCmd(testRegistry(t))
 			var out bytes.Buffer
 			cmd.SetOut(&out)
 			cmd.SetErr(&out)
@@ -274,7 +274,7 @@ func TestPiContextConsent(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	planned, err := planInstall(cmd, installPlanRequest{Names: []string{"context-fixture"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+	planned, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{"context-fixture"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +344,7 @@ func TestPiContextGlobalClaudeProvenance(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	planned, err := planInstall(cmd, installPlanRequest{Names: []string{"fixture-context"}, Tool: "pi", Scope: "global", Home: f.home, ProjectDir: f.root})
+	planned, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{"fixture-context"}, Tool: "pi", Scope: "global", Home: f.home, ProjectDir: f.root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -565,7 +565,7 @@ func TestPiPreflightMCPProposedCollision(t *testing.T) {
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetIn(strings.NewReader("yes\n"))
-	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{home: f.home, projectDir: f.root, yes: true, force: true}, &fakeRunner{})
+	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, yes: true, force: true}, &fakeRunner{})
 	if err == nil || !strings.Contains(err.Error(), "duplicate normalized") {
 		t.Fatalf("proposed duplicate admitted: %v", err)
 	}
@@ -603,7 +603,7 @@ func TestPiPreflightMCPImportedCollision(t *testing.T) {
 			cmd.SetErr(&bytes.Buffer{})
 			cmd.SetIn(strings.NewReader("yes\n"))
 			runner := &fakeRunner{}
-			err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{home: f.home, projectDir: f.root, yes: true, force: true}, runner)
+			err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, yes: true, force: true}, runner)
 			if err == nil || !strings.Contains(err.Error(), "duplicate normalized") || !strings.Contains(err.Error(), source) {
 				t.Fatalf("known imported collision admitted: %v", err)
 			}

@@ -719,15 +719,15 @@ func TestPiLifecycleLocalArchivePinEvidenceRefuses(t *testing.T) {
 func TestPiLifecycleLocalRechecksGlobalBeforeFirstWrite(t *testing.T) {
 	f := dp06Dependencies(t)
 	dp06InstallProfile(t, "global")
-	cmd := newInstallCmd()
-	p, err := planInstall(cmd, installPlanRequest{Names: []string{"fixture-feature"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+	cmd := newInstallCmd(testRegistry(t))
+	p, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{"fixture-feature"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
 	if err != nil {
 		t.Fatal(err)
 	}
 	dp06Write(t, filepath.Join(f.home, ".patronus/bin/fix-bin"), "external edit after verified planning")
 	before := dp01SnapshotFiles(t, f.home)
 	localBefore := dp01SnapshotFiles(t, f.root)
-	err = runDeployWith(cmd, p.Changes, p.Resolver, deployOptions{target: "pi", globalPrerequisites: p.GlobalPrerequisites, home: f.home, projectDir: f.root}, &fakeRunner{})
+	err = runDeployWith(cmd, p.Changes, p.Resolver, deployOptions{Harness: testRegistry(t), target: "pi", globalPrerequisites: p.GlobalPrerequisites, home: f.home, projectDir: f.root}, &fakeRunner{})
 	if err == nil || !strings.Contains(err.Error(), "fresh preview") {
 		t.Fatalf("stale global admitted: %v", err)
 	}

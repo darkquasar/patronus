@@ -186,7 +186,7 @@ func runList(t *testing.T, args ...string) (string, string, error) {
 
 func runUpdate(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newUpdateCmd()
+	cmd := newUpdateCmd(testRegistry(t))
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)

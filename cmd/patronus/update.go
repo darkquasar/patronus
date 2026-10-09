@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/profile"
@@ -35,7 +36,7 @@ import (
 //	                    a MANUAL, explicit action: Patronus never auto-updates.
 //
 // Like install, the installed-item refresh is a dry run unless --deploy.
-func newUpdateCmd() *cobra.Command {
+func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 	var (
 		regSel                                          registrySel
 		allowPkgInstalls, allowPiProject, trackExisting bool
@@ -66,11 +67,11 @@ func newUpdateCmd() *cobra.Command {
 			"global updates require all-consumer review. Runtime activation remains unverified.",
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(target); err != nil {
+			if err := dp06Target(hreg, target); err != nil {
 				return err
 			}
 			for _, name := range args {
-				if err := codexProfileTarget(name, target); err != nil {
+				if err := codexProfileTarget(hreg, name, target); err != nil {
 					return err
 				}
 			}
@@ -87,7 +88,7 @@ func newUpdateCmd() *cobra.Command {
 			}
 			home := homeDir()
 			if target != "" {
-				if err := codexCheckLock(wd, target); err != nil {
+				if err := codexCheckLock(hreg, wd, target); err != nil {
 					return err
 				}
 			}
@@ -149,7 +150,7 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("update: registry unavailable; cannot check for updates")
 			}
 
-			piRoute, err := dp06UpdateTarget(cat, args, all, target, home, wd)
+			piRoute, err := dp06UpdateTarget(hreg, cat, args, all, target, home, wd)
 			if err != nil {
 				return err
 			}
@@ -170,7 +171,7 @@ func newUpdateCmd() *cobra.Command {
 						return fmt.Errorf("update: registry unavailable")
 					}
 				}
-				return dp06UpdatePi(cmd, cat, regSel, args, all, scope, home, wd, deploy, force, mutation, deployOptions{allowPkgInstalls: allowPkgInstalls, allowPiProject: allowPiProject, trackExisting: trackExisting})
+				return dp06UpdatePi(cmd, cat, regSel, args, all, scope, home, wd, deploy, force, mutation, deployOptions{allowPkgInstalls: allowPkgInstalls, allowPiProject: allowPiProject, trackExisting: trackExisting, Harness: hreg})
 			}
 			if local || global {
 				return fmt.Errorf("update scope flags require a proven Pi target")
@@ -386,7 +387,7 @@ func newUpdateCmd() *cobra.Command {
 				if tool == recipe.TargetAgnostic {
 					tool = ""
 				}
-				return planInstall(cmd, installPlanRequest{Names: []string{c.name}, Tool: tool, Scope: c.scope, Home: home, ProjectDir: wd, Registry: regSel, Catalog: cat})
+				return planInstall(cmd, installPlanRequest{Names: []string{c.name}, Tool: tool, Scope: c.scope, Home: home, ProjectDir: wd, Registry: regSel, Catalog: cat, Harness: hreg})
 			}
 			var planned []plannedInstall
 			if hasDirectory {
@@ -466,7 +467,7 @@ func newUpdateCmd() *cobra.Command {
 					// force is exclusively the flag the user supplied. runDeploy must
 					// reconcile the complete owned set before this candidate counts as
 					// updated; unresolved paths/state persistence stop the loop.
-					if err := runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{mutation: mutation, target: c.tool, force: true, home: home, projectDir: wd}, runnerForCommands); err != nil {
+					if err := runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{mutation: mutation, target: c.tool, force: true, home: home, projectDir: wd, Harness: hreg}, runnerForCommands); err != nil {
 						return err
 					}
 				}
@@ -557,8 +558,8 @@ func catalogHasProfile(cat *registry.Catalog, name string) bool {
 }
 
 // dp06UpdateTarget resolves provenance before allowing any scope collection.
-func dp06UpdateTarget(cat *registry.Catalog, args []string, all bool, target, home, wd string) (bool, error) {
-	if err := dp06Target(target); err != nil {
+func dp06UpdateTarget(reg *harness.Registry, cat *registry.Catalog, args []string, all bool, target, home, wd string) (bool, error) {
+	if err := dp06Target(reg, target); err != nil {
 		return false, err
 	}
 	wanted := map[string]bool{}
@@ -711,7 +712,7 @@ func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, ar
 	if len(names) == 0 {
 		return nil
 	}
-	p, err := planInstall(cmd, installPlanRequest{Names: names, Tool: "pi", Scope: scope, Home: home, ProjectDir: wd, Registry: reg, Catalog: cat, Force: force, Acquire: deploy && !jsonOutput})
+	p, err := planInstall(cmd, installPlanRequest{Names: names, Tool: "pi", Scope: scope, Home: home, ProjectDir: wd, Registry: reg, Catalog: cat, Force: force, Acquire: deploy && !jsonOutput, Harness: nativeOpts.Harness})
 	if err != nil {
 		return err
 	}
@@ -751,7 +752,7 @@ func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, ar
 			p.Changes.Diffs[i].Action = diff.Create
 		}
 	}
-	return runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{allowPkgInstalls: nativeOpts.allowPkgInstalls, allowPiProject: nativeOpts.allowPiProject, trackExisting: nativeOpts.trackExisting, mutation: mutation, target: "pi", globalPrerequisites: p.GlobalPrerequisites, force: force, home: home, projectDir: wd}, runnerForCommands)
+	return runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{allowPkgInstalls: nativeOpts.allowPkgInstalls, allowPiProject: nativeOpts.allowPiProject, trackExisting: nativeOpts.trackExisting, mutation: mutation, target: "pi", globalPrerequisites: p.GlobalPrerequisites, force: force, home: home, projectDir: wd, Harness: nativeOpts.Harness}, runnerForCommands)
 }
 
 // Before catalog acquisition, conservatively recognize possible Pi provenance.

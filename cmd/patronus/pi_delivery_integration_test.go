@@ -244,11 +244,11 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 				t.Fatalf("headless combined-context write admitted: %v", err)
 			}
 			dp07NoEffects(t, f, before)
-			cmd := newInstallCmd()
+			cmd := newInstallCmd(testRegistry(t))
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
-			planned, err := planInstall(cmd, installPlanRequest{Profile: "folio-kit", Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+			planned, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Profile: "folio-kit", Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -260,7 +260,7 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 			if err != nil || len(consents) != 1 {
 				t.Fatalf("separate consent: %v", err)
 			}
-			opts := deployOptions{target: "pi", home: f.home, projectDir: f.root, piConsents: consents}
+			opts := deployOptions{Harness: testRegistry(t), target: "pi", home: f.home, projectDir: f.root, piConsents: consents}
 			if scenario == "state-save-failure" {
 				opts.saveState = func(string, *state.State) error { return errors.New("invented persistence fault") }
 			}

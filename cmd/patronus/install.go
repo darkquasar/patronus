@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
@@ -34,7 +35,7 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-func newInstallCmd() *cobra.Command {
+func newInstallCmd(reg *harness.Registry) *cobra.Command {
 	var (
 		tool                          string
 		global                        bool
@@ -110,7 +111,7 @@ func newInstallCmd() *cobra.Command {
 				}
 				defer mutation.close(&err)
 			}
-			planned, err := planInstall(cmd, installPlanRequest{Names: names, Profile: profileSel, Tool: tool, Scope: scope, Home: home, ProjectDir: wd, Registry: regSel, Force: force, Acquire: deploy && !jsonOutput})
+			planned, err := planInstall(cmd, installPlanRequest{Names: names, Profile: profileSel, Tool: tool, Scope: scope, Home: home, ProjectDir: wd, Registry: regSel, Force: force, Acquire: deploy && !jsonOutput, Harness: reg})
 			if err != nil {
 				return err
 			}
@@ -149,7 +150,7 @@ func newInstallCmd() *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runDeployLocked(cmd, cs, res, deployOptions{trackExisting: trackExisting, allowPiProject: allowPiProject, profile: profileSel, mutation: mutation, target: planned.Target, globalPrerequisites: planned.GlobalPrerequisites, force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd}, runnerForCommands)
+			return runDeployLocked(cmd, cs, res, deployOptions{trackExisting: trackExisting, allowPiProject: allowPiProject, profile: profileSel, mutation: mutation, target: planned.Target, globalPrerequisites: planned.GlobalPrerequisites, force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd, Harness: reg}, runnerForCommands)
 		},
 	}
 
@@ -179,6 +180,8 @@ type installPlanRequest struct {
 	Registry                               registrySel
 	Catalog                                *registry.Catalog
 	Acquire                                bool
+	// Harness is the injected target registry; nil fails closed.
+	Harness *harness.Registry
 }
 
 type plannedInstall struct {
@@ -189,14 +192,15 @@ type plannedInstall struct {
 }
 
 func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, error) {
-	if err := dp06Target(req.Tool); err != nil {
+	hreg := req.Harness
+	if err := dp06Target(hreg, req.Tool); err != nil {
 		return plannedInstall{}, err
 	}
 	if req.Tool != "" {
-		if err := codexProfileTarget(req.Profile, req.Tool); err != nil {
+		if err := codexProfileTarget(hreg, req.Profile, req.Tool); err != nil {
 			return plannedInstall{}, err
 		}
-		if err := codexCheckLock(req.ProjectDir, req.Tool); err != nil {
+		if err := codexCheckLock(hreg, req.ProjectDir, req.Tool); err != nil {
 			return plannedInstall{}, err
 		}
 	}
@@ -218,11 +222,11 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			tool = l.Target
 		}
 	}
-	if err := codexProfileTarget(profileSel, tool); err != nil {
+	if err := codexProfileTarget(hreg, profileSel, tool); err != nil {
 		return plannedInstall{}, err
 	}
 	if tool != "" {
-		if err := codexCheckLock(wd, tool); err != nil {
+		if err := codexCheckLock(hreg, wd, tool); err != nil {
 			return plannedInstall{}, err
 		}
 	}
@@ -378,7 +382,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		return plannedInstall{}, err
 	}
 
-	if err := codexCheckComputedLock(wd, tool, cs); err != nil {
+	if err := codexCheckComputedLock(hreg, wd, tool, cs); err != nil {
 		return plannedInstall{}, err
 	}
 	if err := staticPiSelection(cs, tool == "pi"); err != nil {
@@ -880,9 +884,10 @@ type deployOptions struct {
 	piConsents                    []piContextConsent               // operation-local prepared-byte consent; never persisted
 	force                         bool
 	yes                           bool
-	allowPkgInstalls              bool   // --allow-package-installs: run package installs non-interactively, all-or-nothing
-	home                          string // for ~/.patronus/state.json
-	projectDir                    string // for <project>/.patronus/state.json
+	allowPkgInstalls              bool              // --allow-package-installs: run package installs non-interactively, all-or-nothing
+	home                          string            // for ~/.patronus/state.json
+	projectDir                    string            // for <project>/.patronus/state.json
+	Harness                       *harness.Registry // injected target registry
 }
 
 // commandRunner runs a self-wiring recipe's post-install command. The real impl
@@ -1317,13 +1322,8 @@ func conflictPrompt(cmd *cobra.Command, res toolpath.Resolver, yes bool) install
 	}
 }
 
-func dp06Target(target string) error {
-	switch target {
-	case "", "all", "claude", "codex", "opencode", "pi":
-		return nil
-	}
-	return fmt.Errorf("unknown target %q; use claude|codex|opencode|pi|all", target)
-}
+// dp06Target delegates the target enum to the registry (text unchanged).
+func dp06Target(reg *harness.Registry, target string) error { return reg.ValidateTarget(target) }
 
 func dp06ProfileComplete(res *profile.Resolved) error {
 	for _, w := range res.Warnings {

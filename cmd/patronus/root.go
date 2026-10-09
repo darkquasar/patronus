@@ -1,11 +1,21 @@
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/darkquasar/patronus/internal/harness"
+	"github.com/spf13/cobra"
+)
 
 // jsonOutput is the persistent --json flag shared by output commands.
 var jsonOutput bool
 
-func newRootCmd() *cobra.Command {
+func newRootCmd() *cobra.Command { return newRootCmdWith(defaultRegistry) }
+
+// newRootCmdWith builds the root command over the registry build returns. A
+// build error is surfaced by PersistentPreRunE so every subcommand fails closed
+// before it runs; the constructors receive the nil registry and never
+// dereference it before that hook.
+func newRootCmdWith(build func() (*harness.Registry, error)) *cobra.Command {
+	reg, regErr := build()
 	root := &cobra.Command{
 		Use:   "patronus",
 		Short: "Meta-scaffolder for AI coding environments",
@@ -32,17 +42,18 @@ prove the archive pin; use supported delivery or separately qualify a migration.
 		SilenceErrors: false,
 	}
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "emit machine-readable JSON")
+	root.PersistentPreRunE = func(*cobra.Command, []string) error { return regErr }
 
 	root.AddCommand(newListCmd())
 	root.AddCommand(newScanCmd())
-	root.AddCommand(newInstallCmd())
-	root.AddCommand(newLockCmd())
+	root.AddCommand(newInstallCmd(reg))
+	root.AddCommand(newLockCmd(reg))
 	root.AddCommand(newBuildCmd())
 	root.AddCommand(newCheckVersionsCmd())
 	root.AddCommand(newCheckPlaceholdersCmd())
 	root.AddCommand(newCheckGateIntentCmd())
-	root.AddCommand(newUpdateCmd())
-	root.AddCommand(newRemoveCmd([]string{"revert"}))
+	root.AddCommand(newUpdateCmd(reg))
+	root.AddCommand(newRemoveCmd([]string{"revert"}, reg))
 	root.AddCommand(newMigrateCmd())
 	addStubCommands(root)
 	return root

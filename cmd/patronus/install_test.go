@@ -27,7 +27,7 @@ import (
 // fixture environment and returns stdout, stderr and the command error.
 func runInstall(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
@@ -156,10 +156,10 @@ func TestInstallDeployWritesFilesAndState(t *testing.T) {
 			Artifact: "s", Type: "skill", Tool: "claude", Scope: "global"},
 	}}
 
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	if err := runDeploy(cmd, cs, res, deployOptions{home: home, projectDir: proj}); err != nil {
+	if err := runDeploy(cmd, cs, res, deployOptions{Harness: testRegistry(t), home: home, projectDir: proj}); err != nil {
 		t.Fatalf("deploy failed: %v", err)
 	}
 
@@ -183,7 +183,7 @@ func TestInstallDeployWritesFilesAndState(t *testing.T) {
 func TestRecordStateSplitsByScope(t *testing.T) {
 	home := t.TempDir()
 	proj := t.TempDir()
-	opts := deployOptions{home: home, projectDir: proj}
+	opts := deployOptions{Harness: testRegistry(t), home: home, projectDir: proj}
 	applied := []diff.FileDiff{
 		{Path: filepath.Join(home, ".claude/skills/g/SKILL.md"), Action: diff.Create, After: []byte("g"), Artifact: "g", Tool: "claude", Scope: "global"},
 		{Path: filepath.Join(proj, ".claude/skills/l/SKILL.md"), Action: diff.Create, After: []byte("l"), Artifact: "l", Tool: "claude", Scope: "local"},
@@ -328,11 +328,11 @@ func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
 		},
 	}}}
 
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	runner := &fakeRunner{}
-	if err := runDeployWith(cmd, cs, res, deployOptions{home: home, projectDir: proj}, runner); err != nil {
+	if err := runDeployWith(cmd, cs, res, deployOptions{Harness: testRegistry(t), home: home, projectDir: proj}, runner); err != nil {
 		t.Fatalf("deploy failed: %v", err)
 	}
 
@@ -353,7 +353,7 @@ func TestRunDeployRunsExecAndRecordsSelfWired(t *testing.T) {
 }
 
 func TestRunExecsStopsOnFailure(t *testing.T) {
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{
@@ -457,7 +457,7 @@ func TestConsentAllowFlagRunsWhenManagerPresent(t *testing.T) {
 	cs := pkgInstallCS("demo-recipe", diff.InstallCandidateSpec{Manager: "uv", Command: "uv tool install mypkg"})
 	runner := &fakeRunner{}
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "/x", nil }, out: io.Discard}
-	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+	if _, err := runExecs(newInstallCmd(testRegistry(t)), cs, runner, consent); err != nil {
 		t.Fatal(err)
 	}
 	if len(runner.ran) != 1 || runner.ran[0][0] != "uv" {
@@ -479,7 +479,7 @@ func TestConsentAllowFlagFallsOffPreferredManager(t *testing.T) {
 		}
 		return "", errors.New("absent")
 	}
-	if _, err := runExecs(newInstallCmd(), cs, runner, installConsent{allow: true, look: look, out: &out}); err != nil {
+	if _, err := runExecs(newInstallCmd(testRegistry(t)), cs, runner, installConsent{allow: true, look: look, out: &out}); err != nil {
 		t.Fatal(err)
 	}
 	if len(runner.ran) != 1 || runner.ran[0][0] != "brew" {
@@ -495,7 +495,7 @@ func TestConsentSurfacesWhenNoManagerPresent(t *testing.T) {
 	runner := &fakeRunner{}
 	var out bytes.Buffer
 	consent := installConsent{allow: true, look: func(string) (string, error) { return "", errors.New("no") }, out: &out}
-	ran, err := runExecs(newInstallCmd(), cs, runner, consent)
+	ran, err := runExecs(newInstallCmd(testRegistry(t)), cs, runner, consent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,7 +520,7 @@ func TestConsentInteractiveDeclineSurfaces(t *testing.T) {
 		in:   bufio.NewReader(strings.NewReader("n\n")),
 		out:  &out,
 	}
-	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+	if _, err := runExecs(newInstallCmd(testRegistry(t)), cs, runner, consent); err != nil {
 		t.Fatal(err)
 	}
 	if len(runner.ran) != 0 {
@@ -537,7 +537,7 @@ func TestConsentInteractiveAcceptRuns(t *testing.T) {
 		in:   bufio.NewReader(strings.NewReader("y\n")),
 		out:  &out,
 	}
-	if _, err := runExecs(newInstallCmd(), cs, runner, consent); err != nil {
+	if _, err := runExecs(newInstallCmd(testRegistry(t)), cs, runner, consent); err != nil {
 		t.Fatal(err)
 	}
 	if len(runner.ran) != 1 {
@@ -546,7 +546,7 @@ func TestConsentInteractiveAcceptRuns(t *testing.T) {
 }
 
 func TestAllowPackageInstallsFlagRegistered(t *testing.T) {
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	if cmd.Flags().Lookup("allow-package-installs") == nil {
 		t.Fatal("--allow-package-installs not registered")
 	}
@@ -845,9 +845,9 @@ func TestRecordStateSaveFailureIsOperationFailureForEveryTarget(t *testing.T) {
 				path = filepath.Join(f.home, ".pi/agent/prompts/fixture.md")
 			}
 			d := diff.FileDiff{Artifact: "fixture", Type: "command", Tool: tool, Scope: "global", Version: "1", Path: path, Action: diff.Create, After: []byte("initial fixture")}
-			opts := deployOptions{home: f.home, projectDir: f.root, force: true, yes: true}
+			opts := deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, force: true, yes: true}
 			res := toolpath.New(os.LookupEnv, f.home, f.root)
-			cmd := newInstallCmd()
+			cmd := newInstallCmd(testRegistry(t))
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetErr(&bytes.Buffer{})
 			if err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, res, opts); err != nil {
@@ -907,7 +907,7 @@ func TestPiOwnershipReplacementRefusesInvalidContinuity(t *testing.T) {
 			edit := &diff.SettingEdit{Target: diff.FileTargetRef{File: "settings.json", Format: "json"}, Dotted: "fixture", ScalarValue: "old"}
 			before := []byte(`{"fixture":"old","user":"keep"}`)
 			d := diff.FileDiff{Artifact: "fixture-setting", Type: "setting", Tool: "pi", Scope: "global", Version: "1", Path: path, Action: diff.Merge, After: before, Setting: edit}
-			opts := deployOptions{home: f.home, projectDir: f.root, force: true, yes: true}
+			opts := deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, force: true, yes: true}
 			old := state.FromChangeSet([]diff.FileDiff{d}, "first")
 			switch fault {
 			case "changed absolute path":
@@ -942,7 +942,7 @@ func TestPiOwnershipReplacementRefusesInvalidContinuity(t *testing.T) {
 			copyEdit.ScalarValue = "new"
 			d.Setting = &copyEdit
 			snapshot := dp02Snapshot(t, f.home, f.root)
-			cmd := newInstallCmd()
+			cmd := newInstallCmd(testRegistry(t))
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetErr(&bytes.Buffer{})
 			if err := runDeploy(cmd, &diff.ChangeSet{Diffs: []diff.FileDiff{d}}, toolpath.New(os.LookupEnv, f.home, f.root), opts); err == nil {

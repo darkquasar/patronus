@@ -56,7 +56,7 @@ func TestRemoveRevertsV1OrphanPluginMerge(t *testing.T) {
 // execRemove executes the remove command with args, returning stdout, stderr, err.
 func execRemove(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newRemoveCmd([]string{"revert"})
+	cmd := newRemoveCmd([]string{"revert"}, testRegistry(t))
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
@@ -497,13 +497,13 @@ func TestRemoveFooterCountsPluginUninstallExecs(t *testing.T) {
 		Exec: &diff.ExecSpec{Command: []string{"claude", "plugin", "uninstall", "demo-plugin"}, Display: "claude plugin uninstall demo-plugin"},
 	}}}
 
-	cmd := newRemoveCmd(nil)
+	cmd := newRemoveCmd(nil, testRegistry(t))
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	loaded := map[string]*state.State{"local": {Version: state.Version, Items: []state.Item{item}}}
 
-	if err := runRemove(cmd, cs, nil, []state.Item{item}, loaded, removeStateOpts{home: t.TempDir(), projectDir: proj}); err != nil {
+	if err := runRemove(cmd, cs, nil, []state.Item{item}, loaded, removeStateOpts{Harness: testRegistry(t), home: t.TempDir(), projectDir: proj}); err != nil {
 		t.Fatalf("runRemove failed: %v", err)
 	}
 	if len(runner.ran) != 1 {
@@ -520,10 +520,10 @@ func TestRemovePiPreparedCombinedContextPreservesMigration(t *testing.T) {
 	prepared := []byte("Operator-prepared shared instructions\n\nClaude-specific instructions and user content\n")
 	path := filepath.Join(f.root, "CLAUDE.md")
 	dp02File(t, path, string(prepared))
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	planned, err := planInstall(cmd, installPlanRequest{Names: []string{"fixture-context"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+	planned, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{"fixture-context"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -546,7 +546,7 @@ func TestRemovePiPreparedCombinedContextPreservesMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := recordState(planned.Changes, result, deployOptions{home: f.home, projectDir: f.root}); err != nil {
+	if err := recordState(planned.Changes, result, deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := execRemove(t, "fixture-context", "--target", "pi", "--local", "--deploy"); err != nil {
@@ -578,10 +578,10 @@ func TestRemoveSaveFailureRetainsDurableOwnershipForEveryTarget(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cmd := newRemoveCmd(nil)
+			cmd := newRemoveCmd(nil, testRegistry(t))
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetErr(&bytes.Buffer{})
-			err = runRemove(cmd, inverse.ChangeSet, inverse.Ledger, original.Items, map[string]*state.State{"global": original}, removeStateOpts{home: f.home, projectDir: f.root, saveState: func(string, *state.State) error { return errors.New("injected state-save failure") }})
+			err = runRemove(cmd, inverse.ChangeSet, inverse.Ledger, original.Items, map[string]*state.State{"global": original}, removeStateOpts{Harness: testRegistry(t), home: f.home, projectDir: f.root, saveState: func(string, *state.State) error { return errors.New("injected state-save failure") }})
 			if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), path) {
 				t.Fatalf("missing failure diagnostics: %v", err)
 			}
@@ -689,7 +689,7 @@ func TestRemoveLastMomentEditPreservesBytesAndOwnership(t *testing.T) {
 	path := filepath.Join(f.home, ".pi/agent/prompts/fixture-prompt.md")
 	sp := filepath.Join(f.home, ".patronus/state.json")
 	before := mustRead(t, sp)
-	cmd := newRemoveCmd(nil)
+	cmd := newRemoveCmd(nil, testRegistry(t))
 	edited := false
 	cmd.SetOut(dp05WriterFunc(func(p []byte) (int, error) {
 		if !edited {

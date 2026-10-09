@@ -158,7 +158,7 @@ func TestMutationHolderProcess(t *testing.T) {
 	if os.Getenv("PATRONUS_DP05_HOLDER") != "1" {
 		return
 	}
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetOut(&dp05HoldingWriter{})
 	cmd.SetErr(os.Stderr)
 	cmd.SetArgs([]string{"fixture-prompt", "--target", "pi", "--global", "--deploy", "--yes"})
@@ -188,10 +188,10 @@ func TestPiRaceConfirmedPreparedContextRequiresFreshInteractivePreview(t *testin
 		t.Fatal(err)
 	}
 	defer m.release()
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
-	p, err := planInstall(cmd, installPlanRequest{Names: []string{"context-fixture"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
+	p, err := planInstall(cmd, installPlanRequest{Harness: testRegistry(t), Names: []string{"context-fixture"}, Tool: "pi", Scope: "local", Home: f.home, ProjectDir: f.root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestPiRaceCommandRejectsEditAfterPlan(t *testing.T) {
 	f := dp02Setup(t)
 	dp02Artifact(t, f.root, "fixture-prompt", "command", "Desired prompt\n")
 	path := filepath.Join(f.home, ".pi/agent/prompts/fixture-prompt.md")
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	edited := false
 	cmd.SetOut(dp05WriterFunc(func(p []byte) (int, error) {
 		if !edited {
@@ -307,10 +307,10 @@ func TestMutationPiSelectionRejectsProvisioningBeforeWrites(t *testing.T) {
 		{Artifact: "invented-provisioner", Tool: "agnostic", Scope: "global", Action: diff.Exec, Exec: &diff.ExecSpec{Command: []string{"never-run"}}},
 	}}
 	runner := &fakeRunner{}
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
-	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{home: f.home, projectDir: f.root, allowPkgInstalls: true}, runner)
+	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, allowPkgInstalls: true}, runner)
 	if err == nil || !strings.Contains(err.Error(), "EXEC/provisioning") {
 		t.Fatalf("unsafe static selection: %v", err)
 	}
@@ -417,10 +417,10 @@ func TestMutationExternalStateEditAfterWriteReportsPartialUncertainty(t *testing
 		}
 		return os.WriteFile(sp, external, 0600)
 	})
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(testRegistry(t))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
-	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{home: f.home, projectDir: f.root}, runner)
+	err := runDeployWith(cmd, cs, toolpath.New(os.LookupEnv, f.home, f.root), deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root}, runner)
 	if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "re-preview") {
 		t.Fatalf("missing partial effect diagnostic: %v", err)
 	}

@@ -78,10 +78,10 @@ func TestCodexInstructionRemovalFailureRetainsOwnership(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { _ = os.Chmod(filepath.Dir(path), 0700) })
-			cmd := newRemoveCmd(nil)
+			cmd := newRemoveCmd(nil, testRegistry(t))
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetErr(&bytes.Buffer{})
-			if err := runRemove(cmd, inverse.ChangeSet, inverse.Ledger, selected, map[string]*state.State{"global": s}, removeStateOpts{home: home, projectDir: project}); err == nil {
+			if err := runRemove(cmd, inverse.ChangeSet, inverse.Ledger, selected, map[string]*state.State{"global": s}, removeStateOpts{Harness: testRegistry(t), home: home, projectDir: project}); err == nil {
 				t.Fatal("failed physical section write reported success")
 			}
 			got, err := state.Load(sp)
