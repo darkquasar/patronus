@@ -1,5 +1,5 @@
 // Pi 0.87.1 / pi-subagents 0.72.1. Execute this installed statement body unchanged.
-const extraFields = ["baseRef", "integrationCwd", "validationCommands"];
+const extraFields = ["baseRef", "integrationCwd", "validationCommands", "execution"];
 const taskFields = ["engine", "files"];
 const actions = ["implement", "integrate", "validate", "managed-cleanup"];
 const roleAgents = {"writer": ["patronus-writer-pi"], "integrator": ["patronus-writer-pi"], "validator": ["patronus-technical-reviewer-pi"]};
@@ -30,17 +30,28 @@ function list(v, min, max) { return Array.isArray(v) && v.length >= min && v.len
 function absolute(v) { return text(v, 4096) && v.startsWith('/') && v !== '/' && !v.endsWith('/') && !/[\\\x00-\x1f]/.test(v) && v.split('/').slice(1).every(p => p && p !== '.' && p !== '..'); }
 function within(p, root) { return p === root || p.startsWith(root + '/'); }
 function relative(v) { return text(v, 1024) && !v.startsWith('/') && !/[\\*?\[\]\x00-\x1f]/.test(v) && v.split('/').every(p => p && p !== '.' && p !== '..' && p !== '.git'); }
-keys(args, ['cwd','outputDir','sourceRevision','sourceRoots','authorization','preflight','tasks','evidence','roles','runners','concurrency','spawnLimit','timeoutMs', ...extraFields]);
+keys(args, ['cwd','outputDir','sourceRevision','sourceRoots','authorization','preflight','tasks','evidence','roles','runners','concurrency','spawnLimit','timeoutMs', ...extraFields], ['cwd','outputDir','sourceRevision','sourceRoots','authorization','preflight','tasks','evidence','roles','runners','concurrency','spawnLimit','timeoutMs']);
+const optIn = Object.hasOwn(args,'execution');
+requireThat(!(optIn && ['baseRef','integrationCwd','validationCommands'].some(k => Object.hasOwn(args,k))), 'execution is mutually exclusive with legacy operation fields');
 requireThat(absolute(args.cwd) && absolute(args.outputDir) && text(args.sourceRevision, 200), 'canonical absolute paths and source revision required');
 requireThat(list(args.sourceRoots, 1, 16) && args.sourceRoots.every(absolute) && args.sourceRoots.some(r => within(args.cwd, r)), 'source/integration/worktree roots required');
 requireThat(args.sourceRoots.every(r => !within(args.outputDir, r) && !within(r, args.outputDir)), 'output must be outside source/integration/worktrees');
 for (const [name, max] of [['concurrency',10],['spawnLimit',12],['timeoutMs',3600000]]) requireThat(Number.isSafeInteger(args[name]) && args[name] > 0 && args[name] <= max, 'invalid ' + name);
 keys(args.authorization, ['parentVerified','evidence','actions','files']);
-requireThat(args.authorization.parentVerified === true && text(args.authorization.evidence) && list(args.authorization.actions,1,8) && args.authorization.actions.every(v => text(v,100)) && actions.every(a => args.authorization.actions.includes(a)), 'missing actual stage/action grant');
+requireThat(args.authorization.parentVerified === true && text(args.authorization.evidence) && list(args.authorization.actions,1,8) && args.authorization.actions.every(v => text(v,100)), 'missing actual stage/action grant');
+if (!optIn) requireThat(actions.every(a => args.authorization.actions.includes(a)), 'missing actual stage/action grant');
 requireThat(list(args.authorization.files,0,64) && args.authorization.files.every(relative), 'invalid authorized files');
-keys(args.preflight, ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion']);
+keys(args.preflight, ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion','snapshotUse','liveChecks'], optIn ? ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion','snapshotUse','liveChecks'] : ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion']);
 requireThat(args.preflight.pathsVerified === true && args.preflight.rolesVerified === true && text(args.preflight.evidence) && args.preflight.piVersion === '0.87.1' && args.preflight.subagentsVersion === '0.72.1', 'parent path/role/version preflight required');
-requireThat(list(args.tasks,1,10) && list(args.evidence,1,8), 'bounded tasks/evidence required');
+if (optIn) {
+  const hex = (v,n=64) => typeof v === 'string' && new RegExp('^[0-9a-f]{'+n+'}$').test(v);
+  keys(args.preflight.snapshotUse,['schemaVersion','snapshotId','path','sha256','environmentIdentitySha256','observedAt']);
+  const s=args.preflight.snapshotUse; requireThat(s.schemaVersion===1 && hex(s.snapshotId,32) && absolute(s.path) && hex(s.sha256) && hex(s.environmentIdentitySha256) && text(s.observedAt,100) && s.observedAt.endsWith('Z'),'invalid snapshot use');
+  keys(args.preflight.liveChecks,['checkedAt','authorityEvidenceSha256','resourceEvidenceSha256','outputClaimEvidenceSha256','settlementEvidenceSha256','selectedCapabilities']);
+  const l=args.preflight.liveChecks; requireThat(text(l.checkedAt,100)&&l.checkedAt.endsWith('Z')&&hex(l.authorityEvidenceSha256)&&hex(l.resourceEvidenceSha256)&&hex(l.outputClaimEvidenceSha256)&&(l.settlementEvidenceSha256===null||hex(l.settlementEvidenceSha256))&&list(l.selectedCapabilities,1,32),'invalid live checks');
+  const caps=new Set(); for(const c of l.selectedCapabilities){keys(c,['kind','key','evidenceSha256']);const id=c.kind+':'+c.key;requireThat(['runtime','runner','role','tool','provider'].includes(c.kind)&&text(c.key,40)&&/^[a-z][a-z0-9-]*$/.test(c.key)&&hex(c.evidenceSha256)&&!caps.has(id),'invalid/duplicate selected capability');caps.add(id);}
+}
+requireThat(list(args.tasks,optIn?0:1,10) && list(args.evidence,1,8), 'bounded tasks/evidence required');
 for (const e of args.evidence) { keys(e,['label','text']); requireThat(text(e.label,100) && text(e.text,8192),'invalid inline evidence'); }
 requireThat(utf8Bytes(JSON.stringify(args.evidence)) <= 8192, 'inline evidence exceeds 8192 UTF-8 JSON bytes');
 const taskKeys = new Set();
@@ -52,7 +63,7 @@ for (const t of args.tasks) {
     requireThat(text(t.model,200) && /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*(?::(?:off|minimal|low|medium|high|xhigh|max))?$(?![\s\S])/.test(t.model), 'native model must be provider/id with an optional supported thinking suffix');
   }
 }
-keys(args.roles, Object.keys(roleAgents));
+keys(args.roles, Object.keys(roleAgents), optIn ? [] : Object.keys(roleAgents));
 for (const [role, agent] of Object.entries(args.roles)) requireThat(roleAgents[role].includes(agent), 'invalid effective role: ' + role);
 keys(args.runners, candidateEngines, requiredEngines);
 for (const [engine, r] of Object.entries(args.runners)) {
@@ -135,6 +146,37 @@ function collect(results) {
 function references(results) { return JSON.stringify(results.map(r => ({key:r.key,agent:r.agent,runId:r.runId,...bindings.get(r.key),rawOutputReference:r.outputReference || null,outputArtifactPath:r.outputArtifactPath || null,asyncDir:r.asyncDir || null,artifactPaths:r.artifactPaths || []}))); }
 function finish(verdict, phase, extra = {}) {
   return {verdict,phase,requested,selected,omitted,sourceRevision:args.sourceRevision,cwd:args.cwd,outputDir:args.outputDir,limits:{concurrency:args.concurrency,spawnLimit:args.spawnLimit,timeoutMs:args.timeoutMs},runnerEvidence:args.runners,preflight:args.preflight,results:records.map(r => ({key:r.key,agent:r.agent || null,externalAdapter:r.externalAdapter || null,ok:r.ok,runId:r.runId || null,outputBinding:bindings.get(r.key) || null,outputReference:r.outputReference || null,outputArtifactPath:r.outputArtifactPath || null,asyncDir:r.asyncDir || null,rawOutput:r.output,outputPathMapping:r.outputPathMapping || null,continuation:r.continuation || null,underlyingResults:r.results || [],artifactPaths:r.artifactPaths || [],error:r.error || null,stopped:r.stopped || false,terminalOutcome:r.terminalOutcome || null})),parentAcceptanceRequired:true,...extra};
+}
+function evidenceRef(v,kind) { keys(v,['path','sha256','subjectSha256','kind']); return absolute(v.path)&&/^[0-9a-f]{64}$/.test(v.sha256)&&/^[0-9a-f]{64}$/.test(v.subjectSha256)&&v.kind===kind; }
+function lifecycleBase(kind) { return {requested:[{key:kind,kind}],selected:[{key:kind,kind}],omitted:[],started:[],settled:[],achieved:[],pendingParent:[]}; }
+if (optIn) {
+  keys(args.execution,['operation','baseRef','integrationCwd','predecessors','validation'],['operation','predecessors']);
+  const x=args.execution; requireThat(['write','integrate','validate'].includes(x.operation)&&list(x.predecessors,0,10),'invalid execution operation');
+  for(const p of x.predecessors){keys(p,['key','runId','agent','report','handoff','delivery']);requireThat(text(p.key,40)&&text(p.runId,200)&&text(p.agent,200)&&evidenceRef(p.report,'report')&&evidenceRef(p.handoff,'handoff')&&evidenceRef(p.delivery,'target-delivery'),'invalid predecessor evidence');}
+  const roleKeys=Object.keys(args.roles), runnerKeys=Object.keys(args.runners);
+  if(x.operation==='write'){
+    requireThat(text(x.baseRef,200)&&!Object.hasOwn(x,'integrationCwd')&&!Object.hasOwn(x,'validation')&&x.predecessors.length===0&&list(args.tasks,1,10)&&roleKeys.length===1&&roleKeys[0]==='writer'&&args.authorization.actions.includes('implement')&&args.authorization.actions.includes('managed-cleanup')&&args.spawnLimit>=args.tasks.length,'invalid write operation');
+    const claims=[];for(const t of args.tasks){requireThat(candidateEngines.includes(t.engine)&&list(t.files,1,32),'invalid writer task');select(t.engine);for(const f of t.files){requireThat(relative(f)&&args.authorization.files.includes(f)&&!claims.some(p=>within(f,p)||within(p,f)),'unauthorized/overlapping writer claims');claims.push(f);}}
+    requireThat(runnerKeys.every(k=>selected.includes(k)),'unselected runner supplied');
+    const results=await runs.all(args.tasks.map(t=>{const task='Implement only this approved behavior and stop before integration: '+t.text+'\nEXCLUSIVE FILE CLAIMS: '+JSON.stringify(t.files);const options={worktree:true,baseRef:x.baseRef,...(Object.hasOwn(t,'model')?{model:t.model}:{})};return t.engine==='native'?native('writer-'+t.key,'writer',task,options):child('writer-'+t.key,t.engine,task,options);}));
+    const ok=collect(results), life=lifecycleBase('write');life.started=results.map(r=>({key:r.key,kind:'writer',runId:r.runId||null,agent:r.agent||null}));life.settled=results.map(r=>({outcome:ok?'completed':'failed',key:r.key,kind:'writer',runId:r.runId||null,agent:r.agent||null,outputReference:r.outputReference||null,evidenceRefs:r.outputReference?[r.outputReference]:[]}));if(ok)life.pendingParent.push({key:'target-delivery',kind:'target-delivery'});return finish(ok?'awaiting-parent-target-delivery':'blocked','write',{lifecycle:life,execution:x});
+  }
+  requireThat(args.tasks.length===0&&runnerKeys.length===1&&runnerKeys[0]==='native','integrate/validate use native with no writer tasks');
+  if(x.operation==='integrate'){
+    requireThat(text(x.baseRef,200)&&absolute(x.integrationCwd)&&!Object.hasOwn(x,'validation')&&x.predecessors.length>=1&&roleKeys.length===1&&roleKeys[0]==='integrator'&&args.authorization.actions.includes('integrate')&&args.spawnLimit>=1,'invalid integrate operation');
+    const life=lifecycleBase('integrate');const r=await runs.run('integration',nativeVerdict('integration','integrator','Integrate only the admitted predecessors after independently reading their passed delivery references: '+JSON.stringify(x.predecessors),{cwd:x.integrationCwd,worktree:false}));life.started=[{key:'integration',kind:'integrator',runId:r.runId||null,agent:r.agent||null}];const ok=collect([r])&&r.structuredOutput?.verdict==='clear';life.settled=[{outcome:ok?'completed':'failed',key:'integration',kind:'integrator',runId:r.runId||null,agent:r.agent||null,outputReference:r.outputReference||null,evidenceRefs:r.outputReference?[r.outputReference]:[]}];if(ok)life.pendingParent.push({key:'target-delivery',kind:'target-delivery'});return finish(ok?'awaiting-parent-target-delivery':'blocked','integrate',{lifecycle:life,execution:x});
+  }
+  requireThat(absolute(x.integrationCwd)&&x.predecessors.length===1&&object(x.validation)&&args.authorization.actions.includes('validate'),'invalid validate operation');
+  keys(x.validation,['level','risk','question','acceptancePoint','subjectContext','checks','priorShortfall','approvalEvidence'],['level','risk','question','acceptancePoint','subjectContext','checks']);const v=x.validation;
+  keys(v.risk,['changedBehavior','falsePassConsequence','determinism','novelty','blastRadius','costJustification']);requireThat(Object.values(v.risk).every(z=>text(z,2000))&&text(v.question,2000)&&text(v.acceptancePoint,2000)&&text(v.subjectContext,2000)&&list(v.checks,1,8),'invalid validation brief');
+  for(const c of v.checks){keys(c,['key','argv','kind']);requireThat(text(c.key,40)&&list(c.argv,1,16)&&c.argv.every(z=>text(z,1000))&&['command','deterministic-observation'].includes(c.kind),'invalid validation check');}
+  const life=lifecycleBase('validation');
+  if(v.level==='parent-direct') { requireThat(roleKeys.length===0&&!Object.hasOwn(v,'priorShortfall')&&!Object.hasOwn(v,'approvalEvidence'),'invalid parent-direct validation');life.omitted.push({key:'validator',kind:'validator',reason:'parent-direct selected'});life.pendingParent.push({key:'validation',kind:'validation'});return finish('awaiting-parent-validation','parent-direct',{lifecycle:life,execution:x}); }
+  requireThat(['bounded-child','deep'].includes(v.level)&&roleKeys.length===1&&roleKeys[0]==='validator'&&args.spawnLimit>=1,'invalid child validation');
+  if(v.level==='bounded-child')requireThat(!Object.hasOwn(v,'priorShortfall')&&!Object.hasOwn(v,'approvalEvidence'),'bounded validation forbids deep evidence');
+  if(v.level==='deep')requireThat(Object.hasOwn(v,'priorShortfall')&&evidenceRef(v.priorShortfall,'shortfall')&&text(v.approvalEvidence,2000),'deep validation requires prior shortfall and approval');
+  const brief={question:v.question,acceptancePoint:v.acceptancePoint,subjectIdentity:x.predecessors[0].delivery,context:v.subjectContext,checks:v.checks,output:args.outputDir+'/validation.md',timeoutMs:args.timeoutMs,stop:'Return observations only; do not prescribe paths, commands, context, budget, scope, specialist, model, provider, or escalation/remedy/package.'};
+  const r=await runs.run('validation',native('validation','validator','Execute only this bounded validation brief: '+JSON.stringify(brief),{cwd:x.integrationCwd,worktree:false}));life.started=[{key:'validation',kind:'validator',runId:r.runId||null,agent:r.agent||null}];const ok=collect([r]);const outcome=r.structuredOutput?.outcome==='shortfall'?'shortfall':ok?'completed':'failed';life.settled=[{outcome,key:'validation',kind:'validator',runId:r.runId||null,agent:r.agent||null,outputReference:r.outputReference||null,evidenceRefs:r.outputReference?[r.outputReference]:[]}];if(outcome==='completed')life.achieved.push({key:'validated',kind:'validation'});else if(outcome==='shortfall')life.pendingParent.push({key:'shortfall-decision',kind:'validation'});return finish(outcome==='completed'?'ready-for-parent':outcome==='shortfall'?'awaiting-parent-shortfall':'blocked',v.level,{lifecycle:life,execution:x});
 }
 
 requireThat(text(args.baseRef,200) && /^(refs\/(heads|tags)\/|[a-zA-Z0-9_-]+\/)[a-zA-Z0-9_-][a-zA-Z0-9_./-]*$/.test(args.baseRef) && !args.baseRef.includes('..') && args.baseRef.split('/').every(p => p && !p.startsWith('.') && !p.endsWith('.') && !p.endsWith('.lock')), 'approved named baseRef required');

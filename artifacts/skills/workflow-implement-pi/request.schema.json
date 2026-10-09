@@ -93,6 +93,46 @@
         },
         "subagentsVersion": {
           "const": "0.72.1"
+        },
+        "snapshotUse": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {"const": 1},
+            "snapshotId": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "path": {"type": "string", "pattern": "^/", "maxLength": 4096},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "environmentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "observedAt": {"type": "string", "pattern": "Z$", "maxLength": 100}
+          },
+          "required": ["schemaVersion", "snapshotId", "path", "sha256", "environmentIdentitySha256", "observedAt"],
+          "additionalProperties": false,
+          "maxProperties": 16
+        },
+        "liveChecks": {
+          "type": "object",
+          "properties": {
+            "checkedAt": {"type": "string", "pattern": "Z$", "maxLength": 100},
+            "authorityEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "resourceEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "outputClaimEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "settlementEvidenceSha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+            "selectedCapabilities": {
+              "type": "array", "minItems": 1, "maxItems": 32,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {"enum": ["runtime", "runner", "role", "tool", "provider"]},
+                  "key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 40},
+                  "evidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                },
+                "required": ["kind", "key", "evidenceSha256"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["checkedAt", "authorityEvidenceSha256", "resourceEvidenceSha256", "outputClaimEvidenceSha256", "settlementEvidenceSha256", "selectedCapabilities"],
+          "additionalProperties": false,
+          "maxProperties": 16
         }
       },
       "required": [
@@ -168,7 +208,7 @@
         "additionalProperties": false,
         "maxProperties": 16
       },
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 10
     },
     "evidence": {
@@ -216,11 +256,6 @@
           ]
         }
       },
-      "required": [
-        "writer",
-        "integrator",
-        "validator"
-      ],
       "additionalProperties": false,
       "maxProperties": 16
     },
@@ -560,6 +595,72 @@
       },
       "minItems": 1,
       "maxItems": 8
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "operation": {"enum": ["write", "integrate", "validate"]},
+        "baseRef": {"type": "string", "minLength": 1, "maxLength": 200},
+        "integrationCwd": {"type": "string", "pattern": "^/", "maxLength": 4096},
+        "predecessors": {
+          "type": "array", "minItems": 0, "maxItems": 10,
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 40},
+              "runId": {"type": "string", "minLength": 1, "maxLength": 200},
+              "agent": {"type": "string", "minLength": 1, "maxLength": 200},
+              "report": {"$ref": "#/$defs/evidenceReference"},
+              "handoff": {"$ref": "#/$defs/evidenceReference"},
+              "delivery": {"$ref": "#/$defs/evidenceReference"}
+            },
+            "required": ["key", "runId", "agent", "report", "handoff", "delivery"],
+            "additionalProperties": false
+          }
+        },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "level": {"enum": ["parent-direct", "bounded-child", "deep"]},
+            "risk": {
+              "type": "object",
+              "properties": {
+                "changedBehavior": {"type": "string", "minLength": 1, "maxLength": 2000},
+                "falsePassConsequence": {"type": "string", "minLength": 1, "maxLength": 2000},
+                "determinism": {"type": "string", "minLength": 1, "maxLength": 2000},
+                "novelty": {"type": "string", "minLength": 1, "maxLength": 2000},
+                "blastRadius": {"type": "string", "minLength": 1, "maxLength": 2000},
+                "costJustification": {"type": "string", "minLength": 1, "maxLength": 2000}
+              },
+              "required": ["changedBehavior", "falsePassConsequence", "determinism", "novelty", "blastRadius", "costJustification"],
+              "additionalProperties": false
+            },
+            "question": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "acceptancePoint": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "subjectContext": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "checks": {
+              "type": "array", "minItems": 1, "maxItems": 8,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 40},
+                  "argv": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 1000}},
+                  "kind": {"enum": ["command", "deterministic-observation"]}
+                },
+                "required": ["key", "argv", "kind"],
+                "additionalProperties": false
+              }
+            },
+            "priorShortfall": {"$ref": "#/$defs/evidenceReference"},
+            "approvalEvidence": {"type": "string", "minLength": 1, "maxLength": 2000}
+          },
+          "required": ["level", "risk", "question", "acceptancePoint", "subjectContext", "checks"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["operation", "predecessors"],
+      "additionalProperties": false,
+      "maxProperties": 16
     }
   },
   "required": [
@@ -575,11 +676,31 @@
     "runners",
     "concurrency",
     "spawnLimit",
-    "timeoutMs",
-    "baseRef",
-    "integrationCwd",
-    "validationCommands"
+    "timeoutMs"
   ],
+  "allOf": [
+    {
+      "if": {"required": ["execution"]},
+      "then": {
+        "not": {"anyOf": [{"required": ["baseRef"]}, {"required": ["integrationCwd"]}, {"required": ["validationCommands"]}]},
+        "properties": {"preflight": {"required": ["pathsVerified", "rolesVerified", "evidence", "piVersion", "subagentsVersion", "snapshotUse", "liveChecks"]}}
+      },
+      "else": {"required": ["baseRef", "integrationCwd", "validationCommands"]}
+    }
+  ],
+  "$defs": {
+    "evidenceReference": {
+      "type": "object",
+      "properties": {
+        "path": {"type": "string", "pattern": "^/", "maxLength": 4096},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "subjectSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "kind": {"enum": ["parent-validation", "target-delivery", "shortfall", "review", "report", "handoff"]}
+      },
+      "required": ["path", "sha256", "subjectSha256", "kind"],
+      "additionalProperties": false
+    }
+  },
   "additionalProperties": false,
   "maxProperties": 16
 }

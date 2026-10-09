@@ -7,7 +7,21 @@ description: "Run bounded installed implement stages with durable outputs and up
 
 Invoke `/skill:workflow-implement-pi <request.json>` from the authorized parent.
 
-Disjoint native/Claude/Codex writers → separate native integrator → native validation. Each writer uses `worktree:true` and the same approved clean named `baseRef`; the parent verifies it resolves to `sourceRevision` before launch. Explicit file claims must be disjoint and included verbatim in authorization.files. Both upstream external writer choices may be selected together. Missing/unavailable requested writers fail the entire request before any spawn, never disappear into omissions or a native replacement.
+Omitting `execution` preserves the legacy graph: disjoint native/Claude/Codex writers, separate native integrator, then native validation. Each writer uses `worktree:true` and the same approved clean named `baseRef`; the parent verifies it resolves to `sourceRevision` before launch. Explicit file claims must be disjoint and included verbatim in authorization.files. Both upstream external writer choices may be selected together. Missing/unavailable requested writers fail the entire request before any spawn, never disappear into omissions or a native replacement.
+
+## Progressive opt-in operations
+
+An opt-in request supplies `execution` and omits legacy top-level `baseRef`, `integrationCwd`, and `validationCommands`. It also supplies closed `preflight.snapshotUse` and `preflight.liveChecks` records. The parent rereads and hashes the canonical capability snapshot, checks its environment identity and selected records, then performs current authority, resource, output-claim, selected-capability, and settlement checks. Snapshot evidence never grants authority, reserves resources, proves output ownership, or establishes settlement.
+
+The operation is phase-separated:
+
+- `write` launches only the selected writers and returns `awaiting-parent-target-delivery`.
+- `integrate` accepts parent-verified predecessor report, handoff, and target-delivery references, launches only the integrator, and returns `awaiting-parent-target-delivery`.
+- `validate` requires a passed integration delivery reference. `parent-direct` launches no child and returns `awaiting-parent-validation`; `bounded-child` launches one validator with only the exact question, subject, context, approved checks, output, timeout, and stop rule; `deep` additionally requires a prior shortfall reference and explicit parent approval.
+
+No operation automatically admits its successor. Before every dependent stage after mutation, the parent independently reads and hashes every declared target, compares pre/post identity or a deterministic postcondition, checks syntax and semantics, compares the complete authorized path set for additions/modifications/deletions, and records report-target divergence. Missing or unchanged required targets, wrong-target writes, drift, malformed targets, divergence, and unauthorized sibling mutations block with zero successor launches. Reports, receipts, verdicts, and `outputReference` are evidence only.
+
+A bounded validator returns a completed observation or a shortfall with observations, evidence attempted, unresolved questions, newly discovered requirements, confidence, and consequences. It must not suggest, request, name, initiate, or semantically prefer paths, commands, context, budget, scope, specialist, model, provider, or escalation/remedy/package. A shortfall never starts deep validation automatically.
 
 ## Native writer models
 
@@ -65,9 +79,15 @@ The 0.72.1 external awaited result can omit `outputReference` after a successful
 
 Native verdict stages deliberately combine a required `output` path with `outputMode:"inline"` and `outputSchema`. In pi-subagents 0.72.1, `structured_output` can end the child without assistant final text; `file-only` settlement can therefore reject the child before the runtime persists the structured JSON. Inline is only the return transport for those verdicts: the runtime must still save the same bytes to the bound path and return the exact `outputReference`, or the workflow blocks.
 
+## Parent-direct validation evidence
+
+After a `parent-direct` result, the parent rereads the exact integrated subject and confirms it still matches the admitted delivery subject. The parent runs only the approved deterministic checks under the project lock, saves readable stdout/stderr and exits, and writes a closed parent-validation evidence record outside source. A pass requires unchanged subject/environment identity, unambiguous results, exit zero for commands, and readable output hashes. Subject or environment drift, a nonzero exit, unreadable output, ambiguity, or a reached limit creates blocking evidence. No validator child produces this record.
+
 ## Execute the installed artifact, not a generated orchestration
 
 Resolve `{skillDir}` to the absolute installed skill directory (local installs may substitute a project-relative path). Read `request.schema.json`, parse the request file outside the sandbox, validate it and complete the preflight above. The `fixtures/request.json` packet is invented test data, **not a launch grant**. Replace observations with actual verified evidence; never copy its available/auth assertions into live requests.
+
+Callers verify the installed workflow version and opt-in schema capability before emitting `execution`. An older workflow receives only the legacy shape. If capability drifts, the caller returns to an admissible legacy route or blocks when legacy behavior cannot satisfy the intent. Never send unknown opt-in fields speculatively.
 
 First call `subagent` with `action:"validate"`, the absolute installed `workflowScriptPath` ending in `/workflow.js`, and the parsed request as `args`. Then make **one** top-level call with the same path/args and:
 
