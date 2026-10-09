@@ -16,6 +16,14 @@ Coordinator only: discover the qualified native role/tool registry before launch
 
 Report skipped lenses and unverified claims. The parent verifies every material finding against current source and records accept/reject/defer reasons. No author transcript, self-attested pass, agent_end or exit 0 alone satisfies a gate.
 
+## Selected-review request policy
+
+When installed `workflow-peer-review-pi` version 1.1.0 and its opt-in capability are verified, the coordinator records a proportionate `reviewSelection` from the current capability snapshot. Name each reviewer and engine, purpose, independence requirement, and only `policy:{mode:"read-only"}`. Bind the exact snapshot identity plus current authority, resource, output-claim, selected-capability, and predecessor-settlement evidence. Only selected reviewers receive live checks or launches. Unselected installed peers are not probed.
+
+Request-time policy never contains acceptance, accepted, reviewed, clear, passed, verdict, settled, completed, runner availability, or any equivalent achieved result. A selected unavailable reviewer blocks with no substitution. Parent disposition remains pending parent work. Native disposition starts only after every selected peer settles with bound evidence. A returned `reviewed` lifecycle value is achieved evidence, not a launch selector or parent acceptance.
+
+Capability snapshot presence alone does not prove workflow compatibility. Until exact opt-in capability and version verification succeeds, emit only the unchanged legacy request when that route satisfies the authorized review intent. A forced opt-in packet against an older workflow must fail before dispatch. Disable opt-in caller emission before any workflow rollback.
+
 ## Review disposition and authority
 
 Normalize by consequence to **Critical / Major / Medium / Low**: catastrophic security/data-loss impact; substantial requirement/correctness/safety failure; bounded material defect; or presentation/low-impact improvement, respectively. Preserve original severity and every source finding ID under a canonical defect ID, with location, evidence, consequence rationale, proposed correction and unresolved status. Never mechanically convert Important to Major or Minor to Low, or downgrade severity to fit a threshold. A reduction needs concrete consequence evidence and a recorded parent disposition.

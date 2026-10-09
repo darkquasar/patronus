@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: requesting-code-review-pi
 description: "Request independent exact-range implementation review"
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "code-reviewer.md"]
 targets: [pi]
