@@ -307,20 +307,16 @@ func (c *catalog) checkLedger(m document, locks map[profileCase]map[string]bool)
 	if locks[profileCase{Profile: baseline, Target: baselineTarget}] == nil {
 		return fmt.Errorf("baseline closure case not supplied")
 	}
-	count := 0
-	for pc, closure := range locks {
-		if pc.Profile != profile {
-			continue
-		}
-		count++
-		for name := range mapped {
-			if !closure[name] {
-				return fmt.Errorf("%s--%s closure missing ledger endpoint %s", pc.Profile, pc.Target, name)
-			}
-		}
+	// The ledger binds one profile/target case: its endpoints are required in
+	// that closure only, and that closure must have been supplied.
+	closure := locks[profileCase{Profile: profile, Target: target}]
+	if closure == nil {
+		return fmt.Errorf("no supplied closure for ledger profile %s target %s", profile, target)
 	}
-	if count == 0 {
-		return fmt.Errorf("no supplied closure for ledger profile %s", profile)
+	for name := range mapped {
+		if !closure[name] {
+			return fmt.Errorf("%s--%s closure missing ledger endpoint %s", profile, target, name)
+		}
 	}
 	return nil
 }

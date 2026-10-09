@@ -377,3 +377,26 @@ func TestAdmitNamesNoTarget(t *testing.T) {
 		}
 	}
 }
+
+// HS-IR-04: roots supplied for other targets join discovery, so a same-name
+// resource another target can see is refused under the selected root's policy.
+func TestAdmitForeignRootsJoinDiscovery(t *testing.T) {
+	f := newAdmitFixture(t)
+	foreign := filepath.Join(f.home, ".foreign/skills")
+	f.write(t, filepath.Join(foreign, "alpha/SKILL.md"), []byte("alpha\n"))
+	selected := filepath.Join(f.project, ".lax/skills/alpha/SKILL.md")
+	lax := laxDescriptor(func(RootInputs) ([]scan.SkillRoot, error) {
+		return []scan.SkillRoot{{Path: filepath.Join(f.home, ".lax/skills"), DuplicatePolicy: scan.RefuseAlways, Name: toyName}}, nil
+	})
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{Tool: "lax", Type: "skill", Artifact: "alpha", Path: selected, Scope: "local", Action: diff.Create, After: []byte("alpha\n")}}}
+	if err := Admit(lax, f.admission(cs, nil)); err != nil {
+		t.Fatalf("without foreign roots: %v", err)
+	}
+	in := f.admission(cs, nil)
+	in.Roots = []scan.SkillRoot{{Path: foreign, Origin: "foreign user", Recursive: true, DuplicatePolicy: scan.RefuseDifferentBytesVerifiedException, Name: toyName}}
+	err := Admit(lax, in)
+	want := "lax skill identity \"alpha\" conflict: " + filepath.Join(foreign, "alpha/SKILL.md") + " (foreign user) and " + selected + " (selected local); silent shadowing refused"
+	if err == nil || err.Error() != want {
+		t.Fatalf("foreign root collision\n got: %v\nwant: %s", err, want)
+	}
+}

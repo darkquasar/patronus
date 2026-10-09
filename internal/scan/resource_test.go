@@ -233,3 +233,22 @@ func TestDiscoverPiResourcesAgentsKeepAliasesAndSkillsMatchShared(t *testing.T) 
 		t.Fatalf("shared walk differs: %+v %v", shared, err)
 	}
 }
+
+// HS-IR-01: under the verified-exception policy a duplicate found early in a
+// root is reported before a later malformed skill in the same root; under
+// RefuseAlways the walk error keeps precedence (historical Pi order).
+func TestDiscoverSkillsInlineConflictPrecedesLaterWalkError(t *testing.T) {
+	base := t.TempDir()
+	a, b := filepath.Join(base, "a"), filepath.Join(base, "b")
+	writeResource(t, filepath.Join(a, "dup/SKILL.md"), "dup\n")
+	writeResource(t, filepath.Join(b, "dup/SKILL.md"), "dup\nmore\n")
+	writeResource(t, filepath.Join(b, "zzz/SKILL.md"), "bad\n")
+	_, err := DiscoverSkills([]SkillRoot{toyRoot(a, RefuseDifferentBytesVerifiedException), toyRoot(b, RefuseDifferentBytesVerifiedException)}, nil)
+	if err == nil || !strings.Contains(err.Error(), "conflicts at") {
+		t.Fatalf("inline conflict lost to a later walk error: %v", err)
+	}
+	_, err = DiscoverSkills([]SkillRoot{toyRoot(a, RefuseAlways), toyRoot(b, RefuseAlways)}, nil)
+	if err != os.ErrInvalid {
+		t.Fatalf("deferred policy let a conflict precede the walk error: %v", err)
+	}
+}

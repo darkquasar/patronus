@@ -14,10 +14,9 @@ import (
 // paths HS-T10 re-threads (state.LoadWithPolicy, ReconcileInput.Policy,
 // FromResolvedWithPolicy, RefreshSectionChecksumsWithPolicy).
 
-var harnessTimestamp = regexp.MustCompile(`"(generated|installedAt)": "[0-9TZ:-]+"`)
-
 func harnessNormalizeBytes(raw []byte, norm func(string) string) string {
-	return harnessTimestamp.ReplaceAllString(norm(string(raw)), `"$1": "<ts>"`)
+	timestamp := regexp.MustCompile(`"(generated|installedAt)": "[0-9TZ:-]+"`)
+	return timestamp.ReplaceAllString(norm(string(raw)), `"$1": "<ts>"`)
 }
 
 const harnessLockEntry = "  \"entries\": [\n" +

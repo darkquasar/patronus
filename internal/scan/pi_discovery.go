@@ -202,7 +202,7 @@ func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 	var out []PiResource
 	for _, root := range roots {
 		if root.Kind == "skill" {
-			found, err := walkSkillRoot(piSkillRoot(root))
+			found, err := walkSkillRoot(piSkillRoot(root), nil)
 			if err != nil {
 				return nil, err
 			}

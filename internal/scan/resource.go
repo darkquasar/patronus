@@ -77,22 +77,24 @@ func (r SkillRoot) safePath(path string) error {
 
 // DiscoverSkills walks every root in order and returns the discovered skills.
 // Conflicts under RefuseDifferentBytesVerifiedException are detected as each
-// resource is found; conflicts under RefuseAlways are detected over the
-// complete inventory afterwards, so walk errors keep precedence as before.
+// resource is found, before the walk continues; conflicts under RefuseAlways
+// are detected over the complete inventory afterwards, so each target's walk
+// errors keep their historical precedence.
 func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource, error) {
 	var out []Resource
 	var policies []SkillRoot
 	for _, root := range roots {
-		found, err := walkSkillRoot(root)
+		root := root
+		found, err := walkSkillRoot(root, func(r Resource) error {
+			if root.DuplicatePolicy != RefuseDifferentBytesVerifiedException {
+				return nil
+			}
+			return ResourceConflict(out, r, root.DuplicatePolicy, verified, root.ConflictMessage)
+		})
 		if err != nil {
 			return nil, err
 		}
 		for _, r := range found {
-			if root.DuplicatePolicy == RefuseDifferentBytesVerifiedException {
-				if err := ResourceConflict(out, r, root.DuplicatePolicy, verified, root.ConflictMessage); err != nil {
-					return nil, err
-				}
-			}
 			out = append(out, r)
 			policies = append(policies, root)
 		}
@@ -108,9 +110,11 @@ func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource
 	return out, nil
 }
 
-// walkSkillRoot discovers the resources below one root without any conflict
-// check, so a caller composing several kinds can defer identity checks.
-func walkSkillRoot(root SkillRoot) ([]Resource, error) {
+// walkSkillRoot discovers the resources below one root. found runs for each
+// resource as it is discovered (nil skips), so an inline conflict policy keeps
+// its position relative to later walk errors; a caller composing several kinds
+// passes nil and defers identity checks.
+func walkSkillRoot(root SkillRoot, found func(Resource) error) ([]Resource, error) {
 	if err := root.safePath(root.Path); err != nil {
 		return nil, err
 	}
@@ -126,7 +130,13 @@ func walkSkillRoot(root SkillRoot) ([]Resource, error) {
 		if name == "" {
 			return nil
 		}
-		out = append(out, Resource{Kind: "skill", Name: name, Path: path, Origin: root.Origin, Legacy: root.Legacy, Content: raw})
+		r := Resource{Kind: "skill", Name: name, Path: path, Origin: root.Origin, Legacy: root.Legacy, Content: raw}
+		if found != nil {
+			if err := found(r); err != nil {
+				return err
+			}
+		}
+		out = append(out, r)
 		return nil
 	}
 	err := filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {

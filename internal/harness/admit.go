@@ -28,13 +28,16 @@ import (
 //	    P2  ownership (different owner, drift and unknown under StrictUnowned,
 //	        conflict-only refusal otherwise)
 //	    AfterOwnership hook
-//	    P3  context (shadow files when consent is not modelled, relocation,
-//	        mixed context, drift, strict composed inverse and unknown
-//	        ownership), AfterContext hook, unknown selected section, review
+//	    P3  context (shadow files when consent is not modelled, then the
+//	        strict or lenient owner walk: relocation, mixed context, drift,
+//	        unknown ownership), AfterContext hook, unknown selected section,
+//	        review
 //	    P4  resource rules when ResourcePhase is ResourceAfterContext
 //
-// Diffs that are executions, native operations, directory payloads or
-// directories are skipped, as every target skipped them before.
+// Native diffs are skipped at selection; executions, directory payloads and
+// directories are skipped per diff (no target's admission judges them: Codex
+// skipped them explicitly and Pi never selects them, since Pi executions are
+// refused earlier and Pi directory payloads are target-agnostic).
 func Admit(d Descriptor, in *Admission) error {
 	if in == nil || in.Changes == nil {
 		return nil
@@ -86,6 +89,10 @@ func Admit(d Descriptor, in *Admission) error {
 		if err != nil {
 			return err
 		}
+		// Other targets' roots join the inventory after the target's own roots,
+		// so a same-name resource another target can see is judged by the
+		// selected root's policy.
+		roots = append(roots, in.Roots...)
 		if !in.InventoryResolved {
 			in.Inventory, err = scan.DiscoverSkills(roots, verified)
 			if err != nil {
@@ -120,7 +127,7 @@ func Admit(d Descriptor, in *Admission) error {
 				return err
 			}
 		}
-		if fd.Section != nil || filepath.Base(fd.Path) == d.ContextFile {
+		if contextDiff(d, fd) {
 			if err := admitContext(d, in, fd, &facts); err != nil {
 				return err
 			}
@@ -213,10 +220,7 @@ func isResourceType(kind string) bool {
 // strict target also refuses drift and any existing unowned file, while a
 // lenient target refuses only a conflict over a path it does not own unchanged.
 func admitOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error {
-	if fd.Section != nil || filepath.Base(fd.Path) == d.ContextFile || structuredSettingEvidence(d, in.Owners, fd) {
-		return nil
-	}
-	if !d.StrictUnowned && !isResourceType(fd.Type) {
+	if !ownershipDiff(d, in, fd) {
 		return nil
 	}
 	owned, unchanged := false, false
@@ -255,6 +259,22 @@ func admitOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error {
 	return nil
 }
 
+// contextDiff says whether fd enters the context phase: any section diff, and
+// for a strict-ownership target also a whole-file diff of its context file.
+func contextDiff(d Descriptor, fd diff.FileDiff) bool {
+	return fd.Section != nil || (d.StrictUnowned && filepath.Base(fd.Path) == d.ContextFile)
+}
+
+// ownershipDiff says whether fd enters the ownership phase: a strict-ownership
+// target judges every file that is neither a section, its context file nor a
+// structured setting; a lenient target judges resource files only.
+func ownershipDiff(d Descriptor, in *Admission, fd diff.FileDiff) bool {
+	if d.StrictUnowned {
+		return fd.Section == nil && filepath.Base(fd.Path) != d.ContextFile && !structuredSettingEvidence(d, in.Owners, fd)
+	}
+	return isResourceType(fd.Type)
+}
+
 type selectedSection struct{ artifact, name string }
 
 func selectedSections(fd diff.FileDiff) []selectedSection {
@@ -268,16 +288,13 @@ func selectedSections(fd diff.FileDiff) []selectedSection {
 	return out
 }
 
-func selectsSection(sections []selectedSection, artifact, name string) bool {
-	for _, s := range sections {
-		if s.artifact == artifact && s.name == name {
-			return true
-		}
-	}
-	return false
-}
-
-// admitContext is P3 over one context diff.
+// admitContext is P3 over one context diff. The owner walk has two shapes,
+// selected by StrictSections: a strict target walks the recorded owners once
+// (relocation of any section of the selected artifact, mixed-context refusal,
+// drift of every same-target section at the path, ambiguous rows, composed
+// inverse, unknown ownership); a lenient target walks the selected sections in
+// order (relocation and drift of that section's owner, mixed facts, then the
+// unknown-section refusal) exactly as before.
 func admitContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error {
 	if !d.MixedContextConsent {
 		for _, shadow := range d.ShadowFiles {
@@ -289,26 +306,20 @@ func admitContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextF
 			}
 		}
 	}
-	sections := selectedSections(fd)
-	artifacts := []string{fd.Artifact}
-	for _, s := range sections {
-		if !contains(artifacts, s.artifact) {
-			artifacts = append(artifacts, s.artifact)
-		}
+	if d.StrictSections {
+		return admitStrictContext(d, in, fd, facts)
 	}
+	return admitLenientContext(d, in, fd, facts)
+}
+
+func admitStrictContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error {
 	known := map[string]string{}
 	for _, owner := range in.Owners {
 		for _, f := range owner.Files {
+			if owner.Tool == d.Name && owner.Artifact == fd.Artifact && owner.Scope == fd.Scope && f.Section != "" && f.Path != fd.Path {
+				return relocationMessage(d.ErrorPrefix, f.Path, fd.Path)
+			}
 			if f.Path != fd.Path {
-				sameSelection := owner.Tool == d.Name && owner.Scope == fd.Scope && f.Section != ""
-				if d.StrictSections {
-					sameSelection = sameSelection && contains(artifacts, owner.Artifact)
-				} else {
-					sameSelection = sameSelection && selectsSection(sections, owner.Artifact, f.Section)
-				}
-				if sameSelection {
-					return relocationMessage(d.ErrorPrefix, f.Path, fd.Path)
-				}
 				continue
 			}
 			if owner.Tool != d.Name || owner.Scope != fd.Scope || f.Section == "" {
@@ -317,25 +328,20 @@ func admitContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextF
 				}
 				if owner.Tool != d.Name {
 					facts.Mixed = true
-					facts.OtherOwners = append(facts.OtherOwners, owner.Artifact+" ("+owner.Tool+"/"+owner.Scope+") at "+f.Path)
+					facts.OtherOwners = append(facts.OtherOwners, otherOwner(owner, f.Path))
 				}
 				continue
 			}
-			selectedOwner := selectsSection(sections, owner.Artifact, f.Section)
-			if (d.StrictSections || selectedOwner) && f.Checksum != state.Checksum(fd.Before) {
+			if f.Checksum != state.Checksum(fd.Before) {
 				return contextDriftMessage(d.ErrorPrefix, fd.Path, f.Section)
 			}
-			if d.StrictSections {
-				if f.Action != string(diff.Append) || f.Section != d.SectionPrefix+owner.Artifact || known[f.Section] != "" {
-					return ambiguousSectionMessage(d.ErrorPrefix, fd.Path)
-				}
+			if f.Action != string(diff.Append) || f.Section != d.SectionPrefix+owner.Artifact || known[f.Section] != "" {
+				return ambiguousSectionMessage(d.ErrorPrefix, fd.Path)
 			}
-			if d.StrictSections || selectedOwner {
-				known[f.Section] = owner.Artifact
-			}
+			known[f.Section] = owner.Artifact
 		}
 	}
-	if d.StrictSections && len(known) > 1 && (fd.Action == diff.Restore || fd.Intended == diff.Unappend || (fd.Action == diff.Skip && fd.Section == nil)) {
+	if len(known) > 1 && (fd.Action == diff.Restore || fd.Intended == diff.Unappend || (fd.Action == diff.Skip && fd.Section == nil)) {
 		return composedInverseMessage(d.ErrorPrefix, fd.Path)
 	}
 	if d.StrictUnowned {
@@ -353,11 +359,60 @@ func admitContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextF
 			return err
 		}
 	}
-	for _, s := range sections {
+	for _, s := range selectedSections(fd) {
 		if _, exists := adapter.SectionBody(fd.Before, s.name); exists && known[s.name] != s.artifact {
 			return unknownSectionMessage(d.ErrorPrefix, fd.Path, s.name)
 		}
 	}
+	return finishContext(d, in, fd, facts)
+}
+
+func admitLenientContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error {
+	known := map[string]string{}
+	for _, s := range selectedSections(fd) {
+		owned := false
+		for _, owner := range in.Owners {
+			for _, f := range owner.Files {
+				if owner.Tool == d.Name && owner.Artifact == s.artifact && owner.Scope == fd.Scope && f.Section == s.name {
+					if f.Path != fd.Path {
+						return relocationMessage(d.ErrorPrefix, f.Path, fd.Path)
+					}
+					if f.Checksum != state.Checksum(fd.Before) {
+						return contextDriftMessage(d.ErrorPrefix, fd.Path, s.name)
+					}
+					owned = true
+				}
+				if f.Path == fd.Path && owner.Tool != d.Name {
+					if !d.MixedContextConsent {
+						return mixedContextMessage(d.ErrorPrefix, fd.Path, owner)
+					}
+					facts.Mixed = true
+					facts.OtherOwners = append(facts.OtherOwners, otherOwner(owner, f.Path))
+				}
+			}
+		}
+		if owned {
+			known[s.name] = s.artifact
+		}
+		if _, exists := adapter.SectionBody(fd.Before, s.name); exists && !owned {
+			return unknownSectionMessage(d.ErrorPrefix, fd.Path, s.name)
+		}
+	}
+	facts.Known = known
+	if d.Validator != nil {
+		if err := d.Validator.AfterContext(d, in, fd, facts); err != nil {
+			return err
+		}
+	}
+	return finishContext(d, in, fd, facts)
+}
+
+func otherOwner(owner state.Item, path string) string {
+	return owner.Artifact + " (" + owner.Tool + "/" + owner.Scope + ") at " + path
+}
+
+// finishContext emits the mixed-context review for a consenting target.
+func finishContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error {
 	if d.MixedContextConsent && facts.Mixed && in.Review != nil {
 		return in.Review(ContextReview{Path: fd.Path, Scope: fd.Scope, Prior: fd.Before, Result: fd.After, Sources: facts.Sources, OtherOwners: facts.OtherOwners})
 	}

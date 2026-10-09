@@ -145,6 +145,9 @@ func TestHarnessGoldenCodexPreflight(t *testing.T) {
 	unappendChangesProse := codexSectionDiff(ownedSection)
 	unappendChangesProse.Action = diff.Unappend
 	unappendChangesProse.After = []byte("Different prose\n")
+	composed := codexSectionDiff(ownedSection)
+	composed.Contrib = []diff.SectionContrib{{Artifact: "sibling-cx", Section: "sibling-cx"}}
+	composed.After = adapter.AppendSection(composed.After, "sibling-cx", []byte("sibling"))
 	tomlSetting := &diff.SettingEdit{Target: diff.FileTargetRef{File: ".codex/config.toml", Format: "toml"}, Dotted: "mcp_servers.fixture", ScalarValue: map[string]any{"url": "https://fixture.invalid/mcp"}}
 	tomlLeaf := &diff.SettingEdit{Target: tomlSetting.Target, Dotted: "mcp_servers.fixture.url", ScalarValue: "https://fixture.invalid/mcp"}
 	tomlOther := &diff.SettingEdit{Target: tomlSetting.Target, Dotted: "mcp_servers.other", ScalarValue: map[string]any{"url": "https://other.invalid/mcp"}}
@@ -241,6 +244,13 @@ func TestHarnessGoldenCodexPreflight(t *testing.T) {
 			want:   "codex context $P/AGENTS.md inverse changes unselected sections or prose"},
 		{name: "owned section append admitted", diffs: []diff.FileDiff{codexSectionDiff(ownedSection)}, files: map[string]string{"$P/AGENTS.md": string(ownedSection)},
 			owners: []state.Item{codexOwner("codex", "fixture-cx", "local", "$P/AGENTS.md", "fixture-cx", "APPEND", ownedSection)}},
+		// Composed selection (HS-IR-02c): relocation applies to the selected
+		// artifact only; a contributor recorded at another path is not relocation.
+		{name: "composed contributor at other path is not relocation", diffs: []diff.FileDiff{composed}, files: map[string]string{"$P/AGENTS.md": string(ownedSection)},
+			owners: []state.Item{codexOwner("codex", "fixture-cx", "local", "$P/AGENTS.md", "fixture-cx", "APPEND", ownedSection), codexOwner("codex", "sibling-cx", "local", "$P/docs/AGENTS.md", "sibling-cx", "APPEND", nil)}},
+		{name: "composed selected artifact at other path is relocation", diffs: []diff.FileDiff{composed}, files: map[string]string{"$P/AGENTS.md": string(ownedSection)},
+			owners: []state.Item{codexOwner("codex", "fixture-cx", "local", "$P/AGENTS.md", "fixture-cx", "APPEND", ownedSection), codexOwner("codex", "fixture-cx", "local", "$P/docs/AGENTS.md", "other-section", "APPEND", nil)},
+			want:   "codex context ownership at $P/docs/AGENTS.md cannot be silently relocated to $P/AGENTS.md"},
 		{name: "inverse setting foreign overlap", diffs: []diff.FileDiff{inverse}, files: map[string]string{"$P/.codex/config.toml": string(inverse.Before)},
 			owners: []state.Item{settingOwner("fixture-cx", "codex", tomlSetting), settingOwner("foreign", "pi", tomlLeaf)},
 			want:   "codex inverse ownership $P/.codex/config.toml: setting ownership conflict: fixture-cx (codex/local) at mcp_servers.fixture overlaps foreign (pi/local) at mcp_servers.fixture.url"},
@@ -287,6 +297,13 @@ func TestHarnessGoldenPiPreflight(t *testing.T) {
 	existing.Action = diff.Skip
 	existing.Before = []byte(harnessPiSkill)
 	agent := diff.FileDiff{Path: "$P/.pi/agents/fixture-pi.md", Action: diff.Create, Artifact: "fixture-pi", Type: "agent", Tool: "pi", Scope: "local", After: []byte("no frontmatter\n")}
+	piBothSections := adapter.AppendSection(ownedSection, "pi:sibling-pi", []byte("sibling"))
+	piComposed := piSectionDiff(piBothSections)
+	piComposed.Contrib = []diff.SectionContrib{{Artifact: "sibling-pi", Section: "pi:sibling-pi"}}
+	sidecarConflict := piSkillDiff()
+	sidecarConflict.Path = "$P/.pi/skills/fixture-pi/AGENTS.md"
+	sidecarConflict.Action = diff.Conflict
+	sidecarConflict.Before = []byte("existing\n")
 	for _, tc := range []harnessGolden{
 		{name: "composite cross-target destination", diffs: []diff.FileDiff{composite},
 			want: "pi cross-target destination conflict $P/.pi/skills/fixture-pi/SKILL.md (pi+codex)"},
@@ -323,6 +340,16 @@ func TestHarnessGoldenPiPreflight(t *testing.T) {
 			want: "pi context $P/AGENTS.md section pi:fixture-pi has unknown ownership; refuse replacement"},
 		{name: "owned section append admitted", diffs: []diff.FileDiff{piSectionDiff(ownedSection)}, files: map[string]string{"$P/AGENTS.md": string(ownedSection)},
 			owners: []state.Item{codexOwner("pi", "fixture-pi", "local", "$P/AGENTS.md", "pi:fixture-pi", "APPEND", ownedSection)}},
+		// Composed selection (HS-IR-02a): the primary section's unknown
+		// ownership is reported before the contributor's drift.
+		{name: "composed unknown primary precedes contributor drift", diffs: []diff.FileDiff{piComposed}, files: map[string]string{"$P/AGENTS.md": string(piBothSections)},
+			owners: []state.Item{codexOwner("pi", "sibling-pi", "local", "$P/AGENTS.md", "pi:sibling-pi", "APPEND", []byte("recorded differently\n"))},
+			want:   "pi context $P/AGENTS.md section pi:fixture-pi has unknown ownership; refuse replacement"},
+		// A resource sidecar named like the context file keeps the resource
+		// ownership rule (HS-IR-03).
+		{name: "resource sidecar named AGENTS.md keeps ownership rule", diffs: []diff.FileDiff{sidecarConflict}, files: map[string]string{"$P/.pi/skills/fixture-pi/AGENTS.md": "existing\n"},
+			owners: []state.Item{codexOwner("codex", "fixture-pi", "local", "$P/.pi/skills/fixture-pi/AGENTS.md", "", "CREATE", []byte("existing\n"))},
+			want:   "pi destination $P/.pi/skills/fixture-pi/AGENTS.md owned by fixture-pi (codex), selected fixture-pi"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home, project, res := piFixture(t)
@@ -365,6 +392,27 @@ func TestHarnessGoldenPiMixedContextReview(t *testing.T) {
 	}
 	if string(r.Proposed) != string(cs.Diffs[0].After) {
 		t.Fatal("proposed bytes differ from After")
+	}
+}
+
+// Composed two-section diff with one foreign owner (HS-IR-02b): the review
+// lists the foreign owner once per selected section, as before.
+func TestHarnessGoldenPiComposedReviewOtherOwners(t *testing.T) {
+	home, project, res := piFixture(t)
+	before := []byte("Shared prose\n")
+	codexWrite(t, filepath.Join(project, "AGENTS.md"), before)
+	harnessSaveOwners(t, []state.Item{codexOwner("codex", "fixture-cx", "local", "$P/AGENTS.md", "fixture-cx", "APPEND", before)}, home, project)
+	d := piSectionDiff(before)
+	d.Contrib = []diff.SectionContrib{{Artifact: "sibling-pi", Section: "pi:sibling-pi"}}
+	d.After = adapter.AppendSection(d.After, "pi:sibling-pi", []byte("sibling"))
+	cs := &diff.ChangeSet{Diffs: harnessExpandDiffs([]diff.FileDiff{d}, home, project)}
+	reviews, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
+	if err != nil || len(reviews) != 1 {
+		t.Fatalf("reviews %+v err %v", reviews, err)
+	}
+	want := "fixture-cx (codex/local) at " + filepath.Join(project, "AGENTS.md")
+	if got := reviews[0].OtherOwners; len(got) != 2 || got[0] != want || got[1] != want {
+		t.Fatalf("other owners per section: %q", got)
 	}
 }
 

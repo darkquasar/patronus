@@ -225,20 +225,52 @@ func TestLedgerTargetVocabularyIsDataDriven(t *testing.T) {
 }
 func TestLedgerAdditionalItemsCountAsClosureEndpoints(t *testing.T) {
 	f := newFixture(t)
-	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(strings.ReplaceAll(_validLedger, "toy_items: [sample]", "toy_items: [sample]\n    # mapped below instead")+"additional_items:\n  - items: [sample]\n    outcome: Partial\n    reason: invented lane item\n    evidence: not-run\n"))
+	// The baseline member is omitted by its entry, so sample reaches the mapped
+	// endpoints only through additional_items: the additional-only mechanism is
+	// what the closure coverage below depends on.
+	omitted := strings.Replace(strings.Replace(_validLedger, "disposition: port-tz", "disposition: omit", 1), "    toy_items: [sample]\n", "", 1)
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(omitted+"additional_items:\n  - items: [sample]\n    outcome: Partial\n    reason: invented lane item\n    evidence: not-run\n"))
 	dir := filepath.Join(f.root, "closures")
 	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(_validLock))
 	code, out, diagnostic := f.check(t, "--closures", dir)
 	if code != 0 || !strings.Contains(out, "checked from supplied") {
 		t.Fatalf("code=%d out=%s diagnostic=%s", code, out, diagnostic)
 	}
-	// An additional item absent from the supplied closure fails coverage.
-	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte("version: 3\nprofile: invented\ntarget: toy\nentries:\n  - name: other\n    kind: artifact\n    version: 1.0.0\n"))
+	// Without the additional row the omitted member has no ledger evidence at all.
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(omitted))
 	code, _, diagnostic = f.check(t, "--closures", dir)
-	if code == 0 || !strings.Contains(diagnostic, "closure") {
-		t.Fatalf("closure without the additional item accepted: %s", diagnostic)
+	if code == 0 || !strings.Contains(diagnostic, "lacks ledger evidence") {
+		t.Fatalf("omitted member without additional evidence accepted: %s", diagnostic)
 	}
 }
+
+// HS-IR-05: closure coverage binds the ledger's declared profile/target case.
+// For a profile admitted for two targets, the ledger endpoints are required in
+// the declared target's closure only; the other target's closure is not judged
+// by this ledger.
+func TestLedgerClosureBindsDeclaredTarget(t *testing.T) {
+	f := newFixture(t)
+	writeFixtureFile(t, filepath.Join(f.root, "adapters/other.yaml"), []byte("tool: other\nfamily: adapter\n"))
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/profile-targets.yaml"), []byte("schema_version: 1\nprofiles:\n  invented:\n    targets: [toy, other]\n"))
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(_validLedger))
+	dir := filepath.Join(f.root, "closures")
+	// Both admitted closures are supplied; the other-target closure lacks the
+	// ledger endpoint and must not be judged by the toy ledger.
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(_validLock))
+	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte("version: 3\nprofile: invented\ntarget: other\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
+	if code, out, diagnostic := f.check(t, "--closures", dir); code != 0 || !strings.Contains(out, "checked from supplied") {
+		t.Fatalf("declared-target closure not judged alone: code=%d %s %s", code, out, diagnostic)
+	}
+	// The declared target's closure missing the endpoint fails even though the
+	// other target's closure holds it.
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte("version: 3\nprofile: invented\ntarget: toy\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(strings.Replace(_validLedger, "target: toy\n", "target: other\n", 1)))
+	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte("version: 3\nprofile: invented\ntarget: other\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
+	if code, out, diagnostic := f.check(t, "--closures", dir); code != 0 || !strings.Contains(out, "checked from supplied") {
+		t.Fatalf("other-target ledger: code=%d %s %s", code, out, diagnostic)
+	}
+}
+
 func TestProfileCasesAgreeWithDeclaredManifestTargets(t *testing.T) {
 	const declaring = "apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: invented\nversion: 1.0.0\ntargets: [%s]\nlayers:\n  capabilities: [sample]\n"
 	const extending = "apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: child\nversion: 1.0.0\nextends: invented\nlayers:\n  capabilities: [sample]\n"

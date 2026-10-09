@@ -121,7 +121,7 @@ core member. Each row carries `items`, `outcome`, `reason` and `evidence` with
 the same vocabulary as entries: `reason` is required, every item must be an
 existing non-profile catalog item, and `Equivalent` with no items is refused.
 Additional items count as mapped endpoints, so they satisfy direct-member
-evidence and must appear in every supplied closure for the ledger profile.
+evidence and must appear in the supplied closure of the ledger's declared `profile`/`target` case.
 `entries[].core_item` still requires a baseline member.
 
 `--closures DIR` requires every enumerated `<profile>--<target>.lock` file. It
