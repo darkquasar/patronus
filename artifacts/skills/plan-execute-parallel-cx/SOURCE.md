@@ -9,21 +9,33 @@ Bodies are behaviorally authored for Codex, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
-## Bundled helper
+## Supervisor helper
 
 `scripts/supervisor.py`, `references/request.schema.json`,
-`fixtures/test_supervisor.py` and `fixtures/fake_worker.py` are new
+`fixtures/test_supervisor.py` and `fixtures/fake_worker.py` were new
 Patronus-authored files for this Codex skill (introduced in version 1.1.0), not
 ports of a source helper. Version 1.1.1 corrects supervisor fault/interruption
 settlement and adds stop-unknown, supervisor-error and input-apply-failed fixtures.
+Version 1.2.0 moves those four files byte-identically to the required neutral
+skill `isolated-writer-supervisor` 1.0.0 (hash table in its SOURCE.md); this
+skill no longer distributes them and references the installed sibling path
+`{skillsDir}/isolated-writer-supervisor/...`.
 The fake-worker suite runs invented local processes only; it is not native Codex
 qualification. The captured predecessor and its failed/partial evidence remain
 upstream provenance, not a new qualification claim.
+
+## Migration
+
+Existing 1.1.x installs keep ownership of the old sidecar paths; `patronus update` reports
+`obsolete owned path retained; explicit removal required` for them. Run
+`patronus remove plan-execute-parallel-cx` then reinstall, or remove the listed paths
+explicitly, before relying on the shared supervisor.
 
 ## Active reads
 
 - `dispatching-parallel-agents-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-execute-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
+- `isolated-writer-supervisor/scripts/supervisor.py` (and its schema/fixtures): required shared helper, verify installed/readable before use.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

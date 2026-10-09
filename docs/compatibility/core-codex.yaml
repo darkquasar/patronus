@@ -135,7 +135,7 @@ entries:
     disposition: port-cx
     codex_items: [plan-execute-parallel-cx]
     outcome: Partial
-    reason: "Bundled stdlib supervisor/schema. Twelve retained fake-worker cases (independent/dependent writers, timeout/descendants, ownership/results/conflicts/retry, input-apply failure, supervisor faults, unknown-stop refusal) are HISTORICAL results, NOT RUN in current gates and not native proof. Cooperative isolation is not an OS sandbox; native Codex workers/auth remain unqualified."
+    reason: "Supervisor/schema moved in 1.2.0 to the required shared skill isolated-writer-supervisor 1.0.0 (byte-identical, in the closure). Twelve retained fake-worker cases (independent/dependent writers, timeout/descendants, ownership/results/conflicts/retry, input-apply failure, supervisor faults, unknown-stop refusal) are HISTORICAL results, NOT RUN in current gates and not native proof. Cooperative isolation is not an OS sandbox; native Codex workers/auth remain unqualified."
     evidence: runtime-pending
   - core_item: codebase-design
     disposition: port-cx

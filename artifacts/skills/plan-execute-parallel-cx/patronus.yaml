@@ -4,13 +4,13 @@ type: skill
 role: capability
 name: plan-execute-parallel-cx
 description: "Codex only: isolated parallel writers via the bundled supervisor; native Codex workers runtime-pending."
-version: 1.1.1
+version: 1.2.0
 entry: SKILL.md
-files: ["SOURCE.md", "NOTICE", "LICENSE", "scripts/supervisor.py", "references/request.schema.json", "fixtures/test_supervisor.py", "fixtures/fake_worker.py"]
+files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]
 defaults:
   scope: project
-requires: ["plan-execute-cx", "dispatching-parallel-agents-cx"]
+requires: ["plan-execute-cx", "dispatching-parallel-agents-cx", "isolated-writer-supervisor"]
 attribution:
   upstream: "github.com/darkquasar/patronus"
   license: "GPL-3.0"

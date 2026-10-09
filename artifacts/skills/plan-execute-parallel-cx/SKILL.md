@@ -5,10 +5,10 @@ description: "Codex only: run disjoint isolated writers through the bundled supe
 
 # Parallel execution in Codex
 
-This skill ships a bundled supervisor helper, `{skillDir}/scripts/supervisor.py`
+This skill ships a bundled supervisor helper, `{skillsDir}/isolated-writer-supervisor/scripts/supervisor.py`
 (Python 3 standard library, POSIX only). Its isolation, timeout, ownership and
 integration rules are exercised by the bundled fake-worker suite
-`{skillDir}/fixtures/test_supervisor.py`, which drives real local processes in
+`{skillsDir}/isolated-writer-supervisor/fixtures/test_supervisor.py`, which drives real local processes in
 invented scratch repositories. Native Codex workers under the supervisor are
 **Partial**: runtime-pending until a separately authorized native qualification.
 Native Codex workers do not establish write isolation by themselves; only the
@@ -22,8 +22,8 @@ pair per stream. File presence is not execution authorization.
 
 ## Request binding
 
-Write a request matching `{skillDir}/references/request.schema.json` and check it
-with `python3 {skillDir}/scripts/supervisor.py validate REQUEST.json` before any
+Write a request matching `{skillsDir}/isolated-writer-supervisor/references/request.schema.json` and check it
+with `python3 {skillsDir}/isolated-writer-supervisor/scripts/supervisor.py validate REQUEST.json` before any
 launch. The request binds the recorded base commit, the task brief and its hash,
 the evidence directory, a worktree root outside the lead checkout, maximum
 concurrency and, per task: worker argv, exclusive owned paths, timeout, grace
@@ -33,7 +33,7 @@ reused run identity are rejected before anything is created.
 
 ## Writers
 
-`python3 {skillDir}/scripts/supervisor.py run REQUEST.json` starts every attempt in
+`python3 {skillsDir}/isolated-writer-supervisor/scripts/supervisor.py run REQUEST.json` starts every attempt in
 a new worktree and branch from the recorded base, never the lead checkout. The
 worker receives its bindings and a supervisor-owned result path through
 `PATRONUS_SUPERVISOR_*` variables and must write a result whose run, task,
@@ -87,6 +87,13 @@ prove workers stopped. Process-group/cwd observation does not detect arbitrary
 escaped processes outside both boundaries. Only the invented Linux fixtures are
 observed here, not native Codex or qualification of other platforms. Fake-worker tests do not
 qualify native Codex workers, their authentication or their sandbox.
+
+## Migration from 1.1.x
+
+Existing 1.1.x installs keep ownership of the old sidecar paths; `patronus update` reports
+`obsolete owned path retained; explicit removal required` for them. Run
+`patronus remove plan-execute-parallel-cx` then reinstall, or remove the listed paths
+explicitly, before relying on the shared supervisor.
 
 ## Authorized alternative
 
