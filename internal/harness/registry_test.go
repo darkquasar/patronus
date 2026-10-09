@@ -16,7 +16,7 @@ func toyRoots(RootInputs) ([]scan.SkillRoot, error) { return nil, nil }
 func toyRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r, err := NewRegistry(
-		Descriptor{Name: "toy", Profiles: []string{"toy-profile"}, ShadowFiles: []string{"TOY.override.md"}, SkillRoots: toyRoots, ResourcePhase: ResourceAfterContext, LockTargeted: true, LockCoexistence: true, OwnsEffects: true},
+		Descriptor{Name: "toy", Profiles: []string{"toy-profile"}, ShadowFiles: []string{"TOY.override.md"}, SkillRoots: toyRoots, ResourcePhase: ResourceAfterContext, LockTargeted: true, LockCoexistence: true, OwnsEffects: true, StrictSections: true, SectionPrefix: "toy:"},
 		Descriptor{Name: "lax", Profiles: []string{"lax-profile", "shared-profile"}, LockTargeted: true},
 		Descriptor{Name: "plain"},
 		Descriptor{Name: "other", Profiles: []string{"shared-profile"}, OwnsEffects: true},

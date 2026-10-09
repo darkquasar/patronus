@@ -134,6 +134,12 @@ func Compute(items []state.Item, read ReadExisting, occupancy Occupancy) (Result
 // ComputeWithForce changes preservation policy only for selected concrete effects.
 // Structural parse/identity failures remain non-promotable.
 func ComputeWithForce(items []state.Item, read ReadExisting, occupancy Occupancy, force bool) (Result, error) {
+	return ComputeWithPolicy(items, read, occupancy, force, SectionPolicy{})
+}
+
+// ComputeWithPolicy is ComputeWithForce with the section-composition rules
+// taken from p.
+func ComputeWithPolicy(items []state.Item, read ReadExisting, occupancy Occupancy, force bool, p SectionPolicy) (Result, error) {
 	var (
 		res   Result
 		files []fileIntent
@@ -166,7 +172,7 @@ func ComputeWithForce(items []state.Item, read ReadExisting, occupancy Occupancy
 	piPaths := map[string][]fileIntent{}
 	var piPathOrder []string
 	for _, fi := range files {
-		if (fi.item.Tool == "pi" || fi.item.Tool == "codex") && fi.file.Action == string(diff.Append) {
+		if p.Structural(fi.item.Tool) && fi.file.Action == string(diff.Append) {
 			if _, seen := piPaths[fi.file.Path]; !seen {
 				piPaths[fi.file.Path] = nil
 				piPathOrder = append(piPathOrder, fi.file.Path)
@@ -209,7 +215,7 @@ func ComputeWithForce(items []state.Item, read ReadExisting, occupancy Occupancy
 	}
 
 	for _, path := range piPathOrder {
-		group, err := composeSections(path, piPaths[path], read, occupancy, force)
+		group, err := composeSections(path, piPaths[path], read, occupancy, force, p)
 		if err != nil {
 			return Result{}, err
 		}
@@ -807,7 +813,7 @@ func refuseOverlap(group []fileIntent, path, message string, current []byte) set
 // composeSections validates all selected Pi or Codex sections against the same original
 // bytes, then strips them in one physical write. The existing ledger records
 // each logical inverse; no new persisted ownership or section-body hash exists.
-func composeSections(path string, group []fileIntent, read ReadExisting, occupancy Occupancy, force bool) (Result, error) {
+func composeSections(path string, group []fileIntent, read ReadExisting, occupancy Occupancy, force bool, p SectionPolicy) (Result, error) {
 	current, exists, err := read(path)
 	if err != nil {
 		return Result{}, fmt.Errorf("remove: read %s: %w", path, err)
@@ -817,11 +823,9 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 	allowed := map[string]bool{}
 	for _, fi := range group {
 		f := fi.file
-		expected := fi.item.Artifact
-		if fi.item.Tool == "pi" {
-			expected = "pi:" + expected
-		}
-		if (fi.item.Tool != "pi" && fi.item.Tool != "codex") || fi.item.Tool != group[0].item.Tool || fi.item.Scope != group[0].item.Scope || fi.item.Root != group[0].item.Root || f.Action != string(diff.Append) || f.Section != expected || sections[f.Section] {
+		expected := p.Prefix(fi.item.Tool) + fi.item.Artifact
+		strict := p.Strict(fi.item.Tool)
+		if !p.Structural(fi.item.Tool) || fi.item.Tool != group[0].item.Tool || fi.item.Scope != group[0].item.Scope || fi.item.Root != group[0].item.Root || f.Action != string(diff.Append) || f.Section != expected || sections[f.Section] {
 			return refusePiSections(group, "ambiguous section ownership or incompatible actions/scopes", current), nil
 		}
 		sections[f.Section] = true
@@ -830,7 +834,7 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 		claims := 0
 		occupied := map[string]bool{}
 		for _, other := range occupancy[path] {
-			if fi.item.Tool == "codex" && occupied[other.Section] {
+			if strict && occupied[other.Section] {
 				return refusePiSections(group, "ambiguous recorded sibling ownership", current), nil
 			}
 			occupied[other.Section] = true
@@ -838,7 +842,7 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 				return refusePiSections(group, "incompatible recorded context ownership", current), nil
 			}
 			allowed[other.Section] = true
-			if other.Tool == "codex" && other.Section != other.Artifact {
+			if p.Strict(other.Tool) && other.Section != p.Prefix(other.Tool)+other.Artifact {
 				return refusePiSections(group, "incompatible recorded section identity", current), nil
 			}
 			if other.Section != f.Section {
@@ -852,7 +856,7 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 		if !exists {
 			continue
 		}
-		if f.Checksum == "" || ((!force || fi.item.Tool == "codex") && driftsFromChecksum(current, f.Checksum)) {
+		if f.Checksum == "" || ((!force || strict) && driftsFromChecksum(current, f.Checksum)) {
 			return refusePiSections(group, "context changed or lacks checksum evidence", current), nil
 		}
 		start := []byte("<!-- patronus:start " + f.Section + " -->")
@@ -866,7 +870,7 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 			return refusePiSections(group, "ambiguous or nested section markers", current), nil
 		}
 	}
-	if exists && group[0].item.Tool == "codex" {
+	if exists && p.Strict(group[0].item.Tool) {
 		if err := adapter.ValidateSectionMarkers(current, allowed); err != nil {
 			return refusePiSections(group, err.Error(), current), nil
 		}

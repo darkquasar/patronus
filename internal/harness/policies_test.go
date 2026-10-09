@@ -29,3 +29,21 @@ func TestRegistryTargetPolicy(t *testing.T) {
 		t.Fatal("nil registry policy stamps a target")
 	}
 }
+
+func TestRegistrySectionPolicy(t *testing.T) {
+	r := toyRegistry(t)
+	p := r.SectionPolicy()
+	if !p.Structural("toy") || !p.Strict("toy") || p.Prefix("toy") != "toy:" {
+		t.Fatalf("toy rule: %v %v %q", p.Structural("toy"), p.Strict("toy"), p.Prefix("toy"))
+	}
+	if !p.Structural("other") || p.Strict("other") || p.Prefix("other") != "" {
+		t.Fatalf("other rule: %v %v %q", p.Structural("other"), p.Strict("other"), p.Prefix("other"))
+	}
+	if p.Structural("lax") || p.Structural("codex") {
+		t.Fatal("non-owning descriptors compose sections")
+	}
+	var nilReg *Registry
+	if nilReg.SectionPolicy().Structural("pi") {
+		t.Fatal("nil registry policy composes a tool")
+	}
+}
