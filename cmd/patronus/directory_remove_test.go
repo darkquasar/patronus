@@ -272,7 +272,7 @@ func TestDirectoryRemovalOwningHelperAndCommandRespectBusyLock(t *testing.T) {
 	before := lifecycleSnapshot(t, filepath.Join(f.home, ".patronus"))
 	plans := []directoryRemovalPlan{{Recipe: "fixture-kit"}}
 	cmd := newRemoveCmd(nil, testRegistry(t))
-	if err := deployDirectoryRemovals(cmd, f.home, plans, false); !errors.Is(err, packagestate.ErrBusy) {
+	if err := deployDirectoryRemovals(cmd, testRegistry(t), f.home, plans, false); !errors.Is(err, packagestate.ErrBusy) {
 		t.Fatalf("helper bypassed lock: %v", err)
 	}
 	if _, _, err := execRemove(t, "fixture-kit", "--deploy"); !errors.Is(err, packagestate.ErrBusy) {

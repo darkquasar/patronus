@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/packagestate"
-	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -24,18 +24,19 @@ import (
 type mutation struct {
 	release func() error
 	before  map[string][]byte
+	harness *harness.Registry // injected target registry for write-side policy
 }
 
-func beginMutation(home, project string) (*mutation, error) {
-	return acquireMutation(home, filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json"), filepath.Join(project, "patronus.lock"))
+func beginMutation(reg *harness.Registry, home, project string) (*mutation, error) {
+	return acquireMutation(reg, home, filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json"), filepath.Join(project, "patronus.lock"))
 }
 
-func acquireMutation(home string, paths ...string) (*mutation, error) {
+func acquireMutation(reg *harness.Registry, home string, paths ...string) (*mutation, error) {
 	release, err := packagestate.Acquire(home)
 	if err != nil {
 		return nil, err
 	}
-	m := &mutation{release: release, before: map[string][]byte{}}
+	m := &mutation{release: release, before: map[string][]byte{}, harness: reg}
 	for _, path := range paths {
 		if err := m.watch(path); err != nil {
 			return nil, errors.Join(err, release())
@@ -45,6 +46,10 @@ func acquireMutation(home string, paths ...string) (*mutation, error) {
 }
 
 func (m *mutation) close(err *error) { *err = errors.Join(*err, m.release()) }
+
+// ownership is the registry-derived structural ownership policy for every
+// state load made under this mutation.
+func (m *mutation) ownership() state.OwnershipPolicy { return m.harness.OwnershipPolicy() }
 
 func (m *mutation) watch(path string) error {
 	if _, ok := m.before[path]; ok {
@@ -139,13 +144,8 @@ func (m *mutation) checkFile(d diff.FileDiff, consent mutationConsent) error {
 			return err
 		}
 	}
-	if d.Tool == "codex" {
-		if err := scan.CodexSafePath(d.Path); err != nil {
-			return err
-		}
-	}
-	if d.Tool == "pi" {
-		if err := scan.PiSafePath(d.Path); err != nil {
+	if desc, ok := m.harness.Lookup(d.Tool); ok && desc.SafePathCheck {
+		if err := admissionSafePath(desc, d.Path); err != nil {
 			return err
 		}
 	}

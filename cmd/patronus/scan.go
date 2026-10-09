@@ -16,6 +16,7 @@ import (
 	"github.com/darkquasar/patronus/internal/adapter/builtin"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/drift"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/lock"
 	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/plan"
@@ -28,7 +29,7 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-func newScanCmd() *cobra.Command {
+func newScanCmd(reg *harness.Registry) *cobra.Command {
 	return &cobra.Command{
 		Use:   "scan",
 		Short: "Detect installed AI coding tools and their configs",
@@ -41,7 +42,7 @@ func newScanCmd() *cobra.Command {
 			}
 			var mutation *mutation
 			if !jsonOutput {
-				mutation, err = beginMutation(homeDir(), wd)
+				mutation, err = beginMutation(reg, homeDir(), wd)
 				if err != nil {
 					return err
 				}
@@ -70,8 +71,8 @@ func newScanCmd() *cobra.Command {
 			// Reconcile every DEPLOYED file against both the sha we recorded writing
 			// and the source the catalog holds now. It never fails the scan: an
 			// unreachable catalog degrades to reporting nothing.
-			findings := reconcileDrift(cmd.Context(), wd, inv, adapters, warnf)
-			inv.NativePackages, err = scanNativePackages(homeDir(), wd)
+			findings := reconcileDrift(cmd.Context(), reg, wd, inv, adapters, warnf)
+			inv.NativePackages, err = scanNativePackages(homeDir(), wd, reg.OwnershipPolicy())
 			if err != nil {
 				return err
 			}
@@ -148,8 +149,8 @@ func (execPluginLister) List(ctx context.Context, tool string) ([]byte, bool) {
 // per-tool "<plugin>@<marketplace>" id; if the catalog is unavailable, plugins are
 // left unchanged (their ids cannot be resolved). Lock contention, drift and
 // persistence failures are command errors, not a verified scan result.
-func reconcilePluginLock(ctx context.Context, wd string, inv *scan.Inventory, lister pluginLister, warnf func(string, ...any)) (err error) {
-	m, err := beginMutation(inv.Home, wd)
+func reconcilePluginLock(ctx context.Context, reg *harness.Registry, wd string, inv *scan.Inventory, lister pluginLister, warnf func(string, ...any)) (err error) {
+	m, err := beginMutation(reg, inv.Home, wd)
 	if err != nil {
 		return err
 	}
@@ -291,7 +292,7 @@ func scanCatalog(ctx context.Context, wd string, warnf func(string, ...any)) *re
 // It never fails the scan: every way of not-knowing (no registry, no catalog, an
 // artifact whose source cannot be fetched) degrades to reporting less, never to an
 // error — so drift is pure additive signal on top of the inventory.
-func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapters []*manifest.Adapter, warnf func(string, ...any)) []drift.Finding {
+func reconcileDrift(ctx context.Context, hreg *harness.Registry, wd string, inv *scan.Inventory, adapters []*manifest.Adapter, warnf func(string, ...any)) []drift.Finding {
 	reg, _, err := resolveRegistry(ctx, wd, registrySel{}, homeDir(), warnf)
 	if err != nil {
 		return nil // no registry -> nothing to compare against -> stay quiet
@@ -360,7 +361,7 @@ func reconcileDrift(ctx context.Context, wd string, inv *scan.Inventory, adapter
 		if dir == "" {
 			continue
 		}
-		s, err := state.Load(filepath.Join(dir, ".patronus", "state.json"))
+		s, err := state.LoadWithPolicy(filepath.Join(dir, ".patronus", "state.json"), hreg.OwnershipPolicy())
 		if err != nil {
 			warnf("drift: invalid ownership state in %s: %v", dir, err)
 			return []drift.Finding{{Path: filepath.Join(dir, ".patronus", "state.json"), Verdict: settingConflict, Detail: err.Error()}}

@@ -13,7 +13,7 @@ import (
 	"github.com/darkquasar/patronus/internal/profile"
 )
 
-func newLockCmd(reg *harness.Registry) *cobra.Command {
+func newLockCmd(hreg *harness.Registry) *cobra.Command {
 	var (
 		profileSel string
 		tool       string
@@ -34,7 +34,7 @@ func newLockCmd(reg *harness.Registry) *cobra.Command {
 			"its locked version from the registry's immutable key and verifies the sha.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(reg, tool); err != nil {
+			if err := hreg.ValidateTarget(tool); err != nil {
 				return err
 			}
 			if profileSel == "" {
@@ -45,7 +45,7 @@ func newLockCmd(reg *harness.Registry) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			m, err := acquireMutation(homeDir(), filepath.Join(wd, "patronus.lock"))
+			m, err := acquireMutation(hreg, homeDir(), filepath.Join(wd, "patronus.lock"))
 			if err != nil {
 				return err
 			}
@@ -54,17 +54,17 @@ func newLockCmd(reg *harness.Registry) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if prior.Target == "pi" || prior.Target == "codex" {
+			if hreg.TargetPolicy().Targeted(prior.Target) {
 				if !cmd.Flags().Changed("target") {
 					tool = prior.Target
 				} else if tool != prior.Target {
 					return fmt.Errorf("existing lock target %s conflicts with --target %s; explicit migration required", prior.Target, tool)
 				}
 			}
-			if err := codexProfileTarget(reg, profileSel, tool); err != nil {
+			if err := hreg.ProfileTarget(profileSel, nil, tool); err != nil {
 				return err
 			}
-			if err := codexLockTarget(reg, prior, tool); err != nil {
+			if err := hreg.LockTarget(prior, tool); err != nil {
 				return err
 			}
 			warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
@@ -78,6 +78,9 @@ func newLockCmd(reg *harness.Registry) *cobra.Command {
 			}
 			cat, err := reg.Catalog(cmd.Context())
 			if err != nil {
+				return err
+			}
+			if err := hreg.ProfileTarget(profileSel, declaredTargets(cat, profileSel), tool); err != nil {
 				return err
 			}
 
@@ -109,13 +112,9 @@ func newLockCmd(reg *harness.Registry) *cobra.Command {
 			}
 
 			now := time.Now().UTC().Format(time.RFC3339)
-			l, err := lock.FromResolved(cat, res, now)
+			l, err := lock.FromResolvedWithPolicy(cat, res, now, hreg.TargetPolicy())
 			if err != nil {
 				return err
-			}
-
-			if tool == "codex" {
-				l.Version, l.Target = lock.TargetVersion, "codex"
 			}
 
 			// The lock is the shared, committed spec, so it lives at the project root

@@ -173,28 +173,6 @@ func TestCodexPiCoexistenceRefusesCrossTargetLockOverwrite(t *testing.T) {
 	}
 }
 
-func TestCodexPreflightCoreProfileRejectsForeignTargets(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	for _, target := range []string{"all", "claude", "pi"} {
-		t.Run(target, func(t *testing.T) {
-			for _, operation := range []string{"install", "lock", "update"} {
-				var err error
-				switch operation {
-				case "install":
-					_, _, err = runInstall(t, "--profile", "core-profile-cx", "--target", target, "--global")
-				case "lock":
-					_, _, err = runLock(t, "--profile", "core-profile-cx", "--target", target)
-				case "update":
-					_, _, err = runUpdate(t, "core-profile-cx", "--target", target, "--global")
-				}
-				if err == nil || !strings.Contains(err.Error(), "core-profile-cx requires --target codex") {
-					t.Fatalf("%s target %s not explicitly refused: %v", operation, target, err)
-				}
-			}
-		})
-	}
-}
-
 func TestCodexPreflightNormalInstallRefusesLegacyEvenForce(t *testing.T) {
 	root := fixtureCatalog(t)
 	home := t.TempDir()

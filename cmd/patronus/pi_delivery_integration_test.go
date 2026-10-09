@@ -266,7 +266,7 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 			}
 			// Exercise the production consent/check/apply/persistence seams with
 			// invented interactive input, not a fake claim of a real terminal.
-			m, err := beginMutation(f.home, f.root)
+			m, err := beginMutation(testRegistry(t), f.home, f.root)
 			if err != nil {
 				t.Fatal(err)
 			}

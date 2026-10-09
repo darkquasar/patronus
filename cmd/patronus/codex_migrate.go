@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/scan"
@@ -18,12 +19,12 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-func newMigrateCmd() *cobra.Command {
+func newMigrateCmd(reg *harness.Registry) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate",
 		Short: "Relocate recorded Patronus payloads between native roots",
 	}
-	cmd.AddCommand(newMigrateCodexSkillsCmd())
+	cmd.AddCommand(newMigrateCodexSkillsCmd(reg))
 	return cmd
 }
 
@@ -34,9 +35,10 @@ type codexMigrateOpts struct {
 	deploy        bool
 	beforeWrite   func(diff.FileDiff) error
 	saveState     func(string, *state.State) error
+	harness       *harness.Registry
 }
 
-func newMigrateCodexSkillsCmd() *cobra.Command {
+func newMigrateCodexSkillsCmd(reg *harness.Registry) *cobra.Command {
 	var global, local, deploy bool
 	cmd := &cobra.Command{
 		Use:   "codex-skills",
@@ -67,7 +69,7 @@ func newMigrateCodexSkillsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runCodexMigrate(cmd.OutOrStdout(), codexMigrateOpts{home: homeDir(), project: wd, scopes: scopes, deploy: deploy})
+			return runCodexMigrate(cmd.OutOrStdout(), codexMigrateOpts{home: homeDir(), project: wd, scopes: scopes, deploy: deploy, harness: reg})
 		},
 	}
 	cmd.Flags().BoolVar(&global, "global", false, "select global (user) scope")
@@ -94,7 +96,7 @@ func runCodexMigrate(out io.Writer, opts codexMigrateOpts) (err error) {
 		if len(opts.scopes) != 1 {
 			return fmt.Errorf("--deploy requires exactly one selected scope")
 		}
-		if m, err = beginMutation(opts.home, opts.project); err != nil {
+		if m, err = beginMutation(opts.harness, opts.home, opts.project); err != nil {
 			return err
 		}
 		defer m.close(&err)
@@ -111,7 +113,7 @@ func runCodexMigrate(out io.Writer, opts codexMigrateOpts) (err error) {
 		if err := scan.CodexSafePath(sp); err != nil {
 			return err
 		}
-		if states[scope], err = state.Load(sp); err != nil {
+		if states[scope], err = state.LoadWithPolicy(sp, opts.harness.OwnershipPolicy()); err != nil {
 			return fmt.Errorf("load %s state: %w", scope, err)
 		}
 	}

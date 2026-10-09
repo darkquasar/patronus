@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,8 +9,10 @@ import (
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
+	"github.com/spf13/cobra"
 )
 
 // This file pins the Codex and Pi admission behaviour at the base revision with
@@ -451,7 +454,7 @@ func TestHarnessGoldenPiRootOverrideFailure(t *testing.T) {
 // a claude or opencode diff at the same unsafe (symlinked) path is not refused.
 func TestHarnessMutationSafePathGate(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
-	m, err := beginMutation(home, project)
+	m, err := beginMutation(testRegistry(t), home, project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,7 +524,7 @@ func TestHarnessOwnerLoadWrapping(t *testing.T) {
 	t.Run("runDeployLocked", func(t *testing.T) {
 		home, project, res := piFixture(t)
 		codexWrite(t, filepath.Join(home, ".patronus/state.json"), []byte("{broken"))
-		m, err := beginMutation(home, project)
+		m, err := beginMutation(testRegistry(t), home, project)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -606,5 +609,39 @@ func TestHarnessRemoveAllowlistSites(t *testing.T) {
 				t.Fatalf("row retained after complete removal (%s): %+v", tc.tool, after.Items)
 			}
 		})
+	}
+}
+
+// HS-R3/HS-R5: the profile-to-target binding is one registry rule with the
+// historical text, proven over an invented descriptor through every command
+// that binds a profile (install, lock, update). The real-name test it replaces
+// is covered by the catalog gate's profile-targets agreement check.
+func TestHarnessProfileTargetRule(t *testing.T) {
+	reg, err := harness.NewRegistry(harness.Descriptor{Name: "toy", Profiles: []string{"toy-profile"}}, harness.Descriptor{Name: "other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", t.TempDir())
+	t.Chdir(fixtureCatalog(t))
+	run := func(cmd *cobra.Command, args ...string) error {
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetErr(&bytes.Buffer{})
+		cmd.SetArgs(args)
+		return cmd.Execute()
+	}
+	for _, target := range []string{"other", "all"} {
+		want := "toy-profile requires --target toy (got \"" + target + "\")"
+		for name, err := range map[string]error{
+			"install": run(newInstallCmd(reg), "--profile", "toy-profile", "--target", target, "--global"),
+			"lock":    run(newLockCmd(reg), "--profile", "toy-profile", "--target", target),
+			"update":  run(newUpdateCmd(reg), "toy-profile", "--target", target),
+		} {
+			if got := harnessErr(err); got != want {
+				t.Fatalf("%s target %s\n got: %s\nwant: %s", name, target, got, want)
+			}
+		}
+	}
+	if err := run(newInstallCmd(reg), "--profile", "undeclared-profile", "--target", "other", "--global"); err != nil && strings.Contains(err.Error(), "requires --target") {
+		t.Fatalf("undeclared profile bound to a target: %v", err)
 	}
 }

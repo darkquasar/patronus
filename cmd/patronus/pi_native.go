@@ -67,7 +67,7 @@ func nativeShared(s *state.State, id nativepi.Identity, selected map[string]bool
 }
 
 // inspectNative attaches honest read-only evidence to both render surfaces.
-func inspectNative(cs *diff.ChangeSet, home, project string, force bool, selected map[string]bool) error {
+func inspectNative(cs *diff.ChangeSet, home, project string, force bool, selected map[string]bool, policy state.OwnershipPolicy) error {
 	for i := range cs.Diffs {
 		d := &cs.Diffs[i]
 		if d.Native == nil {
@@ -78,7 +78,7 @@ func inspectNative(cs *diff.ChangeSet, home, project string, force bool, selecte
 			return err
 		}
 		d.NativeObservation = &o
-		s, err := state.Load(removeStatePath(d.Scope, home, project))
+		s, err := state.LoadWithPolicy(removeStatePath(d.Scope, home, project), policy)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,7 @@ func applyNative(cmd *cobra.Command, cs *diff.ChangeSet, opts deployOptions, sel
 			if op.Identity.Scope == "local" && !opts.allowPiProject {
 				return fmt.Errorf("native local operation at cwd %s, root %s requires --allow-pi-project-config", op.Identity.Project, op.Identity.Root)
 			}
-			s, err := state.Load(statePath(d.Scope, opts))
+			s, err := state.LoadWithPolicy(statePath(d.Scope, opts), opts.Harness.OwnershipPolicy())
 			if err != nil {
 				return err
 			}
@@ -230,7 +230,7 @@ func applyNative(cmd *cobra.Command, cs *diff.ChangeSet, opts deployOptions, sel
 	// Probe all needed runtimes before any destructive effect.
 	for _, d := range cs.Diffs {
 		if d.Native != nil {
-			s, err := state.Load(statePath(d.Scope, opts))
+			s, err := state.LoadWithPolicy(statePath(d.Scope, opts), opts.Harness.OwnershipPolicy())
 			if err != nil {
 				return err
 			}
@@ -253,7 +253,7 @@ func applyNative(cmd *cobra.Command, cs *diff.ChangeSet, opts deployOptions, sel
 		if d.Native != nil {
 			op := *d.Native
 			path := statePath(d.Scope, opts)
-			s, err := state.Load(path)
+			s, err := state.LoadWithPolicy(path, opts.Harness.OwnershipPolicy())
 			if err != nil {
 				return err
 			}
@@ -403,7 +403,7 @@ func refreshNativeSettings(cs *diff.ChangeSet) error {
 	return nil
 }
 
-func scanNativePackages(home, project string) ([]scan.NativeStatus, error) {
+func scanNativePackages(home, project string, policy state.OwnershipPolicy) ([]scan.NativeStatus, error) {
 	var out []scan.NativeStatus
 	seen := map[string]bool{}
 	for _, root := range []string{home, project} {
@@ -416,7 +416,7 @@ func scanNativePackages(home, project string) ([]scan.NativeStatus, error) {
 			continue
 		}
 		seen[path] = true
-		s, err := state.Load(path)
+		s, err := state.LoadWithPolicy(path, policy)
 		if err != nil {
 			return nil, err
 		}

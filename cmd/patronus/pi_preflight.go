@@ -13,7 +13,6 @@ import (
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/scan"
-	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
 	"github.com/spf13/cobra"
 )
@@ -28,46 +27,6 @@ type piContextReview struct {
 	Consent     piContextConsent
 	Proposed    []byte
 	OtherOwners []string
-}
-
-// piPreflightPlan is Pi admission over an already computed shared ChangeSet:
-// the shared rules run in harness.Admit with the Pi descriptor, Pi-only rules
-// in piValidator, and mixed-context reviews return through Admission.Review
-// as piContextReview values for the deploy consent step.
-func piPreflightPlan(reg *harness.Registry, cs *diff.ChangeSet, res toolpath.Resolver, home, project string) ([]piContextReview, error) {
-	d, ok := reg.Lookup("pi")
-	if !ok {
-		return nil, harness.ErrUnknownTarget
-	}
-	var reviews []piContextReview
-	in := &harness.Admission{
-		Changes:  cs,
-		Resolver: res,
-		Home:     home,
-		Project:  project,
-		Env:      os.LookupEnv,
-		Read:     scan.ReadPiFile,
-		LoadOwners: func() ([]state.Item, error) {
-			return loadOwners([]string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")}, nil, nil)
-		},
-		Warn: func(message string) { appendPlacementWarning(cs, d.Name, message) },
-		Review: func(r harness.ContextReview) error {
-			claudeSource, err := piClaudeContextSources(res, project, r.Scope)
-			if err != nil {
-				return err
-			}
-			piSource := r.Path
-			if len(r.Sources) > 0 {
-				piSource = r.Sources[0]
-			}
-			reviews = append(reviews, piContextReview{Consent: piContextConsent{Path: r.Path, PiSource: piSource, ClaudeSource: claudeSource, PriorHash: sha256.Sum256(r.Prior), ResultHash: sha256.Sum256(r.Result)}, Proposed: append([]byte(nil), r.Result...), OtherOwners: r.OtherOwners})
-			return nil
-		},
-	}
-	if err := harness.Admit(d, in); err != nil {
-		return nil, err
-	}
-	return reviews, nil
 }
 
 // appendPlacementWarning records message once on the first diff of tool, the
@@ -176,14 +135,14 @@ func validatePiConsentBytes(c piContextConsent, path string, prior, result []byt
 	return nil
 }
 
-func preflightPiDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts *deployOptions) error {
-	reviews, err := piPreflightPlan(opts.Harness, cs, res, opts.home, opts.projectDir)
-	if err != nil {
-		return err
-	}
-	for _, d := range cs.Diffs {
-		if d.Tool == "pi" && d.Warning != "" {
-			fmt.Fprintln(cmd.OutOrStdout(), d.Warning)
+// preflightPiDeploy is the consent step for a descriptor that models
+// mixed-context consent: it prints the plan warnings recorded for the target,
+// confirms every review interactively, binds the confirmed operation to the
+// bytes it displayed and reports the planned placements.
+func preflightPiDeploy(cmd *cobra.Command, cs *diff.ChangeSet, d harness.Descriptor, reviews []piContextReview, opts *deployOptions) error {
+	for _, fd := range cs.Diffs {
+		if fd.Tool == d.Name && fd.Warning != "" {
+			fmt.Fprintln(cmd.OutOrStdout(), fd.Warning)
 		}
 	}
 	consents, err := confirmPiContexts(reviews, piInteractiveInput(cmd.InOrStdin()), opts.yes, opts.force, cmd.InOrStdin(), cmd.OutOrStdout())
@@ -194,17 +153,17 @@ func preflightPiDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Reso
 	for _, review := range reviews {
 		// Bind the confirmed operation to the bytes it actually displayed, not a
 		// synthesis or an unrelated confirmation. Last-moment rereads belong DP-05.
-		for _, d := range cs.Diffs {
-			if d.Path == review.Consent.Path {
-				if err := validatePiConsentBytes(review.Consent, d.Path, d.Before, d.After); err != nil {
+		for _, fd := range cs.Diffs {
+			if fd.Path == review.Consent.Path {
+				if err := validatePiConsentBytes(review.Consent, fd.Path, fd.Before, fd.After); err != nil {
 					return err
 				}
 			}
 		}
 	}
-	for _, d := range cs.Diffs {
-		if d.Tool == "pi" {
-			fmt.Fprintf(cmd.OutOrStdout(), "Pi planned placement, runtime-unverified: %s scope=%s; eligible after apply at next startup/reload (static apply does not activate packages).\n", d.Path, d.Scope)
+	for _, fd := range cs.Diffs {
+		if fd.Tool == d.Name {
+			fmt.Fprintf(cmd.OutOrStdout(), "Pi planned placement, runtime-unverified: %s scope=%s; eligible after apply at next startup/reload (static apply does not activate packages).\n", fd.Path, fd.Scope)
 		}
 	}
 	return nil

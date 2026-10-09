@@ -30,12 +30,12 @@ func TestHarnessTargetEnumParity(t *testing.T) {
 		{"invented", false, false, "unknown target \"invented\"; use claude|codex|opencode|pi|all"},
 	} {
 		t.Run("target="+tc.target, func(t *testing.T) {
-			err := dp06Target(testRegistry(t), tc.target)
+			err := testRegistry(t).ValidateTarget(tc.target)
 			if (err == nil) != tc.dp06Accepted {
-				t.Fatalf("dp06Target(testRegistry(t), %q) = %v", tc.target, err)
+				t.Fatalf("testRegistry(t).ValidateTarget(%q) = %v", tc.target, err)
 			}
 			if err != nil && err.Error() != tc.dp06ErrorText {
-				t.Fatalf("dp06Target(testRegistry(t), %q) text %q", tc.target, err)
+				t.Fatalf("testRegistry(t).ValidateTarget(%q) text %q", tc.target, err)
 			}
 			path := filepath.Join(t.TempDir(), "patronus.lock")
 			err = lock.Save(path, &lock.Lock{Version: lock.TargetVersion, Target: tc.target})

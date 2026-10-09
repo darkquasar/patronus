@@ -94,6 +94,11 @@ type Descriptor struct {
 	// PlacementWarning is the static admission/placement advisory emitted
 	// through Admission.Warn once a selection names this target ("" none).
 	PlacementWarning string
+	// PlacementStderr routes PlacementWarning to the planner's stderr after a
+	// successful planning admission instead of recording it on the plan.
+	PlacementStderr bool
+	// AdmitRemoval runs this target's admission over removal inverses too.
+	AdmitRemoval bool
 	// Validator runs the target's own rules at the phase hooks; nil means shared
 	// rules only. Implementations are stateless.
 	Validator Validator

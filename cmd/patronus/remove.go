@@ -60,7 +60,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 			"unrelated roots/configuration remain unchanged.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(reg, tool); err != nil {
+			if err := reg.ValidateTarget(tool); err != nil {
 				return err
 			}
 			if global && local {
@@ -84,7 +84,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 			home := homeDir()
 			var mutation *mutation
 			if deploy && !jsonOutput {
-				mutation, err = beginMutation(home, wd)
+				mutation, err = beginMutation(reg, home, wd)
 				if err != nil {
 					return err
 				}
@@ -106,7 +106,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 			anyKnown := map[string]bool{} // name -> seen anywhere
 			for _, scope := range scopes {
 				sp := removeStatePath(scope, home, wd)
-				s, err := state.Load(sp)
+				s, err := state.LoadWithPolicy(sp, reg.OwnershipPolicy())
 				if err != nil {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
@@ -170,7 +170,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 			// config is exactly the sibling a wholesale restore would destroy, and
 			// a --global remove would otherwise be blind to a local record naming
 			// the same absolute path.
-			occupancy, err := fullOccupancy(home, wd, loaded)
+			occupancy, err := fullOccupancy(home, wd, loaded, reg.OwnershipPolicy())
 			if err != nil {
 				return err
 			}
@@ -221,7 +221,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 					removable = append(removable, ready)
 				}
 			}
-			computed, err := remove.ComputeWithForce(removable, read, occupancy, force)
+			computed, err := remove.ComputeWithPolicy(removable, read, occupancy, force, reg.SectionPolicy())
 			if err != nil {
 				return err
 			}
@@ -277,14 +277,14 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 				}
 				cs.Diffs = append(cs.Diffs, diff.FileDiff{Action: diff.Native, Artifact: it.Artifact, Tool: "pi", Scope: it.Scope, Root: it.Root, Path: op.Identity.MetadataPath(), Native: &op})
 			}
-			if err := inspectNative(cs, home, wd, force, selectedProfiles); err != nil {
+			if err := inspectNative(cs, home, wd, force, selectedProfiles, reg.OwnershipPolicy()); err != nil {
 				return err
 			}
 			cs.DryRun = !deploy
 
 			env := os.LookupEnv
 			res := toolpath.New(env, home, wd)
-			if err := codexPreflightPlan(reg, cs, res, home, wd); err != nil {
+			if err := admitRemoval(reg, cs, res, home, wd); err != nil {
 				return err
 			}
 			if jsonOutput {
@@ -323,7 +323,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 				return err
 			}
 			if len(packagePlans) > 0 {
-				refreshed, err := state.Load(removeStatePath("global", home, wd))
+				refreshed, err := state.LoadWithPolicy(removeStatePath("global", home, wd), reg.OwnershipPolicy())
 				if err != nil {
 					return err
 				}
@@ -379,14 +379,14 @@ func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, war
 // filter narrows what gets REMOVED; it must not narrow what the safety gate can
 // see, or a --global remove would restore a snapshot over a local record's
 // wiring simply because it never looked.
-func fullOccupancy(home, projectDir string, loaded map[string]*state.State) (remove.Occupancy, error) {
+func fullOccupancy(home, projectDir string, loaded map[string]*state.State, policy state.OwnershipPolicy) (remove.Occupancy, error) {
 	states := make([]*state.State, 0, 2)
 	for _, scope := range []string{"global", "local"} {
 		if s, ok := loaded[scope]; ok {
 			states = append(states, s)
 			continue
 		}
-		s, err := state.Load(removeStatePath(scope, home, projectDir))
+		s, err := state.LoadWithPolicy(removeStatePath(scope, home, projectDir), policy)
 		if err != nil {
 			return nil, fmt.Errorf("load %s state: %w", scope, err)
 		}
@@ -447,7 +447,7 @@ type removeStateOpts struct {
 // was actually undone (not skipped as drift); a partially-skipped item stays so a
 // later --force can finish it.
 func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) (err error) {
-	m, err := beginMutation(opts.home, opts.projectDir)
+	m, err := beginMutation(opts.Harness, opts.home, opts.projectDir)
 	if err != nil {
 		return err
 	}
@@ -457,7 +457,7 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 }
 
 func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
-	if err := codexPreflightPlan(opts.Harness, cs, toolpath.New(os.LookupEnv, opts.home, opts.projectDir), opts.home, opts.projectDir); err != nil {
+	if err := admitRemoval(opts.Harness, cs, toolpath.New(os.LookupEnv, opts.home, opts.projectDir), opts.home, opts.projectDir); err != nil {
 		return err
 	}
 	piSelected := false
@@ -493,7 +493,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 	cs = &diff.ChangeSet{Diffs: authored}
 	if len(changedSettings) > 0 {
 		for scope := range loaded {
-			s, err := state.Load(removeStatePath(scope, opts.home, opts.projectDir))
+			s, err := state.LoadWithPolicy(removeStatePath(scope, opts.home, opts.projectDir), opts.Harness.OwnershipPolicy())
 			if err != nil {
 				return errors.Join(nativeErr, err)
 			}
@@ -515,13 +515,13 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 			}
 		}
 		if len(settings) > 0 {
-			fresh, err := remove.ComputeWithForce(settings, func(path string) ([]byte, bool, error) {
+			fresh, err := remove.ComputeWithPolicy(settings, func(path string) ([]byte, bool, error) {
 				b, e := os.ReadFile(path)
 				if os.IsNotExist(e) {
 					return nil, false, nil
 				}
 				return b, e == nil, e
-			}, occupancyOf([]*state.State{loaded["global"], loaded["local"]}), opts.force)
+			}, occupancyOf([]*state.State{loaded["global"], loaded["local"]}), opts.force, opts.Harness.SectionPolicy())
 			if err != nil {
 				return errors.Join(nativeErr, err)
 			}
@@ -606,6 +606,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 	}
 
 	dirty := map[string]bool{} // scopes whose state file changed
+	structural := opts.Harness.OwnershipPolicy()
 	for _, it := range selected {
 		fullyUndone := true
 		for _, f := range it.Files {
@@ -628,7 +629,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 				settledFiles = append(settledFiles, f)
 			}
 		}
-		if !fullyUndone && len(settledFiles) > 0 && (it.Tool == "pi" || it.Tool == "codex") {
+		if !fullyUndone && len(settledFiles) > 0 && structural.Structural(it.Tool) {
 			state.ForgetEffects(loaded[it.Scope], it, settledFiles)
 			dirty[it.Scope] = true
 		}
@@ -637,7 +638,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 			for _, f := range it.Files {
 				shared = shared || sharedProfileEffect(loaded[it.Scope], it, f, opts.profiles)
 			}
-			if it.Tool == "pi" || it.Tool == "codex" || shared {
+			if structural.Structural(it.Tool) || shared {
 				applyErr = errors.Join(applyErr, fmt.Errorf("removal conflict unresolved: %s (%s/%s); ownership retained", it.Artifact, it.Tool, it.Scope))
 			}
 			continue
@@ -663,7 +664,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s (%s): %s\n", w.Item, w.Path, w.Message)
 		}
 		if s := loaded[it.Scope]; s != nil {
-			if it.Tool == "pi" || it.Tool == "codex" {
+			if structural.Structural(it.Tool) {
 				state.ForgetEffects(s, it, it.Files)
 			} else {
 				s.Remove(it.Artifact, it.Tool, it.Scope)
@@ -673,7 +674,7 @@ func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledge
 	}
 
 	for scope, s := range loaded {
-		if state.RefreshSectionChecksums(s.Items, result.Applied) {
+		if state.RefreshSectionChecksumsWithPolicy(s.Items, result.Applied, structural) {
 			dirty[scope] = true
 		}
 		if len(opts.profiles) > 0 {
@@ -824,8 +825,8 @@ func planDirectoryRemovals(home string, items []state.Item, force bool) ([]direc
 	return plans, nil
 }
 
-func deployDirectoryRemovals(cmd *cobra.Command, home string, plans []directoryRemovalPlan, force bool) (err error) {
-	m, err := acquireMutation(home, filepath.Join(home, ".patronus/state.json"))
+func deployDirectoryRemovals(cmd *cobra.Command, reg *harness.Registry, home string, plans []directoryRemovalPlan, force bool) (err error) {
+	m, err := acquireMutation(reg, home, filepath.Join(home, ".patronus/state.json"))
 	if err != nil {
 		return err
 	}

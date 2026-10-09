@@ -67,11 +67,11 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 			"global updates require all-consumer review. Runtime activation remains unverified.",
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if err := dp06Target(hreg, target); err != nil {
+			if err := hreg.ValidateTarget(target); err != nil {
 				return err
 			}
 			for _, name := range args {
-				if err := codexProfileTarget(hreg, name, target); err != nil {
+				if err := hreg.ProfileTarget(name, nil, target); err != nil {
 					return err
 				}
 			}
@@ -88,13 +88,13 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 			}
 			home := homeDir()
 			if target != "" {
-				if err := codexCheckLock(hreg, wd, target); err != nil {
+				if err := checkLock(hreg, wd, target); err != nil {
 					return err
 				}
 			}
 			var mutation *mutation
 			if deploy && !jsonOutput && (len(args) > 0 || all) {
-				mutation, err = beginMutation(home, wd)
+				mutation, err = beginMutation(hreg, home, wd)
 				if err != nil {
 					return err
 				}
@@ -107,7 +107,7 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			previewPi, err := dp06PotentialPi(args, all, target, home, wd)
+			previewPi, err := dp06PotentialPi(hreg, args, all, target, home, wd)
 			if err != nil {
 				return err
 			}
@@ -199,6 +199,9 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 			// each. The profile's own version is not compared (model A).
 			for _, n := range args {
 				if catalogHasProfile(cat, n) {
+					if err := hreg.ProfileTarget(n, declaredTargets(cat, n), target); err != nil {
+						return err
+					}
 					resolutionTarget := target
 					if resolutionTarget == "" {
 						resolutionTarget = "all"
@@ -244,7 +247,7 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 			}
 			for _, scope := range []string{"global", "local"} {
 				sp := removeStatePath(scope, home, wd)
-				s, err := state.Load(sp)
+				s, err := state.LoadWithPolicy(sp, hreg.OwnershipPolicy())
 				if err != nil {
 					return fmt.Errorf("load %s state: %w", scope, err)
 				}
@@ -559,7 +562,7 @@ func catalogHasProfile(cat *registry.Catalog, name string) bool {
 
 // dp06UpdateTarget resolves provenance before allowing any scope collection.
 func dp06UpdateTarget(reg *harness.Registry, cat *registry.Catalog, args []string, all bool, target, home, wd string) (bool, error) {
-	if err := dp06Target(reg, target); err != nil {
+	if err := reg.ValidateTarget(target); err != nil {
 		return false, err
 	}
 	wanted := map[string]bool{}
@@ -589,7 +592,7 @@ func dp06UpdateTarget(reg *harness.Registry, cat *registry.Catalog, args []strin
 		return target == "pi", nil
 	}
 	for _, scope := range []string{"global", "local"} {
-		s, err := state.Load(removeStatePath(scope, home, wd))
+		s, err := state.LoadWithPolicy(removeStatePath(scope, home, wd), reg.OwnershipPolicy())
 		if err != nil {
 			return false, err
 		}
@@ -607,7 +610,7 @@ func dp06UpdateTarget(reg *harness.Registry, cat *registry.Catalog, args []strin
 
 func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, args []string, all bool, scope, home, wd string, deploy, force bool, mutation *mutation, nativeOpts deployOptions) error {
 	out := cmd.OutOrStdout()
-	installed, err := state.Load(removeStatePath(scope, home, wd))
+	installed, err := state.LoadWithPolicy(removeStatePath(scope, home, wd), nativeOpts.Harness.OwnershipPolicy())
 	if err != nil {
 		return err
 	}
@@ -642,7 +645,7 @@ func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, ar
 		if err := dp06ProfileComplete(res); err != nil {
 			return err
 		}
-		if err := dp06CheckProfileLock(wd, name, "pi", cat, home, scope, out); err != nil {
+		if err := dp06CheckProfileLock(nativeOpts.Harness, wd, name, "pi", cat, home, scope, out); err != nil {
 			return err
 		}
 		for _, n := range res.Names() {
@@ -757,7 +760,7 @@ func dp06UpdatePi(cmd *cobra.Command, cat *registry.Catalog, reg registrySel, ar
 
 // Before catalog acquisition, conservatively recognize possible Pi provenance.
 // Exact profile membership is resolved afterwards from available catalog bytes.
-func dp06PotentialPi(args []string, all bool, target, home, wd string) (bool, error) {
+func dp06PotentialPi(reg *harness.Registry, args []string, all bool, target, home, wd string) (bool, error) {
 	if target != "" && target != "all" {
 		return target == "pi", nil
 	}
@@ -772,7 +775,7 @@ func dp06PotentialPi(args []string, all bool, target, home, wd string) (bool, er
 		return true, nil
 	}
 	for _, scope := range []string{"global", "local"} {
-		s, err := state.Load(removeStatePath(scope, home, wd))
+		s, err := state.LoadWithPolicy(removeStatePath(scope, home, wd), reg.OwnershipPolicy())
 		if err != nil {
 			return false, err
 		}

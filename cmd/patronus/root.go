@@ -45,7 +45,7 @@ prove the archive pin; use supported delivery or separately qualify a migration.
 	root.PersistentPreRunE = func(*cobra.Command, []string) error { return regErr }
 
 	root.AddCommand(newListCmd())
-	root.AddCommand(newScanCmd())
+	root.AddCommand(newScanCmd(reg))
 	root.AddCommand(newInstallCmd(reg))
 	root.AddCommand(newLockCmd(reg))
 	root.AddCommand(newBuildCmd())
@@ -54,7 +54,7 @@ prove the archive pin; use supported delivery or separately qualify a migration.
 	root.AddCommand(newCheckGateIntentCmd())
 	root.AddCommand(newUpdateCmd(reg))
 	root.AddCommand(newRemoveCmd([]string{"revert"}, reg))
-	root.AddCommand(newMigrateCmd())
+	root.AddCommand(newMigrateCmd(reg))
 	addStubCommands(root)
 	return root
 }

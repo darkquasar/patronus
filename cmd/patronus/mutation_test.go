@@ -183,7 +183,7 @@ func TestPiRaceConfirmedPreparedContextRequiresFreshInteractivePreview(t *testin
 	dp02Artifact(t, f.root, "context-fixture", "instruction", "Pi-specific contribution\n")
 	path := filepath.Join(f.root, "CLAUDE.md")
 	dp02File(t, path, "Operator-prepared combined instructions\n")
-	m, err := beginMutation(f.home, f.root)
+	m, err := beginMutation(testRegistry(t), f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func TestMutationStateDriftBeforePersistencePreservesExternalBytes(t *testing.T)
 	if err := state.Save(path, original); err != nil {
 		t.Fatal(err)
 	}
-	m, err := beginMutation(f.home, f.root)
+	m, err := beginMutation(testRegistry(t), f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +282,7 @@ func TestMutationStateDriftBeforePersistencePreservesExternalBytes(t *testing.T)
 func TestMutationStatePersistenceReadbackFailure(t *testing.T) {
 	f := dp02Setup(t)
 	path := filepath.Join(f.home, ".patronus/state.json")
-	m, err := beginMutation(f.home, f.root)
+	m, err := beginMutation(testRegistry(t), f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestMutationExternalStateEditAfterWriteReportsPartialUncertainty(t *testing
 func TestMutationLockSaveRejectsExternalEdit(t *testing.T) {
 	f := dp02Setup(t)
 	path := filepath.Join(f.root, "patronus.lock")
-	m, err := beginMutation(f.home, f.root)
+	m, err := beginMutation(testRegistry(t), f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -614,7 +614,7 @@ func TestScanNativePackagesDeduplicatesIdenticalStatePath(t *testing.T) {
 	if _, _, err := runInstall(t, f.args("fixture-native", "--deploy", "--allow-package-installs")...); err != nil {
 		t.Fatal(err)
 	}
-	statuses, err := scanNativePackages(f.home, f.home)
+	statuses, err := scanNativePackages(f.home, f.home, testRegistry(t).OwnershipPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}

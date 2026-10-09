@@ -435,7 +435,7 @@ func TestDirectoryReferenceFailureIsFatalAndRepairable(t *testing.T) {
 func TestDirectoryLegacyOnlyDeployCreatesOnlyCoordinationLock(t *testing.T) {
 	home := t.TempDir()
 	cs := &diff.ChangeSet{}
-	result, err := deployDirectories(context.Background(), home, cs, false)
+	result, err := deployDirectories(context.Background(), testRegistry(t), home, cs, false)
 	if err != nil || result.Legacy != cs {
 		t.Fatalf("legacy result %v %v", result, err)
 	}

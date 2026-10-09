@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/packagebundle"
 	"github.com/darkquasar/patronus/internal/packagedelivery"
@@ -121,8 +122,8 @@ func preflightDirectories(home string, cs *diff.ChangeSet, force bool) error {
 	return nil
 }
 
-func deployDirectories(ctx context.Context, home string, cs *diff.ChangeSet, force bool) (result directoryDeployResult, err error) {
-	m, err := acquireMutation(home, filepath.Join(home, ".patronus/state.json"))
+func deployDirectories(ctx context.Context, reg *harness.Registry, home string, cs *diff.ChangeSet, force bool) (result directoryDeployResult, err error) {
+	m, err := acquireMutation(reg, home, filepath.Join(home, ".patronus/state.json"))
 	if err != nil {
 		return result, err
 	}
@@ -222,7 +223,7 @@ func acknowledgeDirectoryRemoval(home, name string, receipt *packagestate.Receip
 			return err
 		}
 	} else {
-		st, err := state.Load(path)
+		st, err := state.LoadWithPolicy(path, m.ownership())
 		if err != nil {
 			return err
 		}
@@ -275,7 +276,7 @@ func repairDirectoryReference(home string, receipt *packagestate.Receipt, m *mut
 	if err := m.check(path); err != nil {
 		return err
 	}
-	s, err := state.Load(path)
+	s, err := state.LoadWithPolicy(path, m.ownership())
 	if err != nil {
 		return err
 	}

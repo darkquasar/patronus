@@ -1,0 +1,99 @@
+# Reviewed allowlist of the target literals that remain in cmd/patronus and
+# internal/{state,remove,lock} after HS-T10 (HS-R5 as amended by a07c50ab/HP-08).
+# Site identity: file, enclosing declaration, AST path from the declaration to the
+# literal, and the occurrence index of this literal value within the declaration.
+# Classes: target-capability (tool pi|codex: a Pi or Codex capability branch, not
+# admission or target dispatch), descriptor-construction (the registry data),
+# adapter-data (schema enum and native-recipe rules carried by lock/state data),
+# legacy-zero-value (the documented zero-value defaults of the leaf policies).
+# No capability row may name opencode. TestHarnessNoDispatchLiterals pins these
+# bytes by hash; a class change is a review event.
+rows:
+  - {file: cmd/patronus/codex_auth.go, decl: codexAuthPrerequisites, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: codex, class: target-capability, tool: codex}
+  - {file: cmd/patronus/codex_migrate.go, decl: codexMigrationScope, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 0, literal: codex, class: target-capability, tool: codex}
+  - {file: cmd/patronus/codex_migrate.go, decl: runCodexMigrate, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 0, literal: codex, class: target-capability, tool: codex}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: codex, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 1, literal: codex, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: pi, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 1, literal: pi, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 2, literal: pi, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: claude, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: descriptor-construction}
+  - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/AssignStmt/CallExpr/BinaryExpr/BasicLit, index: 4, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/AssignStmt/IndexExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/AssignStmt/CallExpr/CallExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 4, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 5, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 6, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/AssignStmt/BinaryExpr/BasicLit, index: 7, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 8, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: computePlan, astPath: FuncDecl/BlockStmt/ExprStmt/CallExpr/CallExpr/BasicLit, index: 9, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: runDeployLocked, astPath: FuncDecl/BlockStmt/IfStmt/AssignStmt/CallExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: runDeployLocked, astPath: FuncDecl/BlockStmt/AssignStmt/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: runDeployLocked, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: recordStateLocked, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06CheckProfileLock, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06CheckProfileLock, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06CheckProfileLock, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06CheckProfileLock, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06PrintSelection, astPath: FuncDecl/BlockStmt/AssignStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06PrintSelection, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06PrintSelection, astPath: FuncDecl/BlockStmt/ExprStmt/CallExpr/CallExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/install.go, decl: dp06PrintSelection, astPath: FuncDecl/BlockStmt/ExprStmt/CallExpr/CallExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/lock.go, decl: newLockCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/mutation.go, decl: staticPiSelection, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/mutation.go, decl: staticPiSelection, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: piSelectedRoot, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/ReturnStmt/CallExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: piSelectedRoot, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: piProjectItem, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: stampPiRoots, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: qualifyPiOwnership, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: qualifyPiOwnership, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: recordDirectoryProfile, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_membership.go, decl: recordDirectoryProfile, astPath: FuncDecl/BlockStmt/ExprStmt/CallExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_native.go, decl: applyNative, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/AssignStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_native.go, decl: applyNative, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/ExprStmt/CallExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_native.go, decl: applyNative, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/ExprStmt/CallExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_native.go, decl: applyNative, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/ExprStmt/CallExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/pi_preflight.go, decl: piClaudeContextSources, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 0, literal: claude, class: target-capability, tool: pi}
+  - {file: cmd/patronus/remove.go, decl: newRemoveCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/UnaryExpr/ParenExpr/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/remove.go, decl: newRemoveCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/AssignStmt/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/remove.go, decl: newRemoveCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/remove.go, decl: newRemoveCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/RangeStmt/BlockStmt/AssignStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/remove.go, decl: runRemoveLocked, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/scan.go, decl: reconcilePluginLockLocked, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: newUpdateCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: newUpdateCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/IfStmt/BinaryExpr/UnaryExpr/ParenExpr/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: newUpdateCmd, astPath: FuncDecl/BlockStmt/AssignStmt/UnaryExpr/CompositeLit/KeyValueExpr/FuncLit/BlockStmt/RangeStmt/BlockStmt/AssignStmt/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdateTarget, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdateTarget, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/ReturnStmt/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdateTarget, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/AssignStmt/CallExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 3, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/ExprStmt/CallExpr/BasicLit, index: 4, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePi, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 5, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06PotentialPi, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/ReturnStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06PotentialPi, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06PotentialPi, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
+  - {file: cmd/patronus/update.go, decl: dp06UpdatePaths, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: internal/state/policy.go, decl: legacyStructuralTools, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/BasicLit, index: 0, literal: codex, class: legacy-zero-value}
+  - {file: internal/state/policy.go, decl: legacyStructuralTools, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/BasicLit, index: 0, literal: pi, class: legacy-zero-value}
+  - {file: internal/state/state.go, decl: LoadWithPolicy, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: adapter-data}
+  - {file: internal/remove/compute.go, decl: fileUndo, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
+  - {file: internal/remove/policy.go, decl: legacySectionRules, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: codex, class: legacy-zero-value}
+  - {file: internal/remove/policy.go, decl: legacySectionRules, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: pi, class: legacy-zero-value}
+  - {file: internal/lock/build.go, decl: FromResolvedWithPolicy, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: pi, class: adapter-data}
+  - {file: internal/lock/lock.go, decl: Load, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: adapter-data}
+  - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: pi, class: adapter-data}
+  - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: claude, class: adapter-data}
+  - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: codex, class: adapter-data}
+  - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/lock/policy.go, decl: legacyTargetedTools, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/BasicLit, index: 0, literal: pi, class: legacy-zero-value}

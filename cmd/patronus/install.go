@@ -105,7 +105,7 @@ func newInstallCmd(reg *harness.Registry) *cobra.Command {
 			home := toolpath.HomeDir(os.LookupEnv)
 			var mutation *mutation
 			if deploy && !jsonOutput {
-				mutation, err = beginMutation(home, wd)
+				mutation, err = beginMutation(reg, home, wd)
 				if err != nil {
 					return err
 				}
@@ -193,14 +193,14 @@ type plannedInstall struct {
 
 func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, error) {
 	hreg := req.Harness
-	if err := dp06Target(hreg, req.Tool); err != nil {
+	if err := hreg.ValidateTarget(req.Tool); err != nil {
 		return plannedInstall{}, err
 	}
 	if req.Tool != "" {
-		if err := codexProfileTarget(hreg, req.Profile, req.Tool); err != nil {
+		if err := hreg.ProfileTarget(req.Profile, nil, req.Tool); err != nil {
 			return plannedInstall{}, err
 		}
-		if err := codexCheckLock(hreg, req.ProjectDir, req.Tool); err != nil {
+		if err := checkLock(hreg, req.ProjectDir, req.Tool); err != nil {
 			return plannedInstall{}, err
 		}
 	}
@@ -222,11 +222,11 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			tool = l.Target
 		}
 	}
-	if err := codexProfileTarget(hreg, profileSel, tool); err != nil {
+	if err := hreg.ProfileTarget(profileSel, nil, tool); err != nil {
 		return plannedInstall{}, err
 	}
 	if tool != "" {
-		if err := codexCheckLock(hreg, wd, tool); err != nil {
+		if err := checkLock(hreg, wd, tool); err != nil {
 			return plannedInstall{}, err
 		}
 	}
@@ -272,7 +272,11 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	// --profile expands to the profile's resolved item names, which then flow
 	// through the SAME artifact-vs-recipe dispatch a plain install uses.
 	if profileSel != "" {
-		if err := dp06CheckProfileLock(wd, profileSel, tool, cat, home, scope, cmd.OutOrStdout()); err != nil {
+		// The manifest's own declared targets bind the profile as catalog data.
+		if err := hreg.ProfileTarget(profileSel, declaredTargets(cat, profileSel), tool); err != nil {
+			return plannedInstall{}, err
+		}
+		if err := dp06CheckProfileLock(hreg, wd, profileSel, tool, cat, home, scope, cmd.OutOrStdout()); err != nil {
 			return plannedInstall{}, err
 		}
 		// tool selects per-tool flavours (§4); "all" yields the tool-agnostic baseline.
@@ -368,6 +372,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 
 	var globalPrerequisites []diff.FileDiff
 	cs, err := computePlan(planInputs{
+		policy:         hreg.OwnershipPolicy(),
 		cat:            cat,
 		inv:            inv,
 		adapters:       adapterMap(adapters),
@@ -382,7 +387,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		return plannedInstall{}, err
 	}
 
-	if err := codexCheckComputedLock(hreg, wd, tool, cs); err != nil {
+	if err := checkComputedLock(hreg, wd, tool, cs); err != nil {
 		return plannedInstall{}, err
 	}
 	if err := staticPiSelection(cs, tool == "pi"); err != nil {
@@ -393,25 +398,20 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			cs.Diffs[i].NativePrerequisite = true
 		}
 	}
-	if err := inspectNative(cs, home, wd, req.Force, nil); err != nil {
+	if err := inspectNative(cs, home, wd, req.Force, nil, hreg.OwnershipPolicy()); err != nil {
 		return plannedInstall{}, err
 	}
 	if err := inspectDirectoryPlan(home, cs); err != nil {
 		return plannedInstall{}, err
 	}
-	if err := codexPreflightPlan(hreg, cs, res, home, wd); err != nil {
-		return plannedInstall{}, err
-	}
-	for _, d := range cs.Diffs {
-		if contains(strings.Split(d.Tool, "+"), "codex") {
-			warnf("Codex static admission/placement only; skill loading, hooks, trust and fresh-session activation remain runtime-unverified")
-			break
+	for _, d := range hreg.Selected(cs) {
+		reviews, err := admitTarget(hreg, d, cs, res, home, wd, func(message string) { warnf("%s", message) })
+		if err != nil {
+			return plannedInstall{}, err
 		}
-	}
-	if reviews, err := piPreflightPlan(hreg, cs, res, home, wd); err != nil {
-		return plannedInstall{}, err
-	} else if len(reviews) > 0 {
-		warnf("Pi mixed-context conflict: operator-prepared combined file and separately scoped interactive consent required before any selected write")
+		if len(reviews) > 0 {
+			warnf("Pi mixed-context conflict: operator-prepared combined file and separately scoped interactive consent required before any selected write")
+		}
 	}
 	return plannedInstall{Changes: cs, Resolver: res, Target: tool, GlobalPrerequisites: globalPrerequisites}, nil
 }
@@ -419,6 +419,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 // planInputs carries everything computePlan needs to build a change set across a
 // mix of artifact and recipe names.
 type planInputs struct {
+	policy         state.OwnershipPolicy
 	cat            *registry.Catalog
 	inv            *scan.Inventory
 	adapters       map[string]*manifest.Adapter
@@ -510,7 +511,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 				Resolver:     in.res,
 				Tool:         in.tool,
 				Scope:        recipeScope,
-				PlacedDigest: placedDigestFromState(in.inv),
+				PlacedDigest: placedDigestFromState(in.inv, in.policy),
 				Warnf:        in.warnf,
 			})
 			if err != nil {
@@ -523,7 +524,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 				var localDiffs []diff.FileDiff
 				for _, d := range diffs {
 					if d.Scope == "global" && d.Tool == recipe.TargetAgnostic {
-						if err := dp06VerifyGlobal(in.res.ExpandHome("~"), rec.Manifest.Version, d); err != nil {
+						if err := dp06VerifyGlobal(in.res.ExpandHome("~"), rec.Manifest.Version, d, in.policy); err != nil {
 							return nil, err
 						}
 						if in.verifiedGlobal != nil {
@@ -595,7 +596,7 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	}
 	owners, err := loadOwners(paths, nil, func(i int, _ string, err error) error {
 		return fmt.Errorf("read setting ownership in %s: %w", roots[i], err)
-	})
+	}, in.policy)
 	if err != nil {
 		return nil, err
 	}
@@ -934,7 +935,7 @@ func runDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, op
 }
 
 func runDeployWith(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts deployOptions, runner commandRunner) (err error) {
-	m, err := beginMutation(opts.home, opts.projectDir)
+	m, err := beginMutation(opts.Harness, opts.home, opts.projectDir)
 	if err != nil {
 		return err
 	}
@@ -953,15 +954,20 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 	scopes := []string{"global", "local"}
 	owners, err := loadOwners([]string{statePath(scopes[0], opts), statePath(scopes[1], opts)}, nil, func(i int, _ string, err error) error {
 		return fmt.Errorf("load %s state: %w", scopes[i], err)
-	})
+	}, opts.Harness.OwnershipPolicy())
 	if err != nil {
 		return err
 	}
-	if err := codexPreflightPlan(opts.Harness, cs, res, opts.home, opts.projectDir); err != nil {
-		return err
-	}
-	if err := preflightPiDeploy(cmd, cs, res, &opts); err != nil {
-		return err
+	for _, d := range opts.Harness.Selected(cs) {
+		reviews, err := admitTarget(opts.Harness, d, cs, res, opts.home, opts.projectDir, nil)
+		if err != nil {
+			return err
+		}
+		if d.MixedContextConsent {
+			if err := preflightPiDeploy(cmd, cs, d, reviews, &opts); err != nil {
+				return err
+			}
+		}
 	}
 	admitted, err := plan.AdmitSettings(cs, owners)
 	if err != nil {
@@ -1011,7 +1017,7 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 		}
 	}
 	for _, d := range opts.globalPrerequisites {
-		if err := dp06VerifyGlobal(opts.home, d.Version, d); err != nil {
+		if err := dp06VerifyGlobal(opts.home, d.Version, d, opts.Harness.OwnershipPolicy()); err != nil {
 			return err
 		}
 	}
@@ -1173,7 +1179,7 @@ func runExecs(cmd *cobra.Command, cs *diff.ChangeSet, runner commandRunner, cons
 // recordState reconciles complete desired sets against actual outcomes. Directory
 // receipt references are reloaded and preserved, never inferred from file diffs.
 func recordState(desired *diff.ChangeSet, result *install.Result, opts deployOptions) (err error) {
-	m, err := beginMutation(opts.home, opts.projectDir)
+	m, err := beginMutation(opts.Harness, opts.home, opts.projectDir)
 	if err != nil {
 		return err
 	}
@@ -1208,12 +1214,12 @@ func recordStateLocked(desired *diff.ChangeSet, result *install.Result, opts dep
 		if err := opts.mutation.check(path); err != nil {
 			return errors.Join(append(outcomes, fmt.Errorf("save state %s: %w; ownership uncertain; %s", path, err, resultDiagnostics(result)))...)
 		}
-		s, err := state.Load(path)
+		s, err := state.LoadWithPolicy(path, opts.Harness.OwnershipPolicy())
 		if err != nil {
 			return errors.Join(append(outcomes, err)...)
 		}
 		qualifyPiOwnership(s, byScope[scope])
-		reconciled := state.Reconcile(state.ReconcileInput{Old: s.Items, Desired: byScope[scope], Result: *result, Now: now})
+		reconciled := state.Reconcile(state.ReconcileInput{Old: s.Items, Desired: byScope[scope], Result: *result, Now: now, Policy: opts.Harness.OwnershipPolicy()})
 		s.Items = reconciled.Items
 		if opts.target == "pi" {
 			state.EnrollProfile(s, opts.profile, opts.target, scope, piSelectedRoot(scope, opts.home, opts.projectDir), byScope[scope])
@@ -1267,7 +1273,7 @@ func statePath(scope string, opts deployOptions) string {
 // digest Patronus recorded. An unreadable or absent state yields no records at all, so
 // classifyFetch FETCHes — fail closed, because "we have never verified this" is not the
 // same as "this is fine".
-func placedDigestFromState(inv *scan.Inventory) recipe.PlacedDigestFunc {
+func placedDigestFromState(inv *scan.Inventory, policy state.OwnershipPolicy) recipe.PlacedDigestFunc {
 	byDest := map[string]string{}
 	if inv == nil {
 		return func(string) (string, bool) { return "", false }
@@ -1276,7 +1282,7 @@ func placedDigestFromState(inv *scan.Inventory) recipe.PlacedDigestFunc {
 		if dir == "" {
 			continue
 		}
-		s, err := state.Load(filepath.Join(dir, ".patronus", "state.json"))
+		s, err := state.LoadWithPolicy(filepath.Join(dir, ".patronus", "state.json"), policy)
 		if err != nil {
 			continue // unreadable state -> we know nothing about it -> verify everything
 		}
@@ -1322,9 +1328,6 @@ func conflictPrompt(cmd *cobra.Command, res toolpath.Resolver, yes bool) install
 	}
 }
 
-// dp06Target delegates the target enum to the registry (text unchanged).
-func dp06Target(reg *harness.Registry, target string) error { return reg.ValidateTarget(target) }
-
 func dp06ProfileComplete(res *profile.Resolved) error {
 	for _, w := range res.Warnings {
 		if strings.Contains(w, "not resolvable") {
@@ -1336,7 +1339,7 @@ func dp06ProfileComplete(res *profile.Resolved) error {
 
 // Legacy desired pins are not target provenance. Consistent installed rows can
 // establish Pi; otherwise regeneration is a separate deliberate lock command.
-func dp06CheckProfileLock(wd, profileName, target string, cat *registry.Catalog, home, scope string, out io.Writer) error {
+func dp06CheckProfileLock(reg *harness.Registry, wd, profileName, target string, cat *registry.Catalog, home, scope string, out io.Writer) error {
 	l, err := lock.Load(filepath.Join(wd, "patronus.lock"))
 	if err != nil {
 		return err
@@ -1363,7 +1366,7 @@ func dp06CheckProfileLock(wd, profileName, target string, cat *registry.Catalog,
 			return err
 		}
 	}
-	s, err := state.Load(removeStatePath(scope, home, wd))
+	s, err := state.LoadWithPolicy(removeStatePath(scope, home, wd), reg.OwnershipPolicy())
 	if err != nil {
 		return err
 	}
@@ -1425,11 +1428,11 @@ func dp06AdmitFetches(cs *diff.ChangeSet, owners []state.Item) error {
 	return nil
 }
 
-func dp06VerifyGlobal(home, version string, d diff.FileDiff) error {
+func dp06VerifyGlobal(home, version string, d diff.FileDiff, policy state.OwnershipPolicy) error {
 	refuse := func(reason string) error {
 		return fmt.Errorf("global prerequisite %s: %s; run a separate global install/update before local selection", d.Artifact, reason)
 	}
-	s, err := state.Load(filepath.Join(home, ".patronus/state.json"))
+	s, err := state.LoadWithPolicy(filepath.Join(home, ".patronus/state.json"), policy)
 	if err != nil {
 		return err
 	}

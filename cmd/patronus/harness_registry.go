@@ -32,6 +32,8 @@ func defaultRegistry() (*harness.Registry, error) {
 			MixedContextConsent: false,
 			ErrorPrefix:         "codex",
 			PlacementWarning:    "Codex static admission/placement only; skill loading, hooks, trust and fresh-session activation remain runtime-unverified",
+			PlacementStderr:     true,
+			AdmitRemoval:        true,
 			Validator:           codexValidator{},
 		},
 		harness.Descriptor{

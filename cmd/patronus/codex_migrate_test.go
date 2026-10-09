@@ -106,7 +106,7 @@ func TestCodexOwnedRootMigrationRetiresOnlyVerifiedSources(t *testing.T) {
 			sp := filepath.Join(f.root(tc.scope), ".patronus/state.json")
 			stateBefore := mustRead(t, sp)
 
-			out, err := f.run(tc.scope, false, codexMigrateOpts{})
+			out, err := f.run(tc.scope, false, codexMigrateOpts{harness: testRegistry(t)})
 			if err != nil || !strings.Contains(out, "MIGRATE fixture-cx") || !strings.Contains(out, "Preview only") {
 				t.Fatalf("preview: %v\n%s", err, out)
 			}
@@ -118,7 +118,7 @@ func TestCodexOwnedRootMigrationRetiresOnlyVerifiedSources(t *testing.T) {
 			}
 
 			var order []string
-			if _, err := f.run(tc.scope, true, codexMigrateOpts{beforeWrite: func(d diff.FileDiff) error {
+			if _, err := f.run(tc.scope, true, codexMigrateOpts{harness: testRegistry(t), beforeWrite: func(d diff.FileDiff) error {
 				order = append(order, string(d.Action))
 				return nil
 			}, saveState: func(p string, s *state.State) error {
@@ -146,7 +146,7 @@ func TestCodexOwnedRootMigrationRetiresOnlyVerifiedSources(t *testing.T) {
 			if !bytes.Equal(mustRead(t, otherState), otherBefore) {
 				t.Fatal("unselected scope changed")
 			}
-			if out, err := f.run(tc.scope, false, codexMigrateOpts{}); err != nil || !strings.Contains(out, "no recorded legacy") {
+			if out, err := f.run(tc.scope, false, codexMigrateOpts{harness: testRegistry(t)}); err != nil || !strings.Contains(out, "no recorded legacy") {
 				t.Fatalf("rerun not idempotent: %v %s", err, out)
 			}
 		})
@@ -206,7 +206,7 @@ func TestCodexOwnedRootMigrationPreservesUnownedAndEditedFiles(t *testing.T) {
 			sp := filepath.Join(f.project, ".patronus/state.json")
 			before := mustRead(t, sp)
 			snapshot := codexTree(t, legacy)
-			if _, err := f.run("local", true, codexMigrateOpts{}); err == nil || !strings.Contains(err.Error(), want) {
+			if _, err := f.run("local", true, codexMigrateOpts{harness: testRegistry(t)}); err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("want refusal %q, got %v", want, err)
 			}
 			if !bytes.Equal(mustRead(t, sp), before) || codexTree(t, legacy) != snapshot {
@@ -222,7 +222,7 @@ func TestCodexOwnedRootMigrationPreservesUnownedAndEditedFiles(t *testing.T) {
 	t.Run("unowned-legacy-skill-not-adopted", func(t *testing.T) {
 		f := newCodexMigrateFixture(t, "")
 		codexWrite(t, filepath.Join(f.home, ".codex/skills/user-cx/SKILL.md"), []byte("---\nname: user-cx\ndescription: user\n---\n"))
-		if out, err := f.run("global", true, codexMigrateOpts{}); err != nil || !strings.Contains(out, "no recorded legacy") {
+		if out, err := f.run("global", true, codexMigrateOpts{harness: testRegistry(t)}); err != nil || !strings.Contains(out, "no recorded legacy") {
 			t.Fatalf("unowned skill adopted: %v %s", err, out)
 		}
 		if _, err := os.Stat(filepath.Join(f.home, ".codex/skills/user-cx/SKILL.md")); err != nil {
@@ -232,7 +232,7 @@ func TestCodexOwnedRootMigrationPreservesUnownedAndEditedFiles(t *testing.T) {
 	t.Run("deploy-needs-scope-and-no-force", func(t *testing.T) {
 		newCodexMigrateFixture(t, "")
 		for _, args := range [][]string{{"--deploy"}, {"--local", "--deploy", "--force"}} {
-			cmd := newMigrateCodexSkillsCmd()
+			cmd := newMigrateCodexSkillsCmd(testRegistry(t))
 			cmd.SetArgs(args)
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetErr(&bytes.Buffer{})
@@ -252,7 +252,7 @@ func TestCodexOwnedRootMigrationFailureRetainsOldOwnership(t *testing.T) {
 			files := f.seed(t, "global", legacy, "fixture-cx")
 			sp := filepath.Join(f.home, ".patronus/state.json")
 			creates, deletes := 0, 0
-			hooks := codexMigrateOpts{beforeWrite: func(d diff.FileDiff) error {
+			hooks := codexMigrateOpts{harness: testRegistry(t), beforeWrite: func(d diff.FileDiff) error {
 				switch d.Action {
 				case diff.Create:
 					creates++
@@ -297,7 +297,7 @@ func TestCodexOwnedRootMigrationFailureRetainsOldOwnership(t *testing.T) {
 				return // unrecorded destinations stay unresolved; resume refuses below is not attempted
 			}
 			// Verified facts were persisted; a fresh run resumes to completion.
-			if _, err := f.run("global", true, codexMigrateOpts{}); err != nil {
+			if _, err := f.run("global", true, codexMigrateOpts{harness: testRegistry(t)}); err != nil {
 				t.Fatalf("resume after %s: %v", mode, err)
 			}
 			for rel, raw := range files {

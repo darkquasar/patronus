@@ -676,7 +676,7 @@ func TestPiLifecycleScanRetainsTargetWithoutRuntimeProbe(t *testing.T) {
 	}
 	before := mustRead(t, path)
 	probe := &dp06Lister{}
-	if err := reconcilePluginLock(context.Background(), f.root, detectedInv(f.home, "claude", "pi"), probe, func(string, ...any) {}); err != nil {
+	if err := reconcilePluginLock(context.Background(), testRegistry(t), f.root, detectedInv(f.home, "claude", "pi"), probe, func(string, ...any) {}); err != nil {
 		t.Fatal(err)
 	}
 	if probe.calls != 0 || !bytes.Equal(before, mustRead(t, path)) {

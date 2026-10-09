@@ -240,7 +240,7 @@ func recordDirectoryProfile(cs *diff.ChangeSet, opts deployOptions) error {
 		return nil
 	}
 	path := statePath("global", opts)
-	s, err := state.Load(path)
+	s, err := state.LoadWithPolicy(path, opts.Harness.OwnershipPolicy())
 	if err != nil {
 		return err
 	}

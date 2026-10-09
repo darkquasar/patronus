@@ -23,7 +23,7 @@ import (
 // mirroring runInstall/runList/runLock.
 func runScan(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
-	cmd := newScanCmd()
+	cmd := newScanCmd(testRegistry(t))
 	var out, errBuf bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
@@ -80,7 +80,7 @@ func TestReconcilePluginLockFlipsVerified(t *testing.T) {
 		"claude": []byte(`[{"name":"superpowers","marketplace":"claude-plugins-official"}]`),
 	}}
 
-	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), testRegistry(t), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
 
 	got, err := lock.Load(lockPath)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestReconcilePluginLockRejectsMalformedLock(t *testing.T) {
 	if err := os.WriteFile(lockPath, before, 0600); err != nil {
 		t.Fatal(err)
 	}
-	err := reconcilePluginLock(context.Background(), wd, detectedInv(home, "claude"), fakeLister{}, func(string, ...any) {})
+	err := reconcilePluginLock(context.Background(), testRegistry(t), wd, detectedInv(home, "claude"), fakeLister{}, func(string, ...any) {})
 	if err == nil || !strings.Contains(err.Error(), "scan: load lock") {
 		t.Fatalf("malformed lock silently accepted: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestReconcilePluginLockFlipsMissing(t *testing.T) {
 
 	// claude is reachable but reports an empty plugin list -> missing.
 	lister := fakeLister{out: map[string][]byte{"claude": []byte(`[]`)}}
-	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), testRegistry(t), wd, detectedInv(t.TempDir(), "claude"), lister, func(string, ...any) {})
 
 	got, err := lock.Load(lockPath)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestReconcilePluginLockFlipsMissing(t *testing.T) {
 func TestReconcilePluginLockNoLockIsNoop(t *testing.T) {
 	wd := t.TempDir() // no patronus.lock written
 	// Must not panic or create a lock; catalog loader must not even be consulted.
-	reconcilePluginLock(context.Background(), wd, detectedInv(t.TempDir(), "claude"), fakeLister{}, func(string, ...any) {})
+	reconcilePluginLock(context.Background(), testRegistry(t), wd, detectedInv(t.TempDir(), "claude"), fakeLister{}, func(string, ...any) {})
 	if _, err := lock.Load(filepath.Join(wd, "patronus.lock")); err != nil {
 		t.Fatalf("Load of absent lock should be empty, not error: %v", err)
 	}
@@ -991,7 +991,7 @@ func TestScanLockReconciliationRejectsLateExternalEdit(t *testing.T) {
 		}
 		return []byte(`[{"name":"fixture-plugin","marketplace":"fixture-market"}]`), true
 	})
-	err := reconcilePluginLock(context.Background(), f.root, detectedInv(f.home, "claude"), lister, func(string, ...any) {})
+	err := reconcilePluginLock(context.Background(), testRegistry(t), f.root, detectedInv(f.home, "claude"), lister, func(string, ...any) {})
 	if err == nil || !strings.Contains(err.Error(), "fresh preview") || !bytes.Equal(mustRead(t, path), external) {
 		t.Fatalf("stale scan persisted verified status: %v", err)
 	}
