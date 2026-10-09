@@ -25,13 +25,19 @@ import (
 // against the remote registry) the published tarball sha so a teammate can refetch
 // the exact bytes from the immutable name/version key.
 func FromResolved(cat *registry.Catalog, r *profile.Resolved, now string) (*Lock, error) {
+	return FromResolvedWithPolicy(cat, r, now, TargetPolicy{})
+}
+
+// FromResolvedWithPolicy is FromResolved with the targets that stamp the
+// target-bearing schema taken from p.
+func FromResolvedWithPolicy(cat *registry.Catalog, r *profile.Resolved, now string, p TargetPolicy) (*Lock, error) {
 	l := &Lock{
 		Version:   Version,
 		Profile:   r.Profile.Name,
 		Generated: now,
 	}
-	if r.Target == "pi" {
-		l.Version, l.Target = TargetVersion, "pi"
+	if p.Targeted(r.Target) {
+		l.Version, l.Target = TargetVersion, r.Target
 	}
 	for _, it := range r.Items {
 		e := Entry{

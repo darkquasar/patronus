@@ -1,6 +1,9 @@
 package harness
 
-import "github.com/darkquasar/patronus/internal/state"
+import (
+	"github.com/darkquasar/patronus/internal/lock"
+	"github.com/darkquasar/patronus/internal/state"
+)
 
 // OwnershipPolicy derives the structural-ownership policy from the descriptors
 // that own effects (OwnsEffects), in registration order. A nil registry yields
@@ -16,4 +19,20 @@ func (r *Registry) OwnershipPolicy() state.OwnershipPolicy {
 		}
 	}
 	return state.NewOwnershipPolicy(tools...)
+}
+
+// TargetPolicy derives the lock-stamping policy from the descriptors with
+// LockTargeted, in registration order (stamping only; coexistence is
+// LockCoexistence on LockTarget).
+func (r *Registry) TargetPolicy() lock.TargetPolicy {
+	if r == nil {
+		return lock.NewTargetPolicy()
+	}
+	var tools []string
+	for _, name := range r.order {
+		if r.byName[name].LockTargeted {
+			tools = append(tools, name)
+		}
+	}
+	return lock.NewTargetPolicy(tools...)
 }
