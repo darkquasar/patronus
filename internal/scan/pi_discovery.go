@@ -195,9 +195,22 @@ type PiResourceRoot struct {
 // DiscoverPiResources inventories explicit qualified roots. Pi skills/prompts
 // use package-before-native first-wins; subagents use builtin/package/user/project
 // last-wins (package roots first-wins internally). All duplicates are conflicts.
+// Skill roots walk through the shared DiscoverSkills rules (leaf directories,
+// ignore files, dot-directory skip, loose markdown); agent and command roots
+// keep their own walk below.
 func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 	var out []PiResource
 	for _, root := range roots {
+		if root.Kind == "skill" {
+			found, err := walkSkillRoot(piSkillRoot(root))
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range found {
+				out = append(out, piResourceFromShared(r))
+			}
+			continue
+		}
 		if err := PiSafePath(root.Path); err != nil {
 			return nil, err
 		}
@@ -227,9 +240,6 @@ func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 					if root.Kind == "command" || d.Name() == "node_modules" {
 						return filepath.SkipDir
 					}
-					if root.Kind == "skill" && strings.HasPrefix(d.Name(), ".") {
-						return filepath.SkipDir
-					}
 					if root.Kind == "agent" {
 						if d.Name() == ".git" || d.Name() == ".pi" || d.Name() == "sync-backups" || (strings.EqualFold(filepath.Base(filepath.Dir(path)), ".agents") && strings.EqualFold(d.Name(), "skills")) {
 							return filepath.SkipDir
@@ -243,39 +253,9 @@ func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 						}
 					}
 				}
-				if root.Kind == "skill" {
-					for _, ignore := range []string{".gitignore", ".ignore", ".fdignore"} {
-						raw, exists, err := ReadPiFile(filepath.Join(path, ignore))
-						if err != nil {
-							return err
-						}
-						if exists && len(bytes.TrimSpace(raw)) > 0 {
-							return fmt.Errorf("pi skill source %s: ignore rules require qualified discovery", filepath.Join(path, ignore))
-						}
-					}
-					file := filepath.Join(path, "SKILL.md")
-					if _, exists, err := ReadPiFile(file); err != nil {
-						return err
-					} else if exists {
-						r, err := piResourceFile(root, file)
-						if err != nil {
-							return err
-						}
-						if r.Name != "" {
-							out = append(out, r)
-						}
-						return filepath.SkipDir
-					}
-				}
 				return nil
 			}
-			if root.Kind == "skill" && d.Name() != "SKILL.md" {
-				atRoot := filepath.Dir(path) == root.Path
-				if !strings.HasSuffix(path, ".md") || (root.AgentsSkills && atRoot) || (!root.AgentsSkills && !atRoot) {
-					return nil
-				}
-			}
-			if root.Kind != "skill" && (!strings.HasSuffix(d.Name(), ".md") || (root.Kind == "agent" && strings.HasSuffix(d.Name(), ".chain.md"))) {
+			if !strings.HasSuffix(d.Name(), ".md") || (root.Kind == "agent" && strings.HasSuffix(d.Name(), ".chain.md")) {
 				return nil
 			}
 			r, err := piResourceFile(root, path)
@@ -297,6 +277,59 @@ func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 		}
 	}
 	return out, nil
+}
+
+// piSkillRoot carries the Pi skill walk rules onto the shared SkillRoot: a
+// directory with SKILL.md is a leaf, ignore files refuse discovery, dot
+// directories and node_modules are skipped, loose markdown follows the
+// AgentsSkills placement, and every same-name resource is a conflict.
+func piSkillRoot(root PiResourceRoot) SkillRoot {
+	return SkillRoot{
+		Path:            root.Path,
+		Origin:          root.Origin,
+		AgentsSkills:    root.AgentsSkills,
+		IgnoreRules:     true,
+		SkipDotDirs:     true,
+		LooseMarkdown:   true,
+		DuplicatePolicy: RefuseAlways,
+		SafePath:        PiSafePath,
+		Name:            piSkillName,
+		ConflictMessage: piResourceConflictMessage,
+	}
+}
+
+// piSkillName is piResourceFile's naming rule for skill roots over bytes the
+// walk already read: description required (else ignored), name from the
+// directory unless declared, identity must be a safe name.
+func piSkillName(raw []byte, path string) (string, error) {
+	fields, err := piMarkdownFields(raw)
+	if err != nil {
+		return "", fmt.Errorf("pi discovery %s: %w", path, err)
+	}
+	description, _ := fields["description"].(string)
+	if description == "" {
+		return "", nil
+	}
+	name := filepath.Base(filepath.Dir(path))
+	if declared, _ := fields["name"].(string); declared != "" {
+		name = declared
+	}
+	if !PiSafeName(name) {
+		return "", fmt.Errorf("pi discovery invalid identity at %s", path)
+	}
+	return name, nil
+}
+
+func piResourceFromShared(r Resource) PiResource {
+	return PiResource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases}
+}
+
+func piSharedResource(r PiResource) Resource {
+	return Resource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases}
+}
+
+func piResourceConflictMessage(name string, a, b Resource) error {
+	return fmt.Errorf("pi %s identity %q conflict: %s (%s) and %s (%s); silent shadowing refused", b.Kind, name, a.Path, a.Origin, b.Path, b.Origin)
 }
 
 func piResourceFile(root PiResourceRoot, path string) (PiResource, error) {
@@ -501,22 +534,14 @@ func piMarkdownFields(raw []byte) (map[string]any, error) {
 	return fields, nil
 }
 
+// PiResourceConflict refuses any same-identity resource of the same kind at
+// another path: the RefuseAlways policy of the shared ResourceConflict.
 func PiResourceConflict(resources []PiResource, selected PiResource) error {
-	selectedNames := append([]string{selected.Name}, selected.Aliases...)
-	for _, other := range resources {
-		if other.Kind != selected.Kind || other.Path == selected.Path {
-			continue
-		}
-		otherNames := append([]string{other.Name}, other.Aliases...)
-		for _, selectedName := range selectedNames {
-			for _, otherName := range otherNames {
-				if otherName == selectedName {
-					return fmt.Errorf("pi %s identity %q conflict: %s (%s) and %s (%s); silent shadowing refused", selected.Kind, selectedName, other.Path, other.Origin, selected.Path, selected.Origin)
-				}
-			}
-		}
+	shared := make([]Resource, 0, len(resources))
+	for _, r := range resources {
+		shared = append(shared, piSharedResource(r))
 	}
-	return nil
+	return ResourceConflict(shared, piSharedResource(selected), RefuseAlways, nil, piResourceConflictMessage)
 }
 
 // PiMCPSource inventory uses the selected 3.0.0 loader order, low to high.

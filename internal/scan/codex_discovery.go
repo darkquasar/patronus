@@ -1,7 +1,6 @@
 package scan
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -75,54 +74,49 @@ func DiscoverCodexSkills(roots []CodexSkillRoot) ([]CodexSkill, error) {
 
 // DiscoverCodexSkillsWithOwnership permits differing scoped versions only when
 // the caller proves both resources are managed, unchanged Codex installations.
-// A nil verifier retains the conservative discovery-only conflict policy.
+// A nil verifier retains the conservative discovery-only conflict policy. It is
+// the Codex spelling of the shared DiscoverSkills walk.
 func DiscoverCodexSkillsWithOwnership(roots []CodexSkillRoot, verified func(CodexSkill) bool) ([]CodexSkill, error) {
-	var out []CodexSkill
+	shared := make([]SkillRoot, 0, len(roots))
 	for _, root := range roots {
-		if err := CodexSafePath(root.Path); err != nil {
-			return nil, err
-		}
-		err := filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {
-			if os.IsNotExist(err) && path == root.Path {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			if err := CodexSafePath(path); err != nil {
-				return err
-			}
-			if d.IsDir() {
-				return nil
-			}
-			if d.Name() != "SKILL.md" {
-				return nil
-			}
-			raw, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			name, err := CodexSkillName(raw, path)
-			if err != nil {
-				return err
-			}
-			selected := CodexSkill{Name: name, Path: path, Legacy: root.Legacy, Content: raw}
-			for _, other := range out {
-				if other.Name == name && other.Path != path && !bytes.Equal(other.Content, raw) {
-					if !other.Legacy && !selected.Legacy && verified != nil && verified(other) && verified(selected) {
-						continue
-					}
-					return fmt.Errorf("codex skill name %q conflicts at %s and %s; incompatible same-name resources cannot be shadowed", name, other.Path, path)
-				}
-			}
-			out = append(out, selected)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
+		shared = append(shared, codexSkillRoot(root))
+	}
+	var verify func(Resource) bool
+	if verified != nil {
+		verify = func(r Resource) bool { return verified(codexSkillFromResource(r)) }
+	}
+	found, err := DiscoverSkills(shared, verify)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CodexSkill, 0, len(found))
+	for _, r := range found {
+		out = append(out, codexSkillFromResource(r))
 	}
 	return out, nil
+}
+
+// codexSkillRoot carries the Codex walk rules: recursive, SKILL.md only,
+// strict name == directory, identical bytes admitted with the verified-pair
+// exception, and the Codex admission prefix on every path guard.
+func codexSkillRoot(root CodexSkillRoot) SkillRoot {
+	return SkillRoot{
+		Path:            root.Path,
+		Legacy:          root.Legacy,
+		Recursive:       true,
+		DuplicatePolicy: RefuseDifferentBytesVerifiedException,
+		SafePath:        CodexSafePath,
+		Name:            CodexSkillName,
+		ConflictMessage: codexSkillConflict,
+	}
+}
+
+func codexSkillConflict(name string, a, b Resource) error {
+	return fmt.Errorf("codex skill name %q conflicts at %s and %s; incompatible same-name resources cannot be shadowed", name, a.Path, b.Path)
+}
+
+func codexSkillFromResource(r Resource) CodexSkill {
+	return CodexSkill{Name: r.Name, Path: r.Path, Legacy: r.Legacy, Content: r.Content}
 }
 
 // CodexSkillTree lists every regular file below one skill directory without
