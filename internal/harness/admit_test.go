@@ -400,3 +400,29 @@ func TestAdmitForeignRootsJoinDiscovery(t *testing.T) {
 		t.Fatalf("foreign root collision\n got: %v\nwant: %s", err, want)
 	}
 }
+
+// HS-FR-03: foreign roots join the inventory a Prepare hook pre-resolved.
+func TestAdmitForeignRootsJoinPreResolvedInventory(t *testing.T) {
+	f := newAdmitFixture(t)
+	foreign := filepath.Join(f.home, ".foreign/skills")
+	f.write(t, filepath.Join(foreign, "alpha/SKILL.md"), []byte("alpha\n"))
+	selected := filepath.Join(f.project, ".lax/skills/alpha/SKILL.md")
+	lax := laxDescriptor(func(RootInputs) ([]scan.SkillRoot, error) {
+		return []scan.SkillRoot{{Path: filepath.Join(f.home, ".lax/skills"), DuplicatePolicy: scan.RefuseAlways, Name: toyName}}, nil
+	})
+	lax.Validator = inventoryValidator{inventory: []scan.Resource{}}
+	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{Tool: "lax", Type: "skill", Artifact: "alpha", Path: selected, Scope: "local", Action: diff.Create, After: []byte("alpha\n")}}}
+	in := f.admission(cs, nil)
+	in.Roots = []scan.SkillRoot{{Path: foreign, Origin: "foreign user", Recursive: true, DuplicatePolicy: scan.RefuseDifferentBytesVerifiedException, Name: toyName}}
+	err := Admit(lax, in)
+	want := "lax skill identity \"alpha\" conflict: " + filepath.Join(foreign, "alpha/SKILL.md") + " (foreign user) and " + selected + " (selected local); silent shadowing refused"
+	if err == nil || err.Error() != want {
+		t.Fatalf("pre-resolved inventory ignored foreign roots\n got: %v\nwant: %s", err, want)
+	}
+	// A foreign walk error surfaces too.
+	in = f.admission(cs, nil)
+	in.Roots = []scan.SkillRoot{{Path: foreign, Recursive: true, DuplicatePolicy: scan.RefuseAlways, Name: func([]byte, string) (string, error) { return "", os.ErrInvalid }}}
+	if err := Admit(lax, in); err != os.ErrInvalid {
+		t.Fatalf("foreign walk error lost: %v", err)
+	}
+}

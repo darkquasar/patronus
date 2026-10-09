@@ -244,30 +244,37 @@ func TestLedgerAdditionalItemsCountAsClosureEndpoints(t *testing.T) {
 	}
 }
 
-// HS-IR-05: closure coverage binds the ledger's declared profile/target case.
-// For a profile admitted for two targets, the ledger endpoints are required in
-// the declared target's closure only; the other target's closure is not judged
-// by this ledger.
+// HS-IR-05 / HS-FR-05: closure coverage binds the ledger's declared
+// profile/target case. With a profile admitted for two targets, the toy ledger
+// requires its endpoint in the toy closure only: an other-target closure that
+// lacks it is not judged, and a toy closure that lacks it fails even though
+// the other closure holds it.
 func TestLedgerClosureBindsDeclaredTarget(t *testing.T) {
 	f := newFixture(t)
+	f.publishSecond(t, "extra")
 	writeFixtureFile(t, filepath.Join(f.root, "adapters/other.yaml"), []byte("tool: other\nfamily: adapter\n"))
 	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/profile-targets.yaml"), []byte("schema_version: 1\nprofiles:\n  invented:\n    targets: [toy, other]\n"))
 	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(_validLedger))
 	dir := filepath.Join(f.root, "closures")
-	// Both admitted closures are supplied; the other-target closure lacks the
-	// ledger endpoint and must not be judged by the toy ledger.
-	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(_validLock))
-	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte("version: 3\nprofile: invented\ntarget: other\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
+	withSample := _validLock
+	onlyExtra := "version: 3\nprofile: invented\ntarget: %s\nentries:\n  - name: extra\n    kind: artifact\n    version: 1.0.0\n"
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(withSample))
+	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte(fmt.Sprintf(onlyExtra, "other")))
 	if code, out, diagnostic := f.check(t, "--closures", dir); code != 0 || !strings.Contains(out, "checked from supplied") {
-		t.Fatalf("declared-target closure not judged alone: code=%d %s %s", code, out, diagnostic)
+		t.Fatalf("other-target closure without the endpoint was judged: code=%d %s %s", code, out, diagnostic)
 	}
-	// The declared target's closure missing the endpoint fails even though the
-	// other target's closure holds it.
-	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte("version: 3\nprofile: invented\ntarget: toy\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
-	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(strings.Replace(_validLedger, "target: toy\n", "target: other\n", 1)))
-	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte("version: 3\nprofile: invented\ntarget: other\nentries:\n  - name: sample\n    kind: artifact\n    version: 1.0.0\n"))
+	writeFixtureFile(t, filepath.Join(dir, "invented--toy.lock"), []byte(fmt.Sprintf(onlyExtra, "toy")))
+	writeFixtureFile(t, filepath.Join(dir, "invented--other.lock"), []byte(strings.ReplaceAll(withSample, "target: toy", "target: other")))
+	code, _, diagnostic := f.check(t, "--closures", dir)
+	if code == 0 || !strings.Contains(diagnostic, "invented--toy closure missing ledger endpoint sample") {
+		t.Fatalf("declared-target closure missing the endpoint accepted: code=%d %s", code, diagnostic)
+	}
+	// The ledger's own target field (not baseline_target) selects the closure.
+	otherLedger := strings.Replace(_validLedger, "\ntarget: toy\n", "\ntarget: other\n", 1)
+	otherLedger = strings.ReplaceAll(otherLedger, "toy_items:", "other_items:")
+	writeFixtureFile(t, filepath.Join(f.root, "docs/compatibility/invented.yaml"), []byte(otherLedger))
 	if code, out, diagnostic := f.check(t, "--closures", dir); code != 0 || !strings.Contains(out, "checked from supplied") {
-		t.Fatalf("other-target ledger: code=%d %s %s", code, out, diagnostic)
+		t.Fatalf("other-target ledger not judged against the other closure: code=%d %s %s", code, out, diagnostic)
 	}
 }
 

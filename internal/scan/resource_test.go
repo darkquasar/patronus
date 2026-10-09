@@ -252,3 +252,40 @@ func TestDiscoverSkillsInlineConflictPrecedesLaterWalkError(t *testing.T) {
 		t.Fatalf("deferred policy let a conflict precede the walk error: %v", err)
 	}
 }
+
+// HS-FR-02: duplicates within one root are judged inline under the
+// verified-exception policy: differing bytes refused (also before a later
+// malformed skill), identical bytes admitted, verified pair admitted.
+func TestDiscoverSkillsSameRootDuplicates(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		second   string
+		later    string
+		verified func(Resource) bool
+		wantErr  string
+	}{
+		{"different bytes refused", "dup\nmore\n", "", nil, "conflicts at"},
+		{"different bytes refused before later fault", "dup\nmore\n", "bad\n", nil, "conflicts at"},
+		{"identical bytes admitted", "dup\n", "", nil, ""},
+		{"verified pair admitted", "dup\nmore\n", "", func(Resource) bool { return true }, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeResource(t, filepath.Join(root, "a/dup/SKILL.md"), "dup\n")
+			writeResource(t, filepath.Join(root, "b/dup/SKILL.md"), tc.second)
+			if tc.later != "" {
+				writeResource(t, filepath.Join(root, "z/late/SKILL.md"), tc.later)
+			}
+			got, err := DiscoverSkills([]SkillRoot{toyRoot(root, RefuseDifferentBytesVerifiedException)}, tc.verified)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("same-root duplicate: %v", err)
+				}
+				return
+			}
+			if err != nil || len(got) != 2 {
+				t.Fatalf("admitted pair: %v %+v", err, got)
+			}
+		})
+	}
+}

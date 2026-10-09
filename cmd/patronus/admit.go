@@ -18,13 +18,18 @@ import (
 )
 
 // admitTarget runs the shared admission for one selected descriptor with the
-// command's owner loader, placement channel and review conversion. stderr
+// command's owner loader, placement channel and review conversion. A
+// descriptor without AdmitPlan keeps the legacy shared-lane semantics and is
+// not admitted at all. stderr
 // receives a PlacementStderr descriptor's warning after a successful
 // admission (nil discards it, as deployment does); every other descriptor's
 // warning is recorded on the plan. Mixed-context reviews are converted to the
 // operation-local consent shape as they arrive, so a refused Claude provenance
 // lookup keeps its position.
 func admitTarget(reg *harness.Registry, d harness.Descriptor, cs *diff.ChangeSet, res toolpath.Resolver, home, project string, stderr func(string)) ([]piContextReview, error) {
+	if !d.AdmitPlan {
+		return nil, nil
+	}
 	paths := []string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")}
 	var pre func(string) error
 	var wrap func(int, string, error) error
@@ -142,7 +147,7 @@ func checkComputedLock(reg *harness.Registry, project, target string, cs *diff.C
 // removal inverses (AdmitRemoval) over the inverse change set.
 func admitRemoval(reg *harness.Registry, cs *diff.ChangeSet, res toolpath.Resolver, home, project string) error {
 	for _, d := range reg.Selected(cs) {
-		if !d.AdmitRemoval {
+		if !d.AdmitRemoval || !d.AdmitPlan {
 			continue
 		}
 		if _, err := admitTarget(reg, d, cs, res, home, project, nil); err != nil {

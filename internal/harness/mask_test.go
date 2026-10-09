@@ -47,6 +47,9 @@ func TestSkillMaskEdits(t *testing.T) {
 		{"zero mask message only", unmasked, skills("one-aa"), []DescriptorRoots{aa}, nil,
 			[]string{"Found 1 co-visible alpha skills (*-aa) in roots /shared/skills read by plain; no native mask declared"}},
 		{"bare suffix is not a match", masked, skills("-aa", "aa"), []DescriptorRoots{aa}, nil, nil},
+		{"non-skill resources are not counted", masked, []scan.Resource{{Kind: "agent", Name: "worker-aa"}, {Kind: "command", Name: "run-aa"}}, []DescriptorRoots{aa}, nil, nil},
+		{"mixed kinds count skills only", masked, []scan.Resource{{Kind: "agent", Name: "worker-aa"}, {Kind: "skill", Name: "one-aa", Path: "/shared/skills/one-aa/SKILL.md"}}, []DescriptorRoots{aa}, []diff.SettingEdit{edit("aa")},
+			[]string{"Masked 1 co-visible alpha skills (*-aa) from toy via permission.skill in toy.json; re-run update after adding or removing alpha skills"}},
 		{"self is skipped", masked, skills("one-tz"), []DescriptorRoots{{Descriptor: masked, Roots: shared}}, nil, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -99,6 +99,14 @@ func Admit(d Descriptor, in *Admission) error {
 				return err
 			}
 			in.InventoryResolved = true
+		} else if len(in.Roots) > 0 {
+			// A Prepare hook resolved the target's own inventory; the foreign
+			// roots are discovered separately and join it.
+			foreign, err := scan.DiscoverSkills(in.Roots, verified)
+			if err != nil {
+				return err
+			}
+			in.Inventory = append(in.Inventory, foreign...)
 		}
 	}
 	for _, fd := range selected {

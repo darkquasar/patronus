@@ -85,11 +85,17 @@ func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource
 	var policies []SkillRoot
 	for _, root := range roots {
 		root := root
+		// seen is the complete inventory so far, including resources found
+		// earlier in this root, so same-root duplicates are judged inline.
+		seen := append([]Resource(nil), out...)
 		found, err := walkSkillRoot(root, func(r Resource) error {
-			if root.DuplicatePolicy != RefuseDifferentBytesVerifiedException {
-				return nil
+			if root.DuplicatePolicy == RefuseDifferentBytesVerifiedException {
+				if err := ResourceConflict(seen, r, root.DuplicatePolicy, verified, root.ConflictMessage); err != nil {
+					return err
+				}
 			}
-			return ResourceConflict(out, r, root.DuplicatePolicy, verified, root.ConflictMessage)
+			seen = append(seen, r)
+			return nil
 		})
 		if err != nil {
 			return nil, err

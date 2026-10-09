@@ -645,3 +645,42 @@ func TestHarnessProfileTargetRule(t *testing.T) {
 		t.Fatalf("undeclared profile bound to a target: %v", err)
 	}
 }
+
+// HS-FR-01: the flags-false legacy lanes (claude, opencode) are not admitted:
+// a conflicting unowned destination and an existing unowned section stay
+// ordinary plan rows (CONFLICT / APPEND) with no refusal, as at base.
+func TestHarnessLegacyLanesAreNotAdmitted(t *testing.T) {
+	for _, tool := range []string{"claude", "opencode"} {
+		t.Run(tool+"/conflict", func(t *testing.T) {
+			home, _, _ := harnessOutputFixture(t)
+			dest := filepath.Join(home, ".claude/skills/fixture-any/SKILL.md")
+			if tool == "opencode" {
+				dest = filepath.Join(home, ".config/opencode/skills/fixture-any/SKILL.md")
+			}
+			codexWrite(t, dest, []byte("---\nname: fixture-any\ndescription: edited by the user\n---\nOther body\n"))
+			codexWrite(t, filepath.Join(home, ".patronus/state.json"), []byte(`{"version":2,"items":[]}`))
+			out, _, err := runInstall(t, "fixture-any", "--target", tool, "--global")
+			if err != nil {
+				t.Fatalf("legacy conflict refused by admission: %v", err)
+			}
+			if !strings.Contains(out, "CONFLICT") {
+				t.Fatalf("legacy conflict row missing:\n%s", out)
+			}
+		})
+		t.Run(tool+"/section", func(t *testing.T) {
+			home, _, _ := harnessOutputFixture(t)
+			context := filepath.Join(home, ".claude/CLAUDE.md")
+			if tool == "opencode" {
+				context = filepath.Join(home, ".config/opencode/AGENTS.md")
+			}
+			codexWrite(t, context, adapter.AppendSection([]byte("User prose\n"), "fixture-ctx", []byte("old")))
+			out, _, err := runInstall(t, "fixture-ctx", "--target", tool, "--global")
+			if err != nil {
+				t.Fatalf("legacy existing section refused by admission: %v", err)
+			}
+			if !strings.Contains(out, "fixture-ctx") {
+				t.Fatalf("legacy section plan missing:\n%s", out)
+			}
+		})
+	}
+}

@@ -18,7 +18,8 @@ type DescriptorRoots struct {
 
 // SkillMaskEdits is the shared co-visibility rule. For every other descriptor
 // with a nonempty ItemSuffix whose roots intersect the target's roots (by
-// SkillRoot.Path), when at least one discovered skill is named *-<suffix>, it
+// SkillRoot.Path), when at least one discovered resource of Kind skill is
+// named *-<suffix>, it
 // emits one mask edit through the target's SkillMask (the quoted dotted
 // segment `."*-<suffix>"` names the pattern key exactly) and one human message
 // naming the count, the suffix, the source lane and the file. A target without
@@ -41,7 +42,7 @@ func SkillMaskEdits(target Descriptor, targetRoots []scan.SkillRoot, discovered 
 		}
 		count := 0
 		for _, r := range discovered {
-			if strings.HasSuffix(r.Name, "-"+suffix) && len(r.Name) > len(suffix)+1 {
+			if r.Kind == "skill" && strings.HasSuffix(r.Name, "-"+suffix) && len(r.Name) > len(suffix)+1 {
 				count++
 			}
 		}

@@ -33,6 +33,7 @@ func defaultRegistry() (*harness.Registry, error) {
 			ErrorPrefix:         "codex",
 			PlacementWarning:    "Codex static admission/placement only; skill loading, hooks, trust and fresh-session activation remain runtime-unverified",
 			PlacementStderr:     true,
+			AdmitPlan:           true,
 			AdmitRemoval:        true,
 			Validator:           codexValidator{},
 		},
@@ -55,6 +56,7 @@ func defaultRegistry() (*harness.Registry, error) {
 			MixedContextConsent: true,
 			ErrorPrefix:         "pi",
 			PlacementWarning:    "Pi static inventory only: checks cover inspected files, configuration and declared resources; extension callbacks and runtime-only discovery/registrations remain runtime-unverified. Cold-start/reload qualification is separate.",
+			AdmitPlan:           true,
 			Validator:           piValidator{},
 		},
 		harness.Descriptor{

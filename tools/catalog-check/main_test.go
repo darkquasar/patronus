@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -78,6 +79,72 @@ func (f *fixture) publish(t *testing.T, extra *tar.Header) {
 	writeFixtureFile(t, f.index, data)
 	writeFixtureFile(t, f.index+".sha256", []byte(fmt.Sprintf("sha256:%x\n", sha256.Sum256(data))))
 }
+
+// publishSecond adds a second invented skill artifact to the source tree and
+// republishes the index with both artifacts, so tests can build closures that
+// differ in membership.
+func (f *fixture) publishSecond(t *testing.T, name string) {
+	t.Helper()
+	manifest := map[string]any{}
+	for k, v := range f.manifest {
+		manifest[k] = v
+	}
+	manifest["name"] = name
+	manifest["files"] = []string{}
+	members := map[string]string{"SKILL.md": "---\nname: " + name + "\ndescription: Invented skill\n---\nInert body.\n"}
+	for member, body := range members {
+		writeFixtureFile(t, filepath.Join(f.root, "artifacts/skills", name, member), []byte(body))
+	}
+	manifestJSON, _ := json.Marshal(manifest)
+	writeFixtureFile(t, filepath.Join(f.root, "artifacts/skills", name, "patronus.yaml"), manifestJSON)
+	tarball := fixtureTarball(t, manifestJSON, members)
+	writeFixtureFile(t, filepath.Join(filepath.Dir(f.index), name, "1.0.0", name+"-1.0.0.tar.gz"), tarball)
+	firstJSON, _ := json.Marshal(f.manifest)
+	first := fixtureTarball(t, firstJSON, f.members)
+	writeFixtureFile(t, filepath.Join(filepath.Dir(f.index), "sample/1.0.0/sample-1.0.0.tar.gz"), first)
+	entry := func(m map[string]any, raw []byte, n string) map[string]any {
+		return map[string]any{"manifest": m, "tarball": map[string]any{"url": "https://never-fetched.invalid/catalog/" + n + "/1.0.0/" + n + "-1.0.0.tar.gz", "sha256": fmt.Sprintf("sha256:%x", sha256.Sum256(raw))}}
+	}
+	ix := map[string]any{"schemaVersion": 1, "artifacts": []any{entry(f.manifest, first, "sample"), entry(manifest, tarball, name)}, "profiles": []any{map[string]any{"manifest": map[string]any{"apiVersion": "patronus/v2", "family": "profile", "role": "lifecycle", "name": "invented", "version": "1.0.0", "layers": map[string]any{"capabilities": []string{"sample"}}}}}}
+	data, _ := json.Marshal(ix)
+	writeFixtureFile(t, f.index, data)
+	writeFixtureFile(t, f.index+".sha256", []byte(fmt.Sprintf("sha256:%x\n", sha256.Sum256(data))))
+}
+
+// fixtureTarball builds a deterministic tarball (sorted members) of a manifest
+// and its members.
+func fixtureTarball(t *testing.T, manifestJSON []byte, members map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	all := map[string]string{"patronus.yaml": string(manifestJSON)}
+	for name, body := range members {
+		all[name] = body
+	}
+	names := make([]string, 0, len(all))
+	for name := range all {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		body := all[name]
+		if err := tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(body)), Mode: 0644, Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
 func (f *fixture) check(t *testing.T, extra ...string) (int, string, string) {
 	t.Helper()
 	var out, err bytes.Buffer
