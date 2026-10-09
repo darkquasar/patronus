@@ -19,6 +19,9 @@ type ReconcileInput struct {
 	Desired []diff.FileDiff
 	Result  install.Result
 	Now     string
+	// Policy selects the tools whose section checksums refresh after an
+	// Unappend; the zero value is the legacy pair.
+	Policy OwnershipPolicy
 }
 
 // ReconcileResult retains all ownership, including unresolved obsolete paths.
@@ -177,7 +180,7 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 			out.Items[idx].InstalledAt = in.Now
 		}
 	}
-	RefreshSectionChecksums(out.Items, in.Result.Applied)
+	RefreshSectionChecksumsWithPolicy(out.Items, in.Result.Applied, in.Policy)
 	return out
 }
 
@@ -187,9 +190,15 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 // version, timestamps and pre-management baselines remain untouched.
 // The return value reports whether ownership changed and needs persistence.
 func RefreshSectionChecksums(items []Item, applied []diff.FileDiff) bool {
+	return RefreshSectionChecksumsWithPolicy(items, applied, OwnershipPolicy{})
+}
+
+// RefreshSectionChecksumsWithPolicy is RefreshSectionChecksums with the tools
+// whose Unappend refreshes siblings taken from p.
+func RefreshSectionChecksumsWithPolicy(items []Item, applied []diff.FileDiff, p OwnershipPolicy) bool {
 	changed := false
 	for _, d := range applied {
-		if d.Section == nil || (d.Action != diff.Append && d.Action != diff.Unappend) || (d.Action == diff.Unappend && d.Tool != "pi" && d.Tool != "codex") {
+		if d.Section == nil || (d.Action != diff.Append && d.Action != diff.Unappend) || (d.Action == diff.Unappend && !p.Structural(d.Tool)) {
 			continue
 		}
 		for i := range items {

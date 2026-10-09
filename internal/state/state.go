@@ -98,7 +98,11 @@ type FileState struct {
 
 // Load reads a state file. A missing file is not an error: it yields an empty
 // State at the current version (first install on this machine/scope).
-func Load(path string) (*State, error) {
+func Load(path string) (*State, error) { return LoadWithPolicy(path, OwnershipPolicy{}) }
+
+// LoadWithPolicy loads the state file and validates the structural rows of the
+// tools p names.
+func LoadWithPolicy(path string, p OwnershipPolicy) (*State, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -139,7 +143,7 @@ func Load(path string) (*State, error) {
 				return nil, fmt.Errorf("malformed native ownership for %s", it.Artifact)
 			}
 		}
-		if it.Tool != "pi" && it.Tool != "codex" {
+		if !p.Structural(it.Tool) {
 			continue
 		}
 		for j, f := range it.Files {
