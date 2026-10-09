@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
+	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/scan"
 	"github.com/darkquasar/patronus/internal/state"
 	"github.com/darkquasar/patronus/internal/toolpath"
@@ -30,191 +30,61 @@ type piContextReview struct {
 	OtherOwners []string
 }
 
-func piPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project string) ([]piContextReview, error) {
-	var selected []diff.FileDiff
-	agents, resources, mcp := false, false, false
-	for _, d := range cs.Diffs {
-		if d.Native != nil {
-			continue
-		}
-		if contains(strings.Split(d.Tool, "+"), "pi") {
-			if d.Tool != "pi" {
-				return nil, fmt.Errorf("pi cross-target destination conflict %s (%s)", d.Path, d.Tool)
-			}
-			selected = append(selected, d)
-			agents = agents || d.Type == "agent"
-			resources = resources || d.Type == "agent" || d.Type == "skill" || d.Type == "command"
-			mcp = mcp || filepath.Base(d.Path) == "mcp-adapter.json"
-		}
-	}
-	if len(selected) == 0 {
-		return nil, nil
-	}
-	warn := func(message string) {
-		for i := range cs.Diffs {
-			if cs.Diffs[i].Tool == "pi" {
-				if !contains(strings.Split(cs.Diffs[i].Warning, "\n"), message) {
-					if cs.Diffs[i].Warning != "" {
-						cs.Diffs[i].Warning += "\n"
-					}
-					cs.Diffs[i].Warning += message
-				}
-				return
-			}
-		}
-	}
-	warn("Pi static inventory only: checks cover inspected files, configuration and declared resources; extension callbacks and runtime-only discovery/registrations remain runtime-unverified. Cold-start/reload qualification is separate.")
-	if err := scan.PiRootOverride(os.LookupEnv); err != nil {
-		return nil, err
-	}
-	agentRoot := res.ResolveMarker("~/.pi/agent", "pi", "global")
-	for _, root := range []string{home, project, agentRoot} {
-		if err := scan.PiSafePath(root); err != nil {
-			return nil, err
-		}
-	}
-	var discovered []scan.PiResource
-	if resources {
-		roots, err := scan.PiResourceRoots(home, project, agentRoot, agents, os.LookupEnv, warn)
-		if err != nil {
-			return nil, err
-		}
-		discovered, err = scan.DiscoverPiResources(roots)
-		if err != nil {
-			return nil, err
-		}
-	}
-	owners, err := loadOwners([]string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")}, nil, nil)
-	if err != nil {
-		return nil, err
+// piPreflightPlan is Pi admission over an already computed shared ChangeSet:
+// the shared rules run in harness.Admit with the Pi descriptor, Pi-only rules
+// in piValidator, and mixed-context reviews return through Admission.Review
+// as piContextReview values for the deploy consent step.
+func piPreflightPlan(reg *harness.Registry, cs *diff.ChangeSet, res toolpath.Resolver, home, project string) ([]piContextReview, error) {
+	d, ok := reg.Lookup("pi")
+	if !ok {
+		return nil, harness.ErrUnknownTarget
 	}
 	var reviews []piContextReview
-	for _, d := range selected {
-		if err := scan.PiSafePath(d.Path); err != nil {
-			return nil, err
-		}
-		root := agentRoot
-		if d.Scope != "global" {
-			root = filepath.Join(project, ".pi")
-		}
-		if d.Section != nil {
-			if d.Scope != "global" {
-				root = project
-			}
-		}
-		rel, err := filepath.Rel(root, d.Path)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, "../") {
-			return nil, fmt.Errorf("pi destination %s escapes selected root %s", d.Path, root)
-		}
-		if d.Type == "agent" {
-			if _, err := adapter.ValidatePiAgent(d.Artifact, d.After); err != nil {
-				return nil, err
-			}
-		}
-		if d.Type == "agent" || d.Type == "command" || d.Type == "skill" {
-			if d.Type != "skill" || filepath.Base(d.Path) == "SKILL.md" {
-				selectedResource := scan.PiResource{Kind: d.Type, Name: d.Artifact, Path: d.Path, Origin: "selected " + d.Scope}
-				if err := scan.PiResourceConflict(discovered, selectedResource); err != nil {
-					return nil, err
-				}
-			}
-			// A different owner at this exact path cannot be approved by --force.
-			ownedUnchanged := false
-			for _, owner := range owners {
-				for _, f := range owner.Files {
-					if f.Path == d.Path && (owner.Tool != "pi" || owner.Artifact != d.Artifact || owner.Scope != d.Scope) {
-						return nil, fmt.Errorf("pi destination %s owned by %s (%s), selected %s", d.Path, owner.Artifact, owner.Tool, d.Artifact)
-					}
-					if f.Path == d.Path && owner.Tool == "pi" && owner.Artifact == d.Artifact && owner.Scope == d.Scope && f.Checksum == state.Checksum(d.Before) {
-						ownedUnchanged = true
-					}
-				}
-			}
-			if d.Action == diff.Conflict && !ownedUnchanged {
-				return nil, fmt.Errorf("pi resource conflict at %s: existing source and selected %s; resolve migration before applying selection", d.Path, d.Artifact)
-			}
-		}
-		if d.Section != nil {
-			context, err := scan.DiscoverPiContext(filepath.Dir(d.Path), scan.ReadPiFile)
+	in := &harness.Admission{
+		Changes:  cs,
+		Resolver: res,
+		Home:     home,
+		Project:  project,
+		Env:      os.LookupEnv,
+		Read:     scan.ReadPiFile,
+		LoadOwners: func() ([]state.Item, error) {
+			return loadOwners([]string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")}, nil, nil)
+		},
+		Warn: func(message string) { appendPlacementWarning(cs, d.Name, message) },
+		Review: func(r harness.ContextReview) error {
+			claudeSource, err := piClaudeContextSources(res, project, r.Scope)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			if context.Path != d.Path {
-				return nil, fmt.Errorf("pi context %s is shadowed by %s", d.Path, context.Path)
+			piSource := r.Path
+			if len(r.Sources) > 0 {
+				piSource = r.Sources[0]
 			}
-			// Check every inherited context as well, including unreadable candidates.
-			if d.Scope != "global" {
-				if _, err := scan.DiscoverPiContext(agentRoot, scan.ReadPiFile); err != nil {
-					return nil, err
-				}
-				for dir := filepath.Dir(project); ; dir = filepath.Dir(dir) {
-					if _, err := scan.DiscoverPiContext(dir, scan.ReadPiFile); err != nil {
-						return nil, err
-					}
-					if filepath.Dir(dir) == dir {
-						break
-					}
-				}
-			}
-			var otherOwners []string
-			sections := []struct{ artifact, name string }{{d.Artifact, d.Section.Name}}
-			for _, c := range d.Contrib {
-				sections = append(sections, struct{ artifact, name string }{c.Artifact, c.Section})
-			}
-			for _, section := range sections {
-				sectionOwned := false
-				for _, owner := range owners {
-					for _, f := range owner.Files {
-						if owner.Tool == "pi" && owner.Artifact == section.artifact && owner.Scope == d.Scope && f.Section == section.name {
-							if f.Path != d.Path {
-								return nil, fmt.Errorf("pi context ownership at %s would be shadowed/relocated to %s", f.Path, d.Path)
-							}
-							// Existing state records the complete post-apply file hash,
-							// not a section hash. Conservatively refuse any drift;
-							// identity alone cannot authorize replacing user edits.
-							if f.Checksum != state.Checksum(d.Before) {
-								return nil, fmt.Errorf("pi context drift at %s section %s: recorded bytes differ; preserve edits and reconcile before apply", d.Path, section.name)
-							}
-							sectionOwned = true
-						}
-						if f.Path == d.Path && owner.Tool != "pi" {
-							context.Mixed = true
-							otherOwners = append(otherOwners, owner.Artifact+" ("+owner.Tool+"/"+owner.Scope+") at "+f.Path)
-						}
-					}
-				}
-				if _, exists := adapter.SectionBody(d.Before, section.name); exists && !sectionOwned {
-					return nil, fmt.Errorf("pi context %s section %s has unknown ownership; refuse replacement", d.Path, section.name)
-				}
-			}
-			if context.Mixed {
-				claudeSource, err := piClaudeContextSources(res, project, d.Scope)
-				if err != nil {
-					return nil, err
-				}
-				reviews = append(reviews, piContextReview{Consent: piContextConsent{Path: d.Path, PiSource: context.Path, ClaudeSource: claudeSource, PriorHash: sha256.Sum256(d.Before), ResultHash: sha256.Sum256(d.After)}, Proposed: append([]byte(nil), d.After...), OtherOwners: otherOwners})
-			}
-		}
-		if mcp && filepath.Base(d.Path) == "mcp-adapter.json" {
-			if _, err := scan.DiscoverPiMCP(home, project, agentRoot, d.Path, os.LookupEnv, scan.ReadPiFile); err != nil {
-				return nil, err
-			}
-			// Inspect the complete proposed source set, including collisions added
-			// within one file or by two selected scopes, not just existing files.
-			readProposed := func(path string) ([]byte, bool, error) {
-				for _, proposed := range selected {
-					if proposed.Path == path {
-						return proposed.After, true, nil
-					}
-				}
-				return scan.ReadPiFile(path)
-			}
-			if _, err := scan.DiscoverPiMCP(home, project, agentRoot, d.Path, os.LookupEnv, readProposed); err != nil {
-				return nil, err
-			}
-		}
+			reviews = append(reviews, piContextReview{Consent: piContextConsent{Path: r.Path, PiSource: piSource, ClaudeSource: claudeSource, PriorHash: sha256.Sum256(r.Prior), ResultHash: sha256.Sum256(r.Result)}, Proposed: append([]byte(nil), r.Result...), OtherOwners: r.OtherOwners})
+			return nil
+		},
+	}
+	if err := harness.Admit(d, in); err != nil {
+		return nil, err
 	}
 	return reviews, nil
+}
+
+// appendPlacementWarning records message once on the first diff of tool, the
+// channel the plan renderer and the deploy preview already print.
+func appendPlacementWarning(cs *diff.ChangeSet, tool, message string) {
+	for i := range cs.Diffs {
+		if cs.Diffs[i].Tool != tool {
+			continue
+		}
+		if !contains(strings.Split(cs.Diffs[i].Warning, "\n"), message) {
+			if cs.Diffs[i].Warning != "" {
+				cs.Diffs[i].Warning += "\n"
+			}
+			cs.Diffs[i].Warning += message
+		}
+		return
+	}
 }
 
 // Report the qualified canonical Claude sources independently. A CLAUDE name
@@ -307,7 +177,7 @@ func validatePiConsentBytes(c piContextConsent, path string, prior, result []byt
 }
 
 func preflightPiDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolver, opts *deployOptions) error {
-	reviews, err := piPreflightPlan(cs, res, opts.home, opts.projectDir)
+	reviews, err := piPreflightPlan(opts.Harness, cs, res, opts.home, opts.projectDir)
 	if err != nil {
 		return err
 	}
@@ -316,10 +186,11 @@ func preflightPiDeploy(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Reso
 			fmt.Fprintln(cmd.OutOrStdout(), d.Warning)
 		}
 	}
-	opts.piConsents, err = confirmPiContexts(reviews, piInteractiveInput(cmd.InOrStdin()), opts.yes, opts.force, cmd.InOrStdin(), cmd.OutOrStdout())
+	consents, err := confirmPiContexts(reviews, piInteractiveInput(cmd.InOrStdin()), opts.yes, opts.force, cmd.InOrStdin(), cmd.OutOrStdout())
 	if err != nil {
 		return err
 	}
+	opts.consent = piConsentSet(consents)
 	for _, review := range reviews {
 		// Bind the confirmed operation to the bytes it actually displayed, not a
 		// synthesis or an unrelated confirmation. Last-moment rereads belong DP-05.

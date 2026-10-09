@@ -258,7 +258,7 @@ func TestHarnessGoldenCodexPreflight(t *testing.T) {
 			harnessWriteFiles(t, tc.files, home, project)
 			harnessSaveOwners(t, tc.owners, home, project)
 			cs := &diff.ChangeSet{Diffs: harnessExpandDiffs(tc.diffs, home, project)}
-			got := harnessErr(codexPreflightPlan(cs, res, home, project))
+			got := harnessErr(codexPreflightPlan(testRegistry(t), cs, res, home, project))
 			if want := harnessExpand(tc.want, home, project); got != want {
 				t.Fatalf("codex golden\n got: %s\nwant: %s", got, want)
 			}
@@ -329,7 +329,7 @@ func TestHarnessGoldenPiPreflight(t *testing.T) {
 			harnessWriteFiles(t, tc.files, home, project)
 			harnessSaveOwners(t, tc.owners, home, project)
 			cs := &diff.ChangeSet{Diffs: harnessExpandDiffs(tc.diffs, home, project)}
-			_, err := piPreflightPlan(cs, res, home, project)
+			_, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
 			if got, want := harnessErr(err), harnessExpand(tc.want, home, project); got != want {
 				t.Fatalf("pi golden\n got: %s\nwant: %s", got, want)
 			}
@@ -346,7 +346,7 @@ func TestHarnessGoldenPiMixedContextReview(t *testing.T) {
 	harnessSaveOwners(t, []state.Item{codexOwner("codex", "fixture-cx", "local", "$P/AGENTS.md", "fixture-cx", "APPEND", before)}, home, project)
 	d := piSectionDiff(before)
 	cs := &diff.ChangeSet{Diffs: harnessExpandDiffs([]diff.FileDiff{d}, home, project)}
-	reviews, err := piPreflightPlan(cs, res, home, project)
+	reviews, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +377,7 @@ func TestHarnessGoldenPiMCPCollision(t *testing.T) {
 	after := `{"mcpServers":{"fixture-name":{"url":"http://127.0.0.1/mcp"},"fixture_name":{"url":"http://127.0.0.1/mcp"}}}`
 	codexWrite(t, path, []byte(prior))
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{Artifact: "fixture_name", Tool: "pi", Scope: "global", Path: path, Action: diff.Merge, Before: []byte(prior), After: []byte(after)}}}
-	_, err := piPreflightPlan(cs, res, home, project)
+	_, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
 	want := "pi MCP duplicate normalized server \"fixture_name\": " + path + " and " + path
 	if got := harnessErr(err); got != want {
 		t.Fatalf("mcp collision\n got: %s\nwant: %s", got, want)
@@ -390,7 +390,7 @@ func TestHarnessGoldenPiRootOverrideFailure(t *testing.T) {
 	home, project, res := piFixture(t)
 	t.Setenv("PI_CODING_AGENT_DIR", "file://"+filepath.Join(home, ".pi/agent"))
 	cs := &diff.ChangeSet{Diffs: harnessExpandDiffs([]diff.FileDiff{piSkillDiff()}, home, project)}
-	_, err := piPreflightPlan(cs, res, home, project)
+	_, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
 	if got, want := harnessErr(err), "pi root override: whitespace or URI spelling has unqualified host/MCP path semantics"; got != want {
 		t.Fatalf("root override\n got: %s\nwant: %s", got, want)
 	}
@@ -441,7 +441,7 @@ func TestHarnessOwnerLoadWrapping(t *testing.T) {
 	t.Run("codexPreflightPlan", func(t *testing.T) {
 		home, project, res, cs := codexFixture(t)
 		codexWrite(t, filepath.Join(project, ".patronus/state.json"), []byte("{broken"))
-		err := codexPreflightPlan(cs, res, home, project)
+		err := codexPreflightPlan(testRegistry(t), cs, res, home, project)
 		if got := harnessErr(err); !strings.HasPrefix(got, "codex ownership "+filepath.Join(project, ".patronus/state.json")+": ") {
 			t.Fatalf("codex wrap: %q", got)
 		}
@@ -450,7 +450,7 @@ func TestHarnessOwnerLoadWrapping(t *testing.T) {
 		home, project, res := piFixture(t)
 		codexWrite(t, filepath.Join(project, ".patronus/state.json"), []byte("{broken"))
 		cs := &diff.ChangeSet{Diffs: harnessExpandDiffs([]diff.FileDiff{piSkillDiff()}, home, project)}
-		_, err := piPreflightPlan(cs, res, home, project)
+		_, err := piPreflightPlan(testRegistry(t), cs, res, home, project)
 		got := harnessErr(err)
 		if got == "" || strings.HasPrefix(got, "pi ") || strings.HasPrefix(got, "codex ") || strings.HasPrefix(got, "load ") || strings.HasPrefix(got, "read ") {
 			t.Fatalf("pi load error is returned unwrapped today: %q", got)

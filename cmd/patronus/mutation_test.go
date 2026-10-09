@@ -195,7 +195,7 @@ func TestPiRaceConfirmedPreparedContextRequiresFreshInteractivePreview(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	reviews, err := piPreflightPlan(p.Changes, p.Resolver, f.home, f.root)
+	reviews, err := piPreflightPlan(testRegistry(t), p.Changes, p.Resolver, f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,17 +203,17 @@ func TestPiRaceConfirmedPreparedContextRequiresFreshInteractivePreview(t *testin
 	if err != nil || len(consents) != 1 {
 		t.Fatalf("confirmation: %v %#v", err, consents)
 	}
-	if err := m.checkPlan(p.Changes, consents); err != nil {
+	if err := m.checkPlan(p.Changes, piConsentSet(consents)); err != nil {
 		t.Fatal(err)
 	}
 	dp02File(t, path, "External edit after confirmed consent\n")
 	before := dp02Snapshot(t, f.home, f.root)
-	err = m.checkPlan(p.Changes, consents)
+	err = m.checkPlan(p.Changes, piConsentSet(consents))
 	if err == nil || !strings.Contains(err.Error(), "new interactive preview required") {
 		t.Fatalf("stale consent not invalidated: %v", err)
 	}
 	// This is also the exact callback run immediately before each real write.
-	app := install.Applier{BeforeWrite: func(d diff.FileDiff) error { return m.checkFile(d, consents) }}
+	app := install.Applier{BeforeWrite: func(d diff.FileDiff) error { return m.checkFile(d, piConsentSet(consents)) }}
 	result, err := app.Apply(p.Changes)
 	if err == nil || len(result.Applied) != 0 {
 		t.Fatalf("stale consent reached write: %+v %v", result, err)

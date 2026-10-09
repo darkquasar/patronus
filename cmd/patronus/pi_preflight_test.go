@@ -278,7 +278,7 @@ func TestPiContextConsent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reviews, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+	reviews, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +348,7 @@ func TestPiContextGlobalClaudeProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reviews, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+	reviews, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,21 +357,21 @@ func TestPiContextGlobalClaudeProvenance(t *testing.T) {
 		t.Fatalf("wrong global provenance: %+v", reviews)
 	}
 	dp02File(t, claudePath, "Separate Claude instructions\n")
-	reviews, err = piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+	reviews, err = piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root)
 	if err != nil || reviews[0].Consent.ClaudeSource != claudePath {
 		t.Fatalf("separate Claude source not reported: %+v %v", reviews, err)
 	}
 	if err := os.Chmod(claudePath, 0000); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root); err == nil {
+	if _, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root); err == nil {
 		t.Fatal("unreadable Claude source admitted")
 	}
 	if err := os.Chmod(claudePath, 0600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(f.home, "unknown-claude"))
-	if _, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root); err == nil || !strings.Contains(err.Error(), "uncertain") {
+	if _, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root); err == nil || !strings.Contains(err.Error(), "uncertain") {
 		t.Fatalf("unknown Claude override admitted: %v", err)
 	}
 	if string(mustRead(t, claudePath)) != "Separate Claude instructions\n" {
@@ -679,7 +679,7 @@ func TestPiPreflightNoConsentWithoutPi(t *testing.T) {
 	root := t.TempDir()
 	cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{Path: filepath.Join(root, "CLAUDE.md"), Tool: "claude"}}}
 	res := toolpath.New(os.LookupEnv, root, root)
-	if reviews, err := piPreflightPlan(cs, res, root, root); err != nil || len(reviews) != 0 {
+	if reviews, err := piPreflightPlan(testRegistry(t), cs, res, root, root); err != nil || len(reviews) != 0 {
 		t.Fatalf("legacy Claude discovery changed: %v", err)
 	}
 }

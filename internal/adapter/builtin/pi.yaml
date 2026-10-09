@@ -42,3 +42,4 @@ layout:
   instruction:
     global: { file: "~/.pi/agent/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }
+    sectionPrefix: "pi:"

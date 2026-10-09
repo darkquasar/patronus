@@ -527,7 +527,7 @@ func TestRemovePiPreparedCombinedContextPreservesMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reviews, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+	reviews, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root)
 	if err != nil {
 		t.Fatal(err)
 	}

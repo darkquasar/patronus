@@ -378,8 +378,8 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 		if err != nil {
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
 		}
-		if tool == "codex" {
-			leaves, err := codexLeafDiffs(rec, ft, tr, path, before, dotted, obj, scope)
+		if ad.Layout.Mcp.Ownership == manifest.OwnershipLeaf {
+			leaves, err := codexLeafDiffs(rec, ft, tr, path, before, dotted, obj, scope, tool)
 			if err != nil {
 				return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
 			}
@@ -428,8 +428,9 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 // whole table leaves user-added children (bearer_token_env_var, http_headers,
 // env_http_headers, env, ...) unowned: install, update and remove never replace
 // or adopt them. Each leaf carries its own prior, so state keeps an immutable
-// per-leaf inverse. Other harnesses keep whole-map ownership.
-func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Transport, path string, before []byte, dotted string, obj map[string]any, scope string) ([]diff.FileDiff, error) {
+// per-leaf inverse. Selected by the adapter's mcp layout `ownership: leaf`;
+// other harnesses keep whole-map ownership.
+func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Transport, path string, before []byte, dotted string, obj map[string]any, scope, tool string) ([]diff.FileDiff, error) {
 	var out []diff.FileDiff
 	for _, key := range tr.Keys.Keys {
 		val, ok := obj[key]
@@ -453,7 +454,7 @@ func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Tr
 			Artifact: rec.Name,
 			Type:     string(rec.Shape()),
 			Role:     string(rec.Role),
-			Tool:     "codex",
+			Tool:     tool,
 			Scope:    scope,
 			Note:     "wire mcp: " + rec.Name,
 			Setting: &diff.SettingEdit{

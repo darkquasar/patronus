@@ -252,7 +252,7 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			reviews, err := piPreflightPlan(planned.Changes, planned.Resolver, f.home, f.root)
+			reviews, err := piPreflightPlan(testRegistry(t), planned.Changes, planned.Resolver, f.home, f.root)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -260,7 +260,7 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 			if err != nil || len(consents) != 1 {
 				t.Fatalf("separate consent: %v", err)
 			}
-			opts := deployOptions{Harness: testRegistry(t), target: "pi", home: f.home, projectDir: f.root, piConsents: consents}
+			opts := deployOptions{Harness: testRegistry(t), target: "pi", home: f.home, projectDir: f.root, consent: piConsentSet(consents)}
 			if scenario == "state-save-failure" {
 				opts.saveState = func(string, *state.State) error { return errors.New("invented persistence fault") }
 			}
@@ -271,11 +271,11 @@ func TestPiDeliveryIntegrationMixedContextAndStateFault(t *testing.T) {
 				t.Fatal(err)
 			}
 			opts.mutation = m
-			if err := m.checkPlan(planned.Changes, consents); err != nil {
+			if err := m.checkPlan(planned.Changes, piConsentSet(consents)); err != nil {
 				m.release()
 				t.Fatal(err)
 			}
-			app := install.Applier{BeforeWrite: func(d diff.FileDiff) error { return m.checkFile(d, consents) }}
+			app := install.Applier{BeforeWrite: func(d diff.FileDiff) error { return m.checkFile(d, piConsentSet(consents)) }}
 			result, err := app.Apply(planned.Changes)
 			if err == nil {
 				err = recordStateLocked(planned.Changes, result, opts)

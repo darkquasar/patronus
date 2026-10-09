@@ -399,7 +399,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	if err := inspectDirectoryPlan(home, cs); err != nil {
 		return plannedInstall{}, err
 	}
-	if err := codexPreflightPlan(cs, res, home, wd); err != nil {
+	if err := codexPreflightPlan(hreg, cs, res, home, wd); err != nil {
 		return plannedInstall{}, err
 	}
 	for _, d := range cs.Diffs {
@@ -408,7 +408,7 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			break
 		}
 	}
-	if reviews, err := piPreflightPlan(cs, res, home, wd); err != nil {
+	if reviews, err := piPreflightPlan(hreg, cs, res, home, wd); err != nil {
 		return plannedInstall{}, err
 	} else if len(reviews) > 0 {
 		warnf("Pi mixed-context conflict: operator-prepared combined file and separately scoped interactive consent required before any selected write")
@@ -881,7 +881,7 @@ type deployOptions struct {
 	target                        string          // requested runtime, even when all emitted rows are agnostic
 	mutation                      *mutation
 	saveState                     func(string, *state.State) error // nil uses atomic state.Save
-	piConsents                    []piContextConsent               // operation-local prepared-byte consent; never persisted
+	consent                       mutationConsent                  // operation-local prepared-byte consent; never persisted
 	force                         bool
 	yes                           bool
 	allowPkgInstalls              bool              // --allow-package-installs: run package installs non-interactively, all-or-nothing
@@ -957,7 +957,7 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 	if err != nil {
 		return err
 	}
-	if err := codexPreflightPlan(cs, res, opts.home, opts.projectDir); err != nil {
+	if err := codexPreflightPlan(opts.Harness, cs, res, opts.home, opts.projectDir); err != nil {
 		return err
 	}
 	if err := preflightPiDeploy(cmd, cs, res, &opts); err != nil {
@@ -968,7 +968,7 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 		return err
 	}
 	cs = admitted
-	if err := opts.mutation.checkPlan(cs, opts.piConsents); err != nil {
+	if err := opts.mutation.checkPlan(cs, opts.consent); err != nil {
 		return err
 	}
 	out := cmd.OutOrStdout()
@@ -1006,7 +1006,7 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 		}
 		defer prepared.close()
 		// Acquisition can take time; recheck all snapshots before the first write.
-		if err := opts.mutation.checkPlan(cs, opts.piConsents); err != nil {
+		if err := opts.mutation.checkPlan(cs, opts.consent); err != nil {
 			return err
 		}
 	}
@@ -1045,7 +1045,7 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 	}
 	legacy = &diff.ChangeSet{Diffs: authored, DryRun: legacy.DryRun}
 	app := &install.Applier{
-		BeforeWrite: func(d diff.FileDiff) error { return opts.mutation.checkFile(d, opts.piConsents) },
+		BeforeWrite: func(d diff.FileDiff) error { return opts.mutation.checkFile(d, opts.consent) },
 		Force:       opts.force,
 		Conflict:    conflictPrompt(cmd, res, opts.yes),
 		Fetcher:     fetcherForDeploy,

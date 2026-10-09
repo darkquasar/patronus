@@ -91,6 +91,9 @@ type Descriptor struct {
 	AdmissionPrefix     string
 	MixedContextConsent bool
 	ErrorPrefix         string
+	// PlacementWarning is the static admission/placement advisory emitted
+	// through Admission.Warn once a selection names this target ("" none).
+	PlacementWarning string
 	// Validator runs the target's own rules at the phase hooks; nil means shared
 	// rules only. Implementations are stateless.
 	Validator Validator
@@ -98,16 +101,22 @@ type Descriptor struct {
 
 // ContextFacts is what Admit learned about one context file in the context phase.
 type ContextFacts struct {
-	// Mixed reports that another target owns a section at this path.
+	// Mixed reports that another target owns a section at this path (a hook may
+	// also set it from its own context discovery).
 	Mixed bool
 	// OtherOwners lists "<artifact> (<tool>/<scope>) at <path>" for each such owner.
 	OtherOwners []string
+	// Sources are the effective context sources a hook discovered for the review.
+	Sources []string
+	// Known maps every same-target section recorded at this path to its artifact.
+	Known map[string]string
 }
 
 // ContextReview is a harness-neutral mixed-context review; the target wrapper
 // converts it into its own consent type.
 type ContextReview struct {
 	Path        string
+	Scope       string
 	Prior       []byte
 	Result      []byte
 	Sources     []string
@@ -118,10 +127,10 @@ type ContextReview struct {
 // target's own rules keep their first-error order. A hook with nothing to do
 // returns nil. Implementations must not retain state between calls.
 type Validator interface {
-	Prepare(d Descriptor, in Admission) error
-	BeforeOwnership(d Descriptor, in Admission, fd diff.FileDiff) error
-	AfterOwnership(d Descriptor, in Admission, fd diff.FileDiff) error
-	AfterContext(d Descriptor, in Admission, fd diff.FileDiff, facts ContextFacts) error
+	Prepare(d Descriptor, in *Admission) error
+	BeforeOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error
+	AfterOwnership(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error
+	AfterContext(d Descriptor, in *Admission, fd diff.FileDiff, facts *ContextFacts) error
 }
 
 // Admission is the input of Admit: the computed change set, the recorded
@@ -133,11 +142,20 @@ type Admission struct {
 	Home     string
 	Project  string
 	Env      scan.EnvLookup
-	Read     func(path string) ([]byte, bool, error)
+	// Read reads an existing file; nil uses scan.ReadPiFile.
+	Read func(path string) ([]byte, bool, error)
+	// LoadOwners loads the recorded owners after the root safe-path checks and
+	// before discovery, replacing Owners; nil keeps Owners as given.
+	LoadOwners func() ([]state.Item, error)
 	// Warn is the placement-warning channel; nil discards.
 	Warn func(message string)
-	// Review receives mixed-context reviews; nil discards.
-	Review func(review ContextReview)
+	// Review receives mixed-context reviews and may refuse; nil discards.
+	Review func(review ContextReview) error
 	// Roots are other targets' roots for cross-target conflict detection.
 	Roots []scan.SkillRoot
+	// Inventory is the discovered resource inventory the resource rules judge
+	// against. Admit fills it from SkillRoots when a skill is selected unless a
+	// Prepare hook already set it and InventoryResolved.
+	Inventory         []scan.Resource
+	InventoryResolved bool
 }

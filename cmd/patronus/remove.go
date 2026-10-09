@@ -284,7 +284,7 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 
 			env := os.LookupEnv
 			res := toolpath.New(env, home, wd)
-			if err := codexPreflightPlan(cs, res, home, wd); err != nil {
+			if err := codexPreflightPlan(reg, cs, res, home, wd); err != nil {
 				return err
 			}
 			if jsonOutput {
@@ -457,7 +457,7 @@ func runRemove(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, sel
 }
 
 func runRemoveLocked(cmd *cobra.Command, cs *diff.ChangeSet, ledger remove.Ledger, selected []state.Item, loaded map[string]*state.State, opts removeStateOpts) error {
-	if err := codexPreflightPlan(cs, toolpath.New(os.LookupEnv, opts.home, opts.projectDir), opts.home, opts.projectDir); err != nil {
+	if err := codexPreflightPlan(opts.Harness, cs, toolpath.New(os.LookupEnv, opts.home, opts.projectDir), opts.home, opts.projectDir); err != nil {
 		return err
 	}
 	piSelected := false

@@ -38,7 +38,7 @@ func TestCodexPreflightRefusesLegacyInstallWithoutWrites(t *testing.T) {
 	home, project, res, cs := codexFixture(t)
 	legacy := filepath.Join(home, ".codex/skills/fixture-cx/SKILL.md")
 	codexWrite(t, legacy, cs.Diffs[0].After)
-	if err := codexPreflightPlan(cs, res, home, project); err == nil || !strings.Contains(err.Error(), "migration") {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil || !strings.Contains(err.Error(), "migration") {
 		t.Fatalf("legacy install not blocked: %v", err)
 	}
 	if got, err := os.ReadFile(legacy); err != nil || string(got) != string(cs.Diffs[0].After) {
@@ -55,16 +55,16 @@ func TestCodexPreflightRefusesUnownedResourceAndDrift(t *testing.T) {
 	d.Before = append([]byte(nil), d.After...)
 	d.Action = diff.Skip
 	codexWrite(t, d.Path, d.Before)
-	if err := codexPreflightPlan(cs, res, home, project); err == nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil {
 		t.Fatal("unowned equal resource adopted")
 	}
 	codexOwn(t, project, "codex", *d, "")
-	if err := codexPreflightPlan(cs, res, home, project); err != nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err != nil {
 		t.Fatal(err)
 	}
 	d.Before = append(d.Before, []byte("edited\n")...)
 	codexWrite(t, d.Path, d.Before)
-	if err := codexPreflightPlan(cs, res, home, project); err == nil || !strings.Contains(err.Error(), "drift") {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil || !strings.Contains(err.Error(), "drift") {
 		t.Fatalf("owned drift admitted: %v", err)
 	}
 }
@@ -85,7 +85,7 @@ func TestCodexPreflightAdmitsVerifiedOtherScopeVersion(t *testing.T) {
 	other.Before = append(append([]byte(nil), other.After...), []byte("older version\n")...)
 	codexWrite(t, other.Path, other.Before)
 	codexOwn(t, home, "codex", other, "")
-	if err := codexPreflightPlan(cs, res, home, project); err != nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err != nil {
 		t.Fatalf("verified separately scoped version refused: %v", err)
 	}
 }
@@ -100,7 +100,7 @@ func TestCodexPreflightOtherScopeVersionRequiresOwnership(t *testing.T) {
 			other.Before = append(append([]byte(nil), other.After...), []byte("older version\n")...)
 			codexOwn(t, home, tool, other, "")
 			codexWrite(t, other.Path, append(other.Before, []byte("user edit\n")...))
-			if err := codexPreflightPlan(cs, res, home, project); err == nil {
+			if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil {
 				t.Fatal("foreign or edited other-scope version admitted")
 			}
 		})
@@ -144,7 +144,7 @@ func TestCodexMixedContextPreflightRefusesUnknownOwnership(t *testing.T) {
 			if mode == "drift" {
 				d.Before = append(d.Before, []byte("edited prose\n")...)
 			}
-			if err := codexPreflightPlan(cs, res, home, project); err == nil {
+			if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil {
 				t.Fatal("unsafe shared context admitted", mode)
 			}
 		})
@@ -308,7 +308,7 @@ func TestCodexPreflightKnownSectionsPreserveProse(t *testing.T) {
 		t.Fatal(err)
 	}
 	d.After = adapter.AppendSection(d.Before, "fixture-cx", []byte("new"))
-	if err := codexPreflightPlan(cs, res, home, project); err != nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(d.After), "User prose") || !strings.Contains(string(d.After), "sibling-cx") {
@@ -333,14 +333,14 @@ func TestCodexPreflightOwnsSidecarsAndRetiresAlreadyAbsent(t *testing.T) {
 		t.Fatal(err)
 	}
 	cs.Diffs = []diff.FileDiff{d, sidecar}
-	if err := codexPreflightPlan(cs, res, home, project); err != nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err != nil {
 		t.Fatal("owned sidecar update rejected", err)
 	}
 	if err := os.Remove(sidecar.Path); err != nil {
 		t.Fatal(err)
 	}
 	cs.Diffs = []diff.FileDiff{{Path: sidecar.Path, Artifact: d.Artifact, Tool: "codex", Scope: "local", Action: diff.Skip}}
-	if err := codexPreflightPlan(cs, res, home, project); err != nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err != nil {
 		t.Fatal("missing owned effect cannot retire", err)
 	}
 }
@@ -352,7 +352,7 @@ func TestCodexPreflightEmptyUnownedFileCannotBypassOwnership(t *testing.T) {
 	d.Path = filepath.Join(project, ".codex/hooks/fixture-cx.sh")
 	d.After = []byte("#!/bin/sh\n")
 	codexWrite(t, d.Path, nil)
-	if err := codexPreflightPlan(cs, res, home, project); err == nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil {
 		t.Fatal("empty unowned source admitted")
 	}
 }
@@ -409,7 +409,7 @@ func TestCodexPreflightLegacyOwnershipCannotBeRetiredImplicitly(t *testing.T) {
 	old.Scope = "global"
 	old.Before = old.After
 	codexOwn(t, home, "codex", old, "")
-	if err := codexPreflightPlan(cs, res, home, project); err == nil || !strings.Contains(err.Error(), "migration") {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil || !strings.Contains(err.Error(), "migration") {
 		t.Fatalf("legacy missing-file ownership silently relocated: %v", err)
 	}
 }
@@ -429,7 +429,7 @@ func TestCodexPreflightInverseSettingRefusesForeignOverlap(t *testing.T) {
 	if err := state.Save(filepath.Join(project, ".patronus/state.json"), s); err != nil {
 		t.Fatal(err)
 	}
-	if err := codexPreflightPlan(cs, res, home, project); err == nil {
+	if err := codexPreflightPlan(testRegistry(t), cs, res, home, project); err == nil {
 		t.Fatal("forced inverse can destroy foreign configuration")
 	}
 }

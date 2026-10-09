@@ -6,9 +6,9 @@ import (
 )
 
 // defaultRegistry builds the production target registry once, in main. Codex
-// and Pi carry today's behaviour as flags (validators arrive with the shared
-// admission); claude and opencode exist for target-enum parity with every flag
-// false and no validator, so the legacy shared-lane semantics are unchanged.
+// and Pi carry today's behaviour as flags plus their stateless validators;
+// claude and opencode exist for target-enum parity with every flag false and
+// no validator, so the legacy shared-lane semantics are unchanged.
 func defaultRegistry() (*harness.Registry, error) {
 	return harness.NewRegistry(
 		harness.Descriptor{
@@ -31,6 +31,8 @@ func defaultRegistry() (*harness.Registry, error) {
 			AdmissionPrefix:     "codex admission",
 			MixedContextConsent: false,
 			ErrorPrefix:         "codex",
+			PlacementWarning:    "Codex static admission/placement only; skill loading, hooks, trust and fresh-session activation remain runtime-unverified",
+			Validator:           codexValidator{},
 		},
 		harness.Descriptor{
 			Name:                "pi",
@@ -50,6 +52,8 @@ func defaultRegistry() (*harness.Registry, error) {
 			AdmissionPrefix:     "",
 			MixedContextConsent: true,
 			ErrorPrefix:         "pi",
+			PlacementWarning:    "Pi static inventory only: checks cover inspected files, configuration and declared resources; extension callbacks and runtime-only discovery/registrations remain runtime-unverified. Cold-start/reload qualification is separate.",
+			Validator:           piValidator{},
 		},
 		harness.Descriptor{
 			Name:         "claude",

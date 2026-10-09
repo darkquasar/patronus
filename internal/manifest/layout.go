@@ -146,7 +146,14 @@ type McpLayout struct {
 	Project    FileTarget           `yaml:"project"`
 	User       FileTarget           `yaml:"user"` // Claude only
 	Transports map[string]Transport `yaml:"transports,omitempty"`
+	// Ownership selects how a wired server is owned: "leaf" records one
+	// SettingEdit per transport key so user-added siblings stay unowned; empty
+	// keeps whole-map ownership. Optional; older binaries ignore it.
+	Ownership string `yaml:"ownership,omitempty"`
 }
+
+// OwnershipLeaf is the McpLayout.Ownership value for per-leaf ownership.
+const OwnershipLeaf = "leaf"
 
 // HookLayout describes the MERGE primitive for hooks. Null for tools whose hook
 // surface is not yet modeled (Codex, OpenCode today). ScriptDir is where a hook
@@ -202,6 +209,9 @@ type InstructionLayout struct {
 	Project           FileTarget `yaml:"project"`
 	PointerDirGlobal  PathTarget `yaml:"pointerDirGlobal,omitempty"`
 	PointerDirProject PathTarget `yaml:"pointerDirProject,omitempty"`
+	// SectionPrefix is the prefix this tool's section names carry in a shared
+	// context file (Pi: "pi:"). Optional; older binaries ignore it.
+	SectionPrefix string `yaml:"sectionPrefix,omitempty"`
 }
 
 // ForScope returns the file/path target for the given scope ("global"|"local").

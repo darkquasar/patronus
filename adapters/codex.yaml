@@ -33,6 +33,8 @@ layout:
   mcp:
     global: { file: "~/.codex/config.toml", format: toml, path: "mcp_servers.{name}" }
     project: { file: ".codex/config.toml", format: toml, path: "mcp_servers.{name}" }
+    # Per-leaf ownership: one SettingEdit per transport key; user siblings stay unowned.
+    ownership: leaf
     transports:
       stdio:
         keys: { command: "{command}", args: "{args}", env: "{env}" }

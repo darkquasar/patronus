@@ -107,7 +107,13 @@ func (m *mutation) saveLock(path string, l *lock.Lock) error {
 // checkPlan is the final whole-selection admission barrier after interactive
 // confirmation. Later per-file checks still run, since acquisition/prompts and
 // earlier writes can take time. A stale consent is never silently renewed.
-func (m *mutation) checkPlan(cs *diff.ChangeSet, consents []piContextConsent) error {
+// mutationConsent is an opaque, operation-local consent a target's preflight
+// produced for specific paths; nil means no consent was needed.
+type mutationConsent interface {
+	Validate(path string, result []byte) error
+}
+
+func (m *mutation) checkPlan(cs *diff.ChangeSet, consent mutationConsent) error {
 	for path := range m.before {
 		if err := m.check(path); err != nil {
 			return err
@@ -117,7 +123,7 @@ func (m *mutation) checkPlan(cs *diff.ChangeSet, consents []piContextConsent) er
 		if d.IsDir || d.Directory != nil || d.Native != nil || d.Action == diff.Exec {
 			continue
 		}
-		if err := m.checkFile(d, consents); err != nil {
+		if err := m.checkFile(d, consent); err != nil {
 			return err
 		}
 		if err := install.CheckUnchanged(d.Path, d.Before); err != nil {
@@ -127,7 +133,7 @@ func (m *mutation) checkPlan(cs *diff.ChangeSet, consents []piContextConsent) er
 	return nil
 }
 
-func (m *mutation) checkFile(d diff.FileDiff, consents []piContextConsent) error {
+func (m *mutation) checkFile(d diff.FileDiff, consent mutationConsent) error {
 	for path := range m.before {
 		if err := m.check(path); err != nil {
 			return err
@@ -143,17 +149,8 @@ func (m *mutation) checkFile(d diff.FileDiff, consents []piContextConsent) error
 			return err
 		}
 	}
-	for _, c := range consents {
-		if c.Path != d.Path {
-			continue
-		}
-		prior, err := os.ReadFile(d.Path)
-		if err != nil {
-			return fmt.Errorf("pi mixed-context consent stale for %s: %w; new interactive preview required", d.Path, err)
-		}
-		if err := validatePiConsentBytes(c, d.Path, prior, d.After); err != nil {
-			return err
-		}
+	if consent != nil {
+		return consent.Validate(d.Path, d.After)
 	}
 	return nil
 }

@@ -28,8 +28,8 @@ func TestDefaultRegistryDescriptors(t *testing.T) {
 		name string
 		want flags
 	}{
-		{"codex", flags{"cx", "AGENTS.md", "", "~/.codex", "codex admission", "codex", "core-profile-cx", "AGENTS.override.md", harness.ResourceAfterContext, true, true, true, true, true, true, false, true, false}},
-		{"pi", flags{"pi", "AGENTS.md", "pi:", "~/.pi/agent", "", "pi", "core-profile-pi", "", harness.ResourceBeforeOwnership, true, false, true, false, false, true, true, true, false}},
+		{"codex", flags{"cx", "AGENTS.md", "", "~/.codex", "codex admission", "codex", "core-profile-cx", "AGENTS.override.md", harness.ResourceAfterContext, true, true, true, true, true, true, false, true, true}},
+		{"pi", flags{"pi", "AGENTS.md", "pi:", "~/.pi/agent", "", "pi", "core-profile-pi", "", harness.ResourceBeforeOwnership, true, false, true, false, false, true, true, true, true}},
 		{"claude", flags{"", "CLAUDE.md", "", "~/.claude", "", "", "", "", 0, false, false, false, false, false, false, false, false, false}},
 		{"opencode", flags{"oc", "AGENTS.md", "", "~/.config/opencode", "", "", "", "", 0, false, false, false, false, false, false, false, false, false}},
 	} {
@@ -102,8 +102,18 @@ func TestDefaultRegistryRootsAgreeWithAdapters(t *testing.T) {
 					t.Fatalf("adapter root %s missing from %s native roots %v", want, name, roots)
 				}
 			}
-			if d.SectionPrefix != "" && ad.Layout.Instruction == nil {
-				t.Fatalf("%s declares a section prefix without an instruction layout", name)
+			// P6: section naming and MCP ownership are adapter data; the descriptor
+			// flags must agree with the adapter that carries them.
+			prefix := ""
+			if ad.Layout.Instruction != nil {
+				prefix = ad.Layout.Instruction.SectionPrefix
+			}
+			if d.SectionPrefix != prefix {
+				t.Fatalf("%s SectionPrefix %q disagrees with adapter %q", name, d.SectionPrefix, prefix)
+			}
+			leaf := ad.Layout.Mcp != nil && ad.Layout.Mcp.Ownership == manifest.OwnershipLeaf
+			if leaf != d.StrictSections {
+				t.Fatalf("%s mcp ownership leaf=%v but StrictSections=%v", name, leaf, d.StrictSections)
 			}
 		})
 	}
