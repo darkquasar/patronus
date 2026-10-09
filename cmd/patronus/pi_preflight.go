@@ -84,13 +84,9 @@ func piPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project st
 			return nil, err
 		}
 	}
-	var owners []state.Item
-	for _, root := range []string{home, project} {
-		s, err := state.Load(filepath.Join(root, ".patronus/state.json"))
-		if err != nil {
-			return nil, err
-		}
-		owners = append(owners, s.Items...)
+	owners, err := loadOwners([]string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")}, nil, nil)
+	if err != nil {
+		return nil, err
 	}
 	var reviews []piContextReview
 	for _, d := range selected {
@@ -129,7 +125,7 @@ func piPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project st
 					if f.Path == d.Path && (owner.Tool != "pi" || owner.Artifact != d.Artifact || owner.Scope != d.Scope) {
 						return nil, fmt.Errorf("pi destination %s owned by %s (%s), selected %s", d.Path, owner.Artifact, owner.Tool, d.Artifact)
 					}
-					if f.Path == d.Path && owner.Tool == "pi" && owner.Artifact == d.Artifact && owner.Scope == d.Scope && f.Checksum == fmt.Sprintf("sha256:%x", sha256.Sum256(d.Before)) {
+					if f.Path == d.Path && owner.Tool == "pi" && owner.Artifact == d.Artifact && owner.Scope == d.Scope && f.Checksum == state.Checksum(d.Before) {
 						ownedUnchanged = true
 					}
 				}
@@ -176,7 +172,7 @@ func piPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project st
 							// Existing state records the complete post-apply file hash,
 							// not a section hash. Conservatively refuse any drift;
 							// identity alone cannot authorize replacing user edits.
-							if f.Checksum != fmt.Sprintf("sha256:%x", sha256.Sum256(d.Before)) {
+							if f.Checksum != state.Checksum(d.Before) {
 								return nil, fmt.Errorf("pi context drift at %s section %s: recorded bytes differ; preserve edits and reconcile before apply", d.Path, section.name)
 							}
 							sectionOwned = true

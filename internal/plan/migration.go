@@ -1,7 +1,6 @@
 package plan
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -313,4 +312,4 @@ func codexRead(path string) ([]byte, bool, error) {
 	return raw, err == nil, err
 }
 
-func codexSum(raw []byte) string { return fmt.Sprintf("sha256:%x", sha256.Sum256(raw)) }
+func codexSum(raw []byte) string { return state.Checksum(raw) }

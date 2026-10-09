@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -42,17 +41,13 @@ func codexPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project
 			return err
 		}
 	}
-	var owners []state.Item
-	for _, root := range []string{home, project} {
-		path := filepath.Join(root, ".patronus/state.json")
-		if err := scan.CodexSafePath(path); err != nil {
-			return err
-		}
-		s, err := state.Load(path)
-		if err != nil {
-			return fmt.Errorf("codex ownership %s: %w", path, err)
-		}
-		owners = append(owners, s.Items...)
+	owners, err := loadOwners(
+		[]string{filepath.Join(home, ".patronus/state.json"), filepath.Join(project, ".patronus/state.json")},
+		scan.CodexSafePath,
+		func(_ int, path string, err error) error { return fmt.Errorf("codex ownership %s: %w", path, err) },
+	)
+	if err != nil {
+		return err
 	}
 	verifiedSkill := func(r scan.CodexSkill) bool {
 		owned := false
@@ -167,7 +162,7 @@ func codexPreflightPlan(cs *diff.ChangeSet, res toolpath.Resolver, home, project
 	return nil
 }
 
-func codexChecksum(raw []byte) string { return fmt.Sprintf("sha256:%x", sha256.Sum256(raw)) }
+func codexChecksum(raw []byte) string { return state.Checksum(raw) }
 
 // Existing shared context needs positive Codex provenance. There is no implicit
 // consent, including for --force, and no whole-file restore across owners.

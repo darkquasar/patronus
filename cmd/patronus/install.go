@@ -579,19 +579,21 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	if !needsOwnership {
 		return cs, nil
 	}
-	var owners []state.Item
-	roots := []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", "", "local")}
+	var roots, paths []string
 	seen := map[string]bool{}
-	for _, root := range roots {
+	for _, root := range []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", "", "local")} {
 		if root == "" || seen[root] {
 			continue
 		}
 		seen[root] = true
-		s, err := state.Load(filepath.Join(root, ".patronus", "state.json"))
-		if err != nil {
-			return nil, fmt.Errorf("read setting ownership in %s: %w", root, err)
-		}
-		owners = append(owners, s.Items...)
+		roots = append(roots, root)
+		paths = append(paths, filepath.Join(root, ".patronus", "state.json"))
+	}
+	owners, err := loadOwners(paths, nil, func(i int, _ string, err error) error {
+		return fmt.Errorf("read setting ownership in %s: %w", roots[i], err)
+	})
+	if err != nil {
+		return nil, err
 	}
 	if in.tool == "pi" {
 		if err := dp06AdmitFetches(cs, owners); err != nil {
@@ -943,13 +945,12 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 	}
 	// Read both ownership scopes before any mutation, including non-config Pi
 	// installs. Unsupported/insufficient state cannot be repaired by equality.
-	var owners []state.Item
-	for _, scope := range []string{"global", "local"} {
-		s, err := state.Load(statePath(scope, opts))
-		if err != nil {
-			return fmt.Errorf("load %s state: %w", scope, err)
-		}
-		owners = append(owners, s.Items...)
+	scopes := []string{"global", "local"}
+	owners, err := loadOwners([]string{statePath(scopes[0], opts), statePath(scopes[1], opts)}, nil, func(i int, _ string, err error) error {
+		return fmt.Errorf("load %s state: %w", scopes[i], err)
+	})
+	if err != nil {
+		return err
 	}
 	if err := codexPreflightPlan(cs, res, opts.home, opts.projectDir); err != nil {
 		return err

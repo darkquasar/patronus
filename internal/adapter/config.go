@@ -148,7 +148,10 @@ func ReadDotted(existing []byte, ft manifest.FileTarget, dotted string) (any, bo
 	if err != nil {
 		return nil, false, err
 	}
-	parts := strings.Split(dotted, ".")
+	parts, err := splitDotted(dotted)
+	if err != nil {
+		return nil, false, err
+	}
 	for _, part := range parts[:len(parts)-1] {
 		value, present := root[part]
 		if !present {
@@ -208,8 +211,8 @@ func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string,
 // because the per-leaf ownership record cannot prove Patronus created that
 // container. A server table that still holds any user child is kept untouched.
 func pruneEmptyTable(root map[string]any, dotted string) {
-	parts := strings.Split(dotted, ".")
-	if len(parts) != 3 || parts[0] != "mcp_servers" {
+	parts, err := splitDotted(dotted)
+	if err != nil || len(parts) != 3 || parts[0] != "mcp_servers" {
 		return
 	}
 	servers, ok := asStringMap(root[parts[0]])
@@ -336,11 +339,49 @@ func removeDotted(root map[string]any, dotted, identityKey, identityVal string) 
 	return removed
 }
 
+// splitDotted splits a dotted path into its segments. A segment wrapped in
+// double quotes may contain dots (`permission.edit."*.env"` names the key
+// `*.env`); the quotes are not part of the key. Unquoted segments are split on
+// every dot exactly as before, so existing paths are unchanged. A quote that
+// opens a segment must close it immediately before a dot or the end of the path;
+// anything else is malformed and names the offending path.
+func splitDotted(dotted string) ([]string, error) {
+	var parts []string
+	rest := dotted
+	for {
+		if strings.HasPrefix(rest, `"`) {
+			end := strings.Index(rest[1:], `"`)
+			if end < 0 {
+				return nil, fmt.Errorf("config: unterminated quoted segment in dotted path %q", dotted)
+			}
+			parts = append(parts, rest[1:1+end])
+			rest = rest[2+end:]
+			if rest == "" {
+				return parts, nil
+			}
+			if !strings.HasPrefix(rest, ".") {
+				return nil, fmt.Errorf("config: quoted segment must end at a dot in dotted path %q", dotted)
+			}
+			rest = rest[1:]
+			continue
+		}
+		part, after, more := strings.Cut(rest, ".")
+		parts = append(parts, part)
+		if !more {
+			return parts, nil
+		}
+		rest = after
+	}
+}
+
 // descend walks dotted to its leaf, creating intermediate maps as needed, and
 // returns the parent map plus the final key. It errors only when a path segment
 // names an existing non-object value (can't descend through a scalar).
 func descend(root map[string]any, dotted string) (parent map[string]any, leaf string, err error) {
-	parts := strings.Split(dotted, ".")
+	parts, err := splitDotted(dotted)
+	if err != nil {
+		return nil, "", err
+	}
 	cur := root
 	for i, p := range parts {
 		if i == len(parts)-1 {
@@ -367,7 +408,10 @@ func descend(root map[string]any, dotted string) (parent map[string]any, leaf st
 // parent map + final key. A missing segment yields a nil parent, so callers treat
 // "path absent" as "no work" rather than failing.
 func descendExisting(root map[string]any, dotted string) (parent map[string]any, leaf string) {
-	parts := strings.Split(dotted, ".")
+	parts, err := splitDotted(dotted)
+	if err != nil {
+		return nil, "" // a malformed path cannot name an existing leaf
+	}
 	cur := root
 	for i, p := range parts {
 		if i == len(parts)-1 {

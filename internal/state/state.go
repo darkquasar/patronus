@@ -387,7 +387,11 @@ func normalizeHexState(s string) string {
 	return s
 }
 
-func checksum(b []byte) string {
+// Checksum is the ownership checksum of raw bytes: "sha256:" followed by the
+// lowercase hex digest. Every ownership record and admission check uses it.
+func Checksum(b []byte) string {
 	sum := sha256.Sum256(b)
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
+
+func checksum(b []byte) string { return Checksum(b) }
