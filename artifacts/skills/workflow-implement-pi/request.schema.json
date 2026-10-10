@@ -655,12 +655,22 @@
             "approvalEvidence": {"type": "string", "minLength": 1, "maxLength": 2000}
           },
           "required": ["level", "risk", "question", "acceptancePoint", "subjectContext", "checks"],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "allOf": [
+            {"if": {"properties": {"level": {"const": "parent-direct"}}, "required": ["level"]}, "then": {"not": {"anyOf": [{"required": ["priorShortfall"]}, {"required": ["approvalEvidence"]}]}}},
+            {"if": {"properties": {"level": {"const": "bounded-child"}}, "required": ["level"]}, "then": {"not": {"anyOf": [{"required": ["priorShortfall"]}, {"required": ["approvalEvidence"]}]}}},
+            {"if": {"properties": {"level": {"const": "deep"}}, "required": ["level"]}, "then": {"required": ["priorShortfall", "approvalEvidence"], "properties": {"priorShortfall": {"properties": {"kind": {"const": "shortfall"}}}}}}
+          ]
         }
       },
       "required": ["operation", "predecessors"],
       "additionalProperties": false,
-      "maxProperties": 16
+      "maxProperties": 16,
+      "allOf": [
+        {"if": {"properties": {"operation": {"const": "write"}}, "required": ["operation"]}, "then": {"required": ["baseRef"], "properties": {"predecessors": {"maxItems": 0}}, "not": {"anyOf": [{"required": ["integrationCwd"]}, {"required": ["validation"]}]}}},
+        {"if": {"properties": {"operation": {"const": "integrate"}}, "required": ["operation"]}, "then": {"required": ["baseRef", "integrationCwd"], "properties": {"predecessors": {"minItems": 1}}, "not": {"required": ["validation"]}}},
+        {"if": {"properties": {"operation": {"const": "validate"}}, "required": ["operation"]}, "then": {"required": ["integrationCwd", "validation"], "properties": {"predecessors": {"minItems": 1, "maxItems": 1}}, "not": {"required": ["baseRef"]}}}
+      ]
     }
   },
   "required": [

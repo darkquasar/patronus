@@ -23,6 +23,7 @@ function optIn(lanes = ['local']) {
   args.preflight.snapshotUse={schemaVersion:1,snapshotId:'a'.repeat(32),path:'/fixture/state/capability-snapshot-v1.json',sha256:hash,environmentIdentitySha256:hash,observedAt:'2026-10-03T08:00:00Z'};
   const selectedCapabilities=[
     {kind:'runtime',key:'pi',evidenceSha256:hash},
+    {kind:'runtime',key:'pi-subagents',evidenceSha256:hash},
     {kind:'runner',key:'native',evidenceSha256:hash},
     ...lanes.map(lane=>({kind:'role',key:args.roles[lane],evidenceSha256:hash}))
   ];
@@ -52,7 +53,8 @@ function harness(change = () => {}) {
     if (!p.agent.startsWith('patronus-')) for (const unsupported of ['context','model','tools','skill','acceptance','outputSchema','agentContract','toolBudget']) assert.equal(p[unsupported],undefined,unsupported);
     const runId='fixture-'+key, asyncDir='/fixture/runtime/'+runId;
     const output='Output saved to: '+p.output+' (16 B, 1 line). Read this file if needed.';
-    const r = {key,agent:p.agent,ok:true,runId,asyncDir,continuation:{runIds:[runId]},output,outputReference:p.output,artifactPaths:[asyncDir],structuredOutput:{verdict:'clear',summary:'invented evidence'},results:[{index:0,agent:p.agent,exitCode:0,finalOutput:output}]};
+    const observation=p.outputSchema?.oneOf?.some(v=>v.properties?.outcome);const structuredOutput=observation?{outcome:'completed',checksAttempted:['source inspection'],subjectIdentity:'invented-subject',results:['findings saved'],limitations:[],confidence:'high'}:{verdict:'clear',summary:'invented evidence'};
+    const r = {key,agent:p.agent,ok:true,runId,asyncDir,continuation:{runIds:[runId]},output,outputReference:p.output,artifactPaths:[asyncDir],structuredOutput,results:[{index:0,agent:p.agent,exitCode:0,finalOutput:output}]};
     if (!p.agent.startsWith('patronus-')) {
       delete r.outputReference;
       r.externalAdapter={adapter:{id:p.agent,version:1,executionMode:'one-shot-stdin'},handoff:{mode:'fresh'},capabilities:{stop:true,resume:false,structuredOutput:false},outputArtifacts:{stdoutPath:asyncDir+'/external-0.stdout.log',stderrPath:asyncDir+'/external-0.stderr.log'}};
@@ -111,7 +113,7 @@ test('research-only web and mixed requests select only requested lanes and prese
     assert.deepEqual(h.calls.map(c=>c.key),args.tasks.map(t=>'research-'+t.key));
     assert.deepEqual(r.preflight.snapshotUse,args.preflight.snapshotUse);
     assert.deepEqual(r.preflight.liveChecks,args.preflight.liveChecks);
-    assert.equal(r.preflightVerifiedByParent,true);assert.equal(r.parentRereadEvidenceSha256,hash);
+    assert.equal(Object.hasOwn(r,'preflightVerifiedByParent'),false);assert.equal(Object.hasOwn(r,'parentRereadEvidenceSha256'),false);
     assert.equal(r.lifecycle.settled.length,args.tasks.length);
     assert.ok(r.lifecycle.settled.every(x=>x.outcome==='completed' && x.outputReference));
     assert.ok(!h.calls.some(c=>['spec','spec-and-plan','review-plan','review-security','reconciliation'].includes(c.key)));
@@ -135,8 +137,8 @@ test('research-only lifecycle retains completed siblings and exact failure union
   }
 });
 test('research-only saved shortfall and malformed final result never become achieved findings',async()=>{
-  const shortfall=harness(r=>{if(r.key==='research-web')r.observation='shortfall'});const s=await execute(optIn(['local','web']),shortfall.runs);
-  assert.equal(s.verdict,'blocked');assert.equal(s.lifecycle.settled.at(-1).outcome,'shortfall');assert.equal(s.lifecycle.achieved.length,0);assert.deepEqual(s.lifecycle.pendingParent.map(x=>x.kind),['shortfall-decision']);
+  const shortfall=harness((r,p)=>{if(r.key==='research-web'){assert.ok(p.outputSchema?.oneOf?.some(v=>v.properties?.outcome));r.structuredOutput={outcome:'shortfall',observations:['provider evidence incomplete'],evidenceAttempted:['approved query'],unresolvedQuestions:['source identity'],newRequirements:['attributed source evidence'],confidence:'low',consequences:'findings cannot support synthesis'};}});const s=await execute(optIn(['local','web']),shortfall.runs);
+  assert.equal(s.verdict,'blocked');assert.equal(s.lifecycle.settled.at(-1).outcome,'shortfall');assert.deepEqual(s.lifecycle.settled.at(-1).observations,['provider evidence incomplete']);assert.equal(s.lifecycle.achieved.length,0);assert.deepEqual(s.lifecycle.pendingParent.map(x=>x.kind),['shortfall-decision']);
   const malformed=harness(r=>{if(r.key==='research-web')delete r.runId});const m=await execute(optIn(['local','web']),malformed.runs);
   assert.equal(m.verdict,'blocked');assert.equal(m.lifecycle.started.length,1);assert.equal(m.lifecycle.settled.length,1);assert.equal(m.lifecycle.settled[0].outcome,'completed');assert.ok(m.lifecycle.omitted.some(x=>x.key==='research-web'&&/no run identity/.test(x.reason)));assert.equal(m.lifecycle.achieved.length,0);
 });
