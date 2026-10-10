@@ -8,7 +8,7 @@ pointer:
 role: context
 name: serena-pointer
 description: "Always-on pointer that fires serena's own onboarding (`initial_instructions`) at session start and states the serena-vs-graphify division of labour. Deliberately THIN: it does NOT restate serena's per-tool guidance — that is single-sourced in initial_instructions. Carries the code-intel cue on all tools, including opencode (where the two edit-time hooks have no surface)."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

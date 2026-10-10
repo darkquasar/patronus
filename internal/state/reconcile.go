@@ -57,6 +57,21 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 		unresolved[k] = true
 		out.Unresolved = append(out.Unresolved, fmt.Errorf("ownership unresolved: %s (%s/%s) %s: %s", k.artifact, k.tool, k.scope, path, reason))
 	}
+	// adopt records a newly owned file under the item for k, creating the item
+	// (incomplete: no version until every desired outcome resolves) when the
+	// key was not owned before. It returns the item index and ownership state.
+	adopt := func(idx int, owned bool, k itemKey, row Item, next FileState) (int, bool) {
+		if !owned {
+			idx = len(out.Items)
+			byKey[k] = idx
+			fresh := row
+			fresh.Files = nil
+			fresh.ItemVersion = ""
+			out.Items = append(out.Items, fresh)
+		}
+		out.Items[idx].Files = append(out.Items[idx].Files, next)
+		return idx, true
+	}
 	for _, desired := range in.Desired {
 		if desired.IsDir || desired.Directory != nil || desired.Native != nil {
 			continue
@@ -122,16 +137,7 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 							problem(k, next.Path, err.Error())
 							continue
 						}
-						if !ownedItem {
-							idx = len(out.Items)
-							byKey[k] = idx
-							fresh := row
-							fresh.Files = nil
-							fresh.ItemVersion = ""
-							out.Items = append(out.Items, fresh)
-							ownedItem = true
-						}
-						out.Items[idx].Files = append(out.Items[idx].Files, next)
+						idx, ownedItem = adopt(idx, ownedItem, k, row, next)
 						continue
 					}
 					if err := verifyOwned(out.Items[idx].Files[oldIndex], skipped.Before); err != nil {
@@ -159,16 +165,7 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 					}
 					out.Items[idx].Files[oldIndex] = next
 				} else {
-					if !ownedItem {
-						idx = len(out.Items)
-						byKey[k] = idx
-						fresh := row
-						fresh.Files = nil
-						fresh.ItemVersion = ""
-						out.Items = append(out.Items, fresh)
-						ownedItem = true
-					}
-					out.Items[idx].Files = append(out.Items[idx].Files, next)
+					idx, ownedItem = adopt(idx, ownedItem, k, row, next)
 				}
 			}
 		}

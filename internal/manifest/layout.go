@@ -165,6 +165,20 @@ type HookLayout struct {
 	Project          FileTarget `yaml:"project"`
 	GlobalScriptDir  PathTarget `yaml:"globalScriptDir,omitempty"`  // where a global hook's helper script is placed (e.g. ~/.claude/hooks/)
 	ProjectScriptDir PathTarget `yaml:"projectScriptDir,omitempty"` // where a project hook's helper script is placed (e.g. .claude/hooks/)
+	// GlobalRunnerDir and ProjectRunnerDir are where a tool that has no native
+	// hook dispatcher receives the adapter-embedded hook runner (OpenCode:
+	// its plugins dir). Unset for tools with a native hooks surface.
+	GlobalRunnerDir  PathTarget `yaml:"globalRunnerDir,omitempty"`
+	ProjectRunnerDir PathTarget `yaml:"projectRunnerDir,omitempty"`
+}
+
+// RunnerDirFor returns the hook-runner placement dir for the given scope, or an
+// unset PathTarget when this tool models no runner.
+func (l *HookLayout) RunnerDirFor(scope string) PathTarget {
+	if scope == "global" {
+		return l.GlobalRunnerDir
+	}
+	return l.ProjectRunnerDir
 }
 
 // ForScope returns the file/path target for the given scope ("global"|"local").
@@ -190,6 +204,14 @@ func (l *HookLayout) ScriptDirFor(scope string) PathTarget {
 type SettingLayout struct {
 	Global  FileTarget `yaml:"global"`
 	Project FileTarget `yaml:"project"`
+	// Redact lists dotted globs (e.g. provider.*.options) whose values every
+	// rendered view of this file replaces with a placeholder. Presentation
+	// only: applied bytes, checksums and state are never altered by it.
+	Redact []string `yaml:"redact,omitempty"`
+	// SplitLeaves lists dotted paths whose object value a setting artifact owns
+	// as one quoted leaf per key (permission.edit."*.env") instead of one
+	// whole-object scalar, so sibling user keys stay unowned.
+	SplitLeaves []string `yaml:"splitLeaves,omitempty"`
 }
 
 // ForScope returns the file/path target for the given scope ("global"|"local").

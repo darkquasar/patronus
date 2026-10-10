@@ -115,18 +115,30 @@ func TestSettingForPerToolOverrides(t *testing.T) {
 	}
 }
 
-// On a tool with no setting layout (OpenCode — Codex models config.toml now), a
-// setting artifact is an honest no-op, so a flavoured setting diverges cleanly.
+// On a tool with no setting layout, a setting artifact is an honest no-op, so a
+// flavoured setting diverges cleanly. Every shipped adapter now models a
+// setting surface, so the case is proven over an invented adapter.
 func TestTransformSettingNoSurfaceSkips(t *testing.T) {
 	home := t.TempDir()
 	eng := New(toolpath.New(testEnv(home), home, t.TempDir()))
 	art := settingArtifact("ccusage-statusline", "statusLine", "x")
-
-	diffs, err := eng.Transform(art, loadAdapter(t, "opencode"), "global", "", noExisting)
+	noSurface, err := manifest.DecodeAdapter([]byte(`apiVersion: patronus/v2
+family: adapter
+tool: toy
+layout:
+  skill:
+    global: "~/.toy/skills/{name}/SKILL.md"
+    project: ".toy/skills/{name}/SKILL.md"
+`))
 	if err != nil {
-		t.Errorf("opencode: unexpected error %v", err)
+		t.Fatal(err)
+	}
+
+	diffs, err := eng.Transform(art, noSurface, "global", "", noExisting)
+	if err != nil {
+		t.Errorf("no setting surface: unexpected error %v", err)
 	}
 	if len(diffs) != 0 {
-		t.Errorf("opencode: want 0 diffs (no setting surface), got %d", len(diffs))
+		t.Errorf("no setting surface: want 0 diffs, got %d", len(diffs))
 	}
 }

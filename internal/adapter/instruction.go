@@ -43,7 +43,9 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 	}
 
 	ctrlPath := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
-	sectionName := art.Name
+	// The section name a tool writes into a shared context file is adapter
+	// data (Pi declares "pi:", OpenCode "oc:"; Claude and Codex none).
+	sectionName := ad.Layout.Instruction.SectionPrefix + art.Name
 	var warning string
 	if ad.Tool == "pi" {
 		context, err := scan.DiscoverPiContext(filepath.Dir(ctrlPath), scan.PiReadFile(readExisting))
@@ -54,7 +56,6 @@ func (e *Engine) transformInstruction(art *manifest.Artifact, ad *manifest.Adapt
 		if err := scan.PiSafePath(ctrlPath); err != nil {
 			return nil, err
 		}
-		sectionName = "pi:" + art.Name
 	}
 
 	if art.Mode == "pointer" {

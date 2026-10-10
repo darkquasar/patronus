@@ -79,12 +79,13 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(diffs[0].After)
-	const golden = "---\nmode: subagent\nmodel: opus\npermission: read\nprompt: You are a careful reviewer.\n---\n"
+	const golden = "---\ndescription: Reviews code\nmode: subagent\nmodel: opus\npermission: read\nprompt: You are a careful reviewer.\n---\n"
 	if s != golden {
-		t.Fatalf("legacy OpenCode bytes changed:\n%q", s)
+		t.Fatalf("OpenCode agent bytes changed:\n%q", s)
 	}
-	// Allowed keys kept; disallowed "extra" and "description"/"name" dropped from
-	// frontmatter (allow-list is [mode, model, prompt, permission]).
+	// Allowed keys kept (description is required by OpenCode and in the
+	// allow-list since the adapter correction); disallowed "extra" and "name"
+	// dropped from frontmatter.
 	if !strings.Contains(s, "mode: subagent") || !strings.Contains(s, "model: opus") || !strings.Contains(s, "permission: read") {
 		t.Errorf("allowed frontmatter keys missing:\n%s", s)
 	}
@@ -95,7 +96,7 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 	if !strings.Contains(s, "prompt:") || !strings.Contains(s, "careful reviewer") {
 		t.Errorf("body not mapped to prompt:\n%s", s)
 	}
-	want := filepath.Join(home, ".config", "opencode", "agent", "reviewer.md")
+	want := filepath.Join(home, ".config", "opencode", "agents", "reviewer.md") // documented plural dir
 	if diffs[0].Path != want {
 		t.Errorf("path = %q, want %q", diffs[0].Path, want)
 	}

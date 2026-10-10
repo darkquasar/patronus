@@ -90,10 +90,10 @@ func TestVisualProfileClaude(t *testing.T) {
 // real catalog artifact carries that type.
 func TestVisualProfileAppendsDiagramExplainForCodexOpencode(t *testing.T) {
 	for _, tc := range []struct {
-		tool, agentsRel string
+		tool, agentsRel, prefix string
 	}{
-		{"codex", filepath.Join(".codex", "AGENTS.md")},
-		{"opencode", filepath.Join(".config", "opencode", "AGENTS.md")},
+		{"codex", filepath.Join(".codex", "AGENTS.md"), ""},
+		{"opencode", filepath.Join(".config", "opencode", "AGENTS.md"), "oc:"},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
 			root := fixtureCatalog(t)
@@ -112,9 +112,10 @@ func TestVisualProfileAppendsDiagramExplainForCodexOpencode(t *testing.T) {
 			// sections. The design-discipline skills are CREATEd under skills/, not
 			// appended here.
 			body := string(mustRead(t, filepath.Join(home, tc.agentsRel)))
+			// Section names carry the adapter's sectionPrefix (opencode: "oc:").
 			for _, want := range []string{
-				"patronus:start fix-instruction-global",
-				"patronus:start fix-instruction-2",
+				"patronus:start " + tc.prefix + "fix-instruction-global",
+				"patronus:start " + tc.prefix + "fix-instruction-2",
 			} {
 				if !strings.Contains(body, want) {
 					t.Errorf("%s AGENTS.md missing %q:\n%s", tc.tool, want, body)

@@ -12,7 +12,7 @@ pointer:
 role: instruction
 name: writing-style-pointer
 description: "Always-on pointer to the house writing style. Inlines the two always-on mechanics (em-dashes, quote punctuation) so they reach every Slack message and commit body, and points at the writing-editorial skill for the meaning-led prose rules that govern anything carrying reasoning."
-version: 1.1.0
+version: 1.2.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

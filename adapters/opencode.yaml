@@ -2,36 +2,43 @@ apiVersion: patronus/v2
 family: adapter
 tool: opencode
 
-# Honors OPENCODE_CONFIG_DIR, then $XDG_CONFIG_HOME/opencode, then ~/.config/opencode.
-# The scanner resolves those env overrides; markers use the canonical default.
+# OpenCode 1.18.35 reads opencode.json/.jsonc at the project root and under the
+# global config dir ($OPENCODE_CONFIG_DIR, else $XDG_CONFIG_HOME/opencode, else
+# ~/.config/opencode). The scanner resolves those env overrides; markers use
+# the canonical default. OPENCODE_CONFIG (file override) and
+# OPENCODE_CONFIG_CONTENT (inline) are admission inputs, not resolved here.
 detect:
   global: ["~/.config/opencode/"]
-  project: ["opencode.json", "opencode.jsonc", ".opencode/"]
+  project: ["opencode.json", "opencode.jsonc", ".opencode/", ".opencode/opencode.json", ".opencode/opencode.jsonc"]
 
 layout:
   skill:
     global: "~/.config/opencode/skills/{name}/SKILL.md"
     project: ".opencode/skills/{name}/SKILL.md"
-    nameSource: dir
+    nameSource: dir            # Patronus enforces name == dir (documented contract); 1.18.35 tolerates a mismatch
     frontmatter: passthrough   # natively Claude-SKILL.md-compatible
+    required: [name, description]
 
   agent:
-    # Loader accepts agent/ AND agents/ — write singular.
-    global: "~/.config/opencode/agent/{name}.md"
-    project: ".opencode/agent/{name}.md"
-    frontmatter: [mode, model, prompt, permission]
+    # The loader reads agent/ and agents/; write the documented plural form.
+    global: "~/.config/opencode/agents/{name}.md"
+    project: ".opencode/agents/{name}.md"
+    frontmatter: [description, mode, model, temperature, top_p, tools, permission, hidden, color, steps, prompt]
     bodyIs: prompt
 
   command:
-    # Accepts command/ AND commands/ — write singular.
-    global: "~/.config/opencode/command/{name}.md"
-    project: ".opencode/command/{name}.md"
+    # The loader reads command/ and commands/; write the documented plural form.
+    global: "~/.config/opencode/commands/{name}.md"
+    project: ".opencode/commands/{name}.md"
 
-  # OpenCode uses type:"local" (stdio) / type:"remote" (http) — NOT stdio/http —
-  # and stdio command is an array (command:[...]), not command+args.
+  # OpenCode uses type:"local" (stdio) / type:"remote" (http), NOT stdio/http,
+  # and the stdio command is an array (command:[...]), not command+args.
   mcp:
     global: { file: "~/.config/opencode/opencode.json", format: jsonc, path: "mcp.{name}" }
     project: { file: "opencode.json", format: jsonc, path: "mcp.{name}" }
+    # Per-leaf ownership: Patronus owns the transport leaves, never the server
+    # object, so user-added headers/oauth siblings stay unowned.
+    ownership: leaf
     transports:
       stdio:
         keys: { type: "local", command: "{commandArray}", environment: "{env}" }
@@ -39,21 +46,35 @@ layout:
         keys: { type: "remote", url: "{url}", headers: "{headers}" }
 
   hook:
-    # OpenCode has no declarative hooks block. A gate-intent hook merges into the
-    # declarative `permission` config; a nudge-intent hook is delivered by a paired
-    # instruction (AGENTS.md), so it emits no hook here. See transformGateOpenCode.
-    global: { file: "~/.config/opencode/opencode.json", format: json, path: "permission", action: merge }
-    project: { file: "opencode.json", format: json, path: "permission", action: merge }
+    # No JSON hooks block exists in opencode.json; plugins provide event hooks.
+    # Script hooks register in a Patronus-owned hooks.json read by the
+    # adapter-embedded runner placed in the runner dir. A gate hook without a
+    # script becomes declarative permission.<key> = "deny" in the setting file
+    # (transformGateOpenCode). Nudge hooks emit nothing; companion instructions
+    # carry the advice.
+    globalScriptDir: "~/.config/opencode/patronus/hooks/"
+    projectScriptDir: ".opencode/patronus/hooks/"
+    globalRunnerDir: "~/.config/opencode/plugins/"
+    projectRunnerDir: ".opencode/plugins/"
+    global: { file: "~/.config/opencode/patronus/hooks.json", format: json, path: "hooks.{event}", action: merge }
+    project: { file: ".opencode/patronus/hooks.json", format: json, path: "hooks.{event}", action: merge }
+
+  setting:
+    global: { file: "~/.config/opencode/opencode.json", format: jsonc }
+    project: { file: "opencode.json", format: jsonc }
+    redact: ["provider.*.options"]   # presentation only; never alters applied bytes
+    splitLeaves: [permission.edit]   # an object value becomes one quoted leaf per key
 
   instruction:
-    # OpenCode reads AGENTS.md/CLAUDE.md and an `instructions: []` glob array in config.
+    # Root AGENTS.md and ~/.config/opencode/AGENTS.md are read; .opencode/AGENTS.md is not.
     global: { file: "~/.config/opencode/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }
+    sectionPrefix: "oc:"
     pointerDirGlobal: "~/.config/opencode/patronus/instructions/{name}.md"
-    pointerDirProject: ".config/opencode/patronus/instructions/{name}.md"
+    pointerDirProject: ".opencode/patronus/instructions/{name}.md"
 
   output-style:
     # OpenCode has no output-styles surface; the style body lands as an AGENTS.md
-    # APPEND (same target as instruction), action ⇒ appendSection.
+    # APPEND (same target as instruction), action appendSection.
     global: { file: "~/.config/opencode/AGENTS.md", action: appendSection }
     project: { file: "AGENTS.md", action: appendSection }

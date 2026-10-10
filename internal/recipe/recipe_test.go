@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -145,18 +144,22 @@ func TestComputeFetchAndWire_Engram(t *testing.T) {
 		t.Errorf("claude config does not reference installPath %q:\n%s", wantDest, claude.After)
 	}
 
-	// OpenCode stdio uses command:[...] (commandArray) — assert it's a JSON array.
-	oc := merges["opencode"]
-	var ocCfg map[string]any
-	if err := json.Unmarshal(oc.After, &ocCfg); err != nil {
-		t.Fatalf("opencode config not json: %v", err)
+	// OpenCode stdio uses command:[...] (commandArray) and type:"local". The
+	// OpenCode adapter declares per-leaf ownership, so each transport key is its
+	// own MERGE leaf under mcp.demo-memory.
+	ocLeaves := map[string]any{}
+	for _, d := range diffs {
+		if d.Action == diff.Merge && d.Tool == "opencode" && d.Setting != nil {
+			ocLeaves[d.Setting.Dotted] = d.Setting.ScalarValue
+		}
 	}
-	mcp := ocCfg["mcp"].(map[string]any)["demo-memory"].(map[string]any)
-	if _, ok := mcp["command"].([]any); !ok {
-		t.Errorf("opencode command should be a JSON array, got %T (%v)", mcp["command"], mcp["command"])
+	if _, ok := ocLeaves["mcp.demo-memory.command"].([]any); !ok {
+		if _, ok := ocLeaves["mcp.demo-memory.command"].([]string); !ok {
+			t.Errorf("opencode command should be an array leaf, got %T (%v)", ocLeaves["mcp.demo-memory.command"], ocLeaves["mcp.demo-memory.command"])
+		}
 	}
-	if mcp["type"] != "local" {
-		t.Errorf("opencode type = %v, want local", mcp["type"])
+	if ocLeaves["mcp.demo-memory.type"] != "local" {
+		t.Errorf("opencode type = %v, want local", ocLeaves["mcp.demo-memory.type"])
 	}
 }
 

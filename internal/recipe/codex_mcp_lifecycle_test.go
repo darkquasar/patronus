@@ -33,10 +33,13 @@ func TestCodexMCPWiringOwnsTransportLeaves(t *testing.T) {
 			byTool[d.Tool] = append(byTool[d.Tool], d)
 		}
 	}
-	for _, tool := range []string{"claude", "opencode"} {
-		if len(byTool[tool]) != 1 || byTool[tool][0].Setting.Dotted == "" {
-			t.Fatalf("%s whole-map wiring changed: %+v", tool, byTool[tool])
-		}
+	if len(byTool["claude"]) != 1 || byTool["claude"][0].Setting.Dotted == "" {
+		t.Fatalf("claude whole-map wiring changed: %+v", byTool["claude"])
+	}
+	// OpenCode declares ownership: leaf too (one MERGE per transport key).
+	opencode := byTool["opencode"]
+	if len(opencode) != 2 || opencode[0].Setting.Dotted != "mcp.demo-memory.type" || opencode[1].Setting.Dotted != "mcp.demo-memory.command" {
+		t.Fatalf("opencode leaves = %+v", opencode)
 	}
 	codex := byTool["codex"]
 	if len(codex) != 2 || codex[0].Setting.Dotted != "mcp_servers.demo-memory.command" || codex[1].Setting.Dotted != "mcp_servers.demo-memory.args" {

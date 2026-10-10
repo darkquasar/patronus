@@ -141,7 +141,12 @@ var _claudeToOpenCode = map[string]string{
 // ignore — the unmappable-token no-op. When EVERY token is unmappable there is no honest
 // deny to emit, so that is an error, not a silent empty plan.
 func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
-	target := ad.Layout.Hook.ForScope(scope)
+	// Declarative denies live in the agent's settings file (the adapter's
+	// setting layout), never in a hooks registry.
+	if ad.Layout.Setting == nil {
+		return nil, fmt.Errorf("adapter %q: declarative gate %q needs a setting layout", ad.Tool, art.Name)
+	}
+	target := ad.Layout.Setting.ForScope(scope)
 	if !target.OK() {
 		return nil, nil
 	}
@@ -173,7 +178,7 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 	diffs := make([]diff.FileDiff, 0, len(keys))
 	cur := existing
 	for _, key := range keys {
-		dotted := target.Path + "." + key // permission.<key>
+		dotted := "permission." + key
 		// Read before merging: cur accumulates across keys, so the prior must be
 		// captured from the bytes as they stand before THIS key is set.
 		prior, priorPresent, err := ReadDotted(cur, target, dotted)
