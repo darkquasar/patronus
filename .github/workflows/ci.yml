@@ -63,6 +63,7 @@ jobs:
         env:
           PR_BASE: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [ -n "${PR_BASE:-}" ]; then
@@ -70,7 +71,8 @@ jobs:
           elif [ -n "${BEFORE:-}" ] && git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
             echo "rev=$BEFORE" >> "$GITHUB_OUTPUT"
           else
-            echo "rev=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            base=$(git rev-parse --verify "origin/$DEFAULT_BRANCH^{commit}")
+            echo "rev=$base" >> "$GITHUB_OUTPUT"
           fi
       - name: catalog contract gate
         run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
