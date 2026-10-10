@@ -127,7 +127,7 @@ func RemoveSettingEdit(existing []byte, e *diff.SettingEdit) ([]byte, bool, erro
 		return nil, false, fmt.Errorf("setting %s: installed value changed; preserve for repair", e.Dotted)
 	}
 	if e.IdentityKey == "" {
-		return RemoveSettingScalar(existing, ftOf(e), e.Dotted, e.PriorValue, e.PriorPresent)
+		return removeScalar(existing, ftOf(e), e.Dotted, e.PriorValue, e.PriorPresent, e.PruneEmptyParent)
 	}
 	return RemoveSettingsList(existing, ftOf(e), e.Dotted, e.IdentityKey, e.Identity)
 }
@@ -172,6 +172,16 @@ func ReadDotted(existing []byte, ft manifest.FileTarget, dotted string) (any, bo
 // reports whether the key was there to reverse. Surgical, so sibling keys (other
 // settings, hook arrays, other MCP servers) are untouched.
 func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string, prior any, priorPresent bool) ([]byte, bool, error) {
+	return removeScalar(existing, ft, dotted, prior, priorPresent, false)
+}
+
+// removeScalar is RemoveSettingScalar with the per-leaf prune flag: when
+// pruneParent is set and deleting the install-created key empties its
+// immediate parent object, that parent is dropped too, in any format (a
+// per-leaf-owned server object has no valid empty form). The flag never
+// reaches beyond the immediate parent, and a parent holding any other child is
+// untouched. The zero-value path keeps the bounded TOML prune for older rows.
+func removeScalar(existing []byte, ft manifest.FileTarget, dotted string, prior any, priorPresent bool, pruneParent bool) ([]byte, bool, error) {
 	if !ft.OK() {
 		return nil, false, fmt.Errorf("config: empty file target")
 	}
@@ -191,7 +201,10 @@ func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string,
 		parent[leaf] = prior
 	} else {
 		delete(parent, leaf)
-		if ft.Format == "toml" {
+		switch {
+		case pruneParent:
+			pruneEmptyParent(root, dotted)
+		case ft.Format == "toml":
 			pruneEmptyTable(root, dotted)
 		}
 	}
@@ -222,6 +235,30 @@ func pruneEmptyTable(root map[string]any, dotted string) {
 	if m, ok := asStringMap(servers[parts[1]]); ok && len(m) == 0 {
 		delete(servers, parts[1])
 		root[parts[0]] = servers
+	}
+}
+
+// pruneEmptyParent drops the immediate parent object of a deleted leaf when
+// the deletion left it empty (format neutral; selected by
+// SettingEdit.PruneEmptyParent). Only the parent is considered: the
+// grandparent container and every non-empty parent are retained.
+func pruneEmptyParent(root map[string]any, dotted string) {
+	parts, err := splitDotted(dotted)
+	if err != nil || len(parts) < 2 {
+		return
+	}
+	parentPath := parts[:len(parts)-1]
+	grand := root
+	for _, p := range parentPath[:len(parentPath)-1] {
+		next, ok := asStringMap(grand[p])
+		if !ok {
+			return
+		}
+		grand = next
+	}
+	name := parentPath[len(parentPath)-1]
+	if m, ok := asStringMap(grand[name]); ok && len(m) == 0 {
+		delete(grand, name)
 	}
 }
 

@@ -67,6 +67,9 @@ func (e *Engine) Transform(art *manifest.Artifact, ad *manifest.Adapter, scope, 
 		diffs[i].Version = art.Version
 		diffs[i].Type = string(art.Type)
 	}
+	// Settings-file diffs carry the layout's redact globs so every rendered
+	// view hides what the adapter declares (presentation only).
+	StampRedact(diffs, ad, e.resolver)
 	return diffs, nil
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
@@ -19,6 +20,7 @@ import (
 	"github.com/darkquasar/patronus/internal/packagestate"
 	"github.com/darkquasar/patronus/internal/plugin"
 	"github.com/darkquasar/patronus/internal/recipe"
+	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/render"
 	"github.com/darkquasar/patronus/internal/state"
@@ -296,6 +298,9 @@ func newRemoveCmd(aliases []string, reg *harness.Registry) *cobra.Command {
 					Packages []directoryRemovalPlan `json:"packages"`
 				}{cs, packagePlans})
 			}
+			if err := stampInverseRedact(cs, wd, res); err != nil {
+				return err
+			}
 			dp06PrintSelection(cmd, cs, tool, res)
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
 			for _, plan := range packagePlans {
@@ -372,6 +377,29 @@ func pluginRemoveDiffs(cmd *cobra.Command, wd string, selected []state.Item, war
 		out = append(out, pluginUninstallDiffs(pl.Manifest, items, probe)...)
 	}
 	return out
+}
+
+// stampInverseRedact gives removal inverses the same presentation-only
+// redaction forward diffs receive: each diff is stamped from the adapter of
+// its own tool, so a rendered RESTORE or SKIP of a settings file hides what the
+// adapter declares. Adapters come from the checkout when one is above wd and
+// from the embedded copies otherwise (the installed-binary case).
+func stampInverseRedact(cs *diff.ChangeSet, wd string, res toolpath.Resolver) error {
+	if cs == nil {
+		return nil
+	}
+	var adaptersDir string
+	if root, err := registry.DiscoverRoot(wd); err == nil {
+		adaptersDir = filepath.Join(root, "adapters")
+	}
+	adapters, err := loadAdapters(adaptersDir)
+	if err != nil {
+		return err
+	}
+	for _, ad := range adapters {
+		adapter.StampRedact(cs.Diffs, ad, res)
+	}
+	return nil
 }
 
 // fullOccupancy builds the contributor index from BOTH scopes' state files,

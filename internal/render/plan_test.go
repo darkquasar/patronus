@@ -401,3 +401,23 @@ func TestDirectoryPlanDetailsInTableAndJSON(t *testing.T) {
 		})
 	}
 }
+
+// TestVerbosePlanRedactsWithoutAlteringBytes: a diff carrying Redact renders
+// the placeholder and never the value in the verbose unified view, and the
+// change set the applier receives is byte-identical before and after rendering.
+func TestVerbosePlanRedactsWithoutAlteringBytes(t *testing.T) {
+	before := []byte(`{"provider":{"inv":{"options":{"apiKey":"fixture-not-a-secret"}}},"user":1}` + "\n")
+	after := []byte(`{"provider":{"inv":{"options":{"apiKey":"fixture-not-a-secret"}}},"user":2}` + "\n")
+	cs := &diff.ChangeSet{DryRun: true, Diffs: []diff.FileDiff{{
+		Path: "/invented/opencode.json", Action: diff.Merge, Artifact: "fixture", Tool: "toy", Scope: "local",
+		Before: before, After: after, Redact: []string{"provider.*.options"},
+	}}}
+	var out bytes.Buffer
+	PrintPlan(&out, cs, toolpath.New(func(string) (string, bool) { return "", false }, "/invented/home", "/invented"), true)
+	if strings.Contains(out.String(), "fixture-not-a-secret") || !strings.Contains(out.String(), "[redacted]") {
+		t.Fatalf("verbose plan:\n%s", out.String())
+	}
+	if !bytes.Equal(cs.Diffs[0].Before, before) || !bytes.Equal(cs.Diffs[0].After, after) {
+		t.Fatal("rendering altered the change set bytes")
+	}
+}

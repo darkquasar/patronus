@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/install"
@@ -1320,7 +1321,7 @@ func conflictPrompt(cmd *cobra.Command, res toolpath.Resolver, yes bool) install
 		case "o", "overwrite":
 			return install.Overwrite, nil
 		case "d", "diff":
-			fmt.Fprintln(out, d.Unified())
+			fmt.Fprintln(out, adapter.RedactForDisplay(d).Unified())
 			return conflictPrompt(cmd, res, false)(d) // re-prompt after showing the diff
 		default:
 			return install.Skip, nil

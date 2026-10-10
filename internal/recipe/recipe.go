@@ -379,10 +379,11 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
 		}
 		if ad.Layout.Mcp.Ownership == manifest.OwnershipLeaf {
-			leaves, err := codexLeafDiffs(rec, ft, tr, path, before, dotted, obj, scope, tool)
+			leaves, err := leafDiffs(rec, ft, tr, path, before, dotted, obj, scope, tool)
 			if err != nil {
 				return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
 			}
+			adapter.StampRedact(leaves, ad, req.Resolver)
 			out = append(out, leaves...)
 			continue
 		}
@@ -397,7 +398,7 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 			return nil, fmt.Errorf("recipe %q -> %s: read prior: %w", rec.Name, tool, err)
 		}
 
-		out = append(out, diff.FileDiff{
+		whole := []diff.FileDiff{{
 			Path:     path,
 			Action:   diff.Merge,
 			Before:   before,
@@ -418,19 +419,23 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 				PriorValue:   prior,
 				PriorPresent: priorPresent,
 			},
-		})
+		}}
+		adapter.StampRedact(whole, ad, req.Resolver)
+		out = append(out, whole...)
 	}
 	return out, nil
 }
 
-// codexLeafDiffs emits one structural MERGE per transport-supplied leaf of a
-// Codex server table, in the layout's key order. Owning leaves rather than the
-// whole table leaves user-added children (bearer_token_env_var, http_headers,
-// env_http_headers, env, ...) unowned: install, update and remove never replace
+// leafDiffs emits one structural MERGE per transport-supplied leaf of a
+// per-leaf-owned server object (Codex config.toml tables, OpenCode opencode.json
+// objects), in the layout's key order. Owning leaves rather than the whole
+// object leaves user-added children (bearer_token_env_var, http_headers,
+// headers, oauth, env, ...) unowned: install, update and remove never replace
 // or adopt them. Each leaf carries its own prior, so state keeps an immutable
-// per-leaf inverse. Selected by the adapter's mcp layout `ownership: leaf`;
-// other harnesses keep whole-map ownership.
-func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Transport, path string, before []byte, dotted string, obj map[string]any, scope, tool string) ([]diff.FileDiff, error) {
+// per-leaf inverse, and PruneEmptyParent so removing the last install-created
+// leaf drops the emptied server object in any format. Selected by the adapter's
+// mcp layout `ownership: leaf`; other harnesses keep whole-map ownership.
+func leafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Transport, path string, before []byte, dotted string, obj map[string]any, scope, tool string) ([]diff.FileDiff, error) {
 	var out []diff.FileDiff
 	for _, key := range tr.Keys.Keys {
 		val, ok := obj[key]
@@ -463,6 +468,10 @@ func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Tr
 				ScalarValue:  val,
 				PriorValue:   prior,
 				PriorPresent: priorPresent,
+				// TOML keeps its bounded mcp_servers.<name> prune on the zero-value
+				// path so Codex persisted rows stay byte-identical; every other
+				// format needs the per-leaf flag to drop an emptied server object.
+				PruneEmptyParent: ft.Format != "toml",
 			},
 		})
 	}

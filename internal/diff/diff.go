@@ -105,6 +105,13 @@ type FileDiff struct {
 	// other SKIP keeps "equality is not adoption authority".
 	SharedAcquire bool `json:"-"`
 
+	// Redact lists the dotted globs (adapter setting-layout data, e.g.
+	// provider.*.options) whose values every rendered view of this file's
+	// Before/After replaces with a placeholder. Presentation only: the applier,
+	// checksums and state use the real bytes. Empty for files with nothing to
+	// hide.
+	Redact []string `json:"-"`
+
 	// Setting, when set, marks this MERGE as a settings list-append (a hook
 	// registration) rather than a scalar config merge. It carries the element's
 	// identity + target so the planner re-folds multiple appends onto one
@@ -270,6 +277,14 @@ type SettingEdit struct {
 	// here before". Scalar form only; the list form reverses by identity.
 	PriorValue   any
 	PriorPresent bool
+
+	// PruneEmptyParent, on a scalar leaf, says that deleting the install-created
+	// key may also drop its immediate parent object when that leaves the parent
+	// empty: the leaf belongs to a per-leaf-owned container (an MCP server
+	// object) whose empty shell is an invalid definition. A parent that still
+	// holds any user child is kept. Persisted with the leaf; the zero value
+	// keeps today's behaviour for every older row.
+	PruneEmptyParent bool `json:"pruneEmptyParent,omitempty"`
 }
 
 // FileTargetRef is the minimal file/format descriptor a SettingEdit needs to

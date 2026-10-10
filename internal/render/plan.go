@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
@@ -164,7 +165,7 @@ func printVerboseDiffs(w io.Writer, cs *diff.ChangeSet, r toolpath.Resolver) {
 			fmt.Fprintf(w, "── %s ──\n", orDash(current))
 		}
 		fmt.Fprintf(w, "%s  %s  [%s %s]\n", string(d.Action), displayPath(r, d.Path), d.Tool, d.Scope)
-		u := d.Unified()
+		u := adapter.RedactForDisplay(d).Unified()
 		if u == "" {
 			fmt.Fprintln(w)
 			continue

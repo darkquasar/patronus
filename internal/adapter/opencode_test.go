@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -248,5 +250,77 @@ func TestOpenCodeRootContract(t *testing.T) {
 	}
 	if ad.Layout.Setting.Global.Format != "jsonc" || ad.Layout.Hook.Global.Format != "json" || ad.Layout.Hook.Global.Path != "hooks.{event}" {
 		t.Fatalf("formats: setting %q hook %q path %q", ad.Layout.Setting.Global.Format, ad.Layout.Hook.Global.Format, ad.Layout.Hook.Global.Path)
+	}
+}
+
+// TestProviderSubtreeRoundTrip: the provider subtree of opencode.json is
+// value-identical across every structured merge the OpenCode selection performs
+// (quoted permission leaves, MCP transport leaves, the skill mask) and after
+// their removal; Patronus never reads, validates or alters provider values.
+func TestProviderSubtreeRoundTrip(t *testing.T) {
+	ft := manifest.FileTarget{File: "opencode.json", Format: "jsonc"}
+	ref := diff.FileTargetRef{File: ft.File, Format: ft.Format}
+	existing := []byte(`{
+  // user comment-free file (comments are refused by admission, not here)
+  "provider": {"invented": {"options": {"apiKey": "fixture-not-a-secret", "baseURL": "https://invented.example"}, "models": {"m": {}}}},
+  "permission": {"bash": {"*": "ask"}}
+}` + "\n")
+	wantProvider := `{"invented":{"models":{"m":{}},"options":{"apiKey":"fixture-not-a-secret","baseURL":"https://invented.example"}}}`
+	providerOf := func(raw []byte) string {
+		t.Helper()
+		root, err := parseConfig(raw, ft.Format)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := json.Marshal(root["provider"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	edits := []*diff.SettingEdit{
+		{Target: ref, Dotted: `permission.edit."*"`, ScalarValue: "allow"},
+		{Target: ref, Dotted: `permission.edit."*.env"`, ScalarValue: "deny"},
+		{Target: ref, Dotted: `permission.edit.".env.*"`, ScalarValue: "deny"},
+		{Target: ref, Dotted: "mcp.fixture.type", ScalarValue: "remote", PruneEmptyParent: true},
+		{Target: ref, Dotted: "mcp.fixture.url", ScalarValue: "https://invented.example/mcp", PruneEmptyParent: true},
+		{Target: ref, Dotted: `permission.skill."*-aa"`, ScalarValue: "deny"},
+	}
+	cur := existing
+	for _, e := range edits {
+		prior, present, err := ReadDotted(cur, ft, e.Dotted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.PriorValue, e.PriorPresent = prior, present
+		cur, err = ApplySettingEdit(cur, e)
+		if err != nil {
+			t.Fatalf("%s: %v", e.Dotted, err)
+		}
+		if got := providerOf(cur); got != wantProvider {
+			t.Fatalf("after %s provider changed:\n got %s\nwant %s", e.Dotted, got, wantProvider)
+		}
+	}
+	if bytes.Contains(cur, []byte(`"*-aa"`)) == false || bytes.Contains(cur, []byte(`\"`)) {
+		t.Fatalf("quoted leaves not written as plain keys:\n%s", cur)
+	}
+	for i := len(edits) - 1; i >= 0; i-- {
+		var err error
+		cur, _, err = RemoveSettingEdit(cur, edits[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := providerOf(cur); got != wantProvider {
+		t.Fatalf("after removal provider changed:\n got %s\nwant %s", got, wantProvider)
+	}
+	// The fresh server object is pruned with its last leaf; its grandparent
+	// container (mcp) and the user's permission.bash sibling are retained.
+	root, _ := parseConfig(cur, ft.Format)
+	if mcp, _ := root["mcp"].(map[string]any); mcp["fixture"] != nil {
+		t.Fatalf("fresh server object not pruned:\n%s", cur)
+	}
+	if perm, _ := root["permission"].(map[string]any); perm["bash"] == nil {
+		t.Fatalf("user permission sibling lost after removal: %v", perm)
 	}
 }

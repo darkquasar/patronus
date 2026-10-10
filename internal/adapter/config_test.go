@@ -416,3 +416,48 @@ func TestRemoveSettingScalarTOMLPruneIsBounded(t *testing.T) {
 		})
 	}
 }
+
+// TestRemoveLastLeafPrunesFreshServer: a scalar leaf flagged PruneEmptyParent
+// drops its emptied immediate parent object in any format (an install-created
+// JSON server object vanishes with its last leaf); a parent that still holds a
+// user child is kept; a row without the flag never prunes JSON (old state
+// rows); the bounded TOML prune is unchanged on the zero-value path.
+func TestRemoveLastLeafPrunesFreshServer(t *testing.T) {
+	jsonc := diff.FileTargetRef{File: "opencode.json", Format: "jsonc"}
+	toml := diff.FileTargetRef{File: "~/.codex/config.toml", Format: "toml"}
+	edit := func(ft diff.FileTargetRef, dotted string, value any, prune bool) *diff.SettingEdit {
+		return &diff.SettingEdit{Target: ft, Dotted: dotted, ScalarValue: value, PruneEmptyParent: prune}
+	}
+	for _, tc := range []struct {
+		name string
+		in   string
+		edit *diff.SettingEdit
+		gone []string
+		keep []string
+	}{
+		{"json last leaf prunes the fresh server", `{"mcp":{"fixture":{"type":"remote"}},"user":1}`, edit(jsonc, "mcp.fixture.type", "remote", true), []string{"mcp.fixture"}, []string{"mcp", "user"}},
+		{"json user child keeps the server", `{"mcp":{"fixture":{"type":"remote","headers":{"X":"y"}}}}`, edit(jsonc, "mcp.fixture.type", "remote", true), []string{"mcp.fixture.type"}, []string{"mcp.fixture.headers.X"}},
+		{"json without the flag never prunes", `{"mcp":{"fixture":{"type":"remote"}}}`, edit(jsonc, "mcp.fixture.type", "remote", false), []string{"mcp.fixture.type"}, []string{"mcp.fixture"}},
+		{"json container itself is retained", `{"mcp":{"fixture":{"type":"remote"}}}`, edit(jsonc, "mcp.fixture.type", "remote", true), []string{"mcp.fixture"}, []string{"mcp"}},
+		{"toml zero-value path still prunes the server table", "[mcp_servers.inv]\nurl = 'u'\n", edit(toml, "mcp_servers.inv.url", "u", false), []string{"mcp_servers.inv"}, []string{"mcp_servers"}},
+		{"toml flagged leaf prunes the server table", "[mcp_servers.inv]\nurl = 'u'\n", edit(toml, "mcp_servers.inv.url", "u", true), []string{"mcp_servers.inv"}, []string{"mcp_servers"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, found, err := RemoveSettingEdit([]byte(tc.in), tc.edit)
+			if err != nil || !found {
+				t.Fatalf("remove: found=%t err=%v", found, err)
+			}
+			ft := ftOf(tc.edit)
+			for _, k := range tc.gone {
+				if _, present, err := ReadDotted(out, ft, k); err != nil || present {
+					t.Fatalf("%s survived (err %v):\n%s", k, err, out)
+				}
+			}
+			for _, k := range tc.keep {
+				if _, present, err := ReadDotted(out, ft, k); err != nil || !present {
+					t.Fatalf("%s lost (err %v):\n%s", k, err, out)
+				}
+			}
+		})
+	}
+}
