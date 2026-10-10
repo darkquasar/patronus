@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-researcher-oc
+description: "OpenCode only. Investigate local source and return attributed findings"
+version: 1.0.0
+entry: agent.md
+files: []
+targets: [opencode]
+defaults:
+  scope: project
+requires:
+  - research-team-oc
+  - verification-before-completion-oc

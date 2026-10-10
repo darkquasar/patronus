@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-spec-author-oc
+description: "OpenCode only. Consume evidence and author only the assigned specification documents"
+version: 1.0.0
+entry: agent.md
+files: []
+targets: [opencode]
+defaults:
+  scope: project
+requires:
+  - spec-brainstorming-oc
+  - verification-before-completion-oc

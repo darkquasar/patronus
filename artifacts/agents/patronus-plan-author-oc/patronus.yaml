@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: agent
+role: orchestration
+name: patronus-plan-author-oc
+description: "OpenCode only. Write authorized requirement-covered implementation plans"
+version: 1.0.0
+entry: agent.md
+files: []
+targets: [opencode]
+defaults:
+  scope: project
+requires:
+  - plan-writing-oc
+  - verification-before-completion-oc
