@@ -1,0 +1,7 @@
+Codex behavioral adaptation authored for Patronus.
+Source: artifacts/instructions/agents-spine at 46247c13c3de38008c59995c5b1b697f78d3f9e5.
+Upstream: github.com/openai/agents.md
+Upstream commit: d1ac7f063d20e70015ed6732664049ae4ba9d74e
+Copyright (c) 2025 OpenAI
+License: MIT. Full terms in LICENSE.
+Historical host names and paths in SOURCE.md are provenance, not invocations.
