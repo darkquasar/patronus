@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: finishing-a-development-branch-oc
+description: "OpenCode only: Use when authorized implementation is ready for verification and a branch or captured worktree handoff."
+version: 1.0.0
+entry: SKILL.md
+files: ["LICENSE", "NOTICE", "SOURCE.md"]
+targets: [opencode]
+defaults:
+  scope: project
+requires: ["using-git-worktrees-oc", "verification-before-completion-oc", "requesting-code-review-oc"]
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "OpenCode behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."
