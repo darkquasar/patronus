@@ -42,9 +42,9 @@ func Admit(d Descriptor, in *Admission) error {
 	if in == nil || in.Changes == nil {
 		return nil
 	}
-	var selected []diff.FileDiff
+	var selected []int
 	skills := false
-	for _, fd := range in.Changes.Diffs {
+	for i, fd := range in.Changes.Diffs {
 		if fd.Native != nil {
 			continue
 		}
@@ -54,7 +54,7 @@ func Admit(d Descriptor, in *Admission) error {
 		if fd.Tool != d.Name {
 			return crossTargetMessage(d.ErrorPrefix, fd.Path, fd.Tool)
 		}
-		selected = append(selected, fd)
+		selected = append(selected, i)
 		skills = skills || fd.Type == "skill"
 	}
 	if len(selected) == 0 {
@@ -109,7 +109,8 @@ func Admit(d Descriptor, in *Admission) error {
 			in.Inventory = append(in.Inventory, foreign...)
 		}
 	}
-	for _, fd := range selected {
+	for _, i := range selected {
+		fd := in.Changes.Diffs[i]
 		if fd.Action == diff.Exec || fd.Directory != nil || fd.IsDir {
 			continue
 		}
@@ -128,6 +129,12 @@ func Admit(d Descriptor, in *Admission) error {
 		}
 		if err := admitOwnership(d, in, fd); err != nil {
 			return err
+		}
+		if sharedAcquire(d, in.Owners, fd) {
+			// Shared behaviour for strict and lenient targets alike: the SKIP over
+			// an identical placed file every recorded owner holds becomes a
+			// contributor acquisition that reconcile may adopt.
+			in.Changes.Diffs[i].SharedAcquire = true
 		}
 		var facts ContextFacts
 		if d.Validator != nil {
@@ -238,6 +245,12 @@ func admitOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error {
 				continue
 			}
 			if owner.Tool != d.Name || owner.Artifact != fd.Artifact || owner.Scope != fd.Scope {
+				if owner.Tool == d.Name && owner.Scope == fd.Scope && sharedPlacedOwner(f, fd) {
+					// Another artifact of this target placed the identical file: a
+					// shared placed file is co-owned, not an incompatible owner.
+					owned, unchanged = true, true
+					continue
+				}
 				return incompatibleOwnerMessage(d.ErrorPrefix, fd, owner)
 			}
 			matches := f.Checksum == state.Checksum(fd.Before)
@@ -265,6 +278,51 @@ func admitOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error {
 		return resourceConflictMessage(d.ErrorPrefix, fd)
 	}
 	return nil
+}
+
+// sharedPlacedOwner reports whether the recorded row f is a CREATE of the very
+// bytes fd places or releases: a fresh CREATE or identical SKIP carries them in
+// After; a DELETE or a release SKIP (remove's SharedRetained) carries the
+// current bytes in Before.
+func sharedPlacedOwner(f state.FileState, fd diff.FileDiff) bool {
+	if f.Action != string(diff.Create) || f.Checksum == "" {
+		return false
+	}
+	switch fd.Action {
+	case diff.Create:
+		return f.Checksum == state.Checksum(fd.After)
+	case diff.Skip:
+		return f.Checksum == state.Checksum(fd.After) || (len(fd.Before) > 0 && f.Checksum == state.Checksum(fd.Before))
+	case diff.Delete:
+		return len(fd.Before) > 0 && f.Checksum == state.Checksum(fd.Before)
+	default:
+		return false
+	}
+}
+
+// sharedAcquire reports whether fd is a SKIP over a placed file that every
+// recorded owner of the path (same target and scope) holds with these exact
+// bytes, while fd.Artifact is not yet among them.
+func sharedAcquire(d Descriptor, owners []state.Item, fd diff.FileDiff) bool {
+	if fd.Action != diff.Skip || fd.Section != nil || fd.Setting != nil || len(fd.SettingContrib) > 0 || !bytes.Equal(fd.Before, fd.After) {
+		return false
+	}
+	others := 0
+	for _, owner := range owners {
+		for _, f := range owner.Files {
+			if f.Path != fd.Path {
+				continue
+			}
+			if owner.Tool != d.Name || owner.Scope != fd.Scope || !sharedPlacedOwner(f, fd) {
+				return false
+			}
+			if owner.Artifact == fd.Artifact {
+				return false
+			}
+			others++
+		}
+	}
+	return others > 0
 }
 
 // contextDiff says whether fd enters the context phase: any section diff, and

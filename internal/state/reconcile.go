@@ -112,8 +112,28 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 						continue
 					}
 					if oldIndex < 0 {
+						if !desired.SharedAcquire {
+							continue // equality is not adoption authority
+						}
+						// Admission marked this SKIP as a shared placed file: adopt a
+						// CREATE row for the new contributor, but only against a recorded
+						// owner whose checksum proves the bytes on disk.
+						if err := verifySharedOwner(out.Items, k, next, skipped.Before); err != nil {
+							problem(k, next.Path, err.Error())
+							continue
+						}
+						if !ownedItem {
+							idx = len(out.Items)
+							byKey[k] = idx
+							fresh := row
+							fresh.Files = nil
+							fresh.ItemVersion = ""
+							out.Items = append(out.Items, fresh)
+							ownedItem = true
+						}
+						out.Items[idx].Files = append(out.Items[idx].Files, next)
 						continue
-					} // equality is not adoption authority
+					}
 					if err := verifyOwned(out.Items[idx].Files[oldIndex], skipped.Before); err != nil {
 						problem(k, next.Path, err.Error())
 					}
@@ -261,6 +281,26 @@ func forwardDiff(d diff.FileDiff) diff.FileDiff {
 		d.Action = diff.Create
 	}
 	return d
+}
+
+// verifySharedOwner proves a shared-acquire adoption: some other item of the
+// same tool and scope records a CREATE row at next.Path whose checksum matches
+// both the bytes on disk and the adopting row.
+func verifySharedOwner(items []Item, k itemKey, next FileState, current []byte) error {
+	if next.Action != string(diff.Create) || next.Checksum != checksum(current) {
+		return fmt.Errorf("shared placed file changed; not adopted")
+	}
+	for _, it := range items {
+		if it.Tool != k.tool || it.Scope != k.scope || it.Artifact == k.artifact {
+			continue
+		}
+		for _, f := range it.Files {
+			if f.Path == next.Path && f.Action == string(diff.Create) && f.Checksum == next.Checksum {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no recorded owner holds the shared placed file; not adopted")
 }
 
 func sameFile(a, b FileState) bool {

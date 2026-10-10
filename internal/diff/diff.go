@@ -91,6 +91,20 @@ type FileDiff struct {
 	// single-contributor case.
 	Contrib []SectionContrib `json:"-"`
 
+	// CreateContrib lists the ADDITIONAL artifacts that CREATE this same path
+	// with byte-identical content (the shared-placed-file analogue of Contrib:
+	// several hook artifacts place one runner). The applier writes the file
+	// once; state records a CREATE row per contributor so the file is deleted
+	// only when the last contributor is removed. Empty for the common
+	// single-owner case.
+	CreateContrib []CreateContrib `json:"-"`
+
+	// SharedAcquire marks a SKIP over an identical, already-placed file whose
+	// recorded owners all hold the same bytes as this diff's After: admission
+	// sets it so reconcile adopts a CREATE row for the new contributor. Every
+	// other SKIP keeps "equality is not adoption authority".
+	SharedAcquire bool `json:"-"`
+
 	// Setting, when set, marks this MERGE as a settings list-append (a hook
 	// registration) rather than a scalar config merge. It carries the element's
 	// identity + target so the planner re-folds multiple appends onto one
@@ -217,6 +231,16 @@ type SectionContrib struct {
 	Version  string
 	Section  string
 	Prior    []byte
+}
+
+// CreateContrib records one additional artifact that places a shared file with
+// byte-identical content: enough identity for state to record a per-artifact
+// CREATE row and for the plan to render an honest row for it.
+type CreateContrib struct {
+	Artifact string
+	Version  string
+	Type     string
+	Role     string
 }
 
 // SettingEdit captures the inputs of a settings MERGE so the planner can re-fold

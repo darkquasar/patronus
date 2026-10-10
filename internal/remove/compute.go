@@ -75,6 +75,11 @@ const (
 	AmbiguousSkipped Outcome = "ambiguous-skipped"
 	// UnknownAction — the state row records an action this version cannot invert.
 	UnknownAction Outcome = "unknown-action"
+	// SharedRetained — a placed file this contributor shares with another
+	// recorded contributor that is not being removed: this contribution is
+	// released (its row retires) and the file stays. Never promotable under
+	// --force: the other contributor's placement is not the user's to lose.
+	SharedRetained Outcome = "shared-retained"
 )
 
 // Complete reports whether this outcome means the contribution's removal is
@@ -83,7 +88,7 @@ const (
 // --force) can finish the job.
 func (o Outcome) Complete() bool {
 	switch o {
-	case Applied, AlreadyAbsent, SettingAbsent:
+	case Applied, AlreadyAbsent, SettingAbsent, SharedRetained:
 		return true
 	default:
 		return false
@@ -144,6 +149,7 @@ func ComputeWithPolicy(items []state.Item, read ReadExisting, occupancy Occupanc
 		res   Result
 		files []fileIntent
 	)
+	shared := newSharedCreates(items)
 	for _, it := range items {
 		// A self-wiring recipe ran post-install commands with no recorded inverse;
 		// warn rather than invent an uninstall. Its (non-EXEC) files, if any, are
@@ -191,7 +197,7 @@ func ComputeWithPolicy(items []state.Item, read ReadExisting, occupancy Occupanc
 			byPath[fi.file.Path] = append(byPath[fi.file.Path], fi)
 			continue
 		}
-		d, w, out, err := fileUndo(fi.item, fi.file, read, occupancy)
+		d, w, out, err := fileUndo(fi.item, fi.file, read, occupancy, shared)
 		if err != nil {
 			return Result{}, err
 		}
@@ -244,6 +250,10 @@ type Contributor struct {
 	Scope    string
 	Setting  *diff.SettingEdit
 	Section  string // APPEND owner; not a structural config claim
+	// Created marks a CREATE row (a placed file). Created contributors are
+	// consulted by the shared-placed-file rule only; config and section gates
+	// ignore them.
+	Created bool
 }
 
 func (c Contributor) owner() adapter.SettingOwner {
@@ -273,7 +283,37 @@ type Occupancy map[string][]Contributor
 func (o Occupancy) othersOn(path string, self Contributor) []string {
 	var out []string
 	for _, c := range o[path] {
-		if c.owner() == self.owner() {
+		if c.Created || c.owner() == self.owner() {
+			continue
+		}
+		out = append(out, c.Label())
+	}
+	return out
+}
+
+// sharedCreates tracks, across one removal, which selected contributors share a
+// placed file, so the CREATE arm releases a non-last contribution, emits one
+// DELETE per path when every contributor is selected, and settles the rest
+// against that write.
+type sharedCreates struct {
+	selected map[adapter.SettingOwner]bool
+	deleted  map[string]string // path -> label of the contributor whose DELETE was emitted
+}
+
+func newSharedCreates(items []state.Item) *sharedCreates {
+	s := &sharedCreates{selected: make(map[adapter.SettingOwner]bool, len(items)), deleted: map[string]string{}}
+	for _, it := range items {
+		s.selected[adapter.SettingOwner{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}] = true
+	}
+	return s
+}
+
+// retainedBy lists the Created contributors on path that are neither self nor
+// selected for this removal: the ones whose placement keeps the file.
+func (s *sharedCreates) retainedBy(occupancy Occupancy, path string, self Contributor) []string {
+	var out []string
+	for _, c := range occupancy[path] {
+		if !c.Created || c.owner() == self.owner() || s.selected[c.owner()] {
 			continue
 		}
 		out = append(out, c.Label())
@@ -376,7 +416,7 @@ func composeSettingGroup(path string, group []fileIntent, read ReadExisting, occ
 	for _, fi := range group {
 		self := adapter.SettingOwner{Artifact: fi.item.Artifact, Tool: fi.item.Tool, Scope: fi.item.Scope}
 		for _, other := range occupancy[path] {
-			if other.owner() == self {
+			if other.Created || other.owner() == self {
 				continue
 			}
 			if err := adapter.CheckSettingPair(fi.file.Setting, self, other.Setting, other.owner()); err != nil {
@@ -538,7 +578,7 @@ func baseDiff(fi fileIntent) diff.FileDiff {
 // structured outcome. It may also return a warning (drift skipped). The returned
 // diff always carries the item's identity metadata so the renderer groups it like
 // an install row.
-func fileUndo(it state.Item, f state.FileState, read ReadExisting, occupancy Occupancy) (diff.FileDiff, *Warning, Outcome, error) {
+func fileUndo(it state.Item, f state.FileState, read ReadExisting, occupancy Occupancy, shared *sharedCreates) (diff.FileDiff, *Warning, Outcome, error) {
 	base := baseDiff(fileIntent{item: it, file: f})
 
 	current, exists, err := read(f.Path)
@@ -572,6 +612,29 @@ func fileUndo(it state.Item, f state.FileState, read ReadExisting, occupancy Occ
 			base.Note = "user-edited since install — skipped (use --force)"
 			return base, &Warning{Item: it.Artifact, Path: f.Path, Message: "modified since install; not removed (use --force)"}, DriftSkipped, nil
 		}
+		self := Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope, Created: true}
+		if others := shared.retainedBy(occupancy, f.Path, self); len(others) > 0 {
+			// A shared placed file another recorded contributor still holds: this
+			// contribution is released, the file stays. The SKIP carries the
+			// current bytes so the applier verifies and records it, which is what
+			// retires the row. No Intended: --force never deletes another
+			// contributor's placement.
+			base.Action = diff.Skip
+			base.Before = current
+			base.Note = "shared placed file still owned by " + strings.Join(others, ", ") + "; this contribution released"
+			return base, &Warning{Item: it.Artifact, Path: f.Path, Message: base.Note + "; file kept"}, SharedRetained, nil
+		}
+		if first, done := shared.deleted[f.Path]; done {
+			// Every contributor is selected and an earlier one already carries the
+			// DELETE: this row settles against that write. Before carries the
+			// current bytes for admission; the applier verifies the SKIP against
+			// what the DELETE left behind.
+			base.Action = diff.Skip
+			base.Before = current
+			base.Note = "shared placed file deleted with " + first
+			return base, nil, Applied, nil
+		}
+		shared.deleted[f.Path] = it.Artifact
 		base.Action = diff.Delete
 		base.Before = current // so the verbose unified diff shows the removal
 		return base, nil, Applied, nil
@@ -834,6 +897,9 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 		claims := 0
 		occupied := map[string]bool{}
 		for _, other := range occupancy[path] {
+			if other.Created {
+				continue
+			}
 			if strict && occupied[other.Section] {
 				return refusePiSections(group, "ambiguous recorded sibling ownership", current), nil
 			}

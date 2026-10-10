@@ -395,10 +395,12 @@ func fullOccupancy(home, projectDir string, loaded map[string]*state.State, poli
 	return occupancyOf(states), nil
 }
 
-// occupancyOf indexes recorded MERGE and APPEND rows across the states by path,
-// listing the contributors wired into each. remove.Compute uses it to tell a
-// config file this record owns alone from one it shares, which is what makes a
-// pre-compose whole-file restore safe or unsafe.
+// occupancyOf indexes recorded MERGE, APPEND and CREATE rows across the states
+// by path, listing the contributors wired into each. remove.Compute uses it to
+// tell a config file this record owns alone from one it shares, which is what
+// makes a pre-compose whole-file restore safe or unsafe, and to keep a shared
+// placed file (a CREATE several artifacts contributed) until its last
+// contributor is removed.
 //
 // Recorded paths are absolute, so a row from any scope's state file counts:
 // what the gate protects is the FILE, and a contributor recorded in the scope
@@ -415,6 +417,10 @@ func occupancyOf(states []*state.State) remove.Occupancy {
 			// the other's contribution to a shared file.
 			c := remove.Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope}
 			for _, f := range it.Files {
+				if f.Action == string(diff.Create) {
+					occ[f.Path] = append(occ[f.Path], remove.Contributor{Artifact: it.Artifact, Tool: it.Tool, Scope: it.Scope, Created: true})
+					continue
+				}
 				if f.Action != string(diff.Merge) && f.Action != string(diff.Append) {
 					continue
 				}

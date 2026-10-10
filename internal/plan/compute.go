@@ -7,6 +7,7 @@
 package plan
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"sort"
@@ -220,8 +221,9 @@ func sortByRank(tools []string) []string {
 }
 
 // composeByPath folds multiple diffs that target the same absolute path into a
-// single diff. CREATE collisions keep the first (identical content is the common
-// case across SKILL.md-native tools); APPEND/MERGE accumulate so e.g. codex and
+// single diff. CREATE collisions with identical bytes keep the first payload and
+// record every further artifact as a CreateContrib (a shared placed file);
+// differing bytes are refused. APPEND/MERGE accumulate so e.g. codex and
 // opencode both appending to a shared project AGENTS.md produce one combined
 // result rather than two competing writes.
 func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
@@ -360,8 +362,16 @@ func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 			if prev.Setting != nil {
 				return nil, fmt.Errorf("compose %s: structural and nonstructural writes overlap", d.Path)
 			}
-			// Nonstructural CREATE or append-without-section sharing retains the
-			// existing first-result semantics. MERGE evidence was checked above.
+			if prev.Action == diff.Create && d.Action == diff.Create {
+				if !bytes.Equal(prev.After, d.After) {
+					return nil, fmt.Errorf("compose %s: conflicting placed bytes between %s and %s", d.Path, prev.Artifact, d.Artifact)
+				}
+				if d.Artifact != "" && d.Artifact != prev.Artifact && !hasCreateContrib(prev.CreateContrib, d.Artifact) {
+					prev.CreateContrib = append(prev.CreateContrib, diff.CreateContrib{Artifact: d.Artifact, Version: d.Version, Type: d.Type, Role: d.Role})
+				}
+			}
+			// Append-without-section sharing retains the existing first-result
+			// semantics. MERGE evidence was checked above.
 			prev.Tool = mergeTool(prev.Tool, d.Tool)
 		}
 	}
@@ -381,6 +391,15 @@ func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 		out = append(out, d)
 	}
 	return out, nil
+}
+
+func hasCreateContrib(contribs []diff.CreateContrib, artifact string) bool {
+	for _, c := range contribs {
+		if c.Artifact == artifact {
+			return true
+		}
+	}
+	return false
 }
 
 // mergeTool combines tool labels for a shared path. Identical tools collapse;

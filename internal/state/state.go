@@ -323,6 +323,24 @@ func FromChangeSet(applied []diff.FileDiff, now string) []Item {
 			})
 		}
 
+		// A shared placed file (one runner several hook artifacts CREATE with
+		// identical bytes) records a CREATE row per contributor, so removal
+		// deletes the file only with its last contributor.
+		for _, c := range d.CreateContrib {
+			ci := getKey(key{c.Artifact, d.Tool, d.Scope, d.Root})
+			if ci.ItemVersion == "" {
+				ci.ItemVersion = c.Version
+			}
+			if ci.Type == "" {
+				ci.Type = c.Type
+			}
+			ci.Files = append(ci.Files, FileState{
+				Path:     d.Path,
+				Action:   string(diff.Create),
+				Checksum: checksum(d.After),
+			})
+		}
+
 		// A composed MERGE may carry hook elements from OTHER artifacts folded into
 		// one settings.json (e.g. tdd-guard + gitleaks + git-guardrails). Record
 		// each under its own artifact with its list-append intent so remove strips
