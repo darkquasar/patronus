@@ -80,10 +80,11 @@ step "publication and package-delivery contract suites (offline fakes)"
 bash scripts/tests/check-catalog-publication-test.sh
 bash scripts/tests/publish-packages-test.sh
 
-# Retain content/qualification fixture definitions, but do not run shipped prose
-# inventories or artifact/native qualification in this structural release gate.
+# Run the data-driven OpenCode content rules and the invented evidence formats; artifact and
+# native qualification are not run in this structural release gate.
 step "invented evidence-format contracts (no native, model or harness calls)"
 python3 -m unittest discover -s scripts/tests -p 'test_pi_evidence.py'
+python3 -m unittest discover -s scripts/tests -p 'test_oc_content.py'
 
 step "catalog-check structure: source vs public index"
 "$check" --source "$root" --index "$index"
