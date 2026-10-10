@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: plan-review-oc
+description: "OpenCode only: fresh read-only plan/spec coverage and interface review"
+version: 1.0.0
+entry: SKILL.md
+files: [NOTICE, LICENSE, SOURCE.md, plan-reviewer.md]
+targets: [opencode]
+defaults:
+  scope: project
