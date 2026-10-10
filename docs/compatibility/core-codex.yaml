@@ -263,5 +263,5 @@ entries:
     disposition: port-cx
     codex_items: [dispatching-parallel-agents-cx]
     outcome: Partial
-    reason: "Bounded read-only Codex research dispatch guidance; shared writes belong to lead. Selected parallel execution has a bundled isolated supervisor, while native worker/auth qualification remains pending."
+    reason: "Bounded read-only Codex research dispatch guidance; shared writes belong to lead. Selected parallel execution uses the shared isolated-writer-supervisor, while native worker/auth qualification remains pending."
     evidence: runtime-pending

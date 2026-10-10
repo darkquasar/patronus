@@ -3,7 +3,7 @@ family: artifact
 type: skill
 role: capability
 name: plan-execute-parallel-cx
-description: "Codex only: isolated parallel writers via the bundled supervisor; native Codex workers runtime-pending."
+description: "Codex only: isolated parallel writers via the required shared isolated-writer-supervisor; native Codex workers runtime-pending."
 version: 1.2.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]

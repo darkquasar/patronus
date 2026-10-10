@@ -1,13 +1,13 @@
 ---
 name: plan-execute-parallel-cx
-description: "Codex only: run disjoint isolated writers through the bundled supervisor helper. Native Codex worker qualification is runtime-pending (Partial)."
+description: "Codex only: run disjoint isolated writers through the required shared isolated-writer-supervisor. Native Codex worker qualification is runtime-pending (Partial)."
 ---
 
 # Parallel execution in Codex
 
-This skill ships a bundled supervisor helper, `{skillsDir}/isolated-writer-supervisor/scripts/supervisor.py`
+This skill uses the required shared supervisor helper `{skillsDir}/isolated-writer-supervisor/scripts/supervisor.py`
 (Python 3 standard library, POSIX only). Its isolation, timeout, ownership and
-integration rules are exercised by the bundled fake-worker suite
+integration rules are exercised by that skill's fake-worker suite
 `{skillsDir}/isolated-writer-supervisor/fixtures/test_supervisor.py`, which drives real local processes in
 invented scratch repositories. Native Codex workers under the supervisor are
 **Partial**: runtime-pending until a separately authorized native qualification.
