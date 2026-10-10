@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// The production registry: four descriptors with today's behaviour as flags,
-// Targeted() reproducing the historical pi/codex pair, and each descriptor's
-// native skill roots agreeing with the adapter it mirrors.
+// The production registry: four descriptors with their behaviour as flags,
+// Targeted() naming the lock-targeted trio, and each descriptor's native skill
+// roots agreeing with the adapter it mirrors.
 func TestDefaultRegistryDescriptors(t *testing.T) {
 	reg := testRegistry(t)
 	type flags struct {
@@ -31,7 +31,7 @@ func TestDefaultRegistryDescriptors(t *testing.T) {
 		{"codex", flags{"cx", "AGENTS.md", "", "~/.codex", "codex admission", "codex", "core-profile-cx", "AGENTS.override.md", harness.ResourceAfterContext, true, true, true, true, true, true, false, true, true}},
 		{"pi", flags{"pi", "AGENTS.md", "pi:", "~/.pi/agent", "", "pi", "core-profile-pi", "", harness.ResourceBeforeOwnership, true, false, true, false, false, true, true, true, true}},
 		{"claude", flags{"", "CLAUDE.md", "", "~/.claude", "", "", "", "", 0, false, false, false, false, false, false, false, false, false}},
-		{"opencode", flags{"oc", "AGENTS.md", "", "~/.config/opencode", "", "", "", "", 0, false, false, false, false, false, false, false, false, false}},
+		{"opencode", flags{"oc", "AGENTS.md", "oc:", "~/.config/opencode", "opencode admission", "opencode", "core-profile-oc", "", harness.ResourceAfterContext, true, true, true, true, false, true, false, true, true}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d, ok := reg.Lookup(tc.name)
@@ -48,7 +48,7 @@ func TestDefaultRegistryDescriptors(t *testing.T) {
 	for _, d := range reg.Targeted() {
 		targeted = append(targeted, d.Name)
 	}
-	if strings.Join(targeted, ",") != "codex,pi" {
+	if strings.Join(targeted, ",") != "codex,pi,opencode" {
 		t.Fatalf("Targeted = %v", targeted)
 	}
 	if err := reg.ValidateTarget("invented"); err == nil || err.Error() != "unknown target \"invented\"; use claude|codex|opencode|pi|all" {
@@ -77,7 +77,7 @@ func TestDefaultRegistryRootsAgreeWithAdapters(t *testing.T) {
 	for _, ad := range adapters {
 		byTool[ad.Tool] = ad
 	}
-	for _, name := range []string{"codex", "pi"} {
+	for _, name := range []string{"codex", "pi", "opencode"} {
 		t.Run(name, func(t *testing.T) {
 			d, _ := reg.Lookup(name)
 			ad, ok := byTool[name]
@@ -111,9 +111,11 @@ func TestDefaultRegistryRootsAgreeWithAdapters(t *testing.T) {
 			if d.SectionPrefix != prefix {
 				t.Fatalf("%s SectionPrefix %q disagrees with adapter %q", name, d.SectionPrefix, prefix)
 			}
-			leaf := ad.Layout.Mcp != nil && ad.Layout.Mcp.Ownership == manifest.OwnershipLeaf
-			if leaf != d.StrictSections {
-				t.Fatalf("%s mcp ownership leaf=%v but StrictSections=%v", name, leaf, d.StrictSections)
+			// Leaf MCP ownership is adapter data consumed by the recipe engine; it
+			// is independent of the descriptor's section strictness (Codex: leaf and
+			// strict sections; OpenCode: leaf and lenient sections).
+			if ad.Layout.Mcp != nil && ad.Layout.Mcp.Ownership != "" && ad.Layout.Mcp.Ownership != manifest.OwnershipLeaf {
+				t.Fatalf("%s mcp ownership %q is not a known value", name, ad.Layout.Mcp.Ownership)
 			}
 		})
 	}

@@ -83,8 +83,8 @@ func TestHarnessLaneProfileRefusesClaude(t *testing.T) {
 }
 
 // TestHarnessLockCoexistence records the complete install/update/lock outcome
-// matrix over a prior pi or codex lock (HP-02). Today codexLockTarget fires only
-// when the prior or the requested target is codex; the lock command refuses any
+// matrix over a prior pi, codex or opencode lock (HP-02). The coexistence body
+// fires when the prior or the requested target is codex or opencode; the lock command refuses any
 // changed target over a pi or codex lock; dp06CheckProfileLock refuses a differing
 // target only for a matching profile. Accepted rows are asserted as accepted.
 func TestHarnessLockCoexistence(t *testing.T) {
@@ -146,6 +146,27 @@ func TestHarnessLockCoexistence(t *testing.T) {
 		{"codex", "lock", "codex", ""},
 		{"codex", "lock", "pi", lockConflict},
 		{"codex", "lock", "", ""},
+		// OC-T4: opencode coexists like codex (LockCoexistence), so a prior pi or
+		// codex lock refuses an opencode request and a prior opencode lock
+		// refuses every differing explicit target.
+		{"pi", "install", "opencode", codexConflict},
+		{"pi", "lock", "opencode", lockConflict},
+		{"codex", "install", "opencode", codexConflict},
+		{"codex", "lock", "opencode", lockConflict},
+		{"opencode", "install", "claude", codexConflict},
+		{"opencode", "install", "all", codexConflict},
+		{"opencode", "install", "codex", codexConflict},
+		{"opencode", "install", "pi", codexConflict},
+		{"opencode", "install", "opencode", ""},
+		{"opencode", "install", "", targetRequired},
+		{"opencode", "install-profile", "opencode", ""},
+		{"opencode", "install-profile", "claude", codexConflict},
+		{"opencode", "update", "claude", codexConflict},
+		{"opencode", "update", "opencode", nothingInstall},
+		{"opencode", "lock", "claude", lockConflict},
+		{"opencode", "lock", "pi", lockConflict},
+		{"opencode", "lock", "opencode", ""},
+		{"opencode", "lock", "", ""},
 	}
 	for _, tc := range rows {
 		t.Run(tc.prior+"/"+tc.command+"/target="+tc.target, func(t *testing.T) {
@@ -209,4 +230,15 @@ func harnessAnyCatalog(t *testing.T) string {
 	codexWrite(t, filepath.Join(root, "artifacts/skills/fixture-any/SKILL.md"), []byte("---\nname: fixture-any\ndescription: invented skill\n---\nBody\n"))
 	codexWrite(t, filepath.Join(root, "profiles/fixture-any-profile.yaml"), []byte("apiVersion: patronus/v2\nfamily: profile\nrole: lifecycle\nname: fixture-any-profile\nversion: 1.0.0\nlayers:\n  capabilities:\n    - fixture-any\n"))
 	return root
+}
+
+// TestHarnessLegacyLockWordingForOpenCode (OP-18 L-11): a legacy lock without a
+// target but with provenance refuses an OpenCode request with the existing
+// wording, which still says "before Codex migration"; recorded as known wording.
+func TestHarnessLegacyLockWordingForOpenCode(t *testing.T) {
+	reg := testRegistry(t)
+	err := reg.LockTarget(&lock.Lock{Version: lock.Version, Profile: "fixture-any-profile"}, "opencode")
+	if want := "existing legacy lock target is unknown; preserve patronus.lock and reconcile provenance before Codex migration"; harnessErr(err) != want {
+		t.Fatalf("legacy lock wording: %q", harnessErr(err))
+	}
 }

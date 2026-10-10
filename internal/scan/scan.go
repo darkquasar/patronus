@@ -54,6 +54,12 @@ type EnvSnapshot struct {
 	CodexHome         string `json:"codexHome,omitempty"`
 	OpencodeConfigDir string `json:"opencodeConfigDir,omitempty"`
 	XDGConfigHome     string `json:"xdgConfigHome,omitempty"`
+	// OpencodeConfig is the OPENCODE_CONFIG file override (a path, recorded as
+	// given); OpencodeConfigContentSet records only that OPENCODE_CONFIG_CONTENT
+	// is set. Its value is inline configuration that may carry credentials and
+	// is never read, recorded or printed.
+	OpencodeConfig           string `json:"opencodeConfig,omitempty"`
+	OpencodeConfigContentSet bool   `json:"opencodeConfigContentSet,omitempty"`
 }
 
 // Scan detects each adapter's tool at global and local scope. Detection is
@@ -105,10 +111,13 @@ func Scan(opts Options) (*Inventory, error) {
 
 func envSnapshot(env EnvLookup) EnvSnapshot {
 	get := func(k string) string { v, _ := env(k); return v }
+	_, contentSet := env("OPENCODE_CONFIG_CONTENT")
 	return EnvSnapshot{
-		PiCodingAgentDir:  get("PI_CODING_AGENT_DIR"),
-		CodexHome:         get("CODEX_HOME"),
-		OpencodeConfigDir: get("OPENCODE_CONFIG_DIR"),
-		XDGConfigHome:     get("XDG_CONFIG_HOME"),
+		PiCodingAgentDir:         get("PI_CODING_AGENT_DIR"),
+		CodexHome:                get("CODEX_HOME"),
+		OpencodeConfigDir:        get("OPENCODE_CONFIG_DIR"),
+		XDGConfigHome:            get("XDG_CONFIG_HOME"),
+		OpencodeConfig:           get("OPENCODE_CONFIG"),
+		OpencodeConfigContentSet: contentSet && get("OPENCODE_CONFIG_CONTENT") != "",
 	}
 }

@@ -44,7 +44,13 @@ func (e *Engine) transformOutputStyle(art *manifest.Artifact, ad *manifest.Adapt
 	// APPEND flavour (AGENTS.md): delegate to the shared section helper.
 	if target.Action == "appendSection" {
 		p := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
-		d, err := e.appendSectionDiff(p, ad.Tool, scope, string(art.Role), art.Name, body, readExisting)
+		// The style lands in the tool's shared context file, so it carries the
+		// same section prefix the instruction layout declares for that file.
+		section := art.Name
+		if ad.Layout.Instruction != nil {
+			section = ad.Layout.Instruction.SectionPrefix + art.Name
+		}
+		d, err := e.appendSectionDiff(p, ad.Tool, scope, string(art.Role), section, body, readExisting)
 		if err != nil {
 			return nil, err
 		}

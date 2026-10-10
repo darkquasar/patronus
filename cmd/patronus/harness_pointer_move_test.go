@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/state"
 )
 
@@ -15,6 +16,18 @@ import (
 // relocated, with the HS-T11b wording); the documented step is explicit removal
 // then reinstall, after which no row names the old path.
 func TestOpenCodePointerMoveRetainsOwnership(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		sectionRow bool
+	}{
+		{"body row only", false},
+		{"body row and legacy unprefixed section row", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) { testOpenCodePointerMove(t, tc.sectionRow) })
+	}
+}
+
+func testOpenCodePointerMove(t *testing.T, sectionRow bool) {
 	root := fixtureCatalog(t)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -26,20 +39,26 @@ func TestOpenCodePointerMoveRetainsOwnership(t *testing.T) {
 	codexWrite(t, filepath.Join(root, "artifacts/instructions/fix-pointer-oc/patronus.yaml"), []byte(manifest("1.1.0")))
 	codexWrite(t, filepath.Join(root, "artifacts/instructions/fix-pointer-oc/INSTRUCTIONS.md"), []byte(body))
 
-	// Seed the legacy install: the body under the OLD pointer dir and a state
-	// row at 1.0.0 recording it. The legacy unprefixed AGENTS.md section row is
-	// deliberately not seeded here: removing two Patronus sections from one
-	// file needs the structural section policy the filled descriptor enables
-	// (OC-T4 extends this test with that row); user prose is present so the
-	// un-append invariant is exercised.
+	// Seed the legacy install: the body under the OLD pointer dir, optionally
+	// the legacy unprefixed AGENTS.md section the shared lane wrote, and a state
+	// row at 1.0.0 recording them; user prose is present so the un-append
+	// invariant is exercised.
 	oldPath := filepath.Join(root, ".config/opencode/patronus/instructions/fix-pointer-oc.md")
 	newPath := filepath.Join(root, ".opencode/patronus/instructions/fix-pointer-oc.md")
 	agents := filepath.Join(root, "AGENTS.md")
+	prior := []byte("# Project\n\nuser prose\n")
 	codexWrite(t, oldPath, []byte(body))
-	codexWrite(t, agents, []byte("# Project\n\nuser prose\n"))
+	files := []state.FileState{{Path: oldPath, Action: "CREATE", Checksum: state.Checksum([]byte(body))}}
+	if sectionRow {
+		stanza := adapter.AppendSection(prior, "fix-pointer-oc", []byte("pointer stanza (legacy)\n"))
+		codexWrite(t, agents, stanza)
+		files = append(files, state.FileState{Path: agents, Action: "APPEND", Checksum: state.Checksum(stanza), Section: "fix-pointer-oc", Prior: prior})
+	} else {
+		codexWrite(t, agents, prior)
+	}
 	seed := &state.State{Version: state.Version, Items: []state.Item{{
 		Artifact: "fix-pointer-oc", ItemVersion: "1.0.0", Type: "instruction", Tool: "opencode", Scope: "local",
-		Files: []state.FileState{{Path: oldPath, Action: "CREATE", Checksum: state.Checksum([]byte(body))}},
+		Files: files,
 	}}}
 	statePath := filepath.Join(root, ".patronus/state.json")
 	if err := state.Save(statePath, seed); err != nil {
@@ -97,7 +116,7 @@ func TestOpenCodePointerMoveRetainsOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), "user prose") || !strings.Contains(string(raw), "<!-- patronus:start oc:fix-pointer-oc -->") {
+	if !strings.Contains(string(raw), "user prose") || !strings.Contains(string(raw), "<!-- patronus:start oc:fix-pointer-oc -->") || strings.Contains(string(raw), "<!-- patronus:start fix-pointer-oc -->") {
 		t.Fatalf("AGENTS.md after reinstall:\n%s", raw)
 	}
 }

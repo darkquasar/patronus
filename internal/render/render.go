@@ -240,7 +240,7 @@ func printProfileLayers(w io.Writer, m *manifest.Profile) {
 func PrintInventory(w io.Writer, inv *scan.Inventory) {
 	fmt.Fprintf(w, "Scanned project: %s\n", inv.ProjectDir)
 	fmt.Fprintf(w, "Home:            %s\n", inv.Home)
-	if e := inv.Env; e.CodexHome != "" || e.OpencodeConfigDir != "" || e.XDGConfigHome != "" || e.PiCodingAgentDir != "" {
+	if e := inv.Env; e.CodexHome != "" || e.OpencodeConfigDir != "" || e.XDGConfigHome != "" || e.PiCodingAgentDir != "" || e.OpencodeConfig != "" || e.OpencodeConfigContentSet {
 		fmt.Fprintln(w, "Env overrides:")
 		if e.CodexHome != "" {
 			fmt.Fprintf(w, "  CODEX_HOME=%s\n", e.CodexHome)
@@ -253,6 +253,12 @@ func PrintInventory(w io.Writer, inv *scan.Inventory) {
 		}
 		if e.PiCodingAgentDir != "" {
 			fmt.Fprintf(w, "  PI_CODING_AGENT_DIR=%s\n", e.PiCodingAgentDir)
+		}
+		if e.OpencodeConfig != "" {
+			fmt.Fprintf(w, "  OPENCODE_CONFIG=%s\n", e.OpencodeConfig)
+		}
+		if e.OpencodeConfigContentSet {
+			fmt.Fprintln(w, "  OPENCODE_CONFIG_CONTENT=(set; content not recorded)")
 		}
 	}
 	fmt.Fprintln(w)

@@ -5,10 +5,10 @@ import (
 	"github.com/darkquasar/patronus/internal/scan"
 )
 
-// defaultRegistry builds the production target registry once, in main. Codex
-// and Pi carry today's behaviour as flags plus their stateless validators;
-// claude and opencode exist for target-enum parity with every flag false and
-// no validator, so the legacy shared-lane semantics are unchanged.
+// defaultRegistry builds the production target registry once, in main. Codex,
+// Pi and OpenCode carry their behaviour as flags plus stateless validators;
+// claude exists for target-enum parity with every flag false and no validator,
+// so the legacy shared-lane semantics are unchanged.
 func defaultRegistry() (*harness.Registry, error) {
 	return harness.NewRegistry(
 		harness.Descriptor{
@@ -65,12 +65,36 @@ func defaultRegistry() (*harness.Registry, error) {
 			GlobalMarker: "~/.claude",
 		},
 		harness.Descriptor{
-			Name:         "opencode",
-			ItemSuffix:   "oc",
-			ContextFile:  "AGENTS.md",
-			GlobalMarker: "~/.config/opencode",
+			Name:                "opencode",
+			ItemSuffix:          "oc",
+			Profiles:            []string{"core-profile-oc"},
+			ContextFile:         "AGENTS.md",
+			SectionPrefix:       "oc:",
+			GlobalMarker:        "~/.config/opencode",
+			SkillRoots:          openCodeSkillRoots,
+			SkillName:           scan.SkillDirName,
+			SkillMask:           harness.SkillMask{File: "opencode.json", Format: "jsonc", Dotted: "permission.skill", Value: "deny"},
+			ResourcePhase:       harness.ResourceAfterContext,
+			LockTargeted:        true,
+			LockCoexistence:     true,
+			OwnsEffects:         true,
+			StrictUnowned:       true,
+			StrictSections:      false,
+			SafePathCheck:       true,
+			AdmissionPrefix:     "opencode admission",
+			MixedContextConsent: false,
+			ErrorPrefix:         "opencode",
+			PlacementWarning:    "OpenCode static placement only: skill loading, plugin activation, permission effects and fresh-session behaviour remain runtime-unverified",
+			PlacementStderr:     true,
+			AdmitPlan:           true,
+			AdmitRemoval:        true,
+			Validator:           opencodeValidator{},
 		},
 	)
+}
+
+func openCodeSkillRoots(in harness.RootInputs) ([]scan.SkillRoot, error) {
+	return scan.OpenCodeSkillRoots(in.Home, in.Project, in.Env), nil
 }
 
 func codexSkillRoots(in harness.RootInputs) ([]scan.SkillRoot, error) {

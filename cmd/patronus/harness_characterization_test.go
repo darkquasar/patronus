@@ -450,8 +450,8 @@ func TestHarnessGoldenPiRootOverrideFailure(t *testing.T) {
 	}
 }
 
-// Mutation safe-path gate (HP-03b): today only codex and pi diffs are checked;
-// a claude or opencode diff at the same unsafe (symlinked) path is not refused.
+// Mutation safe-path gate (HP-03b): codex, pi and opencode diffs are checked;
+// a claude diff at the same unsafe (symlinked) path is not refused.
 func TestHarnessMutationSafePathGate(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
 	m, err := beginMutation(testRegistry(t), home, project)
@@ -475,7 +475,7 @@ func TestHarnessMutationSafePathGate(t *testing.T) {
 		{"codex", "codex admission: pi path " + link + ": unapproved symlink/redirection"},
 		{"pi", "pi path " + link + ": unapproved symlink/redirection"},
 		{"claude", ""},
-		{"opencode", ""},
+		{"opencode", "opencode admission: pi path " + link + ": unapproved symlink/redirection"},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
 			d := diff.FileDiff{Path: unsafe, Action: diff.Create, Artifact: "fixture", Tool: tc.tool, Scope: "local", After: []byte("x")}
@@ -541,17 +541,19 @@ func TestHarnessOwnerLoadWrapping(t *testing.T) {
 // remove.go allowlist sites (629, 638, 664). Partial undo: a pi item with an
 // unsettled (checksumless, retained) effect forgets its settled effects and
 // reports an unresolved conflict; a codex item's drift is refused by preflight
-// before settlement; a legacy lane item (claude, opencode) keeps every row and
-// reports no error. Complete undo retires the row for every tool.
+// before settlement (opencode likewise, with its own prefix); a legacy lane
+// item (claude) keeps every row and reports no error. Complete undo retires the
+// row for every tool.
 func TestHarnessRemoveAllowlistSites(t *testing.T) {
 	const drift = "codex ownership drift at $P/.pi/skills/fixture-item/drifted.md; preserve edits, reconcile before mutation (no --force bypass)"
+	const openCodeDrift = "opencode ownership drift at $P/.pi/skills/fixture-item/drifted.md; preserve edits, reconcile before mutation (no --force bypass)"
 	for _, tc := range []struct {
 		tool, secondChecksum, wantErr, wantPaths string
 	}{
 		{"codex", codexChecksum([]byte("recorded\n")), drift, "clean.md,drifted.md"},
 		{"pi", "", "removal conflict unresolved: fixture-item (pi/local); ownership retained; verified committed=[\"DELETE $P/.pi/skills/fixture-item/clean.md\"] skipped=[\"SKIP $P/.pi/skills/fixture-item/drifted.md\"] failed=none; re-preview current bytes before repair", "drifted.md"},
 		{"claude", codexChecksum([]byte("recorded\n")), "", "clean.md,drifted.md"},
-		{"opencode", codexChecksum([]byte("recorded\n")), "", "clean.md,drifted.md"},
+		{"opencode", codexChecksum([]byte("recorded\n")), openCodeDrift, "clean.md,drifted.md"},
 	} {
 		t.Run(tc.tool+"/partial", func(t *testing.T) {
 			home, project := t.TempDir(), fixtureCatalog(t)
@@ -646,11 +648,13 @@ func TestHarnessProfileTargetRule(t *testing.T) {
 	}
 }
 
-// HS-FR-01: the flags-false legacy lanes (claude, opencode) are not admitted:
-// a conflicting unowned destination and an existing unowned section stay
-// ordinary plan rows (CONFLICT / APPEND) with no refusal, as at base.
+// HS-FR-01: the flags-false legacy lane (claude) is not admitted: a
+// conflicting unowned destination and an existing unowned section stay
+// ordinary plan rows (CONFLICT / APPEND) with no refusal, as at base. The
+// opencode rows moved to TestOpenCodeLaneIsAdmitted when its descriptor was
+// filled.
 func TestHarnessLegacyLanesAreNotAdmitted(t *testing.T) {
-	for _, tool := range []string{"claude", "opencode"} {
+	for _, tool := range []string{"claude"} {
 		t.Run(tool+"/conflict", func(t *testing.T) {
 			home, _, _ := harnessOutputFixture(t)
 			dest := filepath.Join(home, ".claude/skills/fixture-any/SKILL.md")

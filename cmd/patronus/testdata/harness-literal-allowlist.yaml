@@ -8,6 +8,11 @@
 # legacy-zero-value (the documented zero-value defaults of the leaf policies).
 # No capability row may name opencode. TestHarnessNoDispatchLiterals pins these
 # bytes by hash; a class change is a review event.
+# OC-T4 (OP-13): internal/{adapter,recipe,toolpath,plan,profile,scan} are parsed
+# for the "opencode" literal only; every OpenCode site there is an adapter-data
+# row (tool rank, flavour and context tables, config-base resolution, the Pi
+# import-scan vocabulary, and the declarative-gate branch OC-T5 narrows). The
+# registry row counts the descriptor Name and ErrorPrefix.
 rows:
   - {file: cmd/patronus/codex_auth.go, decl: codexAuthPrerequisites, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: codex, class: target-capability, tool: codex}
   - {file: cmd/patronus/codex_migrate.go, decl: codexMigrationScope, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/AssignStmt/CallExpr/BasicLit, index: 0, literal: codex, class: target-capability, tool: codex}
@@ -19,6 +24,7 @@ rows:
   - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 2, literal: pi, class: descriptor-construction}
   - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: claude, class: descriptor-construction}
   - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: descriptor-construction}
+  - {file: cmd/patronus/harness_registry.go, decl: defaultRegistry, astPath: FuncDecl/BlockStmt/ReturnStmt/CallExpr/CompositeLit/KeyValueExpr/BasicLit, index: 1, literal: opencode, class: descriptor-construction}
   - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BinaryExpr/BasicLit, index: 0, literal: pi, class: target-capability, tool: pi}
   - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 1, literal: pi, class: target-capability, tool: pi}
   - {file: cmd/patronus/install.go, decl: planInstall, astPath: FuncDecl/BlockStmt/AssignStmt/CallExpr/BinaryExpr/BinaryExpr/BasicLit, index: 2, literal: pi, class: target-capability, tool: pi}
@@ -97,3 +103,13 @@ rows:
   - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: codex, class: adapter-data}
   - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: opencode, class: adapter-data}
   - {file: internal/lock/policy.go, decl: legacyTargetedTools, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/BasicLit, index: 0, literal: pi, class: legacy-zero-value}
+  - {file: internal/adapter/hook.go, decl: Engine.transformHook, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/plan/compute.go, decl: var:toolRank, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/profile/profile.go, decl: var:flavourTools, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/recipe/recipe.go, decl: var:toolContexts, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/scan/opencode_discovery.go, decl: openCodeConfigBase, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/IfStmt/BlockStmt/ReturnStmt/CallExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/scan/pi_discovery.go, decl: piMCPImports, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 1, literal: opencode, class: adapter-data}
+  - {file: internal/scan/pi_discovery.go, decl: piMCPImports, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/RangeStmt/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 2, literal: opencode, class: adapter-data}
+  - {file: internal/scan/pi_discovery.go, decl: piMCPImports, astPath: FuncDecl/BlockStmt/RangeStmt/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/toolpath/resolver.go, decl: Resolver.opencodeBase, astPath: FuncDecl/BlockStmt/IfStmt/BlockStmt/ReturnStmt/CallExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
+  - {file: internal/toolpath/resolver.go, decl: Resolver.redirectGlobal, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: opencode, class: adapter-data}

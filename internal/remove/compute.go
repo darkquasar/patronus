@@ -888,7 +888,11 @@ func composeSections(path string, group []fileIntent, read ReadExisting, occupan
 		f := fi.file
 		expected := p.Prefix(fi.item.Tool) + fi.item.Artifact
 		strict := p.Strict(fi.item.Tool)
-		if !p.Structural(fi.item.Tool) || fi.item.Tool != group[0].item.Tool || fi.item.Scope != group[0].item.Scope || fi.item.Root != group[0].item.Root || f.Action != string(diff.Append) || f.Section != expected || sections[f.Section] {
+		// A non-strict tool that gained its prefix later still owns rows recorded
+		// under the bare artifact name (the pre-prefix legacy spelling); a strict
+		// tool never does.
+		legacySpelling := !strict && f.Section == fi.item.Artifact
+		if !p.Structural(fi.item.Tool) || fi.item.Tool != group[0].item.Tool || fi.item.Scope != group[0].item.Scope || fi.item.Root != group[0].item.Root || f.Action != string(diff.Append) || (f.Section != expected && !legacySpelling) || sections[f.Section] {
 			return refusePiSections(group, "ambiguous section ownership or incompatible actions/scopes", current), nil
 		}
 		sections[f.Section] = true

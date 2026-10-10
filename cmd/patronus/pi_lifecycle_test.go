@@ -408,7 +408,8 @@ func TestPiLifecycleLegacyTargetsAndScopeRefusal(t *testing.T) {
 				return fmt.Sprintf("apiVersion: patronus/v2\nfamily: artifact\nname: fixture-legacy\nversion: %s\nrole: capability\ndescription: Invented legacy\ntype: skill\nentry: SKILL.md\ntargets: [%s]\n", version, tool)
 			}
 			body := func(heading string) string {
-				if tool == "codex" {
+				// Codex and OpenCode discovery enforce name == directory.
+				if tool == "codex" || tool == "opencode" {
 					return "---\nname: fixture-legacy\ndescription: Invented legacy\n---\n# " + heading + "\n"
 				}
 				return "# " + heading + "\n"

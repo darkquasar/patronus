@@ -161,9 +161,10 @@ func TestOutputStyleFlavourAppendsForCodexAndOpencode(t *testing.T) {
 	for _, tc := range []struct {
 		tool      string
 		agentsRel string // AGENTS.md location for a --global install of this tool
+		prefix    string // the adapter's section prefix for the shared context file
 	}{
-		{"codex", filepath.Join(".codex", "AGENTS.md")},
-		{"opencode", filepath.Join(".config", "opencode", "AGENTS.md")},
+		{"codex", filepath.Join(".codex", "AGENTS.md"), ""},
+		{"opencode", filepath.Join(".config", "opencode", "AGENTS.md"), "oc:"},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
 			_, home := serveSmokeFixture(t)
@@ -182,7 +183,7 @@ func TestOutputStyleFlavourAppendsForCodexAndOpencode(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: AGENTS.md not written at %s: %v", tc.tool, agents, err)
 			}
-			if !strings.Contains(string(body), "<!-- patronus:start smoke-style -->") {
+			if !strings.Contains(string(body), "<!-- patronus:start "+tc.prefix+"smoke-style -->") {
 				t.Errorf("%s: AGENTS.md missing fenced output-style section:\n%s", tc.tool, body)
 			}
 			if !strings.Contains(string(body), "Always draw an ASCII diagram.") {

@@ -522,6 +522,12 @@ func asStringMap(v any) (map[string]any, bool) {
 // document can be parsed by encoding/json. String contents are preserved. The
 // merger does not round-trip comments; it only needs correct merged bytes for
 // conflict classification.
+// HasJSONComments reports whether raw carries JSONC comments the structured
+// writer would drop on re-serialization.
+func HasJSONComments(raw []byte) bool {
+	return !bytes.Equal(stripJSONComments(raw), raw)
+}
+
 func stripJSONComments(in []byte) []byte {
 	var out bytes.Buffer
 	inString := false

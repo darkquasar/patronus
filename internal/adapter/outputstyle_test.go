@@ -79,7 +79,7 @@ func TestTransformOutputStyleClaudeProjectPath(t *testing.T) {
 // On Codex and OpenCode the output-style has no native surface, so it APPENDs a
 // fenced section into AGENTS.md — idempotent, prose-preserving.
 func TestTransformOutputStyleAppendsAgentsMd(t *testing.T) {
-	for _, tool := range []string{"codex", "opencode"} {
+	for tool, prefix := range map[string]string{"codex": "", "opencode": "oc:"} {
 		t.Run(tool, func(t *testing.T) {
 			src := writeStyle(t, "Draw ASCII diagrams.")
 			home, proj := t.TempDir(), t.TempDir()
@@ -116,13 +116,13 @@ func TestTransformOutputStyleAppendsAgentsMd(t *testing.T) {
 				t.Errorf("action = %s, want APPEND", d.Action)
 			}
 			s := string(d.After)
-			if !strings.Contains(s, "<!-- patronus:start fixture-style -->") {
+			if !strings.Contains(s, "<!-- patronus:start "+prefix+"fixture-style -->") {
 				t.Errorf("missing fenced section:\n%s", s)
 			}
 			if !strings.Contains(s, "# My rules") || !strings.Contains(s, "keep it tidy") {
 				t.Errorf("user prose not preserved:\n%s", s)
 			}
-			if d.Section == nil || d.Section.Name != "fixture-style" {
+			if d.Section == nil || d.Section.Name != prefix+"fixture-style" {
 				t.Errorf("section edit not recorded: %+v", d.Section)
 			}
 

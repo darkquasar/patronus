@@ -17,7 +17,9 @@ import (
 )
 
 // HS-R5: no admission or target-dispatch literal remains in cmd/patronus or in
-// internal/{state,remove,lock}. Every remaining target literal is enumerated
+// internal/{state,remove,lock}; internal/{adapter,recipe,toolpath,plan,profile,
+// scan} carry no unreviewed "opencode" literal (OC-T4). Every remaining target
+// literal is enumerated
 // in the reviewed allowlist fixture with a stable site identity and a class:
 // target-capability (tool pi|codex), descriptor-construction, adapter-data or
 // legacy-zero-value. The test fails on an unlisted site, a stale row, a
@@ -27,7 +29,7 @@ const harnessLiteralFixture = "testdata/harness-literal-allowlist.yaml"
 
 // harnessLiteralFixtureSHA256 pins the reviewed fixture bytes: a class change
 // is a review event, not a silent edit.
-const harnessLiteralFixtureSHA256 = "93ba3ddede3b51f98333592b89e62442d6eaeaf39724f17afeeb0e66d7f438d4"
+const harnessLiteralFixtureSHA256 = "98dfc5b35cfc2a0c11ff717643e992006f440e84e0bb0e0b04a04feab94e7529"
 
 type literalSite struct {
 	File    string `yaml:"file"`
@@ -116,11 +118,31 @@ func harnessLiteralDirs(t *testing.T) []string {
 	return []string{filepath.Join(root, "cmd/patronus"), filepath.Join(root, "internal/state"), filepath.Join(root, "internal/remove"), filepath.Join(root, "internal/lock")}
 }
 
+// harnessOpenCodeLiteralDirs is the OC-T4 extension of the parse set (OP-13):
+// these packages are scanned for the "opencode" literal only, so every
+// OpenCode site is a reviewed adapter-data row; their Pi and Codex literals
+// remain the HS-O3 follow-up.
+func harnessOpenCodeLiteralDirs(t *testing.T) []string {
+	t.Helper()
+	root := applicationSourceRoot(t)
+	var dirs []string
+	for _, pkg := range []string{"adapter", "recipe", "toolpath", "plan", "profile", "scan"} {
+		dirs = append(dirs, filepath.Join(root, "internal", pkg))
+	}
+	return dirs
+}
+
 func observedLiteralSites(t *testing.T) []literalSite {
+	t.Helper()
+	sites := parseLiteralDirs(t, harnessLiteralDirs(t), func(literalSite) bool { return true })
+	return append(sites, parseLiteralDirs(t, harnessOpenCodeLiteralDirs(t), func(s literalSite) bool { return s.Literal == "opencode" })...)
+}
+
+func parseLiteralDirs(t *testing.T, dirs []string, keep func(literalSite) bool) []literalSite {
 	t.Helper()
 	root := applicationSourceRoot(t)
 	var sites []literalSite
-	for _, dir := range harnessLiteralDirs(t) {
+	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			t.Fatal(err)
@@ -135,7 +157,11 @@ func observedLiteralSites(t *testing.T) []literalSite {
 				t.Fatal(err)
 			}
 			rel, _ := filepath.Rel(root, path)
-			sites = append(sites, literalSites(filepath.ToSlash(rel), f)...)
+			for _, s := range literalSites(filepath.ToSlash(rel), f) {
+				if keep(s) {
+					sites = append(sites, s)
+				}
+			}
 		}
 	}
 	return sites
