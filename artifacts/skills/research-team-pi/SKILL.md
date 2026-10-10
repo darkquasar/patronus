@@ -30,7 +30,11 @@ Coordinator reads EVERY findings artifact and confirms complete evidence/decompo
 
 ## Installed execution
 
-Use workflow-research-pi for authorized local/web research, specification/plan synthesis and independent review with at most one reconciliation. Research-only tasks retain their narrower grant; no implicit planning or coding authority. The historical references/workflow-example.js and its fixture remain host-only examples, not a sandbox runtime or an alternate ledger. Never adapt that Node/FS example into a task-local substitute for the installed workflow.js. Native mission state/receipts/status are the sole task authority.
+Use workflow-research-pi for authorized local/web research, specification/plan synthesis and independent review with at most one reconciliation. Verify the installed workflow is version 1.1.0 and supports the opt-in schema before emitting a new selector; snapshot presence alone is not compatibility evidence. Until that verification succeeds, emit only the legacy request with `mode`, `snapshotUse`, and `liveChecks` omitted.
+
+For a research-only grant, send `mode:"research-only"`, only requested local/web tasks, only their roles, native runner evidence, action `research`, `reconcile:false`, and one reserved spawn per task. Bind the parent-reread capability snapshot and current live authority, resource, output-claim, selected-capability, and settlement observations in `preflight.snapshotUse` and `preflight.liveChecks`. Local-only work carries no placeholder web task, role, tools, provider qualification, or web budget. Selected web work retains its separately authorized tool/provider/query/page limits and never falls back to local research. Consume the returned lifecycle records and read every settled findings output before any separately authorized synthesis. `awaiting-parent-synthesis` is pending parent work, not achieved specification, plan, review, acceptance, or next-stage authority.
+
+Research-only tasks retain their narrower grant; no implicit planning or coding authority. The historical references/workflow-example.js and its fixture remain host-only examples, not a sandbox runtime or an alternate ledger. Never adapt that Node/FS example into a task-local substitute for the installed workflow.js. Native mission state/receipts/status are the sole task authority.
 
 ## Review disposition and authority
 

@@ -30,7 +30,8 @@ function harness(change = () => {}) {
     if (!p.agent.startsWith('patronus-')) for (const unsupported of ['context','model','tools','skill','acceptance','outputSchema','agentContract','toolBudget']) assert.equal(p[unsupported],undefined,unsupported);
     const runId='fixture-'+key, asyncDir='/fixture/runtime/'+runId;
     const output='Output saved to: '+p.output+' (16 B, 1 line). Read this file if needed.';
-    const r = {key,agent:p.agent,ok:true,runId,asyncDir,continuation:{runIds:[runId]},output,outputReference:p.output,artifactPaths:[asyncDir],structuredOutput:{verdict:'clear',summary:'invented evidence'},results:[{index:0,agent:p.agent,exitCode:0,finalOutput:output}]};
+    const observation=p.outputSchema?.oneOf?.some(v=>v.properties?.outcome);const structuredOutput=observation?{outcome:'completed',checksAttempted:['fixture'],subjectIdentity:'invented-subject',results:['pass'],limitations:[],confidence:'high'}:{verdict:'clear',summary:'invented evidence'};
+    const r = {key,agent:p.agent,ok:true,runId,asyncDir,continuation:{runIds:[runId]},output,outputReference:p.output,artifactPaths:[asyncDir],structuredOutput,results:[{index:0,agent:p.agent,exitCode:0,finalOutput:output}]};
     if (!p.agent.startsWith('patronus-')) {
       delete r.outputReference;
       r.externalAdapter={adapter:{id:p.agent,version:1,executionMode:'one-shot-stdin'},handoff:{mode:'fresh'},capabilities:{stop:true,resume:false,structuredOutput:false},outputArtifacts:{stdoutPath:asyncDir+'/external-0.stdout.log',stderrPath:asyncDir+'/external-0.stderr.log'}};
@@ -44,9 +45,36 @@ async function rejected(mutate) {
   const args=fresh();mutate(args);const h=harness();
   await assert.rejects(execute(args,h.runs));assert.equal(h.calls.length,0,'invalid request spawned children');
 }
+function parentDeliveryAdmits(record,current) {
+  const exact=['schemaVersion','subjectKey','baseIdentity','authorizedPaths','targets','statusBeforeSha256','statusAfterSha256','changedPaths','unauthorizedChanges','reportSha256','captureSha256','reportTargetDivergence','verifiedAt','verifier','result','failureReason'];
+  if(!record||Object.keys(record).sort().join()!==exact.sort().join()||record.schemaVersion!==1||record.result!=='pass'||record.failureReason!==null||record.reportTargetDivergence||record.unauthorizedChanges.length)return false;
+  if(record.changedPaths.some(p=>!record.authorizedPaths.includes(p))||record.targets.some(t=>!current[t.path]||current[t.path]!==t.observedPostSha256||t.changeRequired&&t.preSha256===t.observedPostSha256||t.syntaxCheck.status!=='passed'||t.semanticCheck.status!=='passed'))return false;
+  return true;
+}
+function parentValidationAdmits(record,currentSubjectSha256,currentEnvironmentSha256) {
+  return record?.schemaVersion===1&&record.kind==='parent-validation'&&record.result==='pass'&&record.failureReason===null&&record.subject.sha256===currentSubjectSha256&&record.environmentIdentitySha256===currentEnvironmentSha256&&record.checks.every(c=>c.result==='pass'&&(c.kind!=='command'||c.exit===0)&&(!c.stdout||c.stdout.readable)&&(!c.stderr||c.stderr.readable));
+}
+function optIn(operation='validate',level='parent-direct') {
+  const a=fresh();
+  a.preflight.snapshotUse={schemaVersion:1,snapshotId:'1'.repeat(32),path:'/fixture/capability-snapshot-v1.json',sha256:'2'.repeat(64),environmentIdentitySha256:'3'.repeat(64),observedAt:'2026-10-08T00:00:00Z'};
+  a.preflight.liveChecks={checkedAt:'2026-10-08T00:01:00Z',authorityEvidenceSha256:'4'.repeat(64),resourceEvidenceSha256:'5'.repeat(64),outputClaimEvidenceSha256:'6'.repeat(64),settlementEvidenceSha256:'7'.repeat(64),selectedCapabilities:[{kind:'runtime',key:'pi',evidenceSha256:'8'.repeat(64)},{kind:'runtime',key:'pi-subagents',evidenceSha256:'8'.repeat(64)},{kind:'runner',key:'native',evidenceSha256:'8'.repeat(64)}]};
+  delete a.baseRef;delete a.integrationCwd;delete a.validationCommands;
+  a.tasks=[];a.roles={};a.authorization.actions=['validate'];a.authorization.files=[];a.runners={native:a.runners.native};a.spawnLimit=1;
+  const evidenceRef=(kind='target-delivery')=>({path:'/fixture/evidence/'+kind+'.json',sha256:'9'.repeat(64),subjectSha256:'a'.repeat(64),kind});
+  const predecessor={key:'integrated',runId:'fixture-integration',agent:'patronus-writer-pi',report:evidenceRef('report'),handoff:evidenceRef('handoff'),delivery:evidenceRef()};
+  a.execution={operation, integrationCwd:'/fixture/integration', predecessors:[predecessor], validation:{level,risk:{changedBehavior:'workflow admission',falsePassConsequence:'dependent work may start',determinism:'fixture exact',novelty:'new route',blastRadius:'workflow callers',costJustification:'existing seam'},question:'Does the exact subject pass?',acceptancePoint:'all checks pass',subjectContext:'invented exact subject',checks:[{key:'fixture',argv:['node','--test','fixture'],kind:'command'}]}};
+  return a;
+}
 test('actual shipped body has portable sandbox syntax and explicit bindings', () => {
   assert.doesNotMatch(script,/\b(?:require|import|process|Buffer)\b|runs\.host|async\s+(?:function|\()/);
   assert.ok(JSON.parse(schemaText).required.includes('authorization'));
+});
+test('implementation schema and body agree on operation and validation matrices',{skip:!packageDir},async()=>{
+  const {default:Ajv2020}=await import(pathToFileURL(join(packageDir,'..','ajv','dist','2020.js')));const validate=new Ajv2020({strict:false}).compile(JSON.parse(schemaText));
+  const parent=optIn();assert.equal(validate(parent),true,JSON.stringify(validate.errors));
+  const bounded=optIn('validate','bounded-child');bounded.roles={validator:fixture.roles.validator};bounded.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'validator',evidenceSha256:'8'.repeat(64)});assert.equal(validate(bounded),true,JSON.stringify(validate.errors));
+  const deep=structuredClone(bounded);deep.execution.validation.level='deep';deep.execution.validation.priorShortfall={path:'/fixture/shortfall.json',sha256:'b'.repeat(64),subjectSha256:'a'.repeat(64),kind:'shortfall'};deep.execution.validation.approvalEvidence='approved';assert.equal(validate(deep),true,JSON.stringify(validate.errors));
+  for(const mutate of [a=>{a.execution.baseRef='refs/tags/v2.6.0'},a=>{a.execution.validation.level='deep'},a=>{a.execution.predecessors=[]}]){const bad=optIn();mutate(bad);assert.equal(validate(bad),false);}
 });
 test('all stages execute with stable keys, durable evidence and parameter variation',async()=>{
   for (const suffix of ['one','two']) {
@@ -91,6 +119,53 @@ function tenWriterRequest(count = 10) {
   return a;
 }
 if(kind==='implement') {
+  test('parent delivery and direct-validation evidence block every required negative case before successor launch',()=>{
+    const target={path:'src/a.js',preSha256:'1'.repeat(64),observedPostSha256:'2'.repeat(64),expectedPostSha256:null,changeRequired:true,postcondition:'changed behavior',syntaxCheck:{status:'passed'},semanticCheck:{status:'passed'}};
+    const base={schemaVersion:1,subjectKey:'writer',baseIdentity:'base',authorizedPaths:['src/a.js'],targets:[target],statusBeforeSha256:'3'.repeat(64),statusAfterSha256:'4'.repeat(64),changedPaths:['src/a.js'],unauthorizedChanges:[],reportSha256:'5'.repeat(64),captureSha256:'6'.repeat(64),reportTargetDivergence:false,verifiedAt:'2026-10-08T00:00:00Z',verifier:{kind:'parent'},result:'pass',failureReason:null};
+    assert.equal(parentDeliveryAdmits(base,{'src/a.js':'2'.repeat(64)}),true);
+    const negatives=[
+      {...base,targets:[{...target,observedPostSha256:target.preSha256}]},
+      {...base,changedPaths:['src/wrong.js']},
+      {...base,reportTargetDivergence:true},
+      base,
+      {...base,unauthorizedChanges:['src/sibling-added.js']},
+      {...base,unauthorizedChanges:['src/sibling-modified.js']},
+      {...base,unauthorizedChanges:['src/sibling-deleted.js']}
+    ];
+    const current=[{'src/a.js':'1'.repeat(64)},{'src/a.js':'2'.repeat(64)},{'src/a.js':'2'.repeat(64)},{'src/a.js':'7'.repeat(64)},{'src/a.js':'2'.repeat(64)},{'src/a.js':'2'.repeat(64)},{'src/a.js':'2'.repeat(64)}];
+    let successors=0;for(let i=0;i<negatives.length;i++)if(parentDeliveryAdmits(negatives[i],current[i]))successors++;assert.equal(successors,0);
+    const validation={schemaVersion:1,kind:'parent-validation',subject:{sha256:'8'.repeat(64)},environmentIdentitySha256:'9'.repeat(64),checks:[{kind:'command',exit:0,result:'pass',stdout:{readable:true},stderr:{readable:true}}],result:'pass',failureReason:null};
+    assert.equal(parentValidationAdmits(validation,'8'.repeat(64),'9'.repeat(64)),true);
+    for(const bad of [{...validation,checks:[{...validation.checks[0],exit:1}]},{...validation,checks:[{...validation.checks[0],stdout:{readable:false}}]},validation,validation]) assert.equal(parentValidationAdmits(bad,bad===validation?'0'.repeat(64):'8'.repeat(64),bad===validation?'0'.repeat(64):'9'.repeat(64)),false);
+  });
+  test('parent-direct opt-in stops pending at the delivery barrier with zero validator launches',async()=>{
+    const a=optIn();const h=harness();const result=await execute(a,h.runs);
+    assert.equal(result.verdict,'awaiting-parent-validation');
+    assert.equal(result.phase,'parent-direct');
+    assert.equal(h.calls.length,0);
+    assert.deepEqual(result.lifecycle.started,[]);
+    assert.ok(result.lifecycle.pendingParent.some(x=>x.kind==='validation'));
+    assert.deepEqual(result.preflight.snapshotUse,a.preflight.snapshotUse);
+    assert.deepEqual(result.preflight.liveChecks,a.preflight.liveChecks);
+  });
+  test('opt-in operations are phase-separated and child validation receives only the bounded brief',async()=>{
+    const write=optIn();write.execution={operation:'write',baseRef:'refs/tags/v2.6.0',predecessors:[]};write.tasks=[{key:'one',text:'Implement one behavior',engine:'native',files:['src/a.txt']}];write.roles={writer:fixture.roles.writer};write.authorization.actions=['implement','managed-cleanup'];write.authorization.files=['src/a.txt'];
+    write.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'writer',evidenceSha256:'8'.repeat(64)});
+    const wh=harness();const wr=await execute(write,wh.runs);assert.equal(wr.verdict,'awaiting-parent-target-delivery');assert.deepEqual(wh.calls.map(c=>c.key),['writer-one']);assert.equal(wr.lifecycle.pendingParent[0].kind,'target-delivery');
+    const integrate=optIn();integrate.execution.operation='integrate';integrate.execution.baseRef='refs/tags/v2.6.0';delete integrate.execution.validation;integrate.roles={integrator:fixture.roles.integrator};integrate.authorization.actions=['integrate'];integrate.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'integrator',evidenceSha256:'8'.repeat(64)});
+    const ih=harness();const ir=await execute(integrate,ih.runs);assert.equal(ir.verdict,'awaiting-parent-target-delivery');assert.deepEqual(ih.calls.map(c=>c.key),['integration']);
+    for(const level of ['bounded-child','deep']) {
+      const a=optIn('validate',level);a.roles={validator:fixture.roles.validator};a.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'validator',evidenceSha256:'8'.repeat(64)});if(level==='deep'){a.execution.validation.priorShortfall={path:'/fixture/shortfall.json',sha256:'b'.repeat(64),subjectSha256:'a'.repeat(64),kind:'shortfall'};a.execution.validation.approvalEvidence='owner approved exact deep question';}
+      const h=harness();const r=await execute(a,h.runs);assert.equal(r.verdict,'ready-for-parent');assert.deepEqual(h.calls.map(c=>c.key),['validation']);assert.match(h.calls[0].task,/Execute only this bounded validation brief/);assert.equal(h.calls[0].outputMode,'inline');assert.ok(h.calls[0].outputSchema?.oneOf?.some(v=>v.properties?.outcome));assert.doesNotMatch(h.calls[0].task,/authorization|authority|inline evidence|runners/i);assert.equal(r.lifecycle.achieved[0].kind,'validation');
+    }
+  });
+  test('opt-in matrices, delivery references and shortfalls fail closed before successors',async()=>{
+    for(const mutate of [a=>{a.baseRef='refs/tags/v2.6.0'},a=>{delete a.preflight.snapshotUse},a=>{a.preflight.liveChecks.selectedCapabilities=a.preflight.liveChecks.selectedCapabilities.filter(c=>c.key!=='pi-subagents')},a=>{a.execution.predecessors[0].delivery.kind='report'},a=>{a.execution.validation.level='deep'},a=>{a.execution.validation.approvalEvidence='approval only'},a=>{a.roles={validator:fixture.roles.validator}},a=>{a.execution.validation.checks.at(-1).surprise=true}]) {
+      const a=optIn();mutate(a);const h=harness();await assert.rejects(execute(a,h.runs));assert.equal(h.calls.length,0);
+    }
+    const a=optIn('validate','bounded-child');a.roles={validator:fixture.roles.validator};a.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'validator',evidenceSha256:'8'.repeat(64)});const h=harness(r=>{if(r.key==='validation')r.structuredOutput={outcome:'shortfall',observations:['invented'],evidenceAttempted:['fixture'],unresolvedQuestions:['identity'],newRequirements:['compatibility evidence'],confidence:'low',consequences:'false pass risk'};});const result=await execute(a,h.runs);assert.equal(result.verdict,'awaiting-parent-shortfall');assert.equal(result.lifecycle.settled[0].outcome,'shortfall');assert.deepEqual(result.lifecycle.settled[0].observations,['invented']);assert.equal(result.lifecycle.achieved.length,0);assert.equal(h.calls.length,1);
+    const failedArgs=optIn('validate','bounded-child');failedArgs.roles={validator:fixture.roles.validator};failedArgs.preflight.liveChecks.selectedCapabilities.push({kind:'role',key:'validator',evidenceSha256:'8'.repeat(64)});const failedHarness=harness(r=>{if(r.key==='validation'){r.ok=false;r.error='invented failure';}});const failed=await execute(failedArgs,failedHarness.runs);assert.equal(failed.lifecycle.settled[0].outcome,'failed');assert.equal(failed.lifecycle.settled[0].failureKind,'runtime-error');assert.equal(failed.lifecycle.settled[0].outputState,'saved');assert.ok(failed.lifecycle.settled[0].terminalEvidence);
+  });
   function mixedNativeRequest() {
     const a=fresh();
     a.tasks=a.tasks.slice(0,2).map((t,i)=>({...t,engine:'native',model:['anthropic/claude-opus-4-8','openai-codex/gpt-6.1-sol:low'][i]}));

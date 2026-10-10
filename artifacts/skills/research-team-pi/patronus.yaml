@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: research-team-pi
 description: "Coordinate bounded native research and hash-bound stage transitions"
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: ["DELIVERABLE-TEMPLATES.md", "LESSONS-FORMAT.md", "RESEARCHER-TEMPLATE.md", "SOURCE.md", "fixtures/workflow-example.test.mjs", "references/stage-gate.schema.json", "references/workflow-example.js"]
 targets: [pi]

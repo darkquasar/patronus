@@ -100,6 +100,12 @@ Cite the actual plan sections that triggered each risk, selected mode, authority
 
 Before launch read using-git-worktrees-pi. Bind exclusive report paths; record run/session/mission/attempt lineage, source/output hashes, owners, open asks and budgets. Every promise must settle before transition or cleanup; await dependent runs.run and ordered runs.all results. Child async receipts are not completion. A missing tool/output or infrastructure failure preserves evidence and stops the lane for same-protocol recovery, never inline/model/provider fallback.
 
+## Declared-target delivery barrier
+
+After any mutation-producing task, do not admit review, validation, integration, publication, or another dependent stage from a receipt, report, verdict, structured claim, or `outputReference`. The coordinator must independently read and hash every exact declared target from its authorized location, bind each target to its pre-run identity and required post-run change or deterministic postcondition, verify syntax and task semantics against actual bytes, and compare the complete authorized path set and source status before/after for unauthorized additions, modifications, or deletions. Compare the child report with actual target bytes and record divergence.
+
+A missing target, unchanged target when change was required, malformed target, wrong-target write, report-target divergence, preidentity drift, or unauthorized sibling mutation produces blocking delivery evidence and zero dependent launches. Preserve the report, actual hashes, path-set observations, and unknown ownership state. This is a parent gate at the existing workflow seam, not permission to build a generic delivery framework or silently repair the child result.
+
 Helpers [task-brief](scripts/task-brief), [review-package](scripts/review-package) and [sdd-workspace](scripts/sdd-workspace) perform only local extraction/Git reads/file writes when separately permitted. They are not authority gates. Defaults share a plan workspace: coordinator serializes use or passes explicit attempt-qualified OUTFILE paths. Copy/hash authoritative brief/native-state/reports into the approved durable location before temporary cleanup. A nonempty helper output is not acceptance. The numbered [fixtures](fixtures/README.md) and RESULTS are dated source provenance, not new Pi behavior or runtime proof.
 
 ## Review disposition and authority

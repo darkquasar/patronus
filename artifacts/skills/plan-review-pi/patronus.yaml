@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: plan-review-pi
 description: "Review exact plan coverage, ordering and interfaces before execution"
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["SOURCE.md", "plan-reviewer.md"]
 targets: [pi]

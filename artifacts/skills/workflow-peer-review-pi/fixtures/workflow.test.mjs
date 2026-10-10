@@ -11,6 +11,19 @@ const schemaText = await readFile(join(dir,'../request.schema.json'),'utf8');
 const fixture = JSON.parse(await readFile(join(dir,'request.json'),'utf8'));
 const kind = fixture.reconcile !== undefined ? 'research' : fixture.baseRef ? 'implement' : 'peer-review';
 const fresh = () => structuredClone(fixture);
+const hex = c => c.repeat(64);
+function selectedReview({engines=['native'], disposition='parent'} = {}) {
+  const a=fresh();
+  delete a.allowReduced;
+  a.preflight.snapshotUse={schemaVersion:1,snapshotId:'1'.repeat(32),path:'/fixture/state/capability-snapshot-v1.json',sha256:hex('2'),environmentIdentitySha256:hex('3'),observedAt:'2026-10-03T08:00:00Z'};
+  a.preflight.liveChecks={checkedAt:'2026-10-03T08:01:00Z',authorityEvidenceSha256:hex('4'),resourceEvidenceSha256:hex('5'),outputClaimEvidenceSha256:hex('6'),settlementEvidenceSha256:null,selectedCapabilities:[{kind:'runtime',key:'pi',evidenceSha256:hex('7')},{kind:'runtime',key:'pi-subagents',evidenceSha256:hex('8')},{kind:'runner',key:'native',evidenceSha256:hex('9')},{kind:'role',key:'peer',evidenceSha256:hex('a')},...engines.filter(engine=>engine!=='native').map((engine,i)=>({kind:'runner',key:engine,evidenceSha256:String(i+1).repeat(64)})),...(disposition==='native'?[{kind:'role',key:'disposition',evidenceSha256:hex('b')}]:[])]};
+  a.reviewSelection={riskRationale:'Invented bounded review risk',reviewers:engines.map((engine,i)=>({key:'review-'+(i+1),engine,purpose:'Review the invented subject',independence:'Fresh from the invented author',policy:{mode:'read-only'}})),disposition};
+  a.roles=disposition==='native'?{peer:fixture.roles.peer,disposition:fixture.roles.disposition}:{peer:fixture.roles.peer};
+  a.runners=Object.fromEntries(engines.map(engine=>[engine,structuredClone(fixture.runners[engine])]));
+  if(!a.runners.native)a.runners.native=structuredClone(fixture.runners.native);
+  a.spawnLimit=engines.length+(disposition==='native'?1:0);
+  return a;
+}
 const packageDir=process.env.PI_SUBAGENTS_PACKAGE;
 const upstreamArgs=packageDir ? await import(pathToFileURL(join(packageDir,'src/workflows/workflow-resources.js'))) : null;
 function normalized(args) {
@@ -140,6 +153,50 @@ if(kind==='implement') {
   });
 }
 if(kind==='peer-review') {
+  test('closed read-only selection launches only named reviewers and achieves review after settlement',async()=>{
+    const args=selectedReview({engines:['native','codex-exec'],disposition:'parent'});
+    const h=harness();const result=await execute(args,h.runs);
+    assert.deepEqual(h.calls.map(c=>c.key),['review-1','review-2']);
+    assert.deepEqual(h.calls.map(c=>c.agent),[args.roles.peer,'codex-exec']);
+    assert.deepEqual(Object.keys(h.calls[1]).sort(),['agent','cwd','key','label','output','outputMode','task','timeoutMs'].sort());
+    assert.equal(result.verdict,'awaiting-parent-disposition');
+    assert.deepEqual(result.preflight.snapshotUse,args.preflight.snapshotUse);
+    assert.deepEqual(result.preflight.liveChecks,args.preflight.liveChecks);
+    assert.deepEqual(result.lifecycle.achieved.map(x=>x.status),['reviewed','reviewed']);
+  });
+  test('achieved status, malformed policy, and mixed request shapes reject with zero dispatch',async()=>{
+    const mutations=[
+      a=>{a.reviewSelection.acceptance='reviewed'},a=>{a.reviewSelection.reviewed=true},a=>{a.reviewSelection.verdict='clear'},a=>{a.reviewSelection.settled=true},a=>{a.reviewSelection.completed=true},
+      a=>{a.reviewSelection.reviewers[0].accepted=true},a=>{a.reviewSelection.reviewers[0].policy.passed=true},a=>{a.reviewSelection.reviewers.at(-1).unknown='late'},
+      a=>{a.reviewSelection.reviewers.at(-1).engine='surprise'},a=>{a.reviewSelection.reviewers.at(-1).key=a.reviewSelection.reviewers[0].key},
+      a=>{delete a.preflight.snapshotUse},a=>{delete a.preflight.liveChecks},a=>{a.allowReduced=false}
+    ];
+    for(const mutate of mutations) {const a=selectedReview({engines:['native','codex-exec']});mutate(a);const h=harness();await assert.rejects(execute(a,h.runs));assert.equal(h.calls.length,0);}
+    await rejected(a=>{a.preflight.snapshotUse={schemaVersion:1}});
+  });
+  test('snapshot/live capability bindings and selected unavailable peers fail closed without substitution',async()=>{
+    for(const mutate of [
+      a=>{a.preflight.snapshotUse.sha256='f'.repeat(63)},
+      a=>{a.preflight.liveChecks.checkedAt='2026-10-03T08:01:00+01:00'},
+      a=>{a.preflight.liveChecks.selectedCapabilities=[]},
+      a=>{a.preflight.liveChecks.selectedCapabilities[1].key='claude-code'},
+      a=>{a.runners['codex-exec'].status='unavailable';a.runners['codex-exec'].reason='invented unavailable';a.runners['codex-exec'].executable='UNAVAILABLE';a.runners['codex-exec'].version='UNAVAILABLE';a.runners['codex-exec'].contractVerified=false;a.runners['codex-exec'].authEvidence='UNAVAILABLE'}
+    ]) {const a=selectedReview({engines:['native','codex-exec']});mutate(a);const h=harness();await assert.rejects(execute(a,h.runs));assert.equal(h.calls.length,0);}
+  });
+  test('parent and native disposition preserve lifecycle and achieved status follows settlement',async()=>{
+    const parent=selectedReview({engines:['native','claude-code'],disposition:'parent'});parent.reviewSelection.validationEvidence={path:'/fixture/evidence/parent-validation.json',sha256:hex('a'),subjectSha256:hex('b'),kind:'parent-validation'};
+    const p=harness();const pending=await execute(parent,p.runs);assert.equal(pending.verdict,'awaiting-parent-disposition');assert.equal(p.calls.length,2);assert.equal(pending.reviewSelection.validationEvidence.path,parent.reviewSelection.validationEvidence.path);assert.equal(pending.lifecycle.pendingParent[0].status,'pending');
+    const nativeArgs=selectedReview({engines:['native','claude-code'],disposition:'native'});const n=harness();const ready=await execute(nativeArgs,n.runs);assert.equal(ready.verdict,'ready-for-parent');assert.equal(n.calls.at(-1).key,'disposition');assert.equal(ready.lifecycle.achieved.at(-1).status,'disposed');
+    const failedDispositionHarness=harness(r=>{if(r.key==='disposition')r.ok=false});const failedDisposition=await execute(nativeArgs,failedDispositionHarness.runs);assert.equal(failedDisposition.verdict,'blocked');assert.equal(failedDisposition.lifecycle.settled.at(-1).outcome,'failed');assert.equal(failedDisposition.lifecycle.settled.at(-1).kind,'disposition');
+    const reduced=selectedReview({engines:['native']});reduced.reviewSelection.reducedReviewEvidence='Invented explicit reduced-review decision';const reducedResult=await execute(reduced,harness().runs);assert.equal(reducedResult.reduced,true);
+    const partialHarness=harness(r=>{if(r.key==='review-2')r.ok=false});const partial=await execute(selectedReview({engines:['native','codex-exec']}),partialHarness.runs);assert.equal(partial.verdict,'blocked');assert.equal(partialHarness.calls.length,2);assert.equal(partial.lifecycle.achieved.length,0);assert.deepEqual(partial.lifecycle.settled.map(x=>x.outcome),['completed','failed']);
+    for(const [fault,expected] of [['timeout','timeout'],['save','save-failure'],['partial','partial']]) {const h=harness(r=>{if(r.key!=='review-2')return;if(fault==='timeout')r.terminalOutcome={state:'partial',reason:'timeout'};if(fault==='save')r.results[0].outputSaveError='invented save failure';if(fault==='partial')r.state='partial'});const blocked=await execute(selectedReview({engines:['native','claude-code']}),h.runs);assert.equal(blocked.verdict,'blocked');assert.equal(blocked.lifecycle.settled[1].failureKind,expected);assert.ok(blocked.lifecycle.settled[1].terminalEvidence.evidenceRefs.length===1);}
+  });
+  test('opt-in request normalizes at the installed seam and schema advertises closed policy bindings',{skip:!packageDir},async()=>{
+    const args=selectedReview({engines:['native','claude-code','codex-exec'],disposition:'native'});assert.ok(normalized(args));
+    const schema=JSON.parse(schemaText);assert.ok(schema.properties.reviewSelection);assert.equal(schema.properties.reviewSelection.additionalProperties,false);assert.ok(schema.properties.preflight.properties.snapshotUse);assert.ok(schema.properties.preflight.properties.liveChecks);
+    const forcedAgainstLegacy={...args};delete forcedAgainstLegacy.reviewSelection;const h=harness();await assert.rejects(execute(forcedAgainstLegacy,h.runs));assert.equal(h.calls.length,0);
+  });
   test('omissions and expressly reduced review, no replacement of failed selected peer',async()=>{
     const a=fresh();a.runners['codex-exec'].status='unavailable';a.runners['codex-exec'].reason='missing executable';
     const r=await execute(a,harness().runs);assert.deepEqual(r.requested,['native','claude-code','codex-exec']);assert.deepEqual(r.selected,['native','claude-code']);assert.equal(r.omitted[0].reason,'missing executable');assert.equal(r.reduced,false);

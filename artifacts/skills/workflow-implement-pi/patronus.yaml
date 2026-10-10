@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: workflow-implement-pi
 description: "Runnable bounded implement workflow using upstream execution authority"
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: ["workflow.js", "request.schema.json", "fixtures/workflow.test.mjs", "fixtures/request.json"]
 targets: [pi]
