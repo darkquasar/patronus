@@ -23,8 +23,7 @@ layout:
     # The loader reads agent/ and agents/; write the documented plural form.
     global: "~/.config/opencode/agents/{name}.md"
     project: ".opencode/agents/{name}.md"
-    frontmatter: [description, mode, model, temperature, top_p, tools, permission, hidden, color, steps, prompt]
-    bodyIs: prompt
+    frontmatter: [description, mode, model, temperature, top_p, tools, permission, hidden, color, steps]
 
   command:
     # The loader reads command/ and commands/; write the documented plural form.

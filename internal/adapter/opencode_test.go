@@ -151,7 +151,7 @@ func TestAgentAllowListDropsUnknownKeysWithWarning(t *testing.T) {
 		t.Fatalf("diffs = %+v", diffs)
 	}
 	s := string(diffs[0].After)
-	for _, want := range []string{"description: OpenCode only. Demo role", "mode: subagent", "model: toy/model", "permission:", "edit: deny", "git status*", "prompt: You are the demo role."} {
+	for _, want := range []string{"description: OpenCode only. Demo role", "mode: subagent", "model: toy/model", "permission:", "edit: deny", "git status*", "---\n\nYou are the demo role.\n"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("emitted frontmatter missing %q:\n%s", want, s)
 		}
@@ -238,6 +238,9 @@ func TestOpenCodeRootContract(t *testing.T) {
 				}
 			}
 		})
+	}
+	if ad.Layout.Agent.BodyIs != "" || strings.Join(ad.Layout.Agent.Frontmatter.Allow, ",") != "description,mode,model,temperature,top_p,tools,permission,hidden,color,steps" {
+		t.Fatalf("agent prompt must remain in Markdown body: bodyIs %q frontmatter %v", ad.Layout.Agent.BodyIs, ad.Layout.Agent.Frontmatter.Allow)
 	}
 	if ad.Layout.Mcp.Ownership != manifest.OwnershipLeaf || ad.Layout.Instruction.SectionPrefix != "oc:" {
 		t.Fatalf("ownership = %q, sectionPrefix = %q", ad.Layout.Mcp.Ownership, ad.Layout.Instruction.SectionPrefix)

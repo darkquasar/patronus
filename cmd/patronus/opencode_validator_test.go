@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -52,19 +53,22 @@ func admitOpenCode(t *testing.T, cs *diff.ChangeSet, res toolpath.Resolver, home
 	return err, warned
 }
 
-// TestOpenCodeDescriptorBindsProfileThroughRegistry: core-profile-oc binds to
-// the opencode target through the one registry rule with the historical
-// text; no OpenCode-only binding function exists; the descriptor is a valid
-// registry member with roots and a validator.
-func TestOpenCodeDescriptorBindsProfileThroughRegistry(t *testing.T) {
+// TestRegisteredDescriptorsBindProfilesThroughRegistry checks each descriptor's
+// declared profiles without coupling application tests to catalog identities.
+// OpenCode has no separate binding function, and its descriptor is filled.
+func TestRegisteredDescriptorsBindProfilesThroughRegistry(t *testing.T) {
 	reg := testRegistry(t)
-	if err := reg.ProfileTarget("core-profile-oc", []string{"opencode"}, "opencode"); err != nil {
-		t.Fatalf("opencode refused: %v", err)
-	}
-	for _, target := range []string{"claude", "codex", "pi", "all", ""} {
-		err := reg.ProfileTarget("core-profile-oc", []string{"opencode"}, target)
-		if want := "core-profile-oc requires --target opencode (got \"" + target + "\")"; harnessErr(err) != want {
-			t.Fatalf("target %q: %q", target, harnessErr(err))
+	for _, descriptor := range reg.Targeted() {
+		for _, profile := range descriptor.Profiles {
+			if err := reg.ProfileTarget(profile, nil, descriptor.Name); err != nil {
+				t.Fatalf("descriptor %q profile %q refused: %v", descriptor.Name, profile, err)
+			}
+			const target = "invented-unregistered-target"
+			err := reg.ProfileTarget(profile, nil, target)
+			want := fmt.Sprintf("%s requires --target %s (got %q)", profile, descriptor.Name, target)
+			if harnessErr(err) != want {
+				t.Fatalf("descriptor %q profile %q refusal = %q, want %q", descriptor.Name, profile, harnessErr(err), want)
+			}
 		}
 	}
 	d, _ := reg.Lookup("opencode")

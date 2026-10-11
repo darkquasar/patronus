@@ -79,7 +79,7 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(diffs[0].After)
-	const golden = "---\ndescription: Reviews code\nmode: subagent\nmodel: opus\npermission: read\nprompt: You are a careful reviewer.\n---\n"
+	const golden = "---\ndescription: Reviews code\nmode: subagent\nmodel: opus\npermission: read\n---\n\nYou are a careful reviewer.\n"
 	if s != golden {
 		t.Fatalf("OpenCode agent bytes changed:\n%q", s)
 	}
@@ -92,9 +92,9 @@ func TestAgentOpencodeFrontmatterAllowList(t *testing.T) {
 	if strings.Contains(s, "extra:") || strings.Contains(s, "dropme") {
 		t.Errorf("disallowed key leaked:\n%s", s)
 	}
-	// bodyIs: prompt -> body lands in the prompt frontmatter key.
-	if !strings.Contains(s, "prompt:") || !strings.Contains(s, "careful reviewer") {
-		t.Errorf("body not mapped to prompt:\n%s", s)
+	// OpenCode reads the prompt from the Markdown body, not frontmatter.
+	if strings.Contains(s, "prompt:") || !strings.HasSuffix(s, "---\n\nYou are a careful reviewer.\n") {
+		t.Errorf("prompt not preserved as Markdown body:\n%s", s)
 	}
 	want := filepath.Join(home, ".config", "opencode", "agents", "reviewer.md") // documented plural dir
 	if diffs[0].Path != want {

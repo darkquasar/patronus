@@ -188,7 +188,7 @@ func TestLayoutDecodeOpencodeArrayAndKeyOrder(t *testing.T) {
 	if ad.Layout.Agent.Frontmatter.Passthrough {
 		t.Error("OpenCode Agent frontmatter should be an allow-list")
 	}
-	want := []string{"description", "mode", "model", "temperature", "top_p", "tools", "permission", "hidden", "color", "steps", "prompt"}
+	want := []string{"description", "mode", "model", "temperature", "top_p", "tools", "permission", "hidden", "color", "steps"}
 	if got := ad.Layout.Agent.Frontmatter.Allow; len(got) != len(want) {
 		t.Errorf("Agent frontmatter allow = %v, want %v", got, want)
 	}
