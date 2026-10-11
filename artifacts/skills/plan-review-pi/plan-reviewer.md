@@ -4,7 +4,23 @@ Read the supplied exact plan AND the spec it implements, mandatory brief and nat
 
 ## Rubric
 
-Check requirement-to-task coverage; actual file paths/interfaces; predecessor dependencies; independently testable tasks; bounded bite-sized red/green steps; no placeholders; naming/type consistency across tasks; verification commands and negative cases; migration/rollback/ownership; user and developer states; scope proportionality. Verify important source anchors locally. Discover available code-intel schemas and call Serena initial_instructions before symbol queries when available; otherwise use source reads and disclose missing integrations. Do not launch services, rebuild a graph or treat a stale snapshot as current. State each skipped lens and why.
+Check requirement-to-task coverage; actual file paths/interfaces; predecessor dependencies; independently testable tasks; a recorded testing strategy/rationale per existing task brief; bounded public-behavior red/green slices when `critical-tdd` applies or approved focused postchecks when `focused-postcheck` applies; no placeholders; naming/type consistency across tasks; verification commands and negative cases; migration/rollback/ownership; user and developer states; scope proportionality. Verify important source anchors locally. Discover available code-intel schemas and call Serena initial_instructions before symbol queries when available; otherwise use source reads and disclose missing integrations. Do not launch services, rebuild a graph or treat a stale snapshot as current. State each skipped lens and why.
+
+Check strategy classification: new or changed auth/secrets, migration/removal,
+ownership, concurrency/settlement/isolation behavior and reproducible behavior
+bugs require `critical-tdd`, a tdd-pi read, intended invented-data failure, minimal
+implementation, green and relevant negative/legacy regressions. Routine
+prose/manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck` with exact diff and positive/negative case inspection plus
+approved focused checks. Explicit test-first requests and project-required checks
+govern; existing safety tests remain. Missing or ambiguous strategy (including a
+legacy brief without one) blocks implementation for a coordinator decision. A
+focused-postcheck task is not defective for lacking invented red evidence; do not
+require prose-substring tests or one red cycle per file/task.
+
+Retain required fresh independent whole-change implementation review even for
+small deliveries; only the owner may explicitly waive it. Preserve Pi's ban on
+task-by-task two-cycle review rituals.
 
 Inspect the full task range, not just the last commit. Read changed files/callers when necessary to test a concrete claim. Run only authorized checks under the project resource lock and budgets, or explicitly say source-read-only; never imply command execution.
 

@@ -9,6 +9,36 @@ Invoke `/skill:workflow-implement-pi <request.json>` from the authorized parent.
 
 Disjoint native/Claude/Codex writers → separate native integrator → native validation. Each writer uses `worktree:true` and the same approved clean named `baseRef`; the parent verifies it resolves to `sourceRevision` before launch. Explicit file claims must be disjoint and included verbatim in authorization.files. Both upstream external writer choices may be selected together. Missing/unavailable requested writers fail the entire request before any spawn, never disappear into omissions or a native replacement.
 
+## Native writer models
+
+A task with `engine:"native"` may set optional `model:"provider/id"`, with a
+supported thinking suffix such as `:low`. Discover exact identifiers using
+`subagent({action:"models"})` and verify each requested model, provider, budget
+and effective role before launch. The schema checks syntax; it cannot prove
+registry membership, authentication or runtime readiness.
+
+Two independent native tasks can select different models without changing role
+settings. For example, these task fragments retain the same native writer role:
+
+```json
+[
+  {"key":"guards","engine":"native","model":"anthropic/claude-opus-4-8","text":"Implement the approved guard task","files":["src/guards.js"]},
+  {"key":"lifecycle","engine":"native","model":"openai-codex/gpt-6.1-sol","text":"Implement the approved lifecycle task","files":["src/lifecycle.js"]}
+]
+```
+
+These fragments are examples, not launch grants. Provider/model namespaces may
+contain additional `/` segments. Supported thinking suffixes are `off`, `minimal`,
+`low`, `medium`, `high`, `xhigh` and `max`. Omit `model` to retain the writer role's
+default. Integration and validation retain their own role defaults. The exact
+requested string is forwarded only to that native writer and recorded as
+`outputBinding.requestedModel`; this records intent, not resolved-model proof.
+
+External `claude-code-writer` and `codex-exec-writer` tasks reject `model` before
+any dispatch. Native Anthropic/OpenAI-Codex model access is separate from the
+Claude/Codex CLI engines. A native model/provider failure blocks dependencies;
+the workflow never selects a replacement engine or model.
+
 The parent supplies a separately owned persistent `integrationCwd`, verifies its clean named base, exclusive ownership and source revision, includes it in sourceRoots and excludes all temporary managed worktrees. This checkout survives writer cleanup for the native validator. Every writer returns upstream captured patch/handoff references. Integrator reads those manifests and patches, not transient branches, before applying; validation reads the exact aggregate and runs the explicit authorized commands through native tools. Claude writer has Read/Write/Edit/Glob/Grep only, no Bash/MCP: it cannot perform required test commands. Codex writer uses workspace-write with approval never. Both require qualified existing CLI/auth/contract observations.
 
 Preflight managed-cleanup authority for the exact runtime allocation policy, capture and deletion semantics; no per-child microapproval is needed inside the existing grant. Unknown cancellation/capture ownership retains evidence for parent reconciliation. Outputs writer-<key>.md, integration.md and validation.md live outside source/integration/worktrees; validation logs must live there too. The parent reads reports AND upstream patches/handoffs. No integration/publication is inferred from a writer exit.
@@ -21,7 +51,7 @@ This skill runs Pi **0.87.1** with **pi-subagents 0.72.1**. Read the installed u
 2. In the exact request environment/cwd perform this **non-inference** discovery list: `command -v pi`, then `pi --version`; `command -v claude`, then `claude --version`; `command -v codex`, then `codex --version`. Run each version command only after successful executable discovery. Resolve executable identity, record time/version/omission and compare with the pinned adapter contract and existing qualified version matrix. These commands do not prove authentication or tool capability. Never read credentials, print secret environment values or launch a prompt as an auth probe. Use existing nonsecret, version-qualified successful-auth evidence when available; otherwise status is `unverified`, not `available`. Launch an unverified engine only with an explicit scoped grant recorded as `allowUnverified:true`; a failed launch stays failed on that engine. Unsupported CLI/flags or missing executable is `unavailable`, with a reason. Do not repair, install, substitute models/runners/protocols or silently retry.
 3. Discover `subagent({action:"list",capabilities:true})` and inspect effective definitions/overrides, selected skill union, loaded extension providers and actual child tools. Verify each `roles` identity maps to the intended native Pi role, not a same-name shadow with a different runner/tools. Verify external identities resolve to the upstream code-owned adapters. Capabilities listing alone proves neither auth nor successful loading. Missing required role/tool/provider blocks before launch. Web needs the four activated web tools and pi-web-access 0.35.0; local roles do not acquire MCP by prose. Optional code-intel is separately qualified; missing services use explicitly disclosed authorized source reads, never private/shared service startup or retargeting. Keep the sandbox 0.71.0 qualification separate.
 4. Canonicalize cwd, integration checkout, all source roots and managed-worktree roots using filesystem realpath/symlink resolution. For a new outputDir, resolve the nearest existing ancestor and append only validated ordinary path components; recheck after creation. Create a unique durable output directory **outside every source, integration and managed-worktree root** and check ownership, writability and no preexisting output claims/symlinks. Include all those canonical roots in `sourceRoots`. This library deliberately uses the default external durable location, not the optional in-source `.pi/subagents/` exception. Never clean, stash or ignore source paths to admit outputs. The sandbox's lexical checks enforce supplied assertions only; they cannot inspect symlinks, Git or authority. Parent must retain reports and upstream patch/handoff manifests before runtime retention expires.
-5. Check actual RAM/cgroup headroom and provider budget: start with at most two useful lightweight lanes on 2CPU/4GiB, reserve 500MB and admit an expensive job only with at least 750MiB headroom; one expensive build/test job under the project lock. Unknown/insufficient resources block expensive admission. Bound concurrency (1–2), total spawns (1–12), and timeout (at most one hour) before launch. There is no custom scheduler, second ledger or always-on goal-controller guarantee.
+5. Check actual RAM/cgroup headroom and provider budget. Select concurrency within the approved resource envelope, up to 10; ten is a ceiling, not a requirement to launch ten children on every host. Start with at most two useful lightweight lanes on 2CPU/4GiB, reserve 500MB and admit an expensive job only with at least 750MiB headroom; one expensive build/test job under the project lock. Unknown/insufficient resources block expensive admission. Bound concurrency (1–10), writer tasks (1–10), total spawns (1–12), and timeout (at most one hour) before launch. Reserve two spawns for integration and validation: ten writers require spawnLimit 12. There is no custom scheduler, second ledger or always-on goal-controller guarantee.
 
 `runners` handles every supplied candidate: `available` requires existing nonsecret auth evidence, discovered executable/version and verified adapter contract; `unverified` requires explicit launch authorization; `unavailable` cannot launch. Missing/invalid selected status fails before spawning. Peer review additionally requires records for all three candidates so omissions cannot disappear. Every return names requested, selected and omitted engines/reasons, source revision, canonical output location, limits and child receipt/report references. No tool/model/acceptance/schema fields are injected into external runners. Claude read-only has **no tools**, user-only settings/hooks are an operator-trusted prerequisite, and empty MCP; Codex read-only uses its upstream sandbox. Supply complete bounded inline subject/diff, requirements, rubric and test evidence, not unreadable file pointers. Both external adapters are one-shot and cannot use native supervision/resume.
 

@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-pi
-version: 2.0.0
+version: 3.0.0
 summary: "Upstream-only bounded Pi workflows, native roles and required subagents and DDG web delivery. Static placement is runtime-unverified; activation and qualification are separate."
 # Deliberately no extends edge to the Claude core. Membership is catalog data,
 # reviewed in docs/pi-content-inventory.md, not an executable name/count oracle.
@@ -26,7 +26,6 @@ layers:
     - spec-brainstorming-pi
     - using-git-worktrees-pi
     - finishing-a-development-branch-pi
-    - writing-editorial-pi
     - research-team-pi
     - workflow-research-pi
     - workflow-implement-pi
