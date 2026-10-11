@@ -45,13 +45,14 @@ OpenCode requires unique native names across locations, so duplicate visibility
 still needs qualification. Patronus-owned instruction sections use `oc:`.
 A context path with a recorded foreign owner refuses an `oc:` write, including
 with `--force`. An already-present unknown selected section name is also
-refused. There is no mixed-context consent path. However, the current lenient
-context policy accepts an unrelated, unrecorded unprefixed section; it does
-not refuse every unknown Patronus section. This is the unresolved OC-G9 gap
-against the broader mixed-context safety requirement, not a safe co-installation
-claim or a waived requirement. Use global scope for one lane or separate project
-roots pending independent review and owner disposition. An existing Codex or Pi
-target lock cannot be silently replaced with OpenCode.
+refused. There is no mixed-context consent path. Every existing Patronus fence
+must have verified same-target, same-scope ownership; unrecorded, foreign,
+malformed and duplicate fences are refused, including with `--force`. User prose
+and verified sibling sections are preserved. Positively recorded bare artifact
+sections remain valid legacy spellings for explicit migration/removal. These
+source checks do not prove native co-installation safety: prefer global scope for
+one lane or separate project roots. An existing Codex or Pi target lock cannot be
+silently replaced with OpenCode.
 
 ## Preview, deploy and refresh
 
@@ -182,7 +183,9 @@ requires a current image/version preflight, a disposable container, sanitized
 proof and separate authorization for native/model calls. Historical contributor
 source paths and observations are provenance, not live roots or credentials.
 No container, model, native guard or worker acceptance run is asserted here.
-OC-G9 remains an unresolved coverage/safety blocker for final whole-change review
-and parent disposition. Publication, integration and cleanup remain separate grants.
+The OC-G9 context-provenance and worker-precheck corrections have local regression
+evidence; formal independent whole-change review and parent disposition remain
+required. Source tests do not pass native rows. Publication, integration and
+cleanup remain separate grants.
 
 See [harness scope](/harnesses) and [adding a harness](/harness-extension).

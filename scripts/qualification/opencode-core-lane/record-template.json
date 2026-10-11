@@ -105,9 +105,9 @@
     "Worker runDir grant covers the whole evidence root; result, permission merge, outside-write denial and settlement remain pending; unknown descendants retained",
     "MCP auth, masks, --pure, lifecycle/migration and double load remain pending; fresh sessions after mutations required",
     "No raw config/provider options, credential hashes, tokens, sentinel values or inline config recorded",
-    "OC-G9 Major unresolved: unrelated unrecorded unprefixed context accepted; recorded foreign owners/unknown selected sections refused; broader requirement not waived",
-    "OC-WC-002 Medium unresolved: worker validator exceptions can yield successful precheck; not fixed or waived",
-    "Incomplete independent whole-change semantic review and unresolved defects block acceptance"
+    "OC-G9 original Major: source correction requires verified ownership for every fence, preserves user prose/verified siblings/recorded bare legacy sections; formal review disposition pending",
+    "OC-WC-002 original Medium: source correction refuses failed validators including empty diagnostics; local invented-data regression evidence, native workers unqualified",
+    "Independent whole-change semantic review and formal finding dispositions remain required; smoke cannot establish full native acceptance"
   ],
   "releaseAccepted": false
 }

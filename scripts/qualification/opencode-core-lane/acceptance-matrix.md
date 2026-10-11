@@ -45,7 +45,7 @@ unintended writes, not just model refusal. No skipped row becomes passed.
 | OC-N03 | Read installed research-team-oc -> spec-brainstorming-oc -> spec-review-oc -> plan-writing-oc -> plan-review-oc; ADR-0003 folders preserved | Missing role/tool/auth blocks; fuzzy base-name and foreign routes do not count | runtime-pending |
 | OC-N04 | Execution reaches independent requesting-code-review-oc, receiving-code-review-oc and verification-before-completion-oc; design/diagnosis/TDD/worktree/meta-skill routes resolve | Reviewer writes lead record, nested delegation, missing sidecar or undeclared capability blocks | runtime-pending |
 | OC-N05 | Actual profile preview/public lock has complete selected requires closure and six audited reused items | claude/codex/pi/all refusal; no -cx/-pi/@claude closure or unresolved warnings | runtime-pending |
-| OC-N06 | Observe co-visible roots, identical unsuffixed duplicate warnings and native computed permission.skill mask for detected Codex family; refresh after add/remove | Different-byte collision, recorded foreign owner at AGENTS.md, unknown selected section and cross-target lock refused; unrelated unrecorded unprefixed section currently accepted (OC-G9 unresolved broader safety blocker); Pi roots not consulted; native duplicate caveat observed | runtime-pending |
+| OC-N06 | Observe co-visible roots, identical unsuffixed duplicate warnings and native computed permission.skill mask for detected Codex family; refresh after add/remove | Different-byte collision, recorded foreign owner, unrecorded/unknown/malformed/duplicate AGENTS.md fences and cross-target lock refused; verified same-target siblings/user prose/recorded bare legacy spelling preserved (OC-G9 source correction, native effects pending); Pi roots not consulted; native duplicate caveat observed | runtime-pending |
 | OC-N07 | Native context7/github MCP initialization with user-managed auth; transport-leaf lifecycle preserves headers/oauth/provider and siblings | Missing auth remains blocked; no credential copying, sentinel printing or credential config hashes; commented config and OPENCODE_CONFIG setting writes refused, inline override warning observed | runtime-pending |
 | OC-N08 | Eight native patronus-*-oc roles appear in agent list with body prompt and permission maps; authors/writer edit within grant | Absent role, dropped permission fields or fallback to built-in role is blocked | runtime-pending |
 | OC-N09 | @patronus-researcher-oc returns attributed read-only findings; reviewers/read-only web role also enforce deny rules | Native edit attempt denied; no nesting; bash allowlist is cooperative and cannot establish OS isolation | runtime-pending |
@@ -72,13 +72,12 @@ Session-start dispatch/heartbeat/reground/language callbacks, editorial and
 Claude usage reporting/statusline are omitted. Advisory instructions do not
 replace callback semantics. Guards are user-disableable best effort, not
 read/egress protection. Shared supervisor/precheck fixture results remain
-historical and not run by development gates. No native row is passed here. OC-G9 remains an unresolved coverage/safety blocker
-against the broader OC-D7/T15 requirement: lenient context admission accepts an
-unrelated unrecorded unprefixed section, while recorded foreign owners and an
-already-present unknown selected section are refused. Preserve this distinction
-and CD5 legacy behavior. Global scope or separate project roots are recommended
-pending final independent whole-change review and parent disposition; these
-procedures neither fix nor waive the unmet broader requirement. OC-WC-002 also
-remains unresolved (Medium): worker validator exceptions can report precheck
-success. Smoke avoids workers but does not qualify or waive their safety. Both
-defects and incomplete whole-change semantic review still block final acceptance.
+outside development gates; the corrected precheck has separately recorded
+invented-data regression evidence. No native row is passed here. OC-G9 (original
+Major) now has a source correction refusing unverified fences while preserving
+CD5 legacy behavior. OC-WC-002 (original Medium) now has fail-closed validator
+handling with local regressions. Formal independent review and parent disposition
+of corrected bytes remain required. Global scope or separate project roots are
+recommended for native co-visibility. Smoke avoids workers but neither qualifies
+nor waives their safety. Full semantic review and unobserved native requirements
+remain separate acceptance gates.

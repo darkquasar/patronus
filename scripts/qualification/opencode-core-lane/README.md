@@ -86,13 +86,14 @@ protection. `--pure` disables external plugins including guards; lack of a block
 there is expected disablement, not protection. Patronus never sets
 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`.
 
-Known unresolved blockers, not fixed or waived here: **OC-G9 (Major)** accepts
-unrelated unrecorded unprefixed context sections despite the broader refusal
-requirement (recorded foreign owners/unknown selected sections are refused);
-**OC-WC-002 (Medium)** can turn worker validator exceptions into precheck success.
-Acceptance also awaits complete independent whole-change semantic review. Global
-scope/separate roots mitigate mixed context, not waive it. Unknown worker
-settlement/descendants require retention, never inferred cleanup authority.
+Source corrections for **OC-G9 (original Major)** now require verified ownership
+for every existing Patronus fence, preserving user prose, verified siblings and
+recorded bare legacy sections. **OC-WC-002 (original Medium)** now refuses failed
+worker validators even with empty diagnostics. Local invented-data regressions
+cover these changes; formal retained independent review/parent disposition still
+remain acceptance requirements. Neither correction passes native rows. Global
+scope/separate roots mitigate native co-visibility, not waive qualification.
+Unknown worker settlement/descendants require retention, never inferred cleanup authority.
 
 ## One-time optional container bootstrap (separate grant only)
 
