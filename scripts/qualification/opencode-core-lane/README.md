@@ -101,7 +101,12 @@ Record sanitized fetch outcome and actual scanner identity, not credentials.
 Repeat local-scope qualification in a separate scratch project/root, after
 reviewing the applicable config and ownership inputs. Do not mix the two scopes
 until the explicit double-load row. Keep failures for disposition, never force
-mixed context or fabricate structural prior evidence.
+mixed context or fabricate structural prior evidence. Current lenient context
+admission refuses recorded foreign owners at AGENTS.md and an already-present
+unknown selected section, but accepts unrelated unrecorded unprefixed sections.
+This OC-G9 mismatch with the broader mixed-context requirement remains an
+unresolved coverage/safety blocker for final review/parent disposition, not
+qualification or a waiver. Prefer global scope or separate project roots.
 
 ## Discovery and sanitized observations
 

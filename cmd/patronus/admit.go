@@ -9,7 +9,6 @@ import (
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/harness"
 	"github.com/darkquasar/patronus/internal/lock"
-	"github.com/darkquasar/patronus/internal/manifest"
 	"github.com/darkquasar/patronus/internal/recipe"
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/scan"
@@ -107,7 +106,7 @@ func declaredTargets(cat *registry.Catalog, profile string) []string {
 	}
 	for i := range cat.Profiles {
 		if m := cat.Profiles[i].Manifest; m != nil && m.Name == profile {
-			return append([]string(nil), manifest.StringList(m.Targets)...)
+			return append([]string(nil), m.Targets...)
 		}
 	}
 	return nil

@@ -170,7 +170,7 @@ func TestHookRunnerNodeFixtures(t *testing.T) {
 	if err != nil {
 		t.Skip("node >= 22.18 with type stripping not on PATH")
 	}
-	version, err := exec.Command(node, "--version").Output()
+	version, err := exec.CommandContext(t.Context(), node, "--version").Output()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestHookRunnerNodeFixtures(t *testing.T) {
 	if err := os.WriteFile(probe, []byte("const value: number = 1; export default value;\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := exec.Command(node, "--experimental-strip-types", "--eval", `import(require("node:url").pathToFileURL(process.argv[1]).href)`, probe).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(t.Context(), node, "--experimental-strip-types", "--eval", `import(require("node:url").pathToFileURL(process.argv[1]).href)`, probe).CombinedOutput(); err != nil {
 		t.Skipf("node >= 22.18 with type stripping not on PATH (actual .ts import probe): %v %s", err, out)
 	}
 	for _, tc := range []struct {
@@ -197,7 +197,7 @@ func TestHookRunnerNodeFixtures(t *testing.T) {
 		{"edit", "edit", `{"filePath":"demo","oldString":"old","newString":"new"}`, "Edit", "", "", false, true},
 		{"write", "write", `{"filePath":"demo","content":"benign"}`, "Write", "", "", false, true},
 		{"edit blocked", "edit", `{"newString":"PLANTED_FIXTURE_SECRET"}`, "Edit", "", "fixture guard blocked", true, true},
-		{"stdout discarded", "edit", `{}`, "Edit", "printf PLANTED_FIXTURE_SECRET", "", false, false},
+		{"stdout discarded", "edit", `{}`, "Edit", "cat >/dev/null; printf PLANTED_FIXTURE_SECRET", "", false, false},
 		{"bash", "bash", `{"command":"echo benign"}`, "Bash", "", "", false, true},
 		{"injected dialect", "invented", `{"source":"value","unlisted":1}`, "Invented", "", "", false, true},
 		{"exact matcher", "edit", `{"newString":"PLANTED_FIXTURE_SECRET"}`, "MultiEdit", "", "", false, false},
@@ -205,9 +205,9 @@ func TestHookRunnerNodeFixtures(t *testing.T) {
 		{"unmapped prototype tool", "toString", `{}`, "", "", "", false, false},
 		{"unlisted prototype argument", "edit", `{"toString":"benign"}`, "Edit", "", "", false, true},
 		{"missing command", "edit", `{}`, "Edit", "/invented/absent-command", "call blocked", true, false},
-		{"other exit", "edit", `{}`, "Edit", "exit 3", "call blocked", true, false},
+		{"other exit", "edit", `{}`, "Edit", "cat >/dev/null; exit 3", "call blocked", true, false},
 		{"timeout", "edit", `{}`, "Edit", "sleep 2", "call blocked", true, false},
-		{"empty stderr", "edit", `{}`, "Edit", "exit 2", "blocked by fixture", true, false},
+		{"empty stderr", "edit", `{}`, "Edit", "cat >/dev/null; exit 2", "blocked by fixture", true, false},
 		{"missing registry", "edit", `{}`, "Edit", "MISSING", "", false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestHookRunnerNodeFixtures(t *testing.T) {
 			if err := os.WriteFile(p, payload, 0644); err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command(node, "--experimental-strip-types", "testdata/opencode-runner/run.mjs", ds[2].Path, p, root)
+			cmd := exec.CommandContext(t.Context(), node, "--experimental-strip-types", "testdata/opencode-runner/run.mjs", ds[2].Path, p, root)
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 			stdout, err := cmd.Output()

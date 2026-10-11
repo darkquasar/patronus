@@ -97,6 +97,8 @@ type Descriptor struct {
 	// PlacementStderr routes PlacementWarning to the planner's stderr after a
 	// successful planning admission instead of recording it on the plan.
 	PlacementStderr bool
+	// DeployNotice is printed only after a successful shared deploy. Empty is silent.
+	DeployNotice string
 	// AdmitPlan runs this target's admission over planning and deployment
 	// selections; false keeps the legacy shared-lane semantics (no admission).
 	AdmitPlan bool

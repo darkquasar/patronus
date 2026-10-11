@@ -84,6 +84,7 @@ func defaultRegistry() (*harness.Registry, error) {
 			AdmissionPrefix:     "opencode admission",
 			MixedContextConsent: false,
 			ErrorPrefix:         "opencode",
+			DeployNotice:        "Restart OpenCode: plugins, permissions and agents load at session start",
 			PlacementWarning:    "OpenCode static placement only: skill loading, plugin activation, permission effects and fresh-session behaviour remain runtime-unverified",
 			PlacementStderr:     true,
 			AdmitPlan:           true,

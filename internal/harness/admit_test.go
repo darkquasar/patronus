@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,7 +135,7 @@ func TestAdmitPhaseOrder(t *testing.T) {
 	}
 	for _, phase := range []string{"prepare", "before-ownership", "after-ownership", "after-context"} {
 		d.Validator = recorder{log: &log, fail: map[string]error{phase: os.ErrInvalid}}
-		if err := Admit(d, f.admission(cs, nil)); err != os.ErrInvalid {
+		if err := Admit(d, f.admission(cs, nil)); !errors.Is(err, os.ErrInvalid) {
 			t.Fatalf("%s error not returned as-is: %v", phase, err)
 		}
 	}
@@ -282,7 +283,7 @@ func TestAdmitContextRules(t *testing.T) {
 	in := f.admission(&diff.ChangeSet{Diffs: []diff.FileDiff{section(lax, ownedLax)}}, []state.Item{sectionOwner("lax", "alpha", "lax:alpha", path, "APPEND", ownedLax), sectionOwner("other", "beta", "beta", path, "APPEND", ownedLax)})
 	f.write(t, path, ownedLax)
 	in.Review = func(ContextReview) error { return os.ErrPermission }
-	if err := Admit(lax, in); err != os.ErrPermission {
+	if err := Admit(lax, in); !errors.Is(err, os.ErrPermission) {
 		t.Fatalf("review refusal not propagated: %v", err)
 	}
 }
@@ -422,7 +423,7 @@ func TestAdmitForeignRootsJoinPreResolvedInventory(t *testing.T) {
 	// A foreign walk error surfaces too.
 	in = f.admission(cs, nil)
 	in.Roots = []scan.SkillRoot{{Path: foreign, Recursive: true, DuplicatePolicy: scan.RefuseAlways, Name: func([]byte, string) (string, error) { return "", os.ErrInvalid }}}
-	if err := Admit(lax, in); err != os.ErrInvalid {
+	if err := Admit(lax, in); !errors.Is(err, os.ErrInvalid) {
 		t.Fatalf("foreign walk error lost: %v", err)
 	}
 }

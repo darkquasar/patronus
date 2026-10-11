@@ -36,7 +36,7 @@ func openCodeFixture(t *testing.T) (home, project string, res toolpath.Resolver,
 
 // admitOpenCode runs the shared admission for the opencode descriptor with the
 // command's owner loader, collecting warnings.
-func admitOpenCode(t *testing.T, cs *diff.ChangeSet, res toolpath.Resolver, home, project string) (error, []string) {
+func admitOpenCode(t *testing.T, cs *diff.ChangeSet, res toolpath.Resolver, home, project string) ([]string, error) {
 	t.Helper()
 	reg := testRegistry(t)
 	d, ok := reg.Lookup("opencode")
@@ -50,7 +50,7 @@ func admitOpenCode(t *testing.T, cs *diff.ChangeSet, res toolpath.Resolver, home
 			warned = append(warned, strings.Split(fd.Warning, "\n")...)
 		}
 	}
-	return err, warned
+	return warned, err
 }
 
 // TestRegisteredDescriptorsBindProfilesThroughRegistry checks each descriptor's
@@ -76,19 +76,27 @@ func TestRegisteredDescriptorsBindProfilesThroughRegistry(t *testing.T) {
 		t.Fatalf("descriptor not filled: %+v", d)
 	}
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, ".", nil, 0)
+	entries, err := os.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, pkg := range pkgs {
-		for _, f := range pkg.Files {
-			ast.Inspect(f, func(n ast.Node) bool {
-				if fn, ok := n.(*ast.FuncDecl); ok && (fn.Name.Name == "opencodeProfileTarget" || fn.Name.Name == "opencodePreflightPlan") {
-					t.Fatalf("OpenCode-only dispatch function %s exists", fn.Name.Name)
-				}
-				return true
-			})
+	// Deliberately inspect every Go file, including tests and all build tags,
+	// just as the prior directory parser did. This inventory guards symbols,
+	// not the package set selected for a particular build.
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+			continue
 		}
+		f, err := parser.ParseFile(fset, entry.Name(), nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			if fn, ok := n.(*ast.FuncDecl); ok && (fn.Name.Name == "opencodeProfileTarget" || fn.Name.Name == "opencodePreflightPlan") {
+				t.Fatalf("OpenCode-only dispatch function %s exists", fn.Name.Name)
+			}
+			return true
+		})
 	}
 	if _, err := os.Stat("opencode_preflight.go"); !os.IsNotExist(err) {
 		t.Fatal("opencode_preflight.go exists")
@@ -124,7 +132,7 @@ func TestOpenCodeValidatorEnv(t *testing.T) {
 			if tc.settings {
 				cs.Diffs = append(cs.Diffs, settingsDiff(project))
 			}
-			err, warned := admitOpenCode(t, cs, res, home, project)
+			warned, err := admitOpenCode(t, cs, res, home, project)
 			if got := harnessErr(err); got != tc.wantErr {
 				t.Fatalf("error\n got: %s\nwant: %s", got, tc.wantErr)
 			}
@@ -160,7 +168,7 @@ func TestOpenCodeValidatorRefusesCommentedConfig(t *testing.T) {
 			if tc.action == diff.Merge {
 				fd.Setting = &diff.SettingEdit{Target: diff.FileTargetRef{File: "opencode.json", Format: "jsonc"}, Dotted: "x", ScalarValue: 2, PriorValue: 1, PriorPresent: true}
 			}
-			err, _ := admitOpenCode(t, &diff.ChangeSet{Diffs: []diff.FileDiff{fd}}, res, home, project)
+			_, err := admitOpenCode(t, &diff.ChangeSet{Diffs: []diff.FileDiff{fd}}, res, home, project)
 			got := harnessErr(err)
 			want := ""
 			if tc.want != "" {
@@ -182,13 +190,13 @@ func TestOpenCodeHarnessOwnedFilesNeverClaimed(t *testing.T) {
 	for _, rel := range []string{".opencode/package.json", ".opencode/package-lock.json", ".opencode/node_modules/x/index.js", ".opencode/.gitignore"} {
 		codexWrite(t, filepath.Join(project, rel), []byte("harness-owned\n"))
 	}
-	if err, _ := admitOpenCode(t, cs, res, home, project); err != nil {
+	if _, err := admitOpenCode(t, cs, res, home, project); err != nil {
 		t.Fatalf("unrelated skill blocked: %v", err)
 	}
 	for _, rel := range []string{".opencode/package.json", ".opencode/node_modules/x/index.js", ".opencode/.gitignore"} {
 		path := filepath.Join(project, rel)
 		claim := &diff.ChangeSet{Diffs: []diff.FileDiff{{Path: path, Action: diff.Create, Artifact: "fixture-oc", Type: "skill", Tool: "opencode", Scope: "local", After: []byte("x")}}}
-		err, _ := admitOpenCode(t, claim, res, home, project)
+		_, err := admitOpenCode(t, claim, res, home, project)
 		if want := "opencode: " + path + " is written by OpenCode for local plugins; Patronus never claims it"; harnessErr(err) != want {
 			t.Fatalf("%s: %q", rel, harnessErr(err))
 		}
@@ -230,7 +238,7 @@ func TestOpenCodeLaneIsAdmitted(t *testing.T) {
 		home, project, res, _ := openCodeFixture(t)
 		context := filepath.Join(project, "AGENTS.md")
 		cs := &diff.ChangeSet{Diffs: []diff.FileDiff{{Path: context, Action: diff.Append, Artifact: "fixture-ctx", Type: "instruction", Tool: "opencode+codex", Scope: "local", Section: &diff.SectionEdit{Name: "oc:fixture-ctx"}, After: []byte("x")}}}
-		err, _ := admitOpenCode(t, cs, res, home, project)
+		_, err := admitOpenCode(t, cs, res, home, project)
 		if want := "opencode cross-target destination conflict " + context + " (opencode+codex)"; harnessErr(err) != want {
 			t.Fatalf("composite\n got: %s\nwant: %s", harnessErr(err), want)
 		}

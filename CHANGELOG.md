@@ -30,8 +30,12 @@ qualification receipt. Guards are user-disableable with `--pure`.
   stops admission when the selection writes `opencode.json(c)`, warns otherwise;
   inline config warnings never record its value. Commented config writes are
   refused; uncommented JSON keys are emitted alphabetically. User credentials
-  and sibling leaves remain user-owned. Mixed project context and cross-target
-  locks refuse silent replacement. Restart OpenCode after successful deploy,
+  and sibling leaves remain user-owned. Recorded foreign context ownership,
+  unknown selected sections and cross-target locks refuse silent replacement.
+  Unrelated unrecorded unprefixed context sections are currently accepted by the
+  lenient policy, an unresolved OC-G9 coverage/safety blocker, not qualified
+  co-installation. Prefer global scope or separate project roots pending review
+  and owner disposition. Restart OpenCode after successful deploy,
   update or removal: plugins, permissions and agents load at session start.
 
 ## v2.6.0

@@ -2,6 +2,7 @@ package scan
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -105,13 +106,13 @@ func TestDiscoverSkillsPiRules(t *testing.T) {
 func TestDiscoverSkillsNameErrorsAndSafePath(t *testing.T) {
 	root := t.TempDir()
 	writeResource(t, filepath.Join(root, "alpha/SKILL.md"), "bad\n")
-	if _, err := DiscoverSkills([]SkillRoot{toyRoot(root, RefuseAlways)}, nil); err != os.ErrInvalid {
+	if _, err := DiscoverSkills([]SkillRoot{toyRoot(root, RefuseAlways)}, nil); !errors.Is(err, os.ErrInvalid) {
 		t.Fatalf("name error not returned as-is: %v", err)
 	}
 	called := ""
 	r := toyRoot(root, RefuseAlways)
 	r.SafePath = func(path string) error { called = path; return os.ErrPermission }
-	if _, err := DiscoverSkills([]SkillRoot{r}, nil); err != os.ErrPermission || called != root {
+	if _, err := DiscoverSkills([]SkillRoot{r}, nil); !errors.Is(err, os.ErrPermission) || called != root {
 		t.Fatalf("root safe-path hook not honoured: %v %q", err, called)
 	}
 	if got, err := DiscoverSkills([]SkillRoot{toyRoot(filepath.Join(root, "absent"), RefuseAlways)}, nil); err != nil || len(got) != 0 {
@@ -146,8 +147,8 @@ func TestDiscoverSkillsDuplicatePolicy(t *testing.T) {
 			ra.ConflictMessage, rb.ConflictMessage = message, message
 			got, err := DiscoverSkills([]SkillRoot{ra, rb}, tc.verified)
 			if tc.wantErr {
-				ce, ok := err.(*conflictError)
-				if !ok || ce.name != "dup" || ce.a != filepath.Join(a, "dup/SKILL.md") || ce.b != filepath.Join(b, "dup/SKILL.md") {
+				var ce *conflictError
+				if !errors.As(err, &ce) || ce.name != "dup" || ce.a != filepath.Join(a, "dup/SKILL.md") || ce.b != filepath.Join(b, "dup/SKILL.md") {
 					t.Fatalf("conflict = %v", err)
 				}
 				return
@@ -248,7 +249,7 @@ func TestDiscoverSkillsInlineConflictPrecedesLaterWalkError(t *testing.T) {
 		t.Fatalf("inline conflict lost to a later walk error: %v", err)
 	}
 	_, err = DiscoverSkills([]SkillRoot{toyRoot(a, RefuseAlways), toyRoot(b, RefuseAlways)}, nil)
-	if err != os.ErrInvalid {
+	if !errors.Is(err, os.ErrInvalid) {
 		t.Fatalf("deferred policy let a conflict precede the walk error: %v", err)
 	}
 }

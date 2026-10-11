@@ -1257,6 +1257,11 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 	if piSelected {
 		fmt.Fprintln(out, "Pi status: placed, runtime-unverified; eligible at next startup/reload (not proof of runtime registration).")
 	}
+	for _, d := range opts.Harness.Selected(cs) {
+		if d.DeployNotice != "" {
+			fmt.Fprintln(out, d.DeployNotice)
+		}
+	}
 	return nil
 }
 

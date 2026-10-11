@@ -334,7 +334,8 @@
     "Static delivery and Node fixtures do not qualify native Bun loading, guard blocking, role permissions or mask effects",
     "Worker runDir grant permits the whole evidence root; permission merge and denied outside-write remain pending",
     "Fresh sessions and both-scope double load require native observations",
-    "No config contents, credential hashes, sentinel values or inline config recorded"
+    "No config contents, credential hashes, sentinel values or inline config recorded",
+    "OC-G9 unresolved coverage/safety blocker: unrelated unrecorded unprefixed context sections accepted; recorded foreign owners and unknown selected sections refused; broader requirement not waived"
   ],
   "releaseAccepted": false
 }
