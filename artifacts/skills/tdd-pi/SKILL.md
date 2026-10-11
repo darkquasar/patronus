@@ -1,6 +1,6 @@
 ---
 name: tdd-pi
-description: Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions "red-green-refactor", or wants integration tests.
+description: "Test-first public-behavior slices for critical-tdd tasks or explicit test-first requests; routine prose/manifests use focused postchecks."
 ---
 
 ## Scope and recovery
@@ -9,6 +9,24 @@ Act only within the task's current grant. Research, authorship, review, planning
 
 
 # Test-Driven Development
+
+## Select the testing strategy
+
+Record `critical-tdd` or `focused-postcheck` in the existing task brief before
+implementation. Select `critical-tdd` for new or changed auth/secrets,
+migration/removal, ownership, concurrency/settlement/isolation behavior and
+reproducible behavior bugs. Explicit test-first requests and project-required
+checks govern. Read this skill when critical TDD is selected.
+
+Routine prose, manifests and mechanical wiring without a changed safety invariant
+use `focused-postcheck`: inspect the exact diff, check positive/negative cases and
+run the approved focused checks after editing. Preserve existing safety tests and
+required fresh independent whole-change implementation review. Do not manufacture
+a red cycle per file/task or add prose-substring tests.
+
+Missing or ambiguous strategy, including a legacy brief without one, stops
+implementation for a coordinator decision. Unknown behavioral work does not
+qualify for focused postchecks. The workflow below applies to `critical-tdd`.
 
 ## Philosophy
 
@@ -65,14 +83,16 @@ Ask: "What should the public interface look like? Which behaviors are most impor
 
 ### 2. Tracer Bullet
 
-Write ONE test that confirms ONE thing about the system:
+Write ONE invented-data test through a public interface for ONE required behavior.
+Run it and confirm the intended behavioral failure, not a setup/tool error:
 
 ```
 RED:   Write test for first behavior → test fails
 GREEN: Write minimal code to pass → test passes
 ```
 
-This is your tracer bullet - proves the path works end-to-end.
+This tracer bullet proves the path end-to-end. Retain the command, actual exit
+and readable red/green logs; run relevant negative-path and legacy regressions.
 
 ### 3. Incremental Loop
 

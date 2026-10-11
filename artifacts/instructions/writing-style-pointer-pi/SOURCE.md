@@ -16,6 +16,6 @@ Classification: `*-pi` skill references are selected Pi closure reads, not tool 
 
 ## Active selected Pi reads
 
-`writing-editorial-pi`
+None. The punctuation rules are inline and require no skill read.
 
 These are source-reviewed invocation classifications, not a second executable catalog membership oracle. Historical source filenames above are not active invocation aliases.

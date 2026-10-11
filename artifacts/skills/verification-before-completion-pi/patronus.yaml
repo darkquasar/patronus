@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: verification-before-completion-pi
 description: "Evidence before claims: run authorized verification and read fresh output before asserting success. Missing authority or unavailable checks mean unverified work, never assumed success. Advisory Pi guidance, not an execution grant or technical guard."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [NOTICE]
 targets: [pi]

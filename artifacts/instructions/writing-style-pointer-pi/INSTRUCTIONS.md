@@ -22,16 +22,3 @@ exactly what was said and the punctuation belongs to your sentence.
 
 > **Don't:** The flag is called "fail-closed."
 > **Do:** The flag is called "fail-closed".
-
-## For prose that reasons or teaches
-
-Anything that makes a case, explains, or teaches — a design doc, an ADR, a
-proposal, a lesson, a longer message — is also governed by the meaning-led prose
-rules: decide the meaning before the sound, ground abstractions in a mechanism
-and a consequence, keep the actor and consequence visible, scale claims to the
-evidence, use contrast only to close a real interpretive branch, explain in the
-positive, and cut puffery and filler.
-
-Those rules carry their reasoning and worked examples, which is what makes them
-applicable rather than mechanical. Read the installed SKILL.md for the `writing-editorial-pi` skill for them, and
-to review a draft against them.
