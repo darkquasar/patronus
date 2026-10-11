@@ -188,12 +188,38 @@ func RemoveSettingScalar(existing []byte, ft manifest.FileTarget, dotted string,
 		parent[leaf] = prior
 	} else {
 		delete(parent, leaf)
+		if ft.Format == "toml" {
+			pruneEmptyTable(root, dotted)
+		}
 	}
 	out, err := serializeConfig(root, ft.Format)
 	if err != nil {
 		return nil, false, err
 	}
 	return out, true, nil
+}
+
+// pruneEmptyTable drops an emptied Codex MCP server table after an
+// install-created transport leaf was deleted from it. Codex owns MCP server
+// leaves, not the server table, and an empty [mcp_servers.<name>] left behind is
+// an invalid server definition. The prune is deliberately bounded to exactly
+// mcp_servers.<name>.<leaf>: every other emptied table (profiles, features,
+// nested env/header tables, the mcp_servers container itself) is retained,
+// because the per-leaf ownership record cannot prove Patronus created that
+// container. A server table that still holds any user child is kept untouched.
+func pruneEmptyTable(root map[string]any, dotted string) {
+	parts := strings.Split(dotted, ".")
+	if len(parts) != 3 || parts[0] != "mcp_servers" {
+		return
+	}
+	servers, ok := asStringMap(root[parts[0]])
+	if !ok {
+		return
+	}
+	if m, ok := asStringMap(servers[parts[1]]); ok && len(m) == 0 {
+		delete(servers, parts[1])
+		root[parts[0]] = servers
+	}
 }
 
 // parseConfig decodes existing config bytes into a generic map. Empty input

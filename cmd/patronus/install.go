@@ -192,6 +192,14 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	if err := dp06Target(req.Tool); err != nil {
 		return plannedInstall{}, err
 	}
+	if req.Tool != "" {
+		if err := codexProfileTarget(req.Profile, req.Tool); err != nil {
+			return plannedInstall{}, err
+		}
+		if err := codexCheckLock(req.ProjectDir, req.Tool); err != nil {
+			return plannedInstall{}, err
+		}
+	}
 	names := append([]string(nil), req.Names...)
 	profileSel, tool, scope, home, wd, regSel := req.Profile, req.Tool, req.Scope, req.Home, req.ProjectDir, req.Registry
 	warnf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), "warning: "+f+"\n", a...) }
@@ -208,6 +216,14 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		}
 		if l.Profile == profileSel && l.Target != "" {
 			tool = l.Target
+		}
+	}
+	if err := codexProfileTarget(profileSel, tool); err != nil {
+		return plannedInstall{}, err
+	}
+	if tool != "" {
+		if err := codexCheckLock(wd, tool); err != nil {
+			return plannedInstall{}, err
 		}
 	}
 	if tool == "pi" && !req.Acquire {
@@ -362,6 +378,9 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 		return plannedInstall{}, err
 	}
 
+	if err := codexCheckComputedLock(wd, tool, cs); err != nil {
+		return plannedInstall{}, err
+	}
 	if err := staticPiSelection(cs, tool == "pi"); err != nil {
 		return plannedInstall{}, err
 	}
@@ -375,6 +394,15 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	}
 	if err := inspectDirectoryPlan(home, cs); err != nil {
 		return plannedInstall{}, err
+	}
+	if err := codexPreflightPlan(cs, res, home, wd); err != nil {
+		return plannedInstall{}, err
+	}
+	for _, d := range cs.Diffs {
+		if contains(strings.Split(d.Tool, "+"), "codex") {
+			warnf("Codex static admission/placement only; skill loading, hooks, trust and fresh-session activation remain runtime-unverified")
+			break
+		}
 	}
 	if reviews, err := piPreflightPlan(cs, res, home, wd); err != nil {
 		return plannedInstall{}, err
@@ -587,6 +615,14 @@ func planWarnings(cs *diff.ChangeSet) []string {
 		}
 		seen[w] = true
 		out = append(out, w)
+	}
+	// Explicitly configured Codex MCP auth/environment references are checked for
+	// presence only; a missing one is an actionable prerequisite, not a pass.
+	for _, w := range codexAuthPrerequisites(cs, os.LookupEnv) {
+		if !seen[w] {
+			seen[w] = true
+			out = append(out, w)
+		}
 	}
 	return out
 }
@@ -914,6 +950,9 @@ func runDeployLocked(cmd *cobra.Command, cs *diff.ChangeSet, res toolpath.Resolv
 			return fmt.Errorf("load %s state: %w", scope, err)
 		}
 		owners = append(owners, s.Items...)
+	}
+	if err := codexPreflightPlan(cs, res, opts.home, opts.projectDir); err != nil {
+		return err
 	}
 	if err := preflightPiDeploy(cmd, cs, res, &opts); err != nil {
 		return err

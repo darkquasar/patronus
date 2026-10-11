@@ -23,9 +23,8 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
-// runInstall executes the install command with args against the real repo
-// (DiscoverRoot walks up from the cwd, which is this package's dir inside the
-// repo). It returns combined stdout and the error.
+// runInstall executes the ordinary install command against the caller's
+// fixture environment and returns stdout, stderr and the command error.
 func runInstall(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 	cmd := newInstallCmd()
@@ -38,14 +37,13 @@ func runInstall(t *testing.T, args ...string) (string, string, error) {
 }
 
 func TestInstallSkillDryRun(t *testing.T) {
-	// Isolate HOME so --global resolves to an empty sandbox (not the developer's
-	// real ~/.claude, where research-team may already be installed → SKIP not CREATE).
+	t.Chdir(fixtureCatalog(t))
 	t.Setenv("HOME", t.TempDir())
-	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
-	for _, want := range []string{"research-team", "SKILL.md", "CREATE", "skill", "dry run"} {
+	for _, want := range []string{"fix-skill", "SKILL.md", "CREATE", "skill", "dry run"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}
@@ -53,11 +51,13 @@ func TestInstallSkillDryRun(t *testing.T) {
 }
 
 func TestInstallVerboseShowsDiff(t *testing.T) {
-	out, _, err := runInstall(t, "agent-principles", "--target", "claude", "--local", "--verbose", "--dry-run")
+	t.Chdir(fixtureCatalog(t))
+	t.Setenv("HOME", t.TempDir())
+	out, _, err := runInstall(t, "fix-instruction-global", "--target", "claude", "--local", "--verbose", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
-	// agent-principles is an Instruction -> APPEND with a unified diff body.
+	// The invented instruction emits APPEND with a unified diff body.
 	if !strings.Contains(out, "APPEND") {
 		t.Errorf("expected APPEND:\n%s", out)
 	}
@@ -67,21 +67,27 @@ func TestInstallVerboseShowsDiff(t *testing.T) {
 }
 
 func TestInstallMutuallyExclusiveScope(t *testing.T) {
-	_, _, err := runInstall(t, "research-team", "--global", "--local")
+	_, _, err := runInstall(t, "fix-skill", "--global", "--local")
 	if err == nil {
 		t.Error("expected error for --global and --local together")
 	}
 }
 
 func TestInstallProfileCloudflareDryRun(t *testing.T) {
+	root := fixtureCatalog(t)
+	mp := filepath.Join(root, "profiles/fix-all.yaml")
+	if err := os.WriteFile(mp, append(mustRead(t, mp), []byte("status: stub\n")...), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(root)
 	t.Setenv("HOME", t.TempDir())
-	out, errOut, err := runInstall(t, "--profile", "cloudflare", "--target", "claude", "--global", "--dry-run")
+	out, errOut, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("profile install failed: %v\n%s", err, errOut)
 	}
-	// The cloudflare profile spans instructions + capabilities + context + memory;
+	// The invented profile populates several delivery layers;
 	// every populated slot's item should appear in the combined plan.
-	for _, want := range []string{"agent-principles", "research-team", "plan-execute-parallel", "pattern-cloudflare", "memory-ai-memory"} {
+	for _, want := range []string{"fix-instruction", "fix-instruction-2", "fix-skill", "fix-style", "fix-hook"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("profile plan missing %q:\n%s", want, out)
 		}
@@ -96,7 +102,7 @@ func TestInstallProfileCloudflareDryRun(t *testing.T) {
 }
 
 func TestInstallProfileAndPositionalMutuallyExclusive(t *testing.T) {
-	_, _, err := runInstall(t, "research-team", "--profile", "golang")
+	_, _, err := runInstall(t, "fix-skill", "--profile", "fix-all")
 	if err == nil {
 		t.Error("expected error for --profile with positional names")
 	}
@@ -110,6 +116,8 @@ func TestInstallNoTargetSpecified(t *testing.T) {
 }
 
 func TestInstallUnknownArtifact(t *testing.T) {
+	t.Chdir(fixtureCatalog(t))
+	t.Setenv("HOME", t.TempDir())
 	_, _, err := runInstall(t, "does-not-exist")
 	if err == nil {
 		t.Error("expected error for unknown artifact")
@@ -117,8 +125,10 @@ func TestInstallUnknownArtifact(t *testing.T) {
 }
 
 func TestInstallDefaultIsDryRun(t *testing.T) {
+	t.Chdir(fixtureCatalog(t))
+	t.Setenv("HOME", t.TempDir())
 	// No --deploy, no --dry-run: must be a safe dry run, no error, plan shown.
-	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global")
+	out, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global")
 	if err != nil {
 		t.Fatalf("default install should succeed as dry run: %v", err)
 	}
@@ -190,20 +200,20 @@ func TestRecordStateSplitsByScope(t *testing.T) {
 }
 
 func TestInstallDeployAndDryRunMutuallyExclusive(t *testing.T) {
-	_, _, err := runInstall(t, "research-team", "--deploy", "--dry-run")
+	_, _, err := runInstall(t, "fix-skill", "--deploy", "--dry-run")
 	if err == nil {
 		t.Error("expected error for --deploy and --dry-run together")
 	}
 }
 
 func TestInstallJSON(t *testing.T) {
-	// Isolate HOME so --global is a clean sandbox (see TestInstallSkillDryRun).
+	t.Chdir(fixtureCatalog(t))
 	t.Setenv("HOME", t.TempDir())
 	// --json is a persistent root flag; set it on the package global directly
 	// since we run the subcommand in isolation here.
 	jsonOutput = true
 	defer func() { jsonOutput = false }()
-	out, _, err := runInstall(t, "research-team", "--target", "claude", "--global", "--dry-run")
+	out, _, err := runInstall(t, "fix-skill", "--target", "claude", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install failed: %v", err)
 	}
@@ -219,12 +229,14 @@ func TestInstallJSON(t *testing.T) {
 // --- Phase 4: recipe dispatch + self-wiring EXEC -----------------------------
 
 func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
-	// github is a remote http MCP recipe: pure MERGE, no fetch.
-	out, _, err := runInstall(t, "github", "--target", "claude", "--local", "--dry-run")
+	t.Chdir(fixtureCatalog(t))
+	t.Setenv("HOME", t.TempDir())
+	// The invented HTTP MCP recipe is pure MERGE, with no fetch.
+	out, _, err := runInstall(t, "fix-mcp-two", "--target", "claude", "--local", "--dry-run")
 	if err != nil {
 		t.Fatalf("install github failed: %v", err)
 	}
-	for _, want := range []string{"github", ".mcp.json", "MERGE", "mcp"} {
+	for _, want := range []string{"fix-mcp-two", ".mcp.json", "MERGE", "mcp"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}
@@ -232,13 +244,14 @@ func TestInstallRecipeRemoteMcpDryRun(t *testing.T) {
 }
 
 func TestInstallRecipeFetchDryRun(t *testing.T) {
+	t.Chdir(fixtureCatalog(t))
 	t.Setenv("HOME", t.TempDir())
-	// engram is a github-release recipe: FETCH the binary + MERGE per tool.
-	out, _, err := runInstall(t, "memory-engram", "--target", "all", "--global", "--dry-run")
+	// The invented archive recipe emits FETCH and a per-tool MERGE.
+	out, _, err := runInstall(t, "fix-mcp-bin", "--target", "all", "--global", "--dry-run")
 	if err != nil {
 		t.Fatalf("install memory-engram failed: %v", err)
 	}
-	for _, want := range []string{"memory-engram", "FETCH", "engram", "MERGE"} {
+	for _, want := range []string{"fix-mcp-bin", "FETCH", "MERGE"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}

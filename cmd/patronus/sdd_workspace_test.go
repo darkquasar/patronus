@@ -1,3 +1,5 @@
+//go:build artifactbehavior
+
 package main
 
 import (

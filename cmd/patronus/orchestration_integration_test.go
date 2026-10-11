@@ -7,19 +7,7 @@ import (
 	"testing"
 )
 
-// These are the §6b acceptance gate for L10 orchestration. Two classes live here:
-//
-//   - CLASS A (mechanism): the requires CLOSURE — a DIRECT install of an
-//     instruction pulls in the binary recipe it documents, dependency-before-
-//     dependent — and the APPEND/UNAPPEND round-trip. The item names are arbitrary
-//     to those claims, so they are asserted on the FIXTURE, where the delivered
-//     binary is bytes the test invented. This is what let cmd/patronus/testdata/tk
-//     (47KB of vendored third-party bash, pinned to an upstream digest) be deleted.
-//
-//   - CLASS B (catalog contents): "the SDD skill really packs its prompt + scripts"
-//     and "core's orchestration slot really pins ticket + tk + session-completion".
-//     The names ARE those assertions, so they stay real — and both stay off the
-//     fetch path (one installs no binary; the other only locks).
+// Shared requires closure, sidecar placement, lock and removal on invented input.
 
 // TestRequiresClosureDirectInstall proves the per-item `requires` edge: installing
 // ONLY the instruction also installs the binary it documents — the closure is
@@ -84,66 +72,46 @@ func TestRequiresClosureDirectInstall(t *testing.T) {
 	}
 }
 
-// TestOrchestrationSkillsInstall proves the two vendored superpowers orchestration
-// skills land as per-tool skills/<name>/SKILL.md, with the SDD skill's aux files
-// (prompts + scripts) packed alongside. Both are installed DIRECTLY here: core no
-// longer wires subagent-driven-development (plan-execute's sdd mode replaced it),
-// but the skill stays in the catalog as an upstream-compatible opt-in, and this is
-// the test that it still installs cleanly on its own.
-//
-// CLASS B: "the real SDD skill really ships implementer-prompt.md and
-// scripts/review-package" is a statement about the CATALOG's contents — the names
-// ARE the assertion, so they stay real. It is safe on the real catalog because it
-// installs two ARTIFACTS and no recipe: it never reads a pin, never hashes upstream
-// bytes, and never places a binary.
+// Entry and declared sidecars travel through build, fetch and install.
 func TestOrchestrationSkillsInstall(t *testing.T) {
-	f := builtRegistry(t)
+	f := serveFixtureFrom(t, fixtureSkillBundle(t))
 	home := withRemoteEnv(t, f)
 
 	if _, errOut, err := runInstall(t,
-		"subagent-driven-development", "dispatching-parallel-agents",
+		"fix-router", "fix-review",
 		"--target", "claude", "--global", "--deploy", "--yes"); err != nil {
 		t.Fatalf("install orchestration skills: %v\n%s", err, errOut)
 	}
 
-	for _, name := range []string{"subagent-driven-development", "dispatching-parallel-agents"} {
+	for _, name := range []string{"fix-router", "fix-review"} {
 		p := filepath.Join(home, ".claude", "skills", name, "SKILL.md")
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("skill %q not created at %s: %v", name, p, err)
 		}
 	}
 	// SDD aux files packed: a prompt template and a script helper.
-	sddDir := filepath.Join(home, ".claude", "skills", "subagent-driven-development")
-	for _, rel := range []string{"implementer-prompt.md", filepath.Join("scripts", "review-package")} {
+	sddDir := filepath.Join(home, ".claude", "skills", "fix-router")
+	for _, rel := range []string{"mode.md", filepath.Join("scripts", "helper")} {
 		if _, err := os.Stat(filepath.Join(sddDir, rel)); err != nil {
 			t.Errorf("SDD aux file %q not packed: %v", rel, err)
 		}
 	}
 }
 
-// TestCoreOrchestrationSlotAndLock proves the core profile's orchestration slot
-// resolves (ticket + tk via closure + session-completion + dispatching-parallel-agents)
-// and the lock pins the closure — tk is pinned even though no slot names it directly.
-// subagent-driven-development is deliberately absent: core executes plans through
-// plan-execute now, whose sdd mode carries that discipline.
-//
-// CLASS B: "the real core profile really wires ticket, and the closure really pins
-// tk" — the names ARE the assertion, so they stay real. It only LOCKS, which
-// resolves and pins from the catalog and never fetches a binary, so it stays off
-// the fetch path.
+// A profile lock includes the instruction dependency even without a layer slot.
 func TestCoreOrchestrationSlotAndLock(t *testing.T) {
 	f := builtRegistry(t)
 	withRemoteEnv(t, f)
 
-	if _, _, err := runLock(t, "--profile", "core", "--target", "claude"); err != nil {
+	if _, _, err := runLock(t, "--profile", "fix-all", "--target", "claude"); err != nil {
 		t.Fatalf("lock: %v", err)
 	}
 	wd, _ := os.Getwd()
 	s := string(mustRead(t, filepath.Join(wd, "patronus.lock")))
 	for _, want := range []string{
-		"ticket", "tk", // tk pinned via the requires closure, not a direct slot entry
-		"session-completion",
-		"dispatching-parallel-agents",
+		"fix-instruction", "fix-bin", // tk pinned via the requires closure, not a direct slot entry
+		"fix-instruction-2",
+		"fix-skill",
 		"tarballSha256",
 	} {
 		if !strings.Contains(s, want) {

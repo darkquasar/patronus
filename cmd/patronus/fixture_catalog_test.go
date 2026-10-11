@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -72,6 +73,17 @@ func fixMcpTarGz(t *testing.T) []byte {
 	return mustTarGz(t, map[string][]byte{"fix-mcp-bin": fixMcpBinary})
 }
 
+// applicationSourceRoot locates application source, not the catalog. The file
+// anchor stays valid when the production artifacts and profiles are absent.
+func applicationSourceRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot locate application fixture source")
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+}
+
 func fixtureCatalog(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -88,10 +100,7 @@ func fixtureCatalog(t *testing.T) string {
 
 	// adapters/ must EXIST for DiscoverRoot. Copy the REAL adapters: they are OUR
 	// code — it is the pins and upstream BYTES we must not inherit.
-	realRoot, err := registry.DiscoverRoot(".")
-	if err != nil {
-		t.Fatalf("discover repo root (to copy adapters/): %v", err)
-	}
+	realRoot := applicationSourceRoot(t)
 	copyDir(t, filepath.Join(realRoot, "adapters"), filepath.Join(root, "adapters"))
 
 	// --- recipes -----------------------------------------------------------
@@ -358,7 +367,7 @@ hook:
   script: fix-hook-2.sh
 `)
 	write("artifacts/hooks/fix-hook-2/fix-hook-2.sh",
-		"#!/bin/sh\n# fixture hook script — never executed by the tests; only placed and removed.\nexit 0\n")
+		"Inert fixture hook bytes, only placed and removed.\n")
 
 	// fix-hook-claude: a CLAUDE-ONLY hook (targets: [claude]). Wired into a profile
 	// as a @claude flavour, it must land on claude and be silently SKIPPED on
@@ -381,21 +390,9 @@ hook:
   command: "{script}"
   script: fix-hook-claude.sh
 `)
-	// The script is PLACED and its bytes asserted; it is executed only by the test
-	// that proves a placed hook script runs (mirroring the real skills-heartbeat).
-	// It enumerates the installed skills dir, exactly as the real heartbeat does.
-	write("artifacts/hooks/fix-hook-claude/fix-hook-claude.sh", `#!/usr/bin/env bash
-# Fixture hook: lists the installed skills, the way skills-heartbeat does.
-set -euo pipefail
-names=""
-if [ -d "${HOME}/.claude/skills" ]; then
-  for d in "${HOME}/.claude/skills"/*/; do
-    [ -d "$d" ] || continue
-    names="${names:+$names, }$(basename "$d")"
-  done
-fi
-printf '{"installedSkills":"%s"}\n' "$names"
-`)
+	// Default tests deliver inert bytes. The historical executable payload is
+	// retained with the excluded artifactbehavior definitions.
+	write("artifacts/hooks/fix-hook-claude/fix-hook-claude.sh", fixClaudeHookBytes)
 
 	// fix-setting: a SCALAR settings MERGE (the ccusage-statusline shape). Installing
 	// it adds one key to settings.json; removing it takes exactly that key away and
@@ -596,8 +593,14 @@ func TestFixtureRegistryServesBothDeliveryShapes(t *testing.T) {
 	if !ok {
 		t.Fatal("fetcher does not serve a catalog index")
 	}
-	if strings.Contains(string(idx), "\"grilling\"") {
-		t.Error("fixture registry served the REAL catalog — DiscoverRoot did not pick the fixture root")
+	ix, err := registry.LoadIndex(idx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range ix.Artifacts {
+		if !strings.HasPrefix(entry.Manifest.Name, "fix-") {
+			t.Errorf("unexpected non-fixture artifact %q", entry.Manifest.Name)
+		}
 	}
 }
 

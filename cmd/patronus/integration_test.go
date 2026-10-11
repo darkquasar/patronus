@@ -42,25 +42,11 @@ func (f *servingFetcher) Fetch(_ context.Context, url string) (io.ReadCloser, er
 	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
-// builtRegistry builds the REAL catalog and serves its index + artifact tarballs.
-// It serves NO binaries — a real-catalog test may read the catalog's SHAPE, never
-// its PINS, so it must never fetch or hash an upstream digest. Its callers are the
-// CLASS-B contents tests (core_profile, orchestration, core_consolidated), which
-// assert against profile resolution, the lock, or the plan and never deploy a
-// binary. Every mechanism (Class-A) test uses fixtureRegistry instead.
-//
-// A test that reaches this and then tries to install a binary will FETCH, miss in
-// the served bodies, and fail loudly — which is correct: the bytes it wants are a
-// third party's, and they must never enter CI.
+// builtRegistry retains the shared caller seam but builds only invented input.
+// The in-memory fetcher rejects every URL not explicitly supplied by the fixture.
 func builtRegistry(t *testing.T) *servingFetcher {
 	t.Helper()
-	outDir := t.TempDir()
-	// Real package recipes pin the official URL; the in-memory fetcher below
-	// still serves only local index/artifact bytes and rejects every other URL.
-	if _, err := runBuild(t, "--out", outDir, "--base-url", registry.DefaultRegistryURL); err != nil {
-		t.Fatalf("build registry: %v", err)
-	}
-	return serveTree(t, outDir)
+	return fixtureRegistry(t)
 }
 
 // serveTree maps an on-disk R2-layout tree (<dir>/catalog/...) onto a fetcher

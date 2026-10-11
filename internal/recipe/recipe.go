@@ -378,6 +378,14 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 		if err != nil {
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
 		}
+		if tool == "codex" {
+			leaves, err := codexLeafDiffs(rec, ft, tr, path, before, dotted, obj, scope)
+			if err != nil {
+				return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
+			}
+			out = append(out, leaves...)
+			continue
+		}
 		after, err := adapter.MergeConfig(before, ft, tr, spec)
 		if err != nil {
 			return nil, fmt.Errorf("recipe %q -> %s: %w", rec.Name, tool, err)
@@ -411,6 +419,54 @@ func wireDiffs(req Request, tools []string, scope, installPath string) ([]diff.F
 				PriorPresent: priorPresent,
 			},
 		})
+	}
+	return out, nil
+}
+
+// codexLeafDiffs emits one structural MERGE per transport-supplied leaf of a
+// Codex server table, in the layout's key order. Owning leaves rather than the
+// whole table leaves user-added children (bearer_token_env_var, http_headers,
+// env_http_headers, env, ...) unowned: install, update and remove never replace
+// or adopt them. Each leaf carries its own prior, so state keeps an immutable
+// per-leaf inverse. Other harnesses keep whole-map ownership.
+func codexLeafDiffs(rec *manifest.Recipe, ft manifest.FileTarget, tr manifest.Transport, path string, before []byte, dotted string, obj map[string]any, scope string) ([]diff.FileDiff, error) {
+	var out []diff.FileDiff
+	for _, key := range tr.Keys.Keys {
+		val, ok := obj[key]
+		if !ok {
+			continue
+		}
+		leaf := dotted + "." + key
+		after, err := adapter.MergeSettings(before, ft, leaf, val)
+		if err != nil {
+			return nil, err
+		}
+		prior, priorPresent, err := adapter.ReadDotted(before, ft, leaf)
+		if err != nil {
+			return nil, fmt.Errorf("read prior: %w", err)
+		}
+		out = append(out, diff.FileDiff{
+			Path:     path,
+			Action:   diff.Merge,
+			Before:   before,
+			After:    after,
+			Artifact: rec.Name,
+			Type:     string(rec.Shape()),
+			Role:     string(rec.Role),
+			Tool:     "codex",
+			Scope:    scope,
+			Note:     "wire mcp: " + rec.Name,
+			Setting: &diff.SettingEdit{
+				Target:       diff.FileTargetRef{File: ft.File, Format: ft.Format},
+				Dotted:       leaf,
+				ScalarValue:  val,
+				PriorValue:   prior,
+				PriorPresent: priorPresent,
+			},
+		})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("mcp server %s: no transport values to wire", dotted)
 	}
 	return out, nil
 }

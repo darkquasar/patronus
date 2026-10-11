@@ -381,3 +381,38 @@ func TestSettingHookDuplicateIdentityRefuses(t *testing.T) {
 		}
 	}
 }
+
+// TestRemoveSettingScalarTOMLPruneIsBounded pins the conservative TOML prune:
+// only an emptied Codex MCP server table (mcp_servers.<name>) is dropped after
+// an install-created leaf is deleted. Any other emptied table, including a
+// user-created container that only held the managed leaf, is retained because
+// the existing ownership record cannot prove Patronus created it.
+func TestRemoveSettingScalarTOMLPruneIsBounded(t *testing.T) {
+	ft := manifest.FileTarget{File: "~/.codex/config.toml", Format: "toml"}
+	cases := []struct {
+		name, in, dotted, gone string
+		keep                   []string
+	}{
+		{"server table pruned", "model = 'm'\n[mcp_servers.inv]\nurl = 'u'\n[mcp_servers.other]\nurl = 'o'\n", "mcp_servers.inv.url", "mcp_servers.inv", []string{"model", "mcp_servers.other.url"}},
+		{"user profile table kept", "[profiles.user_empty]\nmodel = 'managed'\n", "profiles.user_empty.model", "profiles.user_empty.model", []string{"profiles.user_empty"}},
+		{"nested server child table kept", "[mcp_servers.inv.env]\nINVENTED = 'managed'\n[mcp_servers.inv]\nurl = 'u'\n", "mcp_servers.inv.env.INVENTED", "mcp_servers.inv.env.INVENTED", []string{"mcp_servers.inv.env", "mcp_servers.inv.url"}},
+		{"top-level container kept", "[features]\nflag = true\n", "features.flag", "features.flag", []string{"features"}},
+		{"server with user child kept", "[mcp_servers.inv]\nurl = 'u'\nbearer_token_env_var = 'INVENTED_ENV'\n", "mcp_servers.inv.url", "mcp_servers.inv.url", []string{"mcp_servers.inv.bearer_token_env_var"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out, found, err := RemoveSettingScalar([]byte(tc.in), ft, tc.dotted, nil, false)
+			if err != nil || !found {
+				t.Fatalf("remove: found=%t err=%v", found, err)
+			}
+			if _, present, err := ReadDotted(out, ft, tc.gone); err != nil || present {
+				t.Fatalf("%s survived (err %v):\n%s", tc.gone, err, out)
+			}
+			for _, k := range tc.keep {
+				if _, present, err := ReadDotted(out, ft, k); err != nil || !present {
+					t.Fatalf("%s lost (err %v):\n%s", k, err, out)
+				}
+			}
+		})
+	}
+}
