@@ -38,6 +38,14 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Local correction, version 1.0.1
+
+Corrected the dispatcher helper reference to the existing distributed
+`isolated-writer-supervisor/scripts/supervisor.py`, matching the parallel skill's
+route. No helper is added or moved; native workers remain Partial/runtime-pending.
+A focused content regression checks the concrete Python route's file existence
+and manifest distribution. This does not qualify native loading or execution.
+
 ## Active reads
 
 - `grilling-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

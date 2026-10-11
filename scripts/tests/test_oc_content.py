@@ -241,6 +241,23 @@ class OpenCodeContentTest(unittest.TestCase):
                         problems.append("%s:%d: handoff to absent artifact %r" % (rel, number, name))
         self.assertEqual([], problems, "handoffs:\n" + "\n".join(problems))
 
+    def test_dispatcher_python_routes_are_distributed(self):
+        dispatcher = self.root / "artifacts/skills/skills-dispatch-oc/SKILL.md"
+        if not dispatcher.is_file():
+            return
+        routes = re.findall(
+            r"\{skillsDir\}/([^/\s`]+)/scripts/([\w.-]+\.py)",
+            dispatcher.read_text(encoding="utf-8"),
+        )
+        for name, filename in routes:
+            with self.subTest(artifact=name, file=filename):
+                artifact = self.root / "artifacts/skills" / name
+                relative = "scripts/" + filename
+                self.assertTrue((artifact / relative).is_file(), "missing route: %s/%s" % (name, relative))
+                manifest = (artifact / "patronus.yaml").read_text(encoding="utf-8")
+                files_line = next(line for line in manifest.splitlines() if line.startswith("files:"))
+                self.assertIn(relative, _flow_list(files_line.partition(":")[2]))
+
     def test_manifests_target_opencode_only(self):
         problems = []
         for directory in self.oc_dirs():

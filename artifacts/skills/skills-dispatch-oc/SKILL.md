@@ -34,8 +34,8 @@ skill activation or a substitute for an OpenCode body.
 - Review and route a plan: `{skillsDir}/plan-review-oc/SKILL.md`.
 - Approved serial execution: `{skillsDir}/plan-execute-oc/SKILL.md`.
 - Approved parallel execution: `{skillsDir}/plan-execute-parallel-oc/SKILL.md`
-  (bundled bounded helper at
-  `{skillsDir}/plan-execute-parallel-oc/scripts/supervisor.py`; native OpenCode
+  (shared bounded helper at
+  `{skillsDir}/isolated-writer-supervisor/scripts/supervisor.py`; native OpenCode
   workers remain Partial/runtime-pending).
 - Independent review: `{skillsDir}/requesting-code-review-oc/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-oc/SKILL.md`.
