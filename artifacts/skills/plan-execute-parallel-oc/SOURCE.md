@@ -57,6 +57,36 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Fail-closed correction (artifact 1.1.0)
+
+Bounded correction for OC-WC-002 from source base
+`76f8f5166e85d7b55c2a855401f8caae922a9cbb`: permission containers are type-checked
+before accessing `edit`. Both JSON validators now refuse every nonzero checker exit,
+including failure with empty stdout. Known missing identities and malformed JSON keep
+named diagnostics; unexpected checker failures use a generic diagnostic, with checker
+stderr suppressed to avoid exposing configuration or traceback details. Valid tracked
+and env-resolved global working sets retain their previous admission behavior.
+No runner, guard program, native permission rule or supervisor behavior changed.
+
+Observed local invented-data run on 2026-10-11: from this artifact directory,
+`flock -x /tmp/patronus-gates.lock python3 fixtures/test_worker_precheck.py -v`,
+22 tests, OK. New regressions cover scalar/null/list permission containers, malformed
+JSON, and controlled invented executable failures without stdout for both JSON
+validators (statuses 1, 2, 7 and 127). Existing complete/partial sets, named missing
+identities, tracked-base, executable-bit and global-root precedence cases remain.
+Fixture subprocesses have 10-second timeouts. Scalar-container, hook-checker and
+permission-checker tracer bullets each first observed exit 0 instead of refusal, then
+passed after minimal fixes. Full RED/GREEN logs are retained in the source-authoring
+handoff at `correction-final/precheck-evidence/` (not distributed artifact files).
+The earlier 16-test result above remains historical, not current acceptance.
+These fixtures are still outside development gates and prove invented-data script
+behavior only. Native OpenCode workers and permission merging remain runtime-pending.
+
+Corrected source identities (SHA-256):
+
+- `scripts/worker-precheck.sh`: `72d0fde1be4869280adb151c973888d5ab6fa3e932a7a4f06062500f1ae60753`.
+- `fixtures/test_worker_precheck.py`: `d8279261a52202345755e67630ac187ee049937efec9000116c3ae37b7440626`.
+
 ## Active reads
 
 - `dispatching-parallel-agents-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

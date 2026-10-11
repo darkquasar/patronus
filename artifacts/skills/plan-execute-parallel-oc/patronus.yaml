@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-parallel-oc
 description: "OpenCode only: isolated parallel writers via the required shared isolated-writer-supervisor and headless opencode run workers; native OpenCode workers runtime-pending."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE", "scripts/worker-precheck.sh", "fixtures/test_worker_precheck.py"]
 targets: [opencode]

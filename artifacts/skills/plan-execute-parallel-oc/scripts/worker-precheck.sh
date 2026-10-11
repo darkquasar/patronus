@@ -118,14 +118,16 @@ missing = [w for w in want if w not in found]
 for w in missing:
     print(w)
 sys.exit(1 if missing else 0)
-' block-secrets-oc gitleaks-guard-oc > "${TMPDIR:-/tmp}/worker-precheck.$$" || {
+' block-secrets-oc gitleaks-guard-oc > "${TMPDIR:-/tmp}/worker-precheck.$$" 2>/dev/null || {
     status=$?
     if [ "$status" -eq 3 ]; then
       miss "$hooks is not valid JSON"
-    else
-      while IFS= read -r guard; do
+    elif [ "$status" -eq 1 ] && [ -s "${TMPDIR:-/tmp}/worker-precheck.$$" ]; then
+      while IFS= read -r guard || [ -n "$guard" ]; do
         miss "$hooks patronusId entry for $guard"
       done < "${TMPDIR:-/tmp}/worker-precheck.$$"
+    else
+      miss "$hooks validator failed"
     fi
   }
   rm -f "${TMPDIR:-/tmp}/worker-precheck.$$"
@@ -150,7 +152,8 @@ try:
     doc = json.load(sys.stdin)
 except ValueError:
     sys.exit(3)
-edit = doc.get("permission", {}).get("edit") if isinstance(doc, dict) else None
+permission = doc.get("permission") if isinstance(doc, dict) else None
+edit = permission.get("edit") if isinstance(permission, dict) else None
 if not isinstance(edit, dict):
     print("permission.edit object")
     sys.exit(1)
@@ -158,14 +161,16 @@ missing = [k for k in ("*", "*.env", ".env.*") if k not in edit]
 for k in missing:
     print("permission.edit key %s" % k)
 sys.exit(1 if missing else 0)
-' > "${TMPDIR:-/tmp}/worker-precheck.$$" || {
+' > "${TMPDIR:-/tmp}/worker-precheck.$$" 2>/dev/null || {
     status=$?
     if [ "$status" -eq 3 ]; then
       miss "$config is not valid JSON"
-    else
-      while IFS= read -r item; do
+    elif [ "$status" -eq 1 ] && [ -s "${TMPDIR:-/tmp}/worker-precheck.$$" ]; then
+      while IFS= read -r item || [ -n "$item" ]; do
         miss "$config $item"
       done < "${TMPDIR:-/tmp}/worker-precheck.$$"
+    else
+      miss "$config validator failed"
     fi
   }
   rm -f "${TMPDIR:-/tmp}/worker-precheck.$$"
