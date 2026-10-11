@@ -11,9 +11,64 @@ import (
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/install"
 	"github.com/darkquasar/patronus/internal/manifest"
+	"github.com/darkquasar/patronus/internal/plan"
 	"github.com/darkquasar/patronus/internal/remove"
 	"github.com/darkquasar/patronus/internal/state"
 )
+
+func TestReconcileComputedRetirementKeepsEmptyMember(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "toy.json")
+	before := []byte(`{"a":"deny","b":"deny","user":"keep"}`)
+	if err := os.WriteFile(path, before, 0644); err != nil {
+		t.Fatal(err)
+	}
+	var oldDiffs, inverses []diff.FileDiff
+	for _, dotted := range []string{"a", "b"} {
+		e := &diff.SettingEdit{Target: diff.FileTargetRef{File: "toy.json", Format: "json"}, Dotted: dotted, ScalarValue: "deny"}
+		if dotted == "a" {
+			e.PriorPresent, e.PriorValue = true, "original"
+		}
+		d := diff.FileDiff{Path: path, Artifact: "invented-mask", Tool: "toy", Scope: "local", Version: "1", Action: diff.Merge, After: before, Setting: e}
+		oldDiffs = append(oldDiffs, d)
+		d.Action, d.Before, d.Note = diff.Restore, before, "computed leaf retired: "+dotted
+		var err error
+		d.After, _, err = adapter.RemoveSettingEdit(before, e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		inverses = append(inverses, d)
+	}
+	old := state.FromChangeSet(oldDiffs, "first")
+	cs, err := plan.Finalize(inverses, dp04Read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs, err = plan.AdmitSettings(cs, old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &install.Applier{}
+	result, err := app.Apply(cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := state.Reconcile(state.ReconcileInput{Old: old, Desired: cs.Diffs, Result: *result, Now: "next"})
+	if len(got.Unresolved) != 0 || len(got.Items) != 1 || len(got.Items[0].Files) != 0 || got.Items[0].ItemVersion != "1" {
+		t.Fatalf("retirement lost member or retained files: %+v", got)
+	}
+	value, present, err := adapter.ReadDotted(cs.Diffs[0].After, manifest.FileTarget{File: "toy.json", Format: "json"}, "a")
+	if err != nil || !present || value != "original" {
+		t.Fatalf("recorded prior not restored: %s", cs.Diffs[0].After)
+	}
+	removePlan, err := remove.Compute(got.Items, dp04Read, nil)
+	if err != nil || len(removePlan.ChangeSet.Diffs) != 0 {
+		t.Fatalf("empty member not removable: %+v %v", removePlan, err)
+	}
+	failed := state.Reconcile(state.ReconcileInput{Old: old, Desired: cs.Diffs, Now: "failed"})
+	if len(failed.Unresolved) == 0 || len(failed.Items[0].Files) != 2 {
+		t.Fatalf("unapplied retirement released ownership: %+v", failed)
+	}
+}
 
 func TestReconcileRetainsOwnedSkipAndFailedPaths(t *testing.T) {
 	a := diff.FileDiff{Artifact: "fixture", Tool: "pi", Scope: "global", Version: "1", Path: "/fixture/a", Action: diff.Create, After: []byte("a")}

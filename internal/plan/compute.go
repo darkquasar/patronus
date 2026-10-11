@@ -230,8 +230,32 @@ func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 	order := []string{}
 	byPath := map[string]*diff.FileDiff{}
 	settings := map[string][]diff.FileDiff{}
+	inversePaths := map[string]bool{}
+	for _, d := range diffs {
+		for _, row := range settingRows(d) {
+			if computedInverse(row) {
+				inversePaths[d.Path] = true
+			}
+		}
+	}
+	inverseGroups := map[string][]diff.FileDiff{}
+	var inverseOrder []string
 
 	for _, d := range diffs {
+		if computedPreserved(d) {
+			key := "preserved\x00" + d.Path + "\x00" + d.Artifact + "\x00" + d.Setting.Dotted
+			cp := d
+			byPath[key] = &cp
+			order = append(order, key)
+			continue
+		}
+		if inversePaths[d.Path] {
+			if _, ok := inverseGroups[d.Path]; !ok {
+				inverseOrder = append(inverseOrder, d.Path)
+			}
+			inverseGroups[d.Path] = append(inverseGroups[d.Path], d)
+			continue
+		}
 		// FETCH/EXEC are per-recipe intents (a download, a command) that must
 		// not be folded together even if their Path collides (EXEC rows carry no
 		// real path). Pass each through under a unique key so all are preserved.
@@ -380,6 +404,9 @@ func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 	for _, p := range order {
 		d := *byPath[p]
 		for _, row := range settingRows(d) {
+			if computedPreserved(row) {
+				continue
+			}
 			present, equal, err := adapter.SettingStatus(d.After, row.Setting)
 			if err != nil {
 				return nil, fmt.Errorf("compose %s result: %w", d.Path, err)
@@ -389,6 +416,92 @@ func composeByPath(diffs []diff.FileDiff) ([]diff.FileDiff, error) {
 			}
 		}
 		out = append(out, d)
+	}
+	for _, path := range inverseOrder {
+		d, err := composeComputedSettings(inverseGroups[path])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+func computedPreserved(d diff.FileDiff) bool {
+	return d.Setting != nil && d.Action == diff.Skip && d.Intended == diff.Restore && d.Note == "computed leaf "+d.Setting.Dotted+" was edited; not retired"
+}
+
+func computedInverse(d diff.FileDiff) bool {
+	return d.Setting != nil && d.Action == diff.Restore && strings.HasPrefix(d.Note, "computed leaf retired: ")
+}
+
+// composeComputedSettings retains each inverse separately from forward contributors.
+func composeComputedSettings(group []diff.FileDiff) (diff.FileDiff, error) {
+	var rows []diff.FileDiff
+	for _, d := range group {
+		if d.Setting == nil {
+			return diff.FileDiff{}, fmt.Errorf("compose %s: structural and nonstructural writes overlap", d.Path)
+		}
+		rows = append(rows, settingRows(d)...)
+	}
+	for i, row := range rows {
+		if err := adapter.ValidateSettingEdit(row.Setting); err != nil {
+			return diff.FileDiff{}, err
+		}
+		for _, old := range rows[:i] {
+			if old.Tool != row.Tool || old.Scope != row.Scope || old.Root != row.Root {
+				return diff.FileDiff{}, fmt.Errorf("compose %s: structural identity conflict", row.Path)
+			}
+			if err := adapter.CheckSettingPair(old.Setting, settingOwner(old), row.Setting, settingOwner(row)); err != nil {
+				return diff.FileDiff{}, err
+			}
+			if adapter.SettingEditsOverlap(old.Setting, row.Setting) {
+				return diff.FileDiff{}, fmt.Errorf("compose %s: overlapping retirement and desired leaf", row.Path)
+			}
+		}
+	}
+	main := 0
+	for i, row := range rows {
+		if !computedInverse(row) {
+			main = i
+			break
+		}
+	}
+	out := rows[main]
+	out.SettingContrib, out.RestoreContrib = nil, nil
+	out.After = out.Before
+	for i, row := range rows {
+		var err error
+		if computedInverse(row) {
+			out.After, _, err = adapter.RemoveSettingEdit(out.After, row.Setting)
+		} else {
+			out.After, err = adapter.ApplySettingEdit(out.After, row.Setting)
+		}
+		if err != nil {
+			return diff.FileDiff{}, err
+		}
+		if i == main {
+			continue
+		}
+		if computedInverse(row) {
+			out.RestoreContrib = append(out.RestoreContrib, diff.RestoreContrib{Artifact: row.Artifact, Version: row.Version, Type: row.Type, Role: row.Role, Edit: row.Setting})
+		} else {
+			out.SettingContrib = append(out.SettingContrib, diff.SettingContrib{Artifact: row.Artifact, Version: row.Version, Type: row.Type, Role: row.Role, Edit: row.Setting})
+		}
+	}
+	for _, row := range rows {
+		if computedInverse(row) {
+			ft := manifest.FileTarget{File: row.Setting.Target.File, Format: row.Setting.Target.Format}
+			value, present, err := adapter.ReadDotted(out.After, ft, row.Setting.Dotted)
+			if err != nil || present != row.Setting.PriorPresent || (present && !adapter.SettingValuesEqual(value, row.Setting.PriorValue)) {
+				return diff.FileDiff{}, fmt.Errorf("compose %s: result lost inverse %s", row.Path, row.Setting.Dotted)
+			}
+		} else {
+			present, equal, err := adapter.SettingStatus(out.After, row.Setting)
+			if err != nil || !present || !equal {
+				return diff.FileDiff{}, fmt.Errorf("compose %s: result lost setting %s", row.Path, row.Setting.Dotted)
+			}
+		}
 	}
 	return out, nil
 }
@@ -477,10 +590,21 @@ func settingRows(d diff.FileDiff) []diff.FileDiff {
 	}
 	first := d
 	first.SettingContrib = nil
+	first.RestoreContrib = nil
 	rows := []diff.FileDiff{first}
 	for _, c := range d.SettingContrib {
 		row := first
 		row.Artifact, row.Version, row.Type, row.Role, row.Setting = c.Artifact, c.Version, c.Type, c.Role, c.Edit
+		row.Action, row.Note = diff.Merge, ""
+		rows = append(rows, row)
+	}
+	for _, c := range d.RestoreContrib {
+		if c.Edit == nil {
+			continue
+		}
+		row := first
+		row.Artifact, row.Version, row.Type, row.Role, row.Setting = c.Artifact, c.Version, c.Type, c.Role, c.Edit
+		row.Action, row.Note = diff.Restore, "computed leaf retired: "+c.Edit.Dotted
 		rows = append(rows, row)
 	}
 	return rows
@@ -546,15 +670,37 @@ func AdmitSettings(cs *diff.ChangeSet, owners []state.Item) (*diff.ChangeSet, er
 					if err != nil {
 						return nil, fmt.Errorf("setting %s: %w", row.Path, err)
 					}
-					if !present || !equal {
+					if (!present || !equal) && !computedPreserved(row) {
 						return nil, fmt.Errorf("setting %s: recorded leaf %s changed or missing", row.Path, file.Setting.Dotted)
+					}
+					if computedInverse(row) {
+						edit := *file.Setting
+						row.Setting = &edit
 					}
 					owned = true
 				}
 			}
+			if computedPreserved(row) {
+				if !owned || !bytes.Equal(row.Before, row.After) {
+					return nil, fmt.Errorf("setting %s: preserved retirement has no owner or writes bytes", row.Path)
+				}
+				noops = append(noops, row)
+				continue
+			}
 			present, equal, err := adapter.SettingStatus(row.Before, row.Setting)
 			if err != nil {
 				return nil, fmt.Errorf("setting %s: %w", row.Path, err)
+			}
+			if computedInverse(row) {
+				if !owned {
+					return nil, fmt.Errorf("setting %s: inverse has no recorded owner", row.Path)
+				}
+				row.After, _, err = adapter.RemoveSettingEdit(row.Before, row.Setting)
+				if err != nil {
+					return nil, err
+				}
+				raw = append(raw, row)
+				continue
 			}
 			if !owned && present {
 				if !equal {
@@ -583,7 +729,11 @@ func AdmitSettings(cs *diff.ChangeSet, owners []state.Item) (*diff.ChangeSet, er
 	for i := range composed {
 		d := &composed[i]
 		if d.Setting != nil {
-			d.Action = diff.Classify(diff.Merge, d.Before, d.After, len(d.Before) > 0)
+			intended := diff.Merge
+			if computedInverse(*d) {
+				intended = diff.Restore
+			}
+			d.Action = diff.Classify(intended, d.Before, d.After, len(d.Before) > 0)
 		}
 	}
 	composed = append(composed, noops...)

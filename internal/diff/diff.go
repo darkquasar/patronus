@@ -320,10 +320,12 @@ type SettingContrib struct {
 // undo bytes live on the composite's After, and the authoritative per-contributor
 // verdict lives in the remove package's outcome ledger, not here.
 type RestoreContrib struct {
-	Artifact string `json:"artifact"`
-	Version  string `json:"version,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Role     string `json:"role,omitempty"`
+	// Edit is in-memory retirement evidence; ordinary remove display rows leave it nil.
+	Edit     *SettingEdit `json:"-"`
+	Artifact string       `json:"artifact"`
+	Version  string       `json:"version,omitempty"`
+	Type     string       `json:"type,omitempty"`
+	Role     string       `json:"role,omitempty"`
 }
 
 // Classify decides the terminal Action for a proposed change, preserving

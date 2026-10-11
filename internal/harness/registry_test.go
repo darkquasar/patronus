@@ -13,6 +13,32 @@ import (
 
 func toyRoots(RootInputs) ([]scan.SkillRoot, error) { return nil, nil }
 
+func TestDescriptorsIncludesUntargetedAndCopiesSlices(t *testing.T) {
+	reg, err := NewRegistry(Descriptor{Name: "invented-a", Profiles: []string{"fixture-profile"}, ShadowFiles: []string{"shadow.md"}}, Descriptor{Name: "invented-b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := reg.Descriptors()
+	if len(got) != 2 || got[0].Name != "invented-a" || got[1].Name != "invented-b" {
+		t.Fatalf("missing registration order: %+v", got)
+	}
+	got[0].Profiles[0] = "changed"
+	got[0].ShadowFiles[0] = "changed"
+	got[1].Name = "changed"
+	again := reg.Descriptors()
+	if again[0].Profiles[0] != "fixture-profile" || again[0].ShadowFiles[0] != "shadow.md" || again[1].Name != "invented-b" {
+		t.Fatalf("registry was mutated: %+v", again)
+	}
+	var absent *Registry
+	if absent.Descriptors() != nil {
+		t.Fatal("nil registry must return nil")
+	}
+	empty, err := NewRegistry()
+	if err != nil || empty.Descriptors() != nil {
+		t.Fatal("empty registry must return nil")
+	}
+}
+
 func toyRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r, err := NewRegistry(

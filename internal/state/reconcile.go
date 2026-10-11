@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"strings"
+
+	"github.com/darkquasar/patronus/internal/manifest"
 
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
@@ -41,6 +44,9 @@ func keyOf(it Item) itemKey { return itemKey{it.Artifact, it.Tool, it.Scope, it.
 // version for a new partial install), while successful files retain their new
 // checksums and immutable pre-management baselines.
 func Reconcile(in ReconcileInput) ReconcileResult {
+	in.Desired = retirementRows(in.Desired)
+	in.Result.Applied = retirementRows(in.Result.Applied)
+	in.Result.Skipped = retirementRows(in.Result.Skipped)
 	out := ReconcileResult{Items: make([]Item, len(in.Old))}
 	byKey := map[itemKey]int{}
 	for i, it := range in.Old {
@@ -81,6 +87,63 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 		d := desired
 		if applied {
 			d = actual
+		}
+		if desired.Action == diff.Skip && desired.Intended == diff.Restore && desired.Setting != nil && desired.Note == "computed leaf "+desired.Setting.Dotted+" was edited; not retired" {
+			k := itemKey{desired.Artifact, desired.Tool, desired.Scope, desired.Root}
+			selected[k], versions[k] = true, desired.Version
+			idx, ok := byKey[k]
+			found := false
+			if ok {
+				for _, old := range out.Items[idx].Files {
+					if old.Path == desired.Path && adapter.SameSettingTarget(old.Setting, desired.Setting) {
+						seen[k] = append(seen[k], old)
+						found = true
+						break
+					}
+				}
+			}
+			if !found || applied || !wasSkipped || skipped.Action != diff.Skip || !bytes.Equal(desired.Before, desired.After) {
+				problem(k, desired.Path, "edited retirement was not preserved")
+			}
+			continue
+		}
+		if d.Action == diff.Restore && d.Setting != nil && strings.HasPrefix(d.Note, "computed leaf retired: ") {
+			k := itemKey{d.Artifact, d.Tool, d.Scope, d.Root}
+			selected[k], versions[k] = true, d.Version
+			idx, ok := byKey[k]
+			if !ok {
+				problem(k, d.Path, "retirement has no recorded owner")
+				continue
+			}
+			oldIndex := -1
+			for j, f := range out.Items[idx].Files {
+				if f.Path == d.Path && adapter.SameSettingTarget(f.Setting, d.Setting) {
+					oldIndex = j
+					break
+				}
+			}
+			if oldIndex < 0 {
+				problem(k, d.Path, "retirement has no recorded leaf")
+				continue
+			}
+			old := out.Items[idx].Files[oldIndex]
+			seen[k] = append(seen[k], old)
+			if !applied {
+				problem(k, d.Path, "retirement was not completed")
+				continue
+			}
+			if err := verifyOwned(old, desired.Before); err != nil {
+				problem(k, d.Path, err.Error())
+				continue
+			}
+			ft := manifest.FileTarget{File: old.Setting.Target.File, Format: old.Setting.Target.Format}
+			value, present, err := adapter.ReadDotted(d.After, ft, old.Setting.Dotted)
+			if err != nil || present != old.Setting.PriorPresent || (present && !adapter.SettingValuesEqual(value, old.Setting.PriorValue)) {
+				problem(k, d.Path, "retirement inverse was not verified")
+				continue
+			}
+			out.Items[idx].Files = append(out.Items[idx].Files[:oldIndex], out.Items[idx].Files[oldIndex+1:]...)
+			continue
 		}
 		rows := FromChangeSet([]diff.FileDiff{forwardDiff(d)}, in.Now)
 		for _, row := range rows {
@@ -198,6 +261,27 @@ func Reconcile(in ReconcileInput) ReconcileResult {
 		}
 	}
 	RefreshSectionChecksumsWithPolicy(out.Items, in.Result.Applied, in.Policy)
+	return out
+}
+
+// retirementRows expands in-memory computed inverse evidence, leaving legacy rows alone.
+func retirementRows(diffs []diff.FileDiff) []diff.FileDiff {
+	var out []diff.FileDiff
+	for _, d := range diffs {
+		main := d
+		main.RestoreContrib = nil
+		out = append(out, main)
+		for _, c := range d.RestoreContrib {
+			if c.Edit == nil {
+				continue
+			}
+			row := d
+			row.Artifact, row.Version, row.Type, row.Role, row.Setting = c.Artifact, c.Version, c.Type, c.Role, c.Edit
+			row.Action, row.Note = diff.Restore, "computed leaf retired: "+c.Edit.Dotted
+			row.SettingContrib, row.RestoreContrib = nil, nil
+			out = append(out, row)
+		}
+	}
 	return out
 }
 

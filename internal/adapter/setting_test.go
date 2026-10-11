@@ -10,6 +10,60 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+func TestComputedSettingEmitsNoAdapterDiff(t *testing.T) {
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := settingArtifact("invented-mask", "permission.skill", nil)
+	art.Setting.Computed = "skill-mask"
+	diffs, err := eng.Transform(art, loadAdapter(t, "claude"), "global", "", noExisting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 0 {
+		t.Fatalf("computed setting emitted placeholder: %+v", diffs)
+	}
+}
+
+func TestSplitLeavesEmitQuotedKeys(t *testing.T) {
+	ad, err := manifest.DecodeAdapter([]byte("apiVersion: patronus/v2\nfamily: adapter\ntool: toy\nlayout:\n  setting:\n    project: {file: toy.json, format: json}\n    splitLeaves: [permission.edit]\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := settingArtifact("invented-defaults", "permission.edit", map[string]any{"*": "allow", "*.env": "deny", ".env.*": "deny"})
+	before := []byte(`{"permission":{"edit":{"*.secret":"ask"},"bash":"ask"}}`)
+	diffs, err := eng.Transform(art, ad, "local", "", existingBytes(before))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diffs) != 3 {
+		t.Fatalf("want three leaves, got %d", len(diffs))
+	}
+	merged := before
+	for _, d := range diffs {
+		if d.Setting == nil || d.Setting.PriorPresent {
+			t.Fatalf("not independent new leaf: %+v", d.Setting)
+		}
+		merged, err = ApplySettingEdit(merged, d.Setting)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	var root map[string]any
+	if err := json.Unmarshal(merged, &root); err != nil {
+		t.Fatal(err)
+	}
+	permission := root["permission"].(map[string]any)
+	edit := permission["edit"].(map[string]any)
+	if len(edit) != 4 || edit["*"] != "allow" || edit["*.env"] != "deny" || edit[".env.*"] != "deny" || edit["*.secret"] != "ask" || permission["bash"] != "ask" {
+		t.Fatalf("wrong written keys/siblings: %s", merged)
+	}
+	ad.Layout.Setting.SplitLeaves = nil
+	legacy, err := eng.Transform(art, ad, "local", "", noExisting)
+	if err != nil || len(legacy) != 1 || legacy[0].Setting.Dotted != "permission.edit" {
+		t.Fatalf("legacy object changed: %+v, %v", legacy, err)
+	}
+}
+
 func settingArtifact(name, path string, value any) *manifest.Artifact {
 	return &manifest.Artifact{
 		Meta:    manifest.Meta{Family: manifest.FamilyArtifact, Name: name, Role: manifest.RoleObservability},

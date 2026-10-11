@@ -30,6 +30,32 @@ func TestMarshalOmitsEmptyMode(t *testing.T) {
 	}
 }
 
+func TestSettingSpecRequiresExactlyOneOfValueOrComputed(t *testing.T) {
+	for _, tc := range []struct{ name, spec, want string }{
+		{"computed", "path: permission.skill\n  computed: skill-mask", ""},
+		{"false", "path: flag\n  value: false", ""},
+		{"zero", "path: flag\n  value: 0", ""},
+		{"both", "path: flag\n  value: deny\n  computed: skill-mask", "exactly one"},
+		{"neither", "path: flag", "exactly one"},
+		{"null", "path: flag\n  value: null", "exactly one"},
+		{"missing path", "computed: skill-mask", "exactly one"},
+		{"unknown", "path: flag\n  computed: mystery", "unknown computed kind"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := DecodeArtifact([]byte("apiVersion: patronus/v2\nfamily: artifact\nname: invented-setting\nversion: 1.0.0\ndescription: fixture\ntype: setting\nsetting:\n  " + tc.spec + "\n"))
+			if tc.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
 func pointerArtifact() *Artifact {
 	return &Artifact{
 		Meta:    Meta{APIVersion: "patronus/v2", Family: FamilyArtifact, Name: "ticket", Version: "1.0.0"},

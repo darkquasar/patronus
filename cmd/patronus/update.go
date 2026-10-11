@@ -356,11 +356,20 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 						return err
 					}
 				}
+				computed := false
+				for _, entry := range cat.Artifacts {
+					if entry.Manifest.Name == c.name && entry.Manifest.Setting != nil && entry.Manifest.Setting.Computed != "" {
+						computed = true
+					}
+				}
 				switch {
 				case c.latest == "":
 					fmt.Fprintf(out, "%s: not in registry — leaving as-is\n", c.name)
 				case pending != nil:
 					fmt.Fprintf(out, "%s: pending recovery (%s); deploy retries recovery under the package lock\n", c.name, pending.Phase)
+					selected = append(selected, c)
+				case computed:
+					fmt.Fprintf(out, "%s: computed setting, recomputing at %s\n", c.name, c.latest)
 					selected = append(selected, c)
 				case c.installed == c.latest && !(directory && force):
 					fmt.Fprintf(out, "%s: up to date (%s)\n", c.name, c.installed)
@@ -456,6 +465,9 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 					printReadiness(out, readinessReport(p.Changes, exec.LookPath))
 					printPathReadiness(out, pathReadiness(p.Changes, pathDirs(os.Getenv("PATH"))))
 				}
+				for _, message := range p.Messages {
+					fmt.Fprintln(out, message)
+				}
 				if deploy {
 					if hasDirectory {
 						legacy := &diff.ChangeSet{DryRun: false}
@@ -472,6 +484,9 @@ func newUpdateCmd(hreg *harness.Registry) *cobra.Command {
 					// updated; unresolved paths/state persistence stop the loop.
 					if err := runDeployLocked(cmd, p.Changes, p.Resolver, deployOptions{mutation: mutation, target: c.tool, force: true, home: home, projectDir: wd, Harness: hreg}, runnerForCommands); err != nil {
 						return err
+					}
+					for _, message := range p.Messages {
+						fmt.Fprintln(out, message)
 					}
 				}
 				updated++

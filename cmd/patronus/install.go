@@ -134,6 +134,9 @@ func newInstallCmd(reg *harness.Registry) *cobra.Command {
 			}
 			dp06PrintSelection(cmd, cs, planned.Target, res)
 			render.PrintPlan(cmd.OutOrStdout(), cs, res, verbose)
+			for _, message := range planned.Messages {
+				fmt.Fprintln(cmd.OutOrStdout(), message)
+			}
 
 			// Always-on package-install readiness: for every package-install item,
 			// report which candidate managers are present/missing on this host. Shown
@@ -151,7 +154,13 @@ func newInstallCmd(reg *harness.Registry) *cobra.Command {
 			if !deploy {
 				return nil
 			}
-			return runDeployLocked(cmd, cs, res, deployOptions{trackExisting: trackExisting, allowPiProject: allowPiProject, profile: profileSel, mutation: mutation, target: planned.Target, globalPrerequisites: planned.GlobalPrerequisites, force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd, Harness: reg}, runnerForCommands)
+			if err := runDeployLocked(cmd, cs, res, deployOptions{trackExisting: trackExisting, allowPiProject: allowPiProject, profile: profileSel, mutation: mutation, target: planned.Target, globalPrerequisites: planned.GlobalPrerequisites, force: force, yes: yes, allowPkgInstalls: allowPkgInstalls, home: home, projectDir: wd, Harness: reg}, runnerForCommands); err != nil {
+				return err
+			}
+			for _, message := range planned.Messages {
+				fmt.Fprintln(cmd.OutOrStdout(), message)
+			}
+			return nil
 		},
 	}
 
@@ -190,6 +199,7 @@ type plannedInstall struct {
 	Resolver            toolpath.Resolver
 	Target              string
 	GlobalPrerequisites []diff.FileDiff
+	Messages            []string
 }
 
 func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, error) {
@@ -372,7 +382,10 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 	res := toolpath.New(env, home, wd)
 
 	var globalPrerequisites []diff.FileDiff
+	var messages []string
 	cs, err := computePlan(planInputs{
+		harness:        hreg,
+		message:        func(s string) { messages = append(messages, s) },
 		policy:         hreg.OwnershipPolicy(),
 		cat:            cat,
 		inv:            inv,
@@ -414,12 +427,14 @@ func planInstall(cmd *cobra.Command, req installPlanRequest) (plannedInstall, er
 			warnf("Pi mixed-context conflict: operator-prepared combined file and separately scoped interactive consent required before any selected write")
 		}
 	}
-	return plannedInstall{Changes: cs, Resolver: res, Target: tool, GlobalPrerequisites: globalPrerequisites}, nil
+	return plannedInstall{Changes: cs, Resolver: res, Target: tool, GlobalPrerequisites: globalPrerequisites, Messages: messages}, nil
 }
 
 // planInputs carries everything computePlan needs to build a change set across a
 // mix of artifact and recipe names.
 type planInputs struct {
+	harness        *harness.Registry
+	message        func(string)
 	policy         state.OwnershipPolicy
 	cat            *registry.Catalog
 	inv            *scan.Inventory
@@ -572,6 +587,11 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 		raw = append(raw, acs.Diffs...)
 	}
 
+	computed, err := computedSettings(in, artifactNames, read)
+	if err != nil {
+		return nil, err
+	}
+	raw = append(raw, computed...)
 	cs, err := plan.Finalize(raw, read)
 	if err != nil {
 		return nil, err
@@ -608,6 +628,144 @@ func computePlan(in planInputs) (*diff.ChangeSet, error) {
 	}
 	stampPiRoots(cs.Diffs, in.res.ExpandHome("~"), in.res.ResolveMarker(".", "pi", "local"))
 	return plan.AdmitSettings(cs, owners)
+}
+
+// computedSettings uses descriptor roots and mask vocabulary, never target names.
+func computedSettings(in planInputs, names []string, read adapter.ReadExisting) ([]diff.FileDiff, error) {
+	var raw []diff.FileDiff
+	for _, entry := range in.cat.Artifacts {
+		art := entry.Manifest
+		if !contains(names, art.Name) || art.Setting == nil || art.Setting.Computed == "" {
+			continue
+		}
+		if in.harness == nil {
+			return nil, harness.ErrNilRegistry
+		}
+		scope := in.scope
+		if scope == "" {
+			scope = art.Defaults.Scope
+		}
+		if scope == "project" || scope == "" {
+			scope = "local"
+		}
+		for _, tool := range art.Targets {
+			if in.tool != "" && in.tool != "all" && in.tool != tool {
+				continue
+			}
+			d, ok := in.harness.Lookup(tool)
+			if !ok || d.SkillMask.IsZero() || d.SkillRoots == nil {
+				return nil, fmt.Errorf("computed setting %s: target %s has no skill mask", art.Name, tool)
+			}
+			ad := in.adapters[tool]
+			if ad == nil || ad.Layout.Setting == nil {
+				return nil, fmt.Errorf("computed setting %s: no setting layout for %s", art.Name, tool)
+			}
+			ft := ad.Layout.Setting.ForScope(scope)
+			if !ft.OK() {
+				return nil, fmt.Errorf("computed setting %s: no setting target for %s/%s", art.Name, tool, scope)
+			}
+			rootInputs := func(descriptor harness.Descriptor) harness.RootInputs {
+				return harness.RootInputs{Home: in.res.ExpandHome("~"), Project: in.res.ResolveMarker(".", tool, "local"), Config: in.res.ResolveMarker(descriptor.GlobalMarker, descriptor.Name, "global"), Env: os.LookupEnv, Warn: func(s string) {
+					if in.warnf != nil {
+						in.warnf("%s", s)
+					}
+				}}
+			}
+			roots, err := d.SkillRoots(rootInputs(d))
+			if err != nil {
+				return nil, err
+			}
+			discovered, err := scan.DiscoverSkills(roots, nil)
+			if err != nil {
+				return nil, err
+			}
+			var others []harness.DescriptorRoots
+			for _, other := range in.harness.Descriptors() {
+				if other.Name == d.Name || other.ItemSuffix == "" || other.SkillRoots == nil {
+					continue
+				}
+				foreign, err := other.SkillRoots(rootInputs(other))
+				if err != nil {
+					return nil, err
+				}
+				others = append(others, harness.DescriptorRoots{Descriptor: other, Roots: foreign})
+			}
+			path := in.res.ResolveMarker(ft.File, tool, scope)
+			maskTarget := d
+			maskTarget.SkillMask.File, maskTarget.SkillMask.Format = path, ft.Format
+			edits, messages := harness.SkillMaskEdits(maskTarget, roots, discovered, others)
+			before, _, err := read(path)
+			if err != nil {
+				return nil, err
+			}
+			var ownerPaths []string
+			for _, root := range []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", tool, "local")} {
+				ownerPaths = append(ownerPaths, filepath.Join(root, ".patronus", "state.json"))
+			}
+			owners, err := loadOwners(ownerPaths, nil, func(_ int, path string, err error) error {
+				return fmt.Errorf("read computed setting ownership in %s: %w", path, err)
+			}, in.policy)
+			if err != nil {
+				return nil, err
+			}
+			desired := map[string]bool{}
+			for _, edit := range edits {
+				desired[edit.Dotted] = true
+				edit.Target = diff.FileTargetRef{File: ft.File, Format: ft.Format}
+				edit.PriorValue, edit.PriorPresent, err = adapter.ReadDotted(before, ft, edit.Dotted)
+				if err != nil {
+					return nil, err
+				}
+				after, err := adapter.ApplySettingEdit(before, &edit)
+				if err != nil {
+					return nil, err
+				}
+				raw = append(raw, diff.FileDiff{Path: path, Action: diff.Merge, Before: before, After: after, Tool: tool, Scope: scope, Artifact: art.Name, Version: art.Version, Type: string(art.Type), Role: string(art.Role), Setting: &edit, Redact: append([]string(nil), ad.Layout.Setting.Redact...)})
+			}
+			for _, owner := range owners {
+				if owner.Artifact != art.Name || owner.Tool != tool || owner.Scope != scope {
+					continue
+				}
+				for _, file := range owner.Files {
+					if file.Action != string(diff.Merge) || file.Setting == nil || desired[file.Setting.Dotted] {
+						continue
+					}
+					current, _, err := read(file.Path)
+					if err != nil {
+						return nil, err
+					}
+					present, equal, err := adapter.SettingStatus(current, file.Setting)
+					if err != nil {
+						return nil, err
+					}
+					if !present || !equal {
+						warning := fmt.Sprintf("computed leaf %s was edited; not retired", file.Setting.Dotted)
+						edit := *file.Setting
+						raw = append(raw, diff.FileDiff{Path: file.Path, Action: diff.Skip, Intended: diff.Restore, Before: current, After: current, Setting: &edit, Artifact: art.Name, Version: art.Version, Type: string(art.Type), Role: string(art.Role), Tool: tool, Scope: scope, Root: owner.Root, Note: warning, Warning: warning, Redact: append([]string(nil), ad.Layout.Setting.Redact...)})
+						if in.warnf != nil {
+							in.warnf("%s", warning)
+						}
+						continue
+					}
+					after, _, err := adapter.RemoveSettingEdit(current, file.Setting)
+					if err != nil {
+						return nil, err
+					}
+					edit := *file.Setting
+					raw = append(raw, diff.FileDiff{Path: file.Path, Action: diff.Restore, Before: current, After: after, Setting: &edit, Artifact: art.Name, Version: art.Version, Type: string(art.Type), Role: string(art.Role), Tool: tool, Scope: scope, Root: owner.Root, Note: "computed leaf retired: " + edit.Dotted, Redact: append([]string(nil), ad.Layout.Setting.Redact...)})
+				}
+			}
+			if len(messages) == 0 {
+				messages = []string{fmt.Sprintf("Nothing masked: no co-visible foreign lane skills found in roots %s reads", d.Name)}
+			}
+			for _, message := range messages {
+				if in.message != nil {
+					in.message(message)
+				}
+			}
+		}
+	}
+	return raw, nil
 }
 
 // planWarnings collects the distinct, non-empty advisories transforms attached to

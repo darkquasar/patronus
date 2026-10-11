@@ -2,6 +2,8 @@ package adapter
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/diff"
@@ -27,6 +29,9 @@ func (e *Engine) transformSetting(art *manifest.Artifact, ad *manifest.Adapter, 
 	if art.Setting == nil {
 		return nil, fmt.Errorf("adapter: setting artifact %q missing setting block", art.Name)
 	}
+	if art.Setting.Computed != "" {
+		return nil, nil // computed settings are produced by the shared planner
+	}
 	// A setting may diverge per tool — same artifact, different native key/value
 	// (native-sandbox: Claude's `sandbox` object vs Codex's `sandbox_mode` string).
 	// Per-tool overrides (overrides.{tool}.path / .value) refine the base spec; the
@@ -38,37 +43,59 @@ func (e *Engine) transformSetting(art *manifest.Artifact, ad *manifest.Adapter, 
 	if err != nil {
 		return nil, fmt.Errorf("adapter: read settings for %q: %w", art.Name, err)
 	}
-	// The user may have set this key themselves; capture it so remove restores
-	// their value rather than deleting the key outright.
-	prior, priorPresent, err := ReadDotted(existing, target, dotted)
-	if err != nil {
-		return nil, fmt.Errorf("adapter: setting %q: read prior: %w", art.Name, err)
+	values := map[string]any{dotted: value}
+	for _, split := range ad.Layout.Setting.SplitLeaves {
+		if split != dotted {
+			continue
+		}
+		if object, ok := asStringMap(value); ok {
+			values = make(map[string]any, len(object))
+			for key, leaf := range object {
+				values[dotted+"."+strconv.Quote(key)] = leaf
+			}
+		}
 	}
-	after, err := MergeSettings(existing, target, dotted, value)
-	if err != nil {
-		return nil, fmt.Errorf("adapter: merge setting %q: %w", art.Name, err)
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
 	}
+	sort.Strings(keys)
+	var diffs []diff.FileDiff
+	for _, dotted := range keys {
+		value := values[dotted]
+		// The user may have set this key themselves; capture it so remove restores
+		// their value rather than deleting the key outright.
+		prior, priorPresent, err := ReadDotted(existing, target, dotted)
+		if err != nil {
+			return nil, fmt.Errorf("adapter: setting %q: read prior: %w", art.Name, err)
+		}
+		after, err := MergeSettings(existing, target, dotted, value)
+		if err != nil {
+			return nil, fmt.Errorf("adapter: merge setting %q: %w", art.Name, err)
+		}
 
-	return []diff.FileDiff{{
-		Path:   path,
-		Action: diff.Merge,
-		Before: existing,
-		After:  after,
-		Tool:   ad.Tool,
-		Scope:  scope,
-		Role:   string(art.Role),
-		Note:   "setting " + strings.ReplaceAll(dotted, ".", "/") + ": " + art.Name,
-		// Carry the scalar edit (IdentityKey "") so the planner re-folds this set
-		// onto an accumulated settings file without clobbering hooks merged before
-		// it, and remove deletes exactly this key (see RemoveSettingScalar).
-		Setting: &diff.SettingEdit{
-			Target:       diff.FileTargetRef{File: target.File, Format: target.Format},
-			Dotted:       dotted,
-			ScalarValue:  value,
-			PriorValue:   prior,
-			PriorPresent: priorPresent,
-		},
-	}}, nil
+		diffs = append(diffs, diff.FileDiff{
+			Path:   path,
+			Action: diff.Merge,
+			Before: existing,
+			After:  after,
+			Tool:   ad.Tool,
+			Scope:  scope,
+			Role:   string(art.Role),
+			Note:   "setting " + strings.ReplaceAll(dotted, ".", "/") + ": " + art.Name,
+			// Carry the scalar edit (IdentityKey "") so the planner re-folds this set
+			// onto an accumulated settings file without clobbering hooks merged before
+			// it, and remove deletes exactly this key (see RemoveSettingScalar).
+			Setting: &diff.SettingEdit{
+				Target:       diff.FileTargetRef{File: target.File, Format: target.Format},
+				Dotted:       dotted,
+				ScalarValue:  value,
+				PriorValue:   prior,
+				PriorPresent: priorPresent,
+			},
+		})
+	}
+	return diffs, nil
 }
 
 // settingFor resolves a setting artifact's dotted path + value for one tool,

@@ -1,0 +1,15 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: guardrail
+name: permission-defaults-oc
+description: "OpenCode only: allow ordinary edits and deny environment-file edit patterns as defence in depth beside the hook guards. Native effect runtime-pending."
+version: 1.0.0
+targets: [opencode]
+defaults: {scope: project}
+setting:
+  path: permission.edit
+  value:
+    "*": allow
+    "*.env": deny
+    ".env.*": deny

@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: guardrail
+name: skill-visibility-oc
+description: "OpenCode only: computed permission.skill deny mask for detected co-visible foreign lane skill families; reports what it masked. Native effect runtime-pending."
+version: 1.0.0
+targets: [opencode]
+defaults: {scope: project}
+setting:
+  path: permission.skill
+  computed: skill-mask

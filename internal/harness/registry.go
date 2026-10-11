@@ -130,6 +130,18 @@ func (r *Registry) coexistence(name string) bool {
 	return ok && d.LockCoexistence
 }
 
+// Descriptors returns independent descriptor copies in registration order.
+func (r *Registry) Descriptors() []Descriptor {
+	if r == nil {
+		return nil
+	}
+	var out []Descriptor
+	for _, name := range r.order {
+		out = append(out, copyDescriptor(r.byName[name]))
+	}
+	return out
+}
+
 // Targeted returns the descriptors that stamp the lock or own structural
 // effects, in registration order.
 func (r *Registry) Targeted() []Descriptor {

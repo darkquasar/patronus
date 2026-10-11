@@ -18,6 +18,72 @@ import (
 	"github.com/darkquasar/patronus/internal/toolpath"
 )
 
+func TestComputedInverseComposesWithDesiredLeaves(t *testing.T) {
+	for _, order := range []string{"forward-first", "inverse-first", "inverse-only"} {
+		t.Run(order, func(t *testing.T) {
+			before := []byte(`{"permission":{"skill":{"*-aa":"deny","*-bb":"deny","*":"ask"}}}`)
+			edit := func(suffix string) *diff.SettingEdit {
+				return &diff.SettingEdit{Target: diff.FileTargetRef{File: "toy.json", Format: "json"}, Dotted: `permission.skill."*-` + suffix + `"`, ScalarValue: "deny"}
+			}
+			old := diff.FileDiff{Path: "/fixture/toy.json", Artifact: "invented-mask", Tool: "toy", Scope: "local", Version: "1", Type: "setting", Action: diff.Merge, After: before, Setting: edit("bb")}
+			owners := state.FromChangeSet([]diff.FileDiff{old}, "first")
+			retire := old
+			retire.Action = diff.Restore
+			retire.Before = before
+			retire.Note = "computed leaf retired: " + retire.Setting.Dotted
+			var err error
+			retire.After, _, err = adapter.RemoveSettingEdit(before, retire.Setting)
+			if err != nil {
+				t.Fatal(err)
+			}
+			forward := old
+			forward.Before = before
+			forward.Setting = edit("aa")
+			raw := []diff.FileDiff{forward, retire}
+			if order == "inverse-first" {
+				raw = []diff.FileDiff{retire, forward}
+			}
+			if order == "inverse-only" {
+				raw = []diff.FileDiff{retire}
+			}
+			cs, err := Finalize(raw, existingBytes(before))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cs, err = AdmitSettings(cs, owners)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(cs.Diffs) < 1 {
+				t.Fatal("lost retirement")
+			}
+			var inverse bool
+			for _, d := range cs.Diffs {
+				for _, row := range settingRows(d) {
+					if row.Action == diff.Restore && row.Setting.Dotted == retire.Setting.Dotted {
+						inverse = true
+					}
+				}
+			}
+			if !inverse {
+				t.Fatalf("lost inverse identity: %+v", cs.Diffs)
+			}
+			for _, d := range cs.Diffs {
+				if d.Action == diff.Skip {
+					continue
+				}
+				_, present, err := adapter.ReadDotted(d.After, manifest.FileTarget{File: "toy.json", Format: "json"}, retire.Setting.Dotted)
+				if err != nil || present {
+					t.Fatalf("retired key remains: %s %v", d.After, err)
+				}
+			}
+			if _, err := AdmitSettings(cs, nil); err == nil {
+				t.Fatal("inverse without ownership admitted")
+			}
+		})
+	}
+}
+
 // --- test fixtures -----------------------------------------------------------
 
 func loadAdapters(t *testing.T) map[string]*manifest.Adapter {

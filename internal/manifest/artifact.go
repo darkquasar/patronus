@@ -35,8 +35,9 @@ type InstructionPointer struct {
 // identity remove uses to restore the prior value. Value is free-form — a scalar
 // (a sandbox toggle) or an object (a statusline {type, command}).
 type SettingSpec struct {
-	Path  string `yaml:"path" json:"path"`   // dotted path in the settings file, e.g. "statusLine" or "permissions.sandbox"
-	Value any    `yaml:"value" json:"value"` // the value to set there (scalar or object)
+	Path     string `yaml:"path" json:"path"`                             // dotted path in the settings file, e.g. "statusLine" or "permissions.sandbox"
+	Value    any    `yaml:"value" json:"value"`                           // the value to set there (scalar or object)
+	Computed string `yaml:"computed,omitempty" json:"computed,omitempty"` // plan-time kind; mutually exclusive with Value
 }
 
 // HookIntent is what a hook DOES, which decides how each tool wires it. A gate can
@@ -152,8 +153,11 @@ func (a *Artifact) Validate() error {
 		if a.Setting == nil {
 			return fmt.Errorf("setting artifact %q: missing setting block", a.Name)
 		}
-		if a.Setting.Path == "" || a.Setting.Value == nil {
-			return fmt.Errorf("setting artifact %q: setting requires path and value", a.Name)
+		if a.Setting.Path == "" || (a.Setting.Value == nil) == (a.Setting.Computed == "") {
+			return fmt.Errorf("setting artifact %q: setting requires path and exactly one of value or computed", a.Name)
+		}
+		if a.Setting.Computed != "" && a.Setting.Computed != "skill-mask" {
+			return fmt.Errorf("setting artifact %q: unknown computed kind %q", a.Name, a.Setting.Computed)
 		}
 	}
 	if a.Attribution != nil {
