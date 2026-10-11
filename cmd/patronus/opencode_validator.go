@@ -8,6 +8,7 @@ import (
 	"github.com/darkquasar/patronus/internal/adapter"
 	"github.com/darkquasar/patronus/internal/diff"
 	"github.com/darkquasar/patronus/internal/harness"
+	"github.com/darkquasar/patronus/internal/state"
 )
 
 // opencodeValidator holds the OpenCode-only admission rules that are not
@@ -85,7 +86,34 @@ func (opencodeValidator) AfterOwnership(harness.Descriptor, *harness.Admission, 
 	return nil
 }
 
-func (opencodeValidator) AfterContext(harness.Descriptor, *harness.Admission, diff.FileDiff, *harness.ContextFacts) error {
+// AfterContext proves provenance for every existing fence, including siblings
+// the lenient selected-section walk does not collect. Plain prose needs no owner.
+// Recorded bare artifact names remain valid legacy spellings (OC-CD5).
+func (opencodeValidator) AfterContext(d harness.Descriptor, in *harness.Admission, fd diff.FileDiff, _ *harness.ContextFacts) error {
+	if fd.Section == nil && filepath.Base(fd.Path) != d.ContextFile {
+		return nil
+	}
+	allowed := map[string]bool{}
+	for _, owner := range in.Owners {
+		for _, f := range owner.Files {
+			if f.Path != fd.Path {
+				continue
+			}
+			if owner.Tool != d.Name || owner.Scope != fd.Scope || owner.Artifact == "" ||
+				f.Section == "" || f.Action != string(diff.Append) ||
+				(f.Section != d.SectionPrefix+owner.Artifact && f.Section != owner.Artifact) ||
+				allowed[f.Section] {
+				return fmt.Errorf("%s context %s has incompatible or ambiguous section ownership", d.ErrorPrefix, fd.Path)
+			}
+			if f.Checksum != state.Checksum(fd.Before) {
+				return fmt.Errorf("%s context %s section %s has drifted; explicit reconciliation required", d.ErrorPrefix, fd.Path, f.Section)
+			}
+			allowed[f.Section] = true
+		}
+	}
+	if err := adapter.ValidateSectionMarkers(fd.Before, allowed); err != nil {
+		return fmt.Errorf("%s context %s: %w", d.ErrorPrefix, fd.Path, err)
+	}
 	return nil
 }
 

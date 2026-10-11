@@ -244,3 +244,77 @@ func TestOpenCodeLaneIsAdmitted(t *testing.T) {
 		}
 	})
 }
+
+// Admission is the public shared boundary, including whole-file inverse diffs
+// that do not enter the lenient selected-section walk.
+func TestOpenCodeContextProvenanceAdmission(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		for _, action := range []diff.Action{diff.Append, diff.Restore, diff.Delete, diff.Skip} {
+			for _, tc := range []struct {
+				name, tool, ownerScope, artifact, section, recordedAction, checksum string
+				rows                                                                int
+			}{
+				{"wrong tool", "pi", scope, "invented-sibling", "oc:invented-sibling", "APPEND", "matching", 1},
+				{"wrong scope", "opencode", "other-scope", "invented-sibling", "oc:invented-sibling", "APPEND", "matching", 1},
+				{"wrong artifact", "opencode", scope, "invented-other", "oc:invented-sibling", "APPEND", "matching", 1},
+				{"wrong action", "opencode", scope, "invented-sibling", "oc:invented-sibling", "CREATE", "matching", 1},
+				{"empty checksum", "opencode", scope, "invented-sibling", "oc:invented-sibling", "APPEND", "", 1},
+				{"drift checksum", "opencode", scope, "invented-sibling", "oc:invented-sibling", "APPEND", "invented-drift", 1},
+				{"duplicate evidence", "opencode", scope, "invented-sibling", "oc:invented-sibling", "APPEND", "matching", 2},
+				{"no section evidence", "opencode", scope, "invented-sibling", "", "CREATE", "matching", 1},
+			} {
+				t.Run(fmt.Sprintf("%s/%s/%s", scope, action, tc.name), func(t *testing.T) {
+					home, project, res, _ := openCodeFixture(t)
+					path := filepath.Join(project, "AGENTS.md")
+					if scope == "global" {
+						path = filepath.Join(home, ".config/opencode/AGENTS.md")
+					}
+					before := adapter.AppendSection([]byte("User prose\n"), "oc:invented-sibling", []byte("invented\n"))
+					checksum := tc.checksum
+					if checksum == "matching" {
+						checksum = state.Checksum(before)
+					}
+					var owners []state.Item
+					for range tc.rows {
+						owners = append(owners, state.Item{Tool: tc.tool, Scope: tc.ownerScope, Artifact: tc.artifact, Files: []state.FileState{{Path: path, Action: tc.recordedAction, Section: tc.section, Checksum: checksum}}})
+					}
+					fd := diff.FileDiff{Path: path, Tool: "opencode", Scope: scope, Type: "instruction", Artifact: "invented-new", Action: action, Before: before, After: before}
+					if action == diff.Append {
+						fd.Section = &diff.SectionEdit{Name: "oc:invented-new"}
+					}
+					d, _ := testRegistry(t).Lookup("opencode")
+					err := harness.Admit(d, &harness.Admission{Home: home, Project: project, Resolver: res, Env: os.LookupEnv, Owners: owners, Changes: &diff.ChangeSet{Diffs: []diff.FileDiff{fd}}})
+					if err == nil || !strings.Contains(err.Error(), "opencode") || !strings.Contains(err.Error(), path) {
+						t.Fatalf("bad provenance admitted: %v", err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestOpenCodeContextVerifiedMalformedFences(t *testing.T) {
+	for _, tc := range []struct{ name, before, want string }{
+		{"duplicate", "<!-- patronus:start oc:invented-sibling -->\nx\n<!-- patronus:end oc:invented-sibling -->\n<!-- patronus:start oc:invented-sibling -->\nx\n<!-- patronus:end oc:invented-sibling -->\n", "duplicate or nested"},
+		{"nested", "<!-- patronus:start oc:invented-sibling -->\n<!-- patronus:start invented-legacy -->\nx\n<!-- patronus:end invented-legacy -->\n<!-- patronus:end oc:invented-sibling -->\n", "duplicate or nested"},
+		{"missing end", "<!-- patronus:start oc:invented-sibling -->\nx\n", "missing section end"},
+		{"unordered end", "<!-- patronus:end oc:invented-sibling -->\n", "unordered section end"},
+		{"malformed", " <!-- patronus:start oc:invented-sibling -->\n", "malformed section marker"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home, project, res, _ := openCodeFixture(t)
+			path := filepath.Join(project, "AGENTS.md")
+			before := []byte(tc.before)
+			var owners []state.Item
+			for _, s := range []struct{ artifact, section string }{{"invented-sibling", "oc:invented-sibling"}, {"invented-legacy", "invented-legacy"}} {
+				owners = append(owners, state.Item{Tool: "opencode", Scope: "local", Artifact: s.artifact, Files: []state.FileState{{Path: path, Action: "APPEND", Section: s.section, Checksum: state.Checksum(before)}}})
+			}
+			d, _ := testRegistry(t).Lookup("opencode")
+			fd := diff.FileDiff{Path: path, Tool: "opencode", Scope: "local", Type: "instruction", Artifact: "invented-new", Action: diff.Append, Before: before, Section: &diff.SectionEdit{Name: "oc:invented-new"}}
+			err := harness.Admit(d, &harness.Admission{Home: home, Project: project, Resolver: res, Env: os.LookupEnv, Owners: owners, Changes: &diff.ChangeSet{Diffs: []diff.FileDiff{fd}}})
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("malformed fence admission: %v, want %s", err, tc.want)
+			}
+		})
+	}
+}

@@ -471,21 +471,19 @@ func TestSharedDeployNoticeDataAndFailurePaths(t *testing.T) {
 	}
 }
 
-// OC-CD5 keeps lenient sections. This observed acceptance is not a claim that
-// arbitrary unrecorded foreign context is refused: the broader spec wording
-// remains a coordinator review/disposition gap.
+// Unrecorded fences are not ownership evidence, even when user prose is valid.
 func TestHarnessOpenCodeLifecycleUnrecordedUnprefixedSection(t *testing.T) {
 	project, _ := openCodeLifecycleFixture(t)
 	path := filepath.Join(project, "AGENTS.md")
 	prior := adapter.AppendSection([]byte("User prose\n"), "unrecorded-toy", []byte("unrecorded body\n"))
 	codexWrite(t, path, prior)
 	out, errOut, err := runInstall(t, "fix-instruction-2", "--target", "opencode", "--local", "--deploy")
-	if err != nil {
-		t.Fatalf("lenient install: %v\n%s\n%s", err, out, errOut)
+	if err == nil || !strings.Contains(err.Error(), `unknown, duplicate or nested section "unrecorded-toy"`) {
+		t.Fatalf("unrecorded context not refused: %v\n%s\n%s", err, out, errOut)
 	}
-	requireNotice(t, out, 1)
-	if got, found := adapter.RemoveSection(mustRead(t, path), "oc:fix-instruction-2"); !found || !bytes.Equal(got, prior) {
-		t.Fatalf("unrecorded section changed:\n%s", got)
+	requireNotice(t, out, 0)
+	if !bytes.Equal(mustRead(t, path), prior) {
+		t.Fatal("refusal changed unrecorded context")
 	}
 }
 
@@ -523,5 +521,131 @@ func TestSharedDeployNoticeExecFailure(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "Invented reload notice") {
 		t.Fatalf("success notice after failed exec: %s", out.String())
+	}
+}
+
+// Missing records cannot authorize any fence dialect or malformed marker.
+func TestHarnessOpenCodeLifecycleUnverifiedFencesRefuseForce(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		for _, force := range []bool{false, true} {
+			for _, tc := range []struct{ name, prior string }{
+				{"bare", string(adapter.AppendSection([]byte("User prose\n"), "unrecorded-toy", []byte("invented\n")))},
+				{"pi", string(adapter.AppendSection([]byte("User prose\n"), "pi:unrecorded-toy", []byte("invented\n")))},
+				{"oc", string(adapter.AppendSection([]byte("User prose\n"), "oc:unrecorded-toy", []byte("invented\n")))},
+				{"malformed", "User prose\n<!-- patronus:start broken\n"},
+			} {
+				t.Run(fmt.Sprintf("%s/force=%t/%s", scope, force, tc.name), func(t *testing.T) {
+					project, home := openCodeLifecycleFixture(t)
+					path, statePath := filepath.Join(project, "AGENTS.md"), filepath.Join(project, ".patronus/state.json")
+					if scope == "global" {
+						path, statePath = filepath.Join(home, ".config/opencode/AGENTS.md"), filepath.Join(home, ".patronus/state.json")
+					}
+					codexWrite(t, path, []byte(tc.prior))
+					if err := state.Save(statePath, &state.State{Version: state.Version}); err != nil {
+						t.Fatal(err)
+					}
+					beforeState := mustRead(t, statePath)
+					args := []string{"fix-instruction-2", "--target", "opencode", "--" + scope, "--deploy"}
+					if force {
+						args = append(args, "--force", "--yes")
+					}
+					out, errOut, err := runInstall(t, args...)
+					if err == nil || !strings.Contains(err.Error(), "opencode context "+path) {
+						t.Fatalf("unverified fence admitted: %v\n%s\n%s", err, out, errOut)
+					}
+					requireNotice(t, out, 0)
+					if !bytes.Equal(mustRead(t, path), []byte(tc.prior)) || !bytes.Equal(mustRead(t, statePath), beforeState) {
+						t.Fatal("refusal changed context or state")
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestHarnessOpenCodeLifecycleVerifiedSiblingAndLegacyProse(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			project, home := openCodeLifecycleFixture(t)
+			path, statePath := filepath.Join(project, "AGENTS.md"), filepath.Join(project, ".patronus/state.json")
+			if scope == "global" {
+				path, statePath = filepath.Join(home, ".config/opencode/AGENTS.md"), filepath.Join(home, ".patronus/state.json")
+			}
+			prose := []byte("# User context\n\nUser prose with no owner.\n")
+			prior := adapter.AppendSection(adapter.AppendSection(prose, "oc:invented-sibling", []byte("invented sibling\n")), "invented-legacy", []byte("invented legacy\n"))
+			codexWrite(t, path, prior)
+			seed := &state.State{Version: state.Version}
+			for _, s := range []struct{ artifact, section string }{{"invented-sibling", "oc:invented-sibling"}, {"invented-legacy", "invented-legacy"}} {
+				seed.Items = append(seed.Items, state.Item{Artifact: s.artifact, Type: "instruction", Tool: "opencode", Scope: scope, Files: []state.FileState{{Path: path, Action: "APPEND", Section: s.section, Checksum: state.Checksum(prior), Prior: prose}}})
+			}
+			if err := state.Save(statePath, seed); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"fix-instruction-2", "--target", "opencode", "--" + scope, "--deploy"}
+			out, errOut, err := runInstall(t, args...)
+			if err != nil {
+				t.Fatalf("verified context refused: %v\n%s\n%s", err, out, errOut)
+			}
+			if got, found := adapter.RemoveSection(mustRead(t, path), "oc:fix-instruction-2"); !found || !bytes.Equal(got, prior) {
+				t.Fatal("install changed verified siblings or prose")
+			}
+			if out, errOut, err := execRemove(t, "fix-instruction-2", "--target", "opencode", "--deploy"); err != nil {
+				t.Fatalf("remove: %v\n%s\n%s", err, out, errOut)
+			}
+			if !bytes.Equal(mustRead(t, path), prior) {
+				t.Fatal("remove changed verified siblings or prose")
+			}
+		})
+	}
+}
+
+func TestHarnessOpenCodeLifecycleInverseAndUpdateRefuseUnknownFence(t *testing.T) {
+	for _, operation := range []string{"update", "remove"} {
+		for _, force := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/force=%t", operation, force), func(t *testing.T) {
+				project, _ := openCodeLifecycleFixture(t)
+				if out, errOut, err := runInstall(t, "fix-instruction-2", "--target", "opencode", "--local", "--deploy"); err != nil {
+					t.Fatalf("setup install: %v\n%s\n%s", err, out, errOut)
+				}
+				path, statePath := filepath.Join(project, "AGENTS.md"), filepath.Join(project, ".patronus/state.json")
+				prior := adapter.AppendSection(mustRead(t, path), "oc:unrecorded-toy", []byte("invented unknown\n"))
+				codexWrite(t, path, prior)
+				seed, err := state.Load(statePath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Even an exact current checksum for the selected owner cannot
+				// vouch for an unrelated fence absent from ownership records.
+				for i := range seed.Items {
+					for j := range seed.Items[i].Files {
+						if seed.Items[i].Files[j].Path == path {
+							seed.Items[i].Files[j].Checksum = state.Checksum(prior)
+						}
+					}
+				}
+				if err := state.Save(statePath, seed); err != nil {
+					t.Fatal(err)
+				}
+				beforeState := mustRead(t, statePath)
+				args := []string{"fix-instruction-2", "--target", "opencode", "--deploy"}
+				if force {
+					args = append(args, "--force")
+				}
+				var out, errOut string
+				if operation == "update" {
+					manifest := filepath.Join(project, "artifacts/instructions/fix-instruction-2/patronus.yaml")
+					codexWrite(t, manifest, []byte(strings.ReplaceAll(string(mustRead(t, manifest)), "1.0.0", "1.1.0")))
+					out, errOut, err = runUpdate(t, args...)
+				} else {
+					out, errOut, err = execRemove(t, args...)
+				}
+				if err == nil || !strings.Contains(err.Error(), `unknown, duplicate or nested section "oc:unrecorded-toy"`) {
+					t.Fatalf("%s admitted unknown fence: %v\n%s\n%s", operation, err, out, errOut)
+				}
+				if !bytes.Equal(mustRead(t, path), prior) || !bytes.Equal(mustRead(t, statePath), beforeState) {
+					t.Fatal("refusal changed context or state")
+				}
+			})
+		}
 	}
 }
