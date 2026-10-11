@@ -1,0 +1,265 @@
+# Release evidence contract, not a task tracker or native qualification receipt.
+schema_version: 1
+profile: core-profile-cx
+# Baseline coverage: every direct declared member of this profile/target must
+# have an entry below. Selected endpoints are checked against the public CLI
+# closure lock core-profile-cx--codex.lock produced by the catalog gate.
+baseline_profile: core
+baseline_target: claude
+# Test names below are historical pre-decoupling evidence. Current structural
+# checks run in scripts/tests/catalog-contract.sh; artifact behaviour is NOT RUN.
+# Advisory replacements do not establish the omitted SessionStart hook semantics.
+companion_items: [work-state-reground-cx, language-detect-cx]
+entries:
+  - core_item: agents-spine
+    disposition: port-cx
+    codex_items: [agents-spine-cx]
+    outcome: Partial
+    reason: "Codex-specific stage and ownership instructions; native loading remains unqualified. Closure is checked against the catalog gate's public lock; historical TestCodexCoreClosureDoesNotSelectPiOrClaudeWorkflowArtifacts evidence retained."
+    evidence: runtime-pending
+  - core_item: diagram-explain
+    disposition: port-cx
+    codex_items: [diagram-explain-cx]
+    outcome: Partial
+    reason: "Codex-scoped diagram instruction; inherited attribution is provenance, not a foreign host call. Native instruction loading is pending."
+    evidence: runtime-pending
+  - core_item: branch-first
+    disposition: port-cx
+    codex_items: [branch-first-cx]
+    outcome: Partial
+    reason: "Codex advisory branch guidance preserves explicit Git grants. Native instruction loading is pending."
+    evidence: runtime-pending
+  - core_item: writing-style-pointer
+    disposition: port-cx
+    codex_items: [writing-style-pointer-cx]
+    outcome: Partial
+    reason: "Inline house mechanics only. Editorial loading/port is explicitly excluded by the owner, not claimed as a completed downstream workflow."
+    evidence: runtime-pending
+  - core_item: skills-dispatch
+    disposition: port-cx
+    codex_items: [skills-dispatch-cx]
+    outcome: Partial
+    reason: "Codex-specific installed-file reads and explicit -cx routing; fuzzy discovery and fresh-session activation need native evidence."
+    evidence: runtime-pending
+  - core_item: skills-dispatch-activate
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "SessionStart auto-injection omitted. An advisory dispatch skill is selected, but emitted matcher vocabulary, registration, trust and nonce semantics remain separate gates."
+    evidence: runtime-pending
+  - core_item: skills-heartbeat@claude
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "Claude UserPromptSubmit hook and installed-root enumeration are not Codex-qualified. Reassertion requires a native event/nonce/trust test."
+    evidence: runtime-pending
+  - core_item: work-state-reground@claude
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "Claude SessionStart hook omitted; companion work-state-reground-cx is advisory, not an automatic resume/compaction callback. Native matcher/trust/semantics pending."
+    evidence: runtime-pending
+  - core_item: language-detect
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "SessionStart hook omitted; companion language-detect-cx is advisory. Native matcher, trust and activation remain unqualified."
+    evidence: runtime-pending
+  - core_item: plan-writing
+    disposition: port-cx
+    codex_items: [plan-writing-cx]
+    outcome: Partial
+    reason: "Codex planning port preserves ADR-0003 folder invariants. TestCodexSpecFolderMetaInvariants and explicit cross-skill native routing are required."
+    evidence: runtime-pending
+  - core_item: plan-execute
+    disposition: port-cx
+    codex_items: [plan-execute-cx]
+    outcome: Partial
+    reason: "Codex execution port requires requesting-code-review-cx. TestCodexPlanExecuteRequiresCodexReviewSkill checks the dependency; native execution remains pending."
+    evidence: runtime-pending
+  - core_item: grilling
+    disposition: port-cx
+    codex_items: [grilling-cx]
+    outcome: Partial
+    reason: "Codex-scoped bounded interview routes only to -cx planning skills. Native routing is pending."
+    evidence: runtime-pending
+  - core_item: diagnosing-bugs
+    disposition: port-cx
+    codex_items: [diagnosing-bugs-cx]
+    outcome: Partial
+    reason: "Codex diagnosis and inert HITL sidecar route to codebase-design-cx without absent architecture calls. Safe-route and emitted-sidecar tests pass; native invocation remains unqualified."
+    evidence: runtime-pending
+  - core_item: tdd
+    disposition: port-cx
+    codex_items: [tdd-cx]
+    outcome: Partial
+    reason: "Codex test-first guidance and all three sidecars use explicit codebase-design-cx and review routes, bounded module-level safety cycles and no foreign Agent calls. Native routing remains unqualified."
+    evidence: runtime-pending
+  - core_item: spec-brainstorming
+    disposition: port-cx
+    codex_items: [spec-brainstorming-cx]
+    outcome: Partial
+    reason: "Codex-specific spec authoring and bundled ADR-0003 validator. TestCodexSpecFolderMetaInvariants and native research-to-spec route required."
+    evidence: runtime-pending
+  - core_item: using-git-worktrees
+    disposition: port-cx
+    codex_items: [using-git-worktrees-cx]
+    outcome: Partial
+    reason: "Codex worktree guidance preserves explicit allocation, stage and cleanup grants; no dependency installation, automatic commits or in-place fallback. Source contracts pass; native execution remains pending."
+    evidence: runtime-pending
+  - core_item: finishing-a-development-branch
+    disposition: port-cx
+    codex_items: [finishing-a-development-branch-cx]
+    outcome: Partial
+    reason: "Codex completion port separates integration, publication and cleanup grants, with retained failures and no automatic pull/prune. Source safety contracts pass; native loading remains pending."
+    evidence: runtime-pending
+  - core_item: writing-skills
+    disposition: port-cx
+    codex_items: [writing-skills-cx]
+    outcome: Partial
+    reason: "Codex meta-skill bundles adapted authoring/testing/example sidecars. Audits require a separately authorized bounded lead grant; no automatic nested workers or foreign tool mapping. Placement/routes pass; native behavior pending."
+    evidence: runtime-pending
+  - core_item: writing-editorial
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "Editorial selection/loading and a writing-editorial-cx port are explicitly excluded by owner direction. No downstream voice-model/merge route or editorial equivalence is claimed; inline house mechanics remain."
+    evidence: static-confirmed
+  - core_item: research-team@claude
+    disposition: port-cx
+    codex_items: [research-team-cx]
+    outcome: Partial
+    reason: "Codex read-only workers return findings to the lead; TestCodexResearchTeamCollectsFindings checks static contract. Native worker/auth qualification is deferred."
+    evidence: runtime-pending
+  - core_item: plan-execute-parallel@claude
+    disposition: port-cx
+    codex_items: [plan-execute-parallel-cx]
+    outcome: Partial
+    reason: "Bundled stdlib supervisor/schema. Twelve retained fake-worker cases (independent/dependent writers, timeout/descendants, ownership/results/conflicts/retry, input-apply failure, supervisor faults, unknown-stop refusal) are HISTORICAL results, NOT RUN in current gates and not native proof. Cooperative isolation is not an OS sandbox; native Codex workers/auth remain unqualified."
+    evidence: runtime-pending
+  - core_item: codebase-design
+    disposition: port-cx
+    codex_items: [codebase-design-cx]
+    outcome: Partial
+    reason: "Codex deep-module design bundles DEEPENING and DESIGN-IT-TWICE with serial default and bounded separately granted read-only comparison, without Claude Agent calls. Source/link/placement tests pass; native routes pending."
+    evidence: runtime-pending
+  - core_item: domain-modeling
+    disposition: reuse-unsuffixed
+    codex_items: [domain-modeling]
+    outcome: Equivalent
+    reason: "Entire manifest/body/NOTICE and ADR-FORMAT.md/CONTEXT-FORMAT.md audited. Host-neutral glossary/ADR file guidance, local references only, no requires or lane-specific handoff. Reused unchanged at 1.0.1; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    evidence: static-confirmed
+  - core_item: ddd-distilled
+    disposition: reuse-unsuffixed
+    codex_items: [ddd-distilled]
+    outcome: Equivalent
+    reason: "Entire manifest/body/NOTICE audited. Host-neutral domain modeling decision rules, no sidecars, requires or workflow handoff. Reused unchanged at 1.0.0; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes and preserves LLM-derived provenance caveat."
+    evidence: static-confirmed
+  - core_item: refactoring-distilled
+    disposition: reuse-unsuffixed
+    codex_items: [refactoring-distilled]
+    outcome: Equivalent
+    reason: "Entire manifest/body/NOTICE audited. Host-neutral behavior-preserving refactoring rules, no sidecars, requires or workflow handoff. Reused unchanged at 1.0.0; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes and preserves provenance caveat."
+    evidence: static-confirmed
+  - core_item: context7
+    disposition: reuse-unsuffixed
+    codex_items: [context7]
+    outcome: Partial
+    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution or credential copying. No sidecar/host handoff. Native MCP initialization/rate-limit/auth behavior pending; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    evidence: runtime-pending
+  - core_item: pattern-cloudflare
+    disposition: port-cx
+    codex_items: [pattern-cloudflare-cx]
+    outcome: Partial
+    reason: "Standalone Codex index and seven adapted pattern sidecars preserve local-host/stage grants and provenance. Source numeric/platform assumptions are unverified; optional remote capability absence blocks that path. No native Cloudflare qualification."
+    evidence: runtime-pending
+  - core_item: pattern-mcp
+    disposition: port-cx
+    codex_items: [pattern-mcp-cx]
+    outcome: Partial
+    reason: "Codex config/commands guidance preserves user-owned auth and sibling fields. Native MCP/auth qualification is deferred."
+    evidence: runtime-pending
+  - core_item: github
+    disposition: reuse-unsuffixed
+    codex_items: [github]
+    outcome: Partial
+    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution, secrets or foreign workflow handoff. User-owned authentication remains a native prerequisite; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    evidence: runtime-pending
+  - core_item: spec-review
+    disposition: port-cx
+    codex_items: [spec-review-cx]
+    outcome: Partial
+    reason: "Read-only Codex review port preserves ADR-0003 and lead-owned disposition. TestCodexPlanningSkillsAvoidForeignHostAPIs is static evidence only; native handoff pending."
+    evidence: runtime-pending
+  - core_item: plan-review
+    disposition: port-cx
+    codex_items: [plan-review-cx]
+    outcome: Partial
+    reason: "Read-only Codex coverage review names installed -cx routes. TestCodexPlanningSkillsAvoidForeignHostAPIs and native planning handoff required."
+    evidence: runtime-pending
+  - core_item: verification-before-completion
+    disposition: port-cx
+    codex_items: [verification-before-completion-cx]
+    outcome: Partial
+    reason: "Codex-scoped evidence and configured host-check discipline; no foreign host API. Native loading remains pending."
+    evidence: runtime-pending
+  - core_item: requesting-code-review
+    disposition: port-cx
+    codex_items: [requesting-code-review-cx]
+    outcome: Partial
+    reason: "Codex read-only reviewer handoff, declared sidecars and scoped grants. Native reviewer/auth qualification is deferred."
+    evidence: runtime-pending
+  - core_item: receiving-code-review
+    disposition: port-cx
+    codex_items: [receiving-code-review-cx]
+    outcome: Partial
+    reason: "Codex-specific disposition and correction boundaries replace legacy workflow routes. Native loading pending."
+    evidence: runtime-pending
+  - core_item: block-secrets
+    disposition: port-cx
+    codex_items: [block-secrets-cx]
+    outcome: Partial
+    reason: "Codex-only script and registration are selected; retained invented apply_patch/Write alias and legacy Write/Edit/MultiEdit pattern cases are HISTORICAL results, NOT RUN in current gates. Best-effort write-time guard is not read/leak prevention or guaranteed detection. Actual native payload/trust/nonce behavior remains pending."
+    evidence: runtime-pending
+  - core_item: gitleaks
+    disposition: reuse-unsuffixed
+    codex_items: [gitleaks]
+    outcome: Partial
+    reason: "Entire recipe audited: six pinned OS/arch fetch assets and SHA256, target-agnostic binary only, no registration or sidecars. Kept in one profile with MCP recipes; no Pi-specific package EXEC admission reason applies. Guard hook and native/platform qualification remain separate; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    evidence: runtime-pending
+  - core_item: gitleaks-guard
+    disposition: port-cx
+    codex_items: [gitleaks-guard-cx]
+    outcome: Partial
+    reason: "Codex-only commit guard script and registration are selected; retained invented Bash event and staged-diff/scanner error cases are HISTORICAL scratch-repository results, NOT RUN in current gates. Scanner CLI presence is not native protection; actual matcher/trust/nonce behavior remains pending."
+    evidence: runtime-pending
+  - core_item: ccusage
+    disposition: omit
+    codex_items: []
+    outcome: N/A
+    reason: "Claude usage-reporting recipe does not establish Codex usage/cost telemetry; use native Codex observability subject to its own qualification."
+    evidence: static-confirmed
+  - core_item: ccusage-statusline@claude
+    disposition: omit
+    codex_items: []
+    outcome: N/A
+    reason: "Claude-only statusline setting and ccusage dollar-cost contract have no claimed Codex counterpart."
+    evidence: static-confirmed
+  - core_item: ticket
+    disposition: omit
+    codex_items: []
+    outcome: Partial
+    reason: "Legacy instruction pulls tk through requires and assumes committed .tickets. No Codex work-graph integration/audit port in this foundation; scoped durable output guidance is advisory, not a replacement tracker."
+    evidence: static-confirmed
+  - core_item: session-completion
+    disposition: port-cx
+    codex_items: [session-completion-cx]
+    outcome: Partial
+    reason: "Codex completion instruction preserves separate integration/publication/cleanup grants and explicit follow-ups; native instruction loading pending."
+    evidence: runtime-pending
+  - core_item: dispatching-parallel-agents
+    disposition: port-cx
+    codex_items: [dispatching-parallel-agents-cx]
+    outcome: Partial
+    reason: "Bounded read-only Codex research dispatch guidance; shared writes belong to lead. Selected parallel execution has a bundled isolated supervisor, while native worker/auth qualification remains pending."
+    evidence: runtime-pending
