@@ -94,6 +94,7 @@ family: adapter
 tool: opencode
 layout:
   hook:
+    declarativeGate: {path: permission, tools: {bash: bash}}
     global: { file: "~/.toy/hooks.json", format: json, path: "hooks.{event}", action: merge }
     project: { file: ".toy/hooks.json", format: json, path: "hooks.{event}", action: merge }
   setting:
@@ -121,6 +122,7 @@ family: adapter
 tool: opencode
 layout:
   hook:
+    declarativeGate: {path: permission, tools: {bash: bash}}
     global: { file: "~/.toy/hooks.json", format: json, path: "hooks.{event}", action: merge }
     project: { file: ".toy/hooks.json", format: json, path: "hooks.{event}", action: merge }
 `)

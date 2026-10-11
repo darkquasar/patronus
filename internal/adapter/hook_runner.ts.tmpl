@@ -1,0 +1,43 @@
+import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const DIALECT = /*patronus:dialect*/null;
+
+// This adapter asset implements the OpenCode plugin interface. Translation
+// vocabulary is rendered from adapter data, not maintained in this template.
+export const server = async ({ directory }) => {
+  const hooksPath = join(dirname(fileURLToPath(import.meta.url)), "..", "patronus", "hooks.json");
+  let registry;
+  try {
+    registry = JSON.parse(readFileSync(hooksPath, "utf8"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw new Error("patronus-hook-runner: cannot read hooks.json; guards unavailable");
+    console.error(`patronus-hook-runner: no hooks.json at ${hooksPath}; no guards active`);
+    registry = { hooks: {} };
+  }
+  return {
+    "tool.execute.before": async (input, output) => {
+      if (!Object.hasOwn(DIALECT.toolMap, input.tool)) return;
+      const tool_name = DIALECT.toolMap[input.tool];
+      const argMaps = DIALECT.argMap ?? {};
+      const argMap = Object.hasOwn(argMaps, input.tool) ? argMaps[input.tool] : {};
+      const tool_input = Object.fromEntries(Object.entries(output.args ?? {}).map(([key, value]) => [Object.hasOwn(argMap, key) ? argMap[key] : key, value]));
+      const payload = JSON.stringify({ hook_event_name: "PreToolUse", tool_name, tool_input, session_id: input.sessionID, cwd: directory });
+      for (const group of registry.hooks?.PreToolUse ?? []) {
+        if (group.matcher && !group.matcher.split("|").includes(tool_name)) continue;
+        for (const command of group.hooks ?? []) {
+          if (command.type !== "command" || typeof command.command !== "string" || !command.command.trim()) {
+            throw new Error(`patronus-hook-runner: ${group.patronusId} invalid command; call blocked`);
+          }
+          const result = spawnSync(command.command, { shell: true, cwd: directory, input: payload, timeout: (command.timeout ?? 60) * 1000, encoding: "utf8" });
+          if (result.error || result.status !== 0 && result.status !== 2) {
+            throw new Error(`patronus-hook-runner: ${group.patronusId} failed (${result.error?.code ?? result.status}); call blocked`);
+          }
+          if (result.status === 2) throw new Error(result.stderr.trim() || `blocked by ${group.patronusId}`);
+        }
+      }
+    },
+  };
+};

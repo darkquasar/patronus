@@ -170,6 +170,34 @@ type HookLayout struct {
 	// its plugins dir). Unset for tools with a native hooks surface.
 	GlobalRunnerDir  PathTarget `yaml:"globalRunnerDir,omitempty"`
 	ProjectRunnerDir PathTarget `yaml:"projectRunnerDir,omitempty"`
+	// DeclarativeGate, when set, says a script-less gate hook becomes a deny
+	// entry in the tool's declarative permission config (the setting layout
+	// file) instead of a registered handler. Unset for tools with a native
+	// hook dispatcher.
+	DeclarativeGate *DeclarativeGate `yaml:"declarativeGate,omitempty"`
+	// RunnerDialect, when set, is the vocabulary rendered into the
+	// adapter-embedded hook runner the tool loads from RunnerDir (tool and
+	// argument names translated to the Claude-shaped payload hook scripts
+	// read). Unset for tools with a native hook dispatcher.
+	RunnerDialect *RunnerDialect `yaml:"runnerDialect,omitempty"`
+}
+
+// DeclarativeGate maps a Claude PreToolUse matcher token (lower-cased) to the
+// key under Path that denies the same capability; tokens absent from Tools
+// have no equivalent and are dropped with a warning.
+type DeclarativeGate struct {
+	Path  string            `yaml:"path"`
+	Tools map[string]string `yaml:"tools"`
+}
+
+// RunnerDialect is the hook runner's translation table: the tool's own tool
+// names to the Claude tool names hook scripts match on, and per tool the
+// argument names to rename in the payload. Unlisted tools proceed unmatched;
+// unlisted argument keys pass through.
+type RunnerDialect struct {
+	SchemaVersion int                          `yaml:"schemaVersion" json:"schemaVersion"`
+	ToolMap       map[string]string            `yaml:"toolMap" json:"toolMap"`
+	ArgMap        map[string]map[string]string `yaml:"argMap,omitempty" json:"argMap"`
 }
 
 // RunnerDirFor returns the hook-runner placement dir for the given scope, or an

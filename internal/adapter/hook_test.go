@@ -364,6 +364,101 @@ func TestCodexHookPlacesScriptAndRegistration(t *testing.T) {
 	}
 }
 
+func TestOpenCodeScriptHookRegistersPlacesAndRunner(t *testing.T) {
+	home, project, src := t.TempDir(), t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "guard.sh"), []byte("#!/bin/sh\nexit 0\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	eng := New(toolpath.New(testEnv(home), home, project))
+	art := hookArtifact("invented-guard", "PreToolUse", "Write", `"{script}"`)
+	art.Hook.Script, art.Hook.Intent = "guard.sh", manifest.HookGate
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			ds, err := eng.Transform(art, loadAdapter(t, "opencode"), scope, src, noExisting)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ds) != 3 {
+				t.Fatalf("script gate requires script, registration and runner, got %d: %+v", len(ds), ds)
+			}
+			if ds[0].Action != diff.Create || ds[0].Mode != 0755 {
+				t.Fatalf("script: %+v", ds[0])
+			}
+			reg := ds[1]
+			if reg.Setting == nil || reg.Setting.Dotted != "hooks.PreToolUse" || reg.Setting.IdentityKey != patronusHookID {
+				t.Fatalf("registration: %+v", reg)
+			}
+			if ds[2].Action != diff.Create || ds[2].Mode != 0644 || filepath.Base(ds[2].Path) != "patronus-hook-runner.ts" {
+				t.Fatalf("runner: %+v", ds[2])
+			}
+			again, err := eng.Transform(art, loadAdapter(t, "opencode"), scope, src, func(p string) ([]byte, bool, error) {
+				if p == reg.Path {
+					return reg.After, true, nil
+				}
+				return nil, false, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(again[1].After) != string(reg.After) {
+				t.Fatal("registration not idempotent")
+			}
+		})
+	}
+}
+
+func TestRunnerDeclarationRequiresDialect(t *testing.T) {
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := hookArtifact("invented-guard", "PreToolUse", "Write", "sh {script}")
+	art.Hook.Script, art.Hook.Intent = "guard.sh", manifest.HookGate
+	ad := loadAdapter(t, "opencode")
+	ad.Layout.Hook.RunnerDialect = nil
+	src := t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "guard.sh"), []byte("exit 0\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// A runner-declaring adapter must not produce an unguarded script registration.
+	if ds, err := eng.Transform(art, ad, "local", src, noExisting); err == nil || !strings.Contains(err.Error(), "runner dialect") {
+		t.Fatalf("missing runner dialect: %v %+v", err, ds)
+	}
+}
+
+func TestBareRunnerDeclarationCannotSkipScript(t *testing.T) {
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := hookArtifact("invented-guard", "PreToolUse", "Write", "sh {script}")
+	art.Hook.Script, art.Hook.Intent = "guard.sh", manifest.HookGate
+	ad := decodeAdapter(t, `apiVersion: patronus/v2
+family: adapter
+tool: toy
+layout:
+  hook:
+    projectRunnerDir: ".toy/plugins"
+`)
+	if ds, err := eng.Transform(art, ad, "local", "", noExisting); err == nil {
+		t.Fatalf("runner declaration silently skipped selected script: %+v", ds)
+	}
+}
+
+func TestRunnerScriptHookCannotBeSkippedSilently(t *testing.T) {
+	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
+	art := hookArtifact("invented-guard", "PreToolUse", "Write", "sh {script}")
+	art.Hook.Script, art.Hook.Intent = "guard.sh", manifest.HookGate
+	for _, scope := range []string{"global", "local"} {
+		t.Run(scope, func(t *testing.T) {
+			ad := loadAdapter(t, "opencode")
+			ad.Layout.Hook.GlobalScriptDir, ad.Layout.Hook.ProjectScriptDir = manifest.PathTarget{}, manifest.PathTarget{}
+			if ds, err := eng.Transform(art, ad, scope, "", noExisting); err == nil {
+				t.Fatalf("missing script directory silently skipped: %+v", ds)
+			}
+			ad = loadAdapter(t, "opencode")
+			ad.Layout.Hook.Global, ad.Layout.Hook.Project = manifest.FileTarget{}, manifest.FileTarget{}
+			if ds, err := eng.Transform(art, ad, scope, "", noExisting); err == nil {
+				t.Fatalf("missing registration silently skipped: %+v", ds)
+			}
+		})
+	}
+}
+
 func TestCodexScriptHookCannotBeSkippedSilently(t *testing.T) {
 	eng := New(toolpath.New(testEnv(t.TempDir()), t.TempDir(), t.TempDir()))
 	art := hookArtifact("fixture-cx", "PreToolUse", "Write", "sh {script}")

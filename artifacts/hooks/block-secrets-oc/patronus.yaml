@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: block-secrets-oc
+description: "OpenCode only. Best-effort write-time secret guard via the adapter hook runner for apply_patch and Write/Edit/MultiEdit. Does not prevent read-and-leak or guarantee detection. Native plugin activation remains runtime-pending; --pure disables plugins. Requires Python 3."
+version: 1.0.0
+entry: ""
+files: [block-secrets.py]
+targets: [opencode]
+defaults:
+  scope: project
+hook:
+  event: PreToolUse
+  matcher: Write|Edit|MultiEdit|apply_patch
+  intent: gate
+  command: '"{script}"'
+  script: block-secrets.py

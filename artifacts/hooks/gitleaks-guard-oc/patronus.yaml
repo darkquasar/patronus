@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: gitleaks-guard-oc
+description: "OpenCode only. Best-effort Bash commit guard scanning the staged diff with gitleaks via the adapter hook runner. Missing prerequisites and scanner errors block. Does not prevent read-and-leak or guarantee detection. Native plugin activation remains runtime-pending; --pure disables plugins. Requires Python 3 and Git."
+version: 1.0.0
+entry: ""
+files: [gitleaks-guard.py]
+targets: [opencode]
+defaults:
+  scope: project
+requires: [gitleaks]
+hook:
+  event: PreToolUse
+  matcher: Bash
+  intent: gate
+  command: '"{script}"'
+  script: gitleaks-guard.py

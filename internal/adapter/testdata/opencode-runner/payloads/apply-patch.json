@@ -1,0 +1,1 @@
+{"input":{"tool":"apply_patch","sessionID":"fixture-session","callID":"fixture-call"},"output":{"args":{"patchText":"*** Begin Patch\n*** Add File: demo.txt\n+benign fixture\n*** End Patch"}}}

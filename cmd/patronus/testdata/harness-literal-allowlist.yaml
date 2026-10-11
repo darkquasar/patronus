@@ -103,7 +103,6 @@ rows:
   - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: codex, class: adapter-data}
   - {file: internal/lock/lock.go, decl: validateTarget, astPath: FuncDecl/BlockStmt/SwitchStmt/BlockStmt/CaseClause/BasicLit, index: 0, literal: opencode, class: adapter-data}
   - {file: internal/lock/policy.go, decl: legacyTargetedTools, astPath: FuncDecl/BlockStmt/ReturnStmt/CompositeLit/BasicLit, index: 0, literal: pi, class: legacy-zero-value}
-  - {file: internal/adapter/hook.go, decl: Engine.transformHook, astPath: FuncDecl/BlockStmt/IfStmt/BinaryExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
   - {file: internal/plan/compute.go, decl: var:toolRank, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
   - {file: internal/profile/profile.go, decl: var:flavourTools, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}
   - {file: internal/recipe/recipe.go, decl: var:toolContexts, astPath: GenDecl/ValueSpec/CompositeLit/KeyValueExpr/BasicLit, index: 0, literal: opencode, class: adapter-data}

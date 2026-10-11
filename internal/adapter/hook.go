@@ -32,27 +32,32 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 		return nil, fmt.Errorf("adapter: hook artifact %q missing hook block", art.Name)
 	}
 
-	// OpenCode has no declarative hooks block: a gate maps to its `permission`
-	// config; a nudge is delivered by a paired instruction (AGENTS.md), so it emits
-	// no hook diff here. Other tools fall through to the settings-list merge below.
-	if ad.Tool == "opencode" {
-		if spec.Intent == manifest.HookGate {
-			return e.transformGateOpenCode(art, ad, scope, spec, readExisting)
-		}
-		return nil, nil // nudge: the paired instruction artifact carries it on OpenCode
+	// A tool without a native hook dispatcher declares its hook surface as
+	// data: a script-less gate becomes a declarative permission deny, a nudge
+	// has no delivery (its companion instruction carries the advice), and a
+	// script hook registers in the Patronus-owned registry the adapter-embedded
+	// runner reads. Tools with a native dispatcher fall through unchanged.
+	if spec.Intent == manifest.HookGate && spec.Script == "" && ad.Layout.Hook.DeclarativeGate != nil {
+		return e.transformDeclarativeGate(art, ad, scope, spec, readExisting)
+	}
+	if (spec.Intent == manifest.HookNudge || spec.Intent == "") && ad.Layout.Hook.RunnerDialect != nil {
+		return nil, nil
 	}
 
 	target := ad.Layout.Hook.ForScope(scope)
+	scriptDirs := ad.Tool == "codex" || ad.Layout.Hook.RunnerDialect != nil ||
+		ad.Layout.Hook.GlobalScriptDir.OK() || ad.Layout.Hook.ProjectScriptDir.OK() ||
+		ad.Layout.Hook.GlobalRunnerDir.OK() || ad.Layout.Hook.ProjectRunnerDir.OK()
 	if !target.OK() {
-		if ad.Tool == "codex" && spec.Script != "" {
-			return nil, fmt.Errorf("adapter codex: script hook %q has no %s registration target", art.Name, scope)
+		if scriptDirs && spec.Script != "" {
+			return nil, fmt.Errorf("adapter %s: script hook %q has no %s registration target", ad.Tool, art.Name, scope)
 		}
 		return nil, nil
 	}
 
 	if spec.Script != "" && !ad.Layout.Hook.ScriptDirFor(scope).OK() {
-		if ad.Tool == "codex" {
-			return nil, fmt.Errorf("adapter codex: hook %q ships a script but has no %s hook-script dir", art.Name, scope)
+		if scriptDirs {
+			return nil, fmt.Errorf("adapter %s: hook %q ships a script but has no %s hook-script dir", ad.Tool, art.Name, scope)
 		}
 		return nil, nil
 	}
@@ -89,7 +94,7 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 	if ad.Tool == "codex" {
 		warning = "Codex static hook script placement and structured registration only: event/matcher/payload semantics and native trust remain runtime-unverified; Patronus does not write trust internals"
 	}
-	return append(diffs, diff.FileDiff{
+	diffs = append(diffs, diff.FileDiff{
 		Warning: warning,
 		Path:    path,
 		Action:  diff.Merge,
@@ -106,41 +111,44 @@ func (e *Engine) transformHook(art *manifest.Artifact, ad *manifest.Adapter, sco
 			Identity:    identity,
 			Elem:        elem,
 		},
-	}), nil
+	})
+	// A tool that reads the registry through the adapter-embedded runner
+	// receives the runner next to the registration. Every script hook places
+	// the identical bytes; composition records them as one shared placed file.
+	if dir := ad.Layout.Hook.RunnerDirFor(scope); dir.OK() && spec.Script != "" {
+		if ad.Layout.Hook.RunnerDialect == nil {
+			return nil, fmt.Errorf("adapter %s: hook runner for %q: missing runner dialect", ad.Tool, art.Name)
+		}
+		runner, err := renderHookRunner(*ad.Layout.Hook.RunnerDialect)
+		if err != nil {
+			return nil, fmt.Errorf("adapter %s: hook runner for %q: %w", ad.Tool, art.Name, err)
+		}
+		diffs = append(diffs, diff.FileDiff{
+			Path:   filepath.Join(e.resolver.ResolveMarker(dir.Path, ad.Tool, scope), hookRunnerFile),
+			Action: diff.Create,
+			After:  runner,
+			Mode:   0o644,
+			Tool:   ad.Tool,
+			Scope:  scope,
+			Role:   string(art.Role),
+			Note:   "hook runner: " + art.Name,
+		})
+	}
+	return diffs, nil
 }
 
-// _claudeToOpenCode maps a Claude PreToolUse matcher token to the OpenCode
-// permission key that gates the same capability. OpenCode keys are single
-// lowercase tool names (not pipe-alternations), and its `edit` permission covers
-// write/edit/patch — so Write, Edit, and MultiEdit all deny under `edit`. Tokens
-// with no OpenCode tool (TodoWrite is Claude-only) are absent: they cannot be
-// honestly gated on OpenCode and are dropped with a warning. Keys are matched
-// case-insensitively so both "Bash" and "bash" resolve.
-var _claudeToOpenCode = map[string]string{
-	"write":     "edit",
-	"edit":      "edit",
-	"multiedit": "edit",
-	"bash":      "bash",
-	"read":      "read",
-	"grep":      "grep",
-	"glob":      "glob",
-	"webfetch":  "webfetch",
-	"websearch": "websearch",
-	"task":      "task",
-}
-
-// transformGateOpenCode maps a gate hook to OpenCode's declarative permission
-// config: one permission.<tool> = "deny" per distinct OpenCode tool the matcher
-// names. OpenCode has no hooks block, so a gate is a deny rule, not a PreToolUse
-// handler; and its keys are single lowercase tool names, so a Claude alternation
-// like Write|Edit|MultiEdit must be split and mapped (here, collapsing to the one
-// `edit` key). A gate always denies — ask/allow are not a gate's job.
+// transformDeclarativeGate maps a script-less gate hook to the tool's
+// declarative permission config: one <gate.Path>.<key> = "deny" per distinct
+// key the matcher's tokens map to through the adapter's DeclarativeGate table,
+// written into the setting layout file. Such a tool has no hook dispatcher for
+// a command-less gate, so the gate is a deny rule; its keys are single names,
+// so a Claude alternation like Write|Edit|MultiEdit is split, mapped and
+// collapsed. A gate always denies.
 //
-// A token with no OpenCode equivalent (Claude-only, e.g. TodoWrite) is dropped
-// with a warning rather than wired as a bogus key that OpenCode would silently
-// ignore — the unmappable-token no-op. When EVERY token is unmappable there is no honest
-// deny to emit, so that is an error, not a silent empty plan.
-func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
+// A token with no mapping is dropped with a warning rather than wired as a
+// bogus key the tool would silently ignore; when EVERY token is unmappable
+// there is no honest deny to emit, so that is an error, not an empty plan.
+func (e *Engine) transformDeclarativeGate(art *manifest.Artifact, ad *manifest.Adapter, scope string, spec *manifest.HookSpec, readExisting ReadExisting) ([]diff.FileDiff, error) {
 	// Declarative denies live in the agent's settings file (the adapter's
 	// setting layout), never in a hooks registry.
 	if ad.Layout.Setting == nil {
@@ -151,12 +159,12 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 		return nil, nil
 	}
 	if spec.Matcher == "" {
-		return nil, fmt.Errorf("adapter: opencode gate hook %q needs a matcher (the permission key to deny)", art.Name)
+		return nil, fmt.Errorf("adapter: %s gate hook %q needs a matcher (the permission key to deny)", ad.Tool, art.Name)
 	}
-
-	keys, dropped := openCodePermissionKeys(spec.Matcher)
+	gate := ad.Layout.Hook.DeclarativeGate
+	keys, dropped := declarativeGateKeys(gate, spec.Matcher)
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("adapter: opencode gate hook %q has no matcher token that maps to an opencode permission key (matcher %q); it cannot be gated on opencode", art.Name, spec.Matcher)
+		return nil, fmt.Errorf("adapter: %s gate hook %q has no matcher token that maps to a %s permission key (matcher %q); it cannot be gated on %s", ad.Tool, art.Name, ad.Tool, spec.Matcher, ad.Tool)
 	}
 
 	path := e.resolver.ResolveMarker(target.File, ad.Tool, scope)
@@ -169,7 +177,7 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 	if len(dropped) > 0 {
 		// Partial wire: name the dropped tokens so the blind spot is visible, never
 		// a silent skip. The mappable keys below still deny.
-		warning = fmt.Sprintf("gate %q: matcher token(s) %s have no opencode permission key — denied only %s", art.Name, strings.Join(dropped, ", "), strings.Join(keys, ", "))
+		warning = fmt.Sprintf("gate %q: matcher token(s) %s have no %s permission key — denied only %s", art.Name, strings.Join(dropped, ", "), ad.Tool, strings.Join(keys, ", "))
 	}
 
 	// Each key is an independent scalar deny, threaded through MergeSettings so the
@@ -178,7 +186,7 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 	diffs := make([]diff.FileDiff, 0, len(keys))
 	cur := existing
 	for _, key := range keys {
-		dotted := "permission." + key
+		dotted := gate.Path + "." + key
 		// Read before merging: cur accumulates across keys, so the prior must be
 		// captured from the bytes as they stand before THIS key is set.
 		prior, priorPresent, err := ReadDotted(cur, target, dotted)
@@ -213,17 +221,17 @@ func (e *Engine) transformGateOpenCode(art *manifest.Artifact, ad *manifest.Adap
 	return diffs, nil
 }
 
-// openCodePermissionKeys splits a Claude matcher on "|", maps each token to its
-// OpenCode permission key, and returns the DISTINCT keys (input order preserved)
-// plus the tokens that had no mapping. A token is looked up case-insensitively.
-func openCodePermissionKeys(matcher string) (keys, dropped []string) {
+// declarativeGateKeys splits a Claude matcher on "|", maps each token through
+// the gate table (case-insensitively), and returns the DISTINCT keys (input
+// order preserved) plus the tokens that had no mapping.
+func declarativeGateKeys(gate *manifest.DeclarativeGate, matcher string) (keys, dropped []string) {
 	seen := map[string]bool{}
 	for tok := range strings.SplitSeq(matcher, "|") {
 		tok = strings.TrimSpace(tok)
 		if tok == "" {
 			continue
 		}
-		key, ok := _claudeToOpenCode[strings.ToLower(tok)]
+		key, ok := gate.Tools[strings.ToLower(tok)]
 		if !ok {
 			dropped = append(dropped, tok)
 			continue

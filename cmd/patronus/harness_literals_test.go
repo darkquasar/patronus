@@ -29,7 +29,7 @@ const harnessLiteralFixture = "testdata/harness-literal-allowlist.yaml"
 
 // harnessLiteralFixtureSHA256 pins the reviewed fixture bytes: a class change
 // is a review event, not a silent edit.
-const harnessLiteralFixtureSHA256 = "98dfc5b35cfc2a0c11ff717643e992006f440e84e0bb0e0b04a04feab94e7529"
+const harnessLiteralFixtureSHA256 = "bfb67c71f9fd6d38d2d9955d5dafd03cd6f4181c68c4e9b667b17e69fd1d2c40"
 
 type literalSite struct {
 	File    string `yaml:"file"`
