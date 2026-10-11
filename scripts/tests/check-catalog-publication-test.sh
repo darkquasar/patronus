@@ -38,7 +38,8 @@ python3 - "$root/.github/workflows/publish-catalog.yml" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 assert 'id: guard' in text
-assert 'bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"' in text
+# The build job guards the registry its own catalog gate produced and checked.
+assert 'bash scripts/check-catalog-publication.sh "$RUNNER_TEMP/catalog-gate/registry" >> "$GITHUB_OUTPUT"' in text
 uploads = [step for step in text.split('      - ') if 'aws s3api put-object' in step]
 assert uploads, 'no upload steps inspected'
 build, publish = text.split('  publish:\n', 1)

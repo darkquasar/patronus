@@ -1,0 +1,22 @@
+# Retained reviewed baseline only, not a claim that these references ship.
+# A source/manifest change invalidates its exception and requires remediation
+# or a separately reviewed compatibility disposition. New bundles inherit none.
+schema_version: 1
+exceptions:
+  - source: artifacts/skills/writing-skills/SKILL.md
+    manifest_content_sha256: 22a8ac1c0c65191965324cde057ef86233f76096baf31940fc7d6c5b84db1c58
+    upstream_only: true
+    reason: Existing entry explicitly classifies these runtime tool mappings as upstream-only.
+    references:
+      - ../using-superpowers/references/claude-code-tools.md
+      - ../using-superpowers/references/codex-tools.md
+      - ../using-superpowers/references/copilot-tools.md
+      - ../using-superpowers/references/gemini-tools.md
+  - source: artifacts/skills/research-team/SKILL.md
+    manifest_content_sha256: 053e8927d68e6a4827c1ef1c6e06b9f6d1a9e9a6f150f466968b7faddfd98525
+    reason: Previously accepted immutable legacy sidecar debt; files exist in source but are not distributed.
+    references: [RESEARCHER-TEMPLATE.md, DELIVERABLE-TEMPLATES.md, LESSONS-FORMAT.md]
+  - source: artifacts/skills/plan-execute-parallel/SKILL.md
+    manifest_content_sha256: 41f296d52c6d2cdfe8723894d1b021850b578e832fa743d6d96ded0038e4420b
+    reason: Previously accepted immutable legacy sidecar debt; files exist in source but are not distributed.
+    references: [PROVENANCE-GUIDE.md, TEAMMATE-TEMPLATE.md]
