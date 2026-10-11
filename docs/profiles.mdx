@@ -31,11 +31,17 @@ layers; only its populated selections are installed.
 For Pi, choose `core-profile-pi`. Add `code-intel-pi` when you want its optional
 code intelligence guidance. These are separate from the Claude core profile.
 
+For Codex, choose `core-profile-cx` with explicit `--target codex`, not legacy
+`core` or a Pi profile. It includes standalone Codex skills, advisory instructions
+and source guard/helper payloads; native runtime/auth/trust remain unqualified.
+See the [Codex guide](/codex-core) for both scopes and safe legacy-root migration.
+
 ## Pin a profile
 
 ```sh
 patronus lock --profile core
 patronus lock --profile core-profile-pi --target pi
+patronus lock --profile core-profile-cx --target codex
 ```
 
 Commit `patronus.lock` when your project needs to share desired versions and

@@ -29,6 +29,8 @@
         "group": "Harnesses and packages",
         "pages": [
           "harnesses",
+          "codex-core",
+          "harness-extension",
           "pi-core",
           "pi-delivery",
           "agent-artifacts",

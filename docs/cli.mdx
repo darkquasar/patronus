@@ -12,6 +12,7 @@ description: "Common commands and deployment flags."
 | `patronus update [name...]` | Refresh catalogue or update selected installed items |
 | `patronus remove <name>...` | Preview removal; alias `revert` |
 | `patronus lock --profile <name>` | Write desired versions to `patronus.lock` |
+| `patronus migrate codex-skills` | Preview checksum/ownership-proven legacy Codex skill relocation |
 
 ## Deployment flags
 
@@ -28,6 +29,10 @@ description: "Common commands and deployment flags."
 Pi updates require exactly one explicit scope. `--force` does not imply
 `--deploy`, broaden selection, or bypass package-install consent.
 
+Codex skill migration is preview-only by default. Apply requires `--deploy` and
+an explicit `--global` or `--local`; no force/adopt flag is supported. Unknown,
+edited or colliding ownership blocks relocation. See [Codex core](/codex-core).
+
 Use the command's own help for all supported flags:
 
 ```sh
@@ -35,4 +40,5 @@ patronus --help
 patronus install --help
 patronus update --help
 patronus remove --help
+patronus migrate codex-skills --help
 ```
