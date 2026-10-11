@@ -3,6 +3,37 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## Unreleased
+
+### Catalogue: OpenCode core
+
+`core-profile-oc` 1.0.0 selects explicit OpenCode workflow skills, seven advisory
+instructions, eight native roles, two best-effort guards, two permission
+settings, six unchanged neutral items and the shared isolated writer supervisor.
+The compatibility ledger, closure exclusion gate and qualification scaffolding
+record static delivery only. Native loading, Bun hook effects, role permissions,
+MCP auth, skill masks and worker results remain runtime-pending. The first
+procedure is limited to opencode-ai 1.18.35 on Linux arm64; it is not a native
+qualification receipt. Guards are user-disableable with `--pure`.
+
+### Changed
+
+- **OpenCode adapter delivery uses native plural agent/command directories and
+  project instruction pointers under `.opencode/patronus/instructions/`.**
+  The adapter and shared ownership/runner changes ship with the binary, while
+  profile/artifact content publishes independently through the catalogue.
+  A legacy OpenCode pointer body under `.config/opencode/patronus/instructions/`
+  is retained by `patronus update` with `obsolete owned path retained; explicit removal required`;
+  run `patronus remove <artifact> --target opencode` for the inspected scope and
+  reinstall to relocate it. Review previews and authorize those writes first.
+- **OpenCode config writes are structural and conservative.** `OPENCODE_CONFIG`
+  stops admission when the selection writes `opencode.json(c)`, warns otherwise;
+  inline config warnings never record its value. Commented config writes are
+  refused; uncommented JSON keys are emitted alphabetically. User credentials
+  and sibling leaves remain user-owned. Mixed project context and cross-target
+  locks refuse silent replacement. Restart OpenCode after successful deploy,
+  update or removal: plugins, permissions and agents load at session start.
+
 ## v2.6.0
 
 The binary release adds Codex skill-root migration, deployment admission and

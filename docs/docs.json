@@ -30,6 +30,7 @@
         "pages": [
           "harnesses",
           "codex-core",
+          "opencode-core",
           "harness-extension",
           "pi-core",
           "pi-delivery",

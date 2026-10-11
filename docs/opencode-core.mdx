@@ -1,0 +1,182 @@
+---
+title: "OpenCode core lane"
+description: "Install the explicit OpenCode working set and distinguish static delivery from native qualification."
+---
+
+`core-profile-oc` 1.0.0 is an explicit OpenCode-only profile, not an extension
+of legacy `core`, Codex or Pi. It selects 21 `-oc` workflow skills, seven advisory
+instructions, eight native role agents, two best-effort guards, two permission
+settings, six unchanged neutral items and the shared `isolated-writer-supervisor`.
+The hook runner is adapter machinery, not another profile item. The compatibility
+contract is `docs/compatibility/core-opencode.yaml`.
+
+The first qualification procedure targets **opencode-ai 1.18.35 on Linux arm64
+only**. No version/platform pair or native effect is qualified by this source
+delivery. Catalog and application gates prove packaging and installer behavior,
+not Bun loading, skill routing, role permissions, MCP authentication or worker
+settlement. Every native acceptance row remains runtime-pending.
+
+## Roots and admission
+
+Install Patronus and OpenCode separately. Global roots resolve through
+`OPENCODE_CONFIG_DIR`, otherwise `$XDG_CONFIG_HOME/opencode`, otherwise
+`~/.config/opencode`. Preview with the actual environment and project selected
+for deployment.
+
+| Surface | Global (default) | Project |
+|---|---|---|
+| Skills | `~/.config/opencode/skills/<name>/SKILL.md` | `.opencode/skills/<name>/SKILL.md` |
+| Native roles | `~/.config/opencode/agents/<name>.md` | `.opencode/agents/<name>.md` |
+| Runner plugin | `~/.config/opencode/plugins/patronus-hook-runner.ts` | `.opencode/plugins/patronus-hook-runner.ts` |
+| Guard scripts and registration | `~/.config/opencode/patronus/hooks/`, `patronus/hooks.json` | `.opencode/patronus/hooks/`, `.opencode/patronus/hooks.json` |
+| Instructions | `~/.config/opencode/AGENTS.md` | root `AGENTS.md` |
+| Permission and MCP leaves | `~/.config/opencode/opencode.json` | root `opencode.json` |
+
+OpenCode also discovers singular `skill/` roots, `.claude/skills` recursively
+and `.agents/skills`, including their global counterparts. Global
+`~/.agents/skills` discovery is docs-derived and runtime-pending. A
+`.opencode/AGENTS.md` file is not the project instruction target. Exact `-oc`
+names and descriptions beginning with "OpenCode only" help distinguish siblings;
+source naming does not prove native routing.
+
+Admission refuses same-name resources with different bytes. Identical unsuffixed
+neutral skills visible in multiple roots produce a warning naming both paths;
+OpenCode requires unique native names across locations, so duplicate visibility
+still needs qualification. Patronus-owned instruction sections use `oc:`.
+A project `AGENTS.md` with Codex unprefixed, Pi `pi:` or unknown Patronus sections
+refuses an `oc:` write. There is no mixed-context consent path, and `--force`
+does not bypass it. Use global scope for one lane or separate project roots.
+An existing Codex or Pi target lock cannot be silently replaced with OpenCode.
+
+## Preview, deploy and refresh
+
+```sh
+patronus install --profile core-profile-oc --target opencode --local --dry-run
+patronus install --profile core-profile-oc --target opencode --global --dry-run
+# Authorize only the exact reviewed scope and preview before deployment:
+patronus install --profile core-profile-oc --target opencode --global --deploy
+patronus lock --profile core-profile-oc --target opencode
+```
+
+The profile refuses targets `claude`, `codex`, `pi` and `all`. Deployment can
+fetch the pinned `gitleaks` binary; that requires its own network/install grant
+in a restricted environment. Guard scripts also require Python 3 and Git.
+All placement, structured ownership, state and locks use the shared installer.
+OpenCode-owned `.opencode/package.json`, `package-lock.json`, `node_modules/` and
+`.gitignore` are not claimed or removed by Patronus.
+
+`skill-visibility-oc` computes `permission.skill` deny patterns only for detected
+foreign lane families in roots OpenCode reads, currently `*-cx` when Codex skills
+are present. Pi roots are not consulted. Preview/deploy names the count, suffix
+and config file, or reports nothing masked. After adding or removing foreign
+skills, run `patronus update skill-visibility-oc --target opencode --dry-run`,
+review the intended scope, then authorize deployment. Computed settings refresh
+at the same artifact version and retire only unchanged owned obsolete leaves;
+edited leaves remain owned with a warning. Native masking is runtime-pending.
+
+Patronus documents and never sets `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`; set it
+yourself to hide Claude skills from OpenCode.
+
+## User-owned configuration and credentials
+
+Permission defaults own three `permission.edit` leaves: `* = allow`,
+`*.env = deny` and `.env.* = deny`. They do not deny all edits or bash commands.
+MCP recipes `context7` and `github` own transport leaves, not headers, OAuth,
+provider credentials or sibling user rules. Native server initialization/auth
+and permission enforcement remain pending.
+
+The structured JSON writer emits keys alphabetically. Every setting-file write,
+including removal inverses and force removal, refuses commented
+`opencode.json(c)` rather than stripping comments. An uncommented user's key
+order can therefore change. Native credential stores `auth.json` and
+`mcp-auth.json` stay user-owned and are never opened by Patronus. The structured
+merge necessarily parses and re-emits the config document, preserving provider
+values; previews redact `provider.*.options` without changing applied bytes.
+
+`OPENCODE_CONFIG` stops admission when the selection writes `opencode.json(c)`:
+Patronus must not merge into a file OpenCode does not read. Unset the override
+or reconcile the intended config target before continuing. Skills/agents/plugins
+without setting-file writes instead receive a warning. `OPENCODE_CONFIG_CONTENT`
+always warns that inline config can override placed settings; its value is never
+recorded. Do not attach credentials, config contents, sentinel values or hashes
+of credential-bearing config to evidence.
+
+## Installed routes and workers
+
+Read the exact installed `SKILL.md` before invoking it. The planning folder keeps
+ADR-0003: `docs/specs/NN-slug/`, one folder-level research file and `meta.yaml`,
+one spec/plan pair per stream. Local planning state is not public navigation.
+
+```text
++------------------+  findings  +-----------------------+  reviewed spec  +-----------------+
+| research-team-oc | =========> | spec-brainstorming-oc | ===============> | plan-writing-oc |
++------------------+            +-----------------------+                  +-----------------+
+```
+
+Use `spec-review-oc` and `plan-review-oc` at their gates. Native read-only research
+and review use the OpenCode Task tool and installed `patronus-*-oc` roles, only
+when the role is present with its required permissions. Spec/plan authors and
+the writer allow edits; researcher/web-researcher and reviewers deny edits.
+Read-only prose and tool permissions are not an OS sandbox. Native enforcement
+and no-nesting behavior must be observed, not inferred from frontmatter.
+
+`plan-execute-parallel-oc` requires the shared supervisor. Never run concurrent
+writers in the lead checkout; one native subagent writer at most shares a cwd.
+Fresh worktrees contain tracked files only. Before launch, the working-set
+precheck requires the writer, both guards/scripts/registrations, runner and
+permission defaults at global scope, or tracked in the project's recorded base.
+
+Each isolated worker uses `opencode run --format json --auto --agent
+patronus-writer-oc -m <provider/model> --dir <attempt worktree> <brief reference>`
+with a per-run inline `OPENCODE_CONFIG_CONTENT` grant for
+`agent.patronus-writer-oc.permission.external_directory."<runDir>/*" = allow`.
+The agent keeps `external_directory."*" = deny`. Trade: the worker may write
+anywhere under the recorded evidence root, not just its result file. Deny/allow
+merge semantics remain runtime-pending. `--auto` flips ask to allow only; it is
+not permission to widen denied paths. The supervisor result file is the contract,
+not process exit or undocumented JSON events. Missing results or unknown stop
+preserve work and block integration/cleanup. Retained fake-worker/precheck
+fixtures are historical, not native qualification.
+
+## Guards, migration and fresh sessions
+
+Guards are best effort and user-disableable: `--pure` runs OpenCode without
+external plugins, including the Patronus hook runner. They do not prevent reading
+or egress and do not guarantee secret detection. The runner maps native tool
+names/arguments into the existing guard payload, including `patchText -> patch`
+and `newString -> new_string`; exit 2, other errors and spawn failures block.
+Node fixture checks do not qualify Bun or actual `tool.execute.before` effects.
+Session-start dispatch, heartbeat, reground and language hooks remain omitted;
+advisory instructions do not replace callbacks. Editorial and Claude usage
+telemetry/statusline are also omitted.
+
+Installing both global and project scopes loads two runner instances and matching
+guards run twice. This is intended to be benign, but native double-load behavior
+remains pending. Restart OpenCode after install, update and removal, then verify
+in a fresh session. The successful deploy notice requirement is:
+"Restart OpenCode: plugins, permissions and agents load at session start".
+A retained session can still hold old plugins, permissions and agents.
+
+A legacy OpenCode pointer body under `.config/opencode/patronus/instructions/`
+is retained by `patronus update` with `obsolete owned path retained; explicit removal required`.
+Run `patronus remove <artifact> --target opencode` for the inspected scope and
+reinstall to relocate it. Review previews before authorizing either mutation;
+removal is explicit by item, not an inverse-profile operation. Sibling sections,
+user prose and user config leaves survive conservative removal.
+
+Because OpenCode now has structural ownership policy, a hand-edited or
+pre-evidence Merge row is refused with "missing or invalid pre-management prior
+evidence" naming its artifact/path. Do not repair this with force or fabricated
+ownership. Preserve old state and ask for a separately authorized reconciliation.
+
+## Qualification and limits
+
+Procedures, OC-N01..N17 matrix, inert record template and hash-bound reuse/body
+audit live under `scripts/qualification/opencode-core-lane/`. The procedure
+requires a current image/version preflight, a disposable container, sanitized
+proof and separate authorization for native/model calls. Historical contributor
+source paths and observations are provenance, not live roots or credentials.
+No container, model, native guard or worker acceptance run is asserted here.
+Publication, integration and cleanup remain separate grants.
+
+See [harness scope](/harnesses) and [adding a harness](/harness-extension).
