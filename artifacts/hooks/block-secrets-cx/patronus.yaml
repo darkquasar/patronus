@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: guardrail
+name: block-secrets-cx
+description: "Best-effort Codex write-time secret guard for apply_patch and Write/Edit/MultiEdit. Does not prevent read-and-leak or guarantee detection. Native event, matcher and trust qualification remain runtime-pending. Requires Python 3."
+version: 1.0.0
+entry: ""
+files: [block-secrets.py]
+targets: [codex]
+defaults:
+  scope: project
+hook:
+  event: PreToolUse
+  matcher: Write|Edit|MultiEdit|apply_patch
+  intent: gate
+  command: '"{script}"'
+  script: block-secrets.py
