@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "plan-execute-parallel-cx supervisor request",
+  "description": "Documents the request the bundled supervisor validates itself with the Python standard library. Paths are absolute unless stated. worktreeRoot and runDir lie outside the lead checkout and Git directory and are disjoint. Owned paths are repository-relative; a trailing slash claims a directory; claims never overlap across tasks.",
+  "type": "object",
+  "required": ["schemaVersion", "runId", "repository", "baseCommit", "brief", "worktreeRoot", "runDir", "tasks"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "runId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "repository": {"type": "string", "description": "Lead checkout; used only to create attempt worktrees, never as a worker cwd."},
+    "baseCommit": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"},
+    "brief": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "worktreeRoot": {"type": "string", "description": "Attempts are created at worktreeRoot/runId/task/attempt-N and are never removed by the supervisor."},
+    "runDir": {"type": "string", "description": "Evidence root. Must not exist; the run binding is immutable."},
+    "maxConcurrency": {"type": "integer", "minimum": 1, "maximum": 8, "default": 1},
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "command", "ownedPaths", "timeoutSeconds", "graceSeconds"],
+        "properties": {
+          "key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+          "command": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Worker argv, run in the attempt worktree in a new process group."},
+          "ownedPaths": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "predecessors": {"type": "array", "items": {"type": "string"}, "default": []},
+          "timeoutSeconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 86400},
+          "graceSeconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 600},
+          "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 5, "default": 1}
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "description": "Disabled by default. When enabled, integrate also requires the --grant-integration flag.",
+      "properties": {
+        "enabled": {"type": "boolean", "default": false},
+        "worktree": {"type": "string"},
+        "head": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$", "description": "Latest checked integration head; drift refuses before any apply."}
+      }
+    }
+  },
+  "$defs": {
+    "result": {
+      "description": "Written by the worker at PATRONUS_SUPERVISOR_RESULT. Bindings must equal the supplied environment.",
+      "type": "object",
+      "required": ["runId", "task", "attempt", "root", "base", "status", "changedFiles"],
+      "properties": {
+        "runId": {"type": "string"},
+        "task": {"type": "string"},
+        "attempt": {"type": "integer"},
+        "root": {"type": "string"},
+        "base": {"type": "string"},
+        "status": {"enum": ["complete", "failed", "blocked"]},
+        "changedFiles": {"type": "array", "items": {"type": "string"}},
+        "summary": {"type": "string"}
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+The "spec-review-cx" skill and reviewer brief are authored for Patronus as a Codex
+behavioral adaptation of the legacy and Pi source siblings at revision 46247c13c3de38008c59995c5b1b697f78d3f9e5.
+They follow the repository GPL-3.0 license bundled in LICENSE.
+Source inventories and hashes are in SOURCE.md. No external reviewer prompt is
+copied unchanged and no native Codex runtime qualification is claimed.

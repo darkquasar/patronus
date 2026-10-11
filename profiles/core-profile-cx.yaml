@@ -1,0 +1,58 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: core-profile-cx
+version: 1.1.0
+summary: "Codex source lane: explicit planning, design, diagnosis, review and execution routes, scoped migration, isolated-worker helper and write/commit guards. Native loading, authentication and hook trust remain runtime-unverified."
+# Explicit membership, no extends edge to legacy core or Pi profiles.
+# The release contract is docs/compatibility/core-codex.yaml.
+layers:
+  instructions:
+    - agents-spine-cx
+    - diagram-explain-cx
+    - branch-first-cx
+    - writing-style-pointer-cx
+    - work-state-reground-cx
+    - language-detect-cx
+    - session-completion-cx
+  capabilities:
+    - skills-dispatch-cx
+    - plan-writing-cx
+    - plan-execute-cx
+    - grilling-cx
+    - spec-brainstorming-cx
+    - research-team-cx
+    - plan-execute-parallel-cx # Bundled helper; native Codex workers remain runtime-pending
+    - diagnosing-bugs-cx
+    - tdd-cx
+    - using-git-worktrees-cx
+    - finishing-a-development-branch-cx
+    - writing-skills-cx
+  context:
+    - domain-modeling
+    - ddd-distilled
+    - refactoring-distilled
+    - context7
+    - pattern-mcp-cx
+    - codebase-design-cx
+    - pattern-cloudflare-cx
+  tools:
+    - github
+  eval:
+    - spec-review-cx
+    - plan-review-cx
+    - verification-before-completion-cx
+    - requesting-code-review-cx
+    - receiving-code-review-cx
+  guardrails:
+    - gitleaks
+    - block-secrets-cx # Write-time best effort; native trust/semantics pending
+    - gitleaks-guard-cx # Staged-commit guard; native trust/semantics pending
+  orchestration:
+    - dispatching-parallel-agents-cx
+todo:
+  - "Qualify native Codex skill loading, cross-skill routing and fresh-session lifecycle."
+  - "Qualify installed design/diagnosis/TDD/worktree/meta-skill and Cloudflare routes in both scopes; editorial remains explicitly excluded."
+  - "Observe separately authorized owned-root migration and failure recovery; edited/unowned files remain blocked."
+  - "Qualify native isolated workers, cooperative process boundaries and unknown-stop handling; never infer OS sandboxing."
+  - "Qualify guard registration, actual payloads, native trust and nonce semantics; advisory SessionStart replacements remain omitted."

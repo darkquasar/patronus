@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: codebase-design-cx
+description: "Codex only: Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary."
+version: 1.0.0
+entry: SKILL.md
+files: ["DEEPENING.md", "DESIGN-IT-TWICE.md", "LICENSE", "NOTICE", "SOURCE.md"]
+targets: [codex]
+defaults:
+  scope: project
+requires: ["dispatching-parallel-agents-cx"]
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."
