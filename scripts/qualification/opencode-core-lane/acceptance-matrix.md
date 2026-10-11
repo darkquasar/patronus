@@ -1,11 +1,29 @@
 # Native OpenCode acceptance matrix
 
-Every native row is **runtime-pending**. Proposed first qualification only:
-`opencode-ai` 1.18.35 on Linux arm64, isolated global and project scopes. No
-qualified session, executable hash or proof is invented here. Local Node tests,
-static profile closure and retained historical fixtures do not establish native
-Bun or OpenCode behavior. The procedure in `README.md` needs its own grant and
-current image/version preflight; historical image presence is not current proof.
+Every full row below starts **runtime-pending/not-run**. Proposed full matrix:
+`opencode-ai` **1.18.35, Linux arm64**, isolated global and project scopes. No
+native execution or qualified platform is claimed. Shared preparation, authority
+and evidence rules live in `README.md`; Node/static/historical evidence is not
+native Bun, guard or permission proof.
+
+## Choose a mode, not a retry campaign
+
+| Mode/group | Rows | Coverage |
+|---|---|---|
+| Default SMOKE | N01/N02/N08/N09/N10 (partial only) | One prepared global scope; discovery, one exact skill + benign write, actual invented .env guard block, researcher findings + native edit denial. <=3 model-backed native case invocations, <=90s each, <=5min total; unmeasured operational cap, not an inference/cost bound. |
+| Discovery/routes | N01..N05/N08 | All identities/roots, skill negatives, handoffs and closure controls |
+| Visibility/auth | N06/N07 | Masks, collisions, refreshed co-visible roots, user-managed MCP auth |
+| Permissions/guards | N09..N11 | All role denials, mappings, runner error paths, staged-secret commit |
+| Workers | N12/N13 | Result contract, complete working set, outside-write denial, settlement |
+| Disable/lifecycle | N14..N16 | --pure, fresh update/removal, migration, failure/ownership controls |
+| Double load | N17 | Explicit global + project combined-scope session |
+
+Nxx in the map means OC-Nxx below. Targeted follow-ups are optional per launch,
+not optional for full acceptance. A full attempt requires every row in both
+isolated scopes and N17 combined. SMOKE success never passes a full row or sets
+`releaseAccepted=true`; missing or incomplete observations remain not-run and
+runtime-pending. Timeout, missing tool/auth or missing actual attempted negative blocks, with
+partial evidence retained and no retry/fallback.
 
 | Dimension | Required observation |
 |---|---|
@@ -16,9 +34,9 @@ current image/version preflight; historical image presence is not current proof.
 | Authority | Native/model, network/install, image changes and cleanup separately granted |
 | Sessions | New session ID after each install/update/remove, nonsecret observable nonce |
 
-Run each mandatory row in both scopes. Preserve failed, blocked and not-run
-attempts. Expected refusal is evidence only with its actual diagnostic and zero
-unintended writes. No skipped row becomes passed from a prose summary.
+The following required full observations are unchanged. Preserve failed, blocked
+and not-run attempts. Expected refusal needs its actual diagnostic and zero
+unintended writes, not just model refusal. No skipped row becomes passed.
 
 | ID | Case and positive observation | Negative control / blocker | State |
 |---|---|---|---|
@@ -42,11 +60,13 @@ unintended writes. No skipped row becomes passed from a prose summary.
 
 ## Per-row evidence
 
-Record ID, expectation, actual observation, status (`passed`, `failed`, `blocked`,
-`not-run`), sanitized command/exit, date, version/platform/scope, roots, before/
-after public payload hashes, fresh-session ID, nonces, explicit negative control,
-relative sanitized log path/SHA256 and reviewer/owner disposition. Do not store
-config contents, credential-bearing hashes or inline-config values.
+Use the compact record: shared identity once; add actual observations with ID,
+coverage (`partial` or `full`), scope, expectation/actual result, status (`passed`,
+`failed`, `blocked`, `not-run`), sanitized command/exit, date/session ID/nonce,
+public before/after hashes, negative control result, relative log path/SHA256 and
+review/owner disposition. Root changes require a new environment record. Missing
+observations inherit not-run, never passed. No config contents, credential hashes,
+sentinels or inline-config values.
 
 Session-start dispatch/heartbeat/reground/language callbacks, editorial and
 Claude usage reporting/statusline are omitted. Advisory instructions do not
@@ -58,4 +78,7 @@ unrelated unrecorded unprefixed section, while recorded foreign owners and an
 already-present unknown selected section are refused. Preserve this distinction
 and CD5 legacy behavior. Global scope or separate project roots are recommended
 pending final independent whole-change review and parent disposition; these
-procedures neither fix nor waive the unmet broader requirement.
+procedures neither fix nor waive the unmet broader requirement. OC-WC-002 also
+remains unresolved (Medium): worker validator exceptions can report precheck
+success. Smoke avoids workers but does not qualify or waive their safety. Both
+defects and incomplete whole-change semantic review still block final acceptance.
