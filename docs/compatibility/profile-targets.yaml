@@ -22,6 +22,7 @@ profiles:
   code-intel-pi-runtime: {targets: [claude]}
   core: {targets: [claude]}
   core-profile-cx: {targets: [codex]}
+  core-profile-oc: {targets: [opencode]}
   core-profile-pi: {targets: [pi]}
   data: {targets: [claude]}
   eval: {targets: [claude]}

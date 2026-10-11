@@ -1,0 +1,308 @@
+# Static inventory at cf83372db7ca3d796785cbfab51f44f37d1273b7.
+# Authoring provenance is recorded in each -oc SOURCE.md and the per-file audit
+# in scripts/qualification/opencode-core-lane/reuse-audit.md. No native pass.
+schema_version: 1
+profile: core-profile-oc
+target: opencode
+item_suffix: oc
+baseline_profile: core
+baseline_target: claude
+companion_items: [work-state-reground-oc, language-detect-oc]
+entries:
+  - core_item: agents-spine
+    disposition: port-oc
+    opencode_items: [agents-spine-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/agents-spine-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: diagram-explain
+    disposition: port-oc
+    opencode_items: [diagram-explain-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/diagram-explain-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: branch-first
+    disposition: port-oc
+    opencode_items: [branch-first-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/branch-first-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: writing-style-pointer
+    disposition: port-oc
+    opencode_items: [writing-style-pointer-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/writing-style-pointer-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: skills-dispatch
+    disposition: port-oc
+    opencode_items: [skills-dispatch-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/skills-dispatch-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: skills-dispatch-activate
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Startup dispatch hook omitted; skills-dispatch-oc is explicit advisory guidance, not a callback."
+    evidence: static-confirmed
+  - core_item: skills-heartbeat@claude
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Claude heartbeat callback omitted; no per-turn automatic reassertion is claimed."
+    evidence: static-confirmed
+  - core_item: work-state-reground@claude
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Startup callback omitted; companion work-state-reground-oc is advisory only."
+    evidence: static-confirmed
+  - core_item: language-detect
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Startup callback omitted; companion language-detect-oc supplies advisory language guidance."
+    evidence: static-confirmed
+  - core_item: plan-writing
+    disposition: port-oc
+    opencode_items: [plan-writing-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/plan-writing-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: plan-execute
+    disposition: port-oc
+    opencode_items: [plan-execute-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/plan-execute-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: grilling
+    disposition: port-oc
+    opencode_items: [grilling-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/grilling-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: diagnosing-bugs
+    disposition: port-oc
+    opencode_items: [diagnosing-bugs-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/diagnosing-bugs-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: tdd
+    disposition: port-oc
+    opencode_items: [tdd-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/tdd-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: spec-brainstorming
+    disposition: port-oc
+    opencode_items: [spec-brainstorming-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/spec-brainstorming-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: using-git-worktrees
+    disposition: port-oc
+    opencode_items: [using-git-worktrees-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/using-git-worktrees-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: finishing-a-development-branch
+    disposition: port-oc
+    opencode_items: [finishing-a-development-branch-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/finishing-a-development-branch-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: writing-skills
+    disposition: port-oc
+    opencode_items: [writing-skills-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/writing-skills-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: writing-editorial
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Editorial router, voice-model and merge workflow are excluded; inline house mechanics remain."
+    evidence: static-confirmed
+  - core_item: research-team@claude
+    disposition: port-oc
+    opencode_items: [research-team-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/research-team-oc/SOURCE.md. OpenCode Task tool read-only native researcher roles, bounded fanout and no nested delegation."
+    evidence: runtime-pending
+  - core_item: plan-execute-parallel@claude
+    disposition: port-oc
+    opencode_items: [plan-execute-parallel-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/plan-execute-parallel-oc/SOURCE.md. Shared supervisor and complete working-set precheck; inline external_directory grant allows the recorded runDir only outside the worktree. Trade: worker can write anywhere under that evidence root. Permission merge and worker results remain native-pending; isolation is cooperative, not an OS sandbox."
+    evidence: runtime-pending
+  - core_item: codebase-design
+    disposition: port-oc
+    opencode_items: [codebase-design-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/codebase-design-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: domain-modeling
+    disposition: reuse-unsuffixed
+    opencode_items: [domain-modeling]
+    outcome: Partial
+    reason: "Entire manifest, body, NOTICE and declared sidecars audited unchanged; host-neutral local guidance, no host calls or lane handoffs. Identical unsuffixed copies in .claude/skills and .opencode/skills warn with both paths, but native names must be unique across locations; duplicate visibility remains a caveat."
+    evidence: runtime-pending
+  - core_item: ddd-distilled
+    disposition: reuse-unsuffixed
+    opencode_items: [ddd-distilled]
+    outcome: Partial
+    reason: "Entire manifest, body, NOTICE and declared sidecars audited unchanged; host-neutral local guidance, no host calls or lane handoffs. Identical unsuffixed copies in .claude/skills and .opencode/skills warn with both paths, but native names must be unique across locations; duplicate visibility remains a caveat."
+    evidence: runtime-pending
+  - core_item: refactoring-distilled
+    disposition: reuse-unsuffixed
+    opencode_items: [refactoring-distilled]
+    outcome: Partial
+    reason: "Entire manifest, body, NOTICE and declared sidecars audited unchanged; host-neutral local guidance, no host calls or lane handoffs. Identical unsuffixed copies in .claude/skills and .opencode/skills warn with both paths, but native names must be unique across locations; duplicate visibility remains a caveat."
+    evidence: runtime-pending
+  - core_item: context7
+    disposition: reuse-unsuffixed
+    opencode_items: [context7]
+    outcome: Partial
+    reason: "Entire wire-only hosted HTTP recipe reused unchanged; opencode target declared, no secret or package execution. Native MCP initialization/auth remains pending; auth and headers are user-owned. Structured leaves preserve siblings; commented config writes refused and keys alphabetized."
+    evidence: runtime-pending
+  - core_item: pattern-cloudflare
+    disposition: port-oc
+    opencode_items: [pattern-cloudflare-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/pattern-cloudflare-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: pattern-mcp
+    disposition: port-oc
+    opencode_items: [pattern-mcp-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/pattern-mcp-oc/SOURCE.md. OpenCode opencode.json local/remote MCP shapes and native CLI guidance; structured transport leaves preserve user auth. Keys alphabetized; commented config writes refused."
+    evidence: runtime-pending
+  - core_item: github
+    disposition: reuse-unsuffixed
+    opencode_items: [github]
+    outcome: Partial
+    reason: "Entire wire-only hosted HTTP recipe reused unchanged; opencode target declared, no secret or package execution. Native MCP initialization/auth remains pending; auth and headers are user-owned. Structured leaves preserve siblings; commented config writes refused and keys alphabetized."
+    evidence: runtime-pending
+  - core_item: spec-review
+    disposition: port-oc
+    opencode_items: [spec-review-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/spec-review-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: plan-review
+    disposition: port-oc
+    opencode_items: [plan-review-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/plan-review-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: verification-before-completion
+    disposition: port-oc
+    opencode_items: [verification-before-completion-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/verification-before-completion-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: requesting-code-review
+    disposition: port-oc
+    opencode_items: [requesting-code-review-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/requesting-code-review-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: receiving-code-review
+    disposition: port-oc
+    opencode_items: [receiving-code-review-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/receiving-code-review-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: block-secrets
+    disposition: port-oc
+    opencode_items: [block-secrets-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/hooks/block-secrets-oc/SOURCE.md. Adapter runner maps patchText to patch and newString to new_string; byte-identical guard script from the Codex sibling. Best-effort write-time protection, not read/egress protection; --pure disables. Native Bun loading and fail-closed blocking pending."
+    evidence: runtime-pending
+  - core_item: gitleaks
+    disposition: reuse-unsuffixed
+    opencode_items: [gitleaks]
+    outcome: Partial
+    reason: "Entire target-agnostic fetch-only recipe reused unchanged, six pinned OS/arch assets; pins read, not downloaded or revalidated. CLI presence does not qualify native staged-commit protection."
+    evidence: runtime-pending
+  - core_item: gitleaks-guard
+    disposition: port-oc
+    opencode_items: [gitleaks-guard-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/hooks/gitleaks-guard-oc/SOURCE.md. Byte-identical Codex sibling script; adapter runner maps bash to Bash. Staged scanner prerequisite is separate from native registration/blocking. Best effort and --pure disableable."
+    evidence: runtime-pending
+  - core_item: ccusage
+    disposition: omit
+    opencode_items: []
+    outcome: N/A
+    reason: "Claude usage reporting is not OpenCode telemetry; no counterpart is claimed."
+    evidence: static-confirmed
+  - core_item: ccusage-statusline@claude
+    disposition: omit
+    opencode_items: []
+    outcome: N/A
+    reason: "Claude-only usage statusline has no claimed native counterpart."
+    evidence: static-confirmed
+  - core_item: ticket
+    disposition: omit
+    opencode_items: []
+    outcome: Partial
+    reason: "Legacy tk dependency and work-graph integration are omitted; durable outputs do not replace a tracker."
+    evidence: static-confirmed
+  - core_item: session-completion
+    disposition: port-oc
+    opencode_items: [session-completion-oc]
+    outcome: Partial
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/session-completion-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    evidence: runtime-pending
+  - core_item: dispatching-parallel-agents
+    disposition: port-oc
+    opencode_items: [dispatching-parallel-agents-oc]
+    outcome: Partial
+    reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/dispatching-parallel-agents-oc/SOURCE.md. OpenCode Task tool read-only roles; isolated writer routes require the shared supervisor."
+    evidence: runtime-pending
+additional_items:
+  - items: [patronus-researcher-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. Read-only edit: deny and bounded bash ask/allow map; native enforcement pending."
+    evidence: runtime-pending
+  - items: [patronus-web-researcher-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. Read-only edit: deny and bounded bash ask/allow map; native enforcement pending. Web tools require their own authority and native qualification."
+    evidence: runtime-pending
+  - items: [patronus-spec-author-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. edit: allow for authoring; external_directory deny."
+    evidence: runtime-pending
+  - items: [patronus-plan-author-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. edit: allow for authoring; external_directory deny."
+    evidence: runtime-pending
+  - items: [patronus-plan-reviewer-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. Read-only edit: deny and bounded bash ask/allow map; native enforcement pending."
+    evidence: runtime-pending
+  - items: [patronus-technical-reviewer-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. Read-only edit: deny and bounded bash ask/allow map; native enforcement pending."
+    evidence: runtime-pending
+  - items: [patronus-workflow-security-reviewer-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. Read-only edit: deny and bounded bash ask/allow map; native enforcement pending."
+    evidence: runtime-pending
+  - items: [patronus-writer-oc]
+    outcome: Partial
+    reason: "Native subagent body ported from the Pi role with OpenCode skill reads; mode: subagent, no nesting. edit: allow; external_directory deny with per-run runDir grant; native permission merge pending."
+    evidence: runtime-pending
+  - items: [permission-defaults-oc]
+    outcome: Partial
+    reason: "Original setting owns three permission.edit leaves: * allow, *.env deny, .env.* deny. Defence in depth, not blanket bash/edit denial; native pattern matching pending."
+    evidence: runtime-pending
+  - items: [skill-visibility-oc]
+    outcome: Partial
+    reason: "Original computed setting masks only detected foreign suffix families in intersecting roots, *-cx today; Pi roots not read. Unchanged-version update refreshes and conservatively retires unchanged owned leaves; native permission.skill effect pending."
+    evidence: runtime-pending
+  - items: [isolated-writer-supervisor]
+    outcome: Partial
+    reason: "Shared unsuffixed supervisor required by plan-execute-parallel-oc. Retained fake-worker fixtures and precheck results are historical, not run by current gates and not native evidence. Result-file, settlement and cooperative isolation limits remain native-pending."
+    evidence: runtime-pending

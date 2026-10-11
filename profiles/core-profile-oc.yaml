@@ -1,0 +1,68 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: core-profile-oc
+version: 1.0.0
+targets: [opencode]
+summary: "OpenCode source lane: explicit workflow skills, advisory instructions, native roles, isolated-worker supervisor, best-effort guards and structured permission settings. Native loading and effects remain runtime-pending."
+# Explicit spec section 5 membership, no extends edge. Static delivery only.
+# Release contract: docs/compatibility/core-opencode.yaml.
+layers:
+  instructions:
+    - agents-spine-oc
+    - diagram-explain-oc
+    - branch-first-oc
+    - writing-style-pointer-oc
+    - work-state-reground-oc
+    - language-detect-oc
+    - session-completion-oc
+  capabilities:
+    - skills-dispatch-oc
+    - plan-writing-oc
+    - plan-execute-oc
+    - grilling-oc
+    - spec-brainstorming-oc
+    - research-team-oc
+    - plan-execute-parallel-oc
+    - diagnosing-bugs-oc
+    - tdd-oc
+    - using-git-worktrees-oc
+    - finishing-a-development-branch-oc
+    - writing-skills-oc
+  context:
+    - domain-modeling
+    - ddd-distilled
+    - refactoring-distilled
+    - context7
+    - pattern-mcp-oc
+    - codebase-design-oc
+    - pattern-cloudflare-oc
+  tools:
+    - github
+  eval:
+    - spec-review-oc
+    - plan-review-oc
+    - verification-before-completion-oc
+    - requesting-code-review-oc
+    - receiving-code-review-oc
+  guardrails:
+    - gitleaks
+    - block-secrets-oc
+    - gitleaks-guard-oc
+    - permission-defaults-oc
+    - skill-visibility-oc
+  orchestration:
+    - dispatching-parallel-agents-oc
+    - isolated-writer-supervisor
+    - patronus-researcher-oc
+    - patronus-web-researcher-oc
+    - patronus-spec-author-oc
+    - patronus-plan-author-oc
+    - patronus-plan-reviewer-oc
+    - patronus-technical-reviewer-oc
+    - patronus-workflow-security-reviewer-oc
+    - patronus-writer-oc
+todo:
+  - "Qualify opencode-ai 1.18.35 on Linux arm64 in both scopes and fresh sessions."
+  - "Observe Bun runner loading, argument mapping, blocking, --pure and benign double-scope execution."
+  - "Observe native role permissions, skill masks, MCP authentication and runDir-only worker result grants."

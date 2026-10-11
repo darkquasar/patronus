@@ -164,6 +164,13 @@ while read -r p; do
   echo "refused as expected: $c ($(head -n 1 "$out/logs/lock-$c.err"))"
 done < "$out/lane-only.txt"
 
+step "OpenCode core public closure excludes foreign workflow lanes"
+oc_closure=$out/closures/core-profile-oc--opencode.lock
+[ -f "$oc_closure" ] || fail "missing OpenCode core public closure lock"
+if grep -E -- '-cx|-pi|@claude' "$oc_closure"; then
+  fail "OpenCode core closure selects a foreign workflow lane"
+fi
+
 step "catalog-check ledger coverage against public closure locks"
 "$check" --source "$root" --index "$index" --closures "$out/closures"
 
