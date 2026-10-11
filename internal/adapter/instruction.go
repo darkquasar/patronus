@@ -253,6 +253,39 @@ func SectionBody(existing []byte, name string) (body []byte, found bool) {
 	return bytes.Trim(inner, "\n"), true
 }
 
+// ValidateSectionMarkers requires balanced, unique, non-nested fence lines for
+// positively owned sections. Prose outside the fences is left uninterpreted.
+func ValidateSectionMarkers(existing []byte, allowed map[string]bool) error {
+	open := ""
+	seen := map[string]bool{}
+	for _, line := range strings.Split(string(existing), "\n") {
+		if !strings.Contains(line, "<!-- patronus:") {
+			continue
+		}
+		if strings.HasPrefix(line, "<!-- patronus:start ") && strings.HasSuffix(line, " -->") {
+			name := strings.TrimSuffix(strings.TrimPrefix(line, "<!-- patronus:start "), " -->")
+			if !allowed[name] || seen[name] || open != "" {
+				return fmt.Errorf("unknown, duplicate or nested section %q", name)
+			}
+			seen[name], open = true, name
+			continue
+		}
+		if strings.HasPrefix(line, "<!-- patronus:end ") && strings.HasSuffix(line, " -->") {
+			name := strings.TrimSuffix(strings.TrimPrefix(line, "<!-- patronus:end "), " -->")
+			if open == "" || name != open {
+				return fmt.Errorf("unordered section end %q", name)
+			}
+			open = ""
+			continue
+		}
+		return fmt.Errorf("malformed section marker")
+	}
+	if open != "" {
+		return fmt.Errorf("missing section end %q", open)
+	}
+	return nil
+}
+
 // buildBlock renders the fenced block with the body between the markers.
 func buildBlock(start, end string, body []byte) string {
 	trimmed := bytes.TrimRight(body, "\n")

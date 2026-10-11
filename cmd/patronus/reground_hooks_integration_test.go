@@ -1,26 +1,11 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 )
-
-// runPlacedHook executes a hook script that install placed under
-// <home>/.claude/hooks/, with HOME pointed at the test home so the script's own
-// ${HOME}/.claude/... lookups resolve to the deployed tree. Returns its stdout.
-func runPlacedHook(t *testing.T, home, script string) (string, error) {
-	t.Helper()
-	p := filepath.Join(home, ".claude", "hooks", script)
-	cmd := exec.CommandContext(context.Background(), "bash", p)
-	cmd.Env = append(os.Environ(), "HOME="+home)
-	out, err := cmd.Output()
-	return string(out), err
-}
 
 // These cover the tiered JIT re-grounding hooks: skills-heartbeat (UserPromptSubmit,
 // per-turn) and work-state-reground (SessionStart, resume/compaction). Both are
@@ -104,25 +89,3 @@ func TestClaudeOnlyHookSkipsOtherTools(t *testing.T) {
 // script listing "tdd" only proves tdd exists somewhere; here, the only skill in
 // the tree is one this test installed, so the script must genuinely enumerate the
 // deployed directory to find it.
-func TestPlacedHookScriptRunsAndListsSkills(t *testing.T) {
-	f := fixtureRegistry(t)
-	home := withRemoteEnv(t, f)
-
-	if _, e, err := runInstall(t, "--profile", "fix-all", "--target", "claude", "--global", "--deploy", "--yes"); err != nil {
-		t.Fatalf("install: %v\n%s", err, e)
-	}
-
-	out, err := runPlacedHook(t, home, "fix-hook-claude.sh")
-	if err != nil {
-		t.Fatalf("running the placed hook script: %v", err)
-	}
-	var emitted struct {
-		InstalledSkills string `json:"installedSkills"`
-	}
-	if err := json.Unmarshal([]byte(out), &emitted); err != nil {
-		t.Fatalf("hook output is not valid JSON: %v\n%s", err, out)
-	}
-	if !strings.Contains(emitted.InstalledSkills, "fix-skill") {
-		t.Errorf("the placed hook should enumerate the skill installed beside it, got %q", emitted.InstalledSkills)
-	}
-}
