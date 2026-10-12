@@ -2,6 +2,7 @@ package install
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -91,6 +92,111 @@ func TestApplyFetchArchive(t *testing.T) {
 	}
 	if read(t, dest) != bin {
 		t.Errorf("extracted content = %q, want %q", read(t, dest), bin)
+	}
+}
+
+// fetchBinaryBody wraps invented bytes in the supported executable deliveries.
+func fetchBinaryBody(t *testing.T, format string, bin []byte) []byte {
+	t.Helper()
+	if format == "" {
+		return bin
+	}
+	var buf bytes.Buffer
+	if format == "zip" {
+		zw := zip.NewWriter(&buf)
+		w, err := zw.Create("fixture")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write(bin); err != nil {
+			t.Fatal(err)
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		gz := gzip.NewWriter(&buf)
+		tw := tar.NewWriter(gz)
+		if err := tw.WriteHeader(&tar.Header{Name: "fixture", Mode: 0o755, Size: int64(len(bin)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(bin); err != nil {
+			t.Fatal(err)
+		}
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := gz.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return buf.Bytes()
+}
+
+func TestFetchBinaryAboveDirectoryLimit(t *testing.T) {
+	bin := bytes.Repeat([]byte("x"), (16<<20)+1)
+	for _, format := range []string{"", "tar.gz", "zip"} {
+		t.Run("format="+format, func(t *testing.T) {
+			body := fetchBinaryBody(t, format, bin)
+			dest := filepath.Join(t.TempDir(), "fixture")
+			spec := &diff.FetchSpec{URL: "https://fixture.invalid/binary", SHA256: sha(body), Dest: dest, Archive: format, BinaryPath: "fixture"}
+			fetcher := fakeFetcher{bodies: map[string][]byte{spec.URL: body}}
+			acquired, err := AcquireFetch(context.Background(), spec, fetcher)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(acquired, body) {
+				t.Fatal("acquisition changed verified delivery bytes")
+			}
+			a := &Applier{Fetcher: fetcher}
+			res, err := a.Apply(cs(diff.FileDiff{Path: dest, Action: diff.Fetch, Fetch: spec}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			placed, err := os.ReadFile(dest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(placed, bin) || spec.PlacedSHA256 != sha(bin) || len(res.Applied) != 1 {
+				t.Fatal("FETCH did not place and record the verified binary")
+			}
+		})
+	}
+}
+
+func TestAcquireFetchBinaryAtLimit(t *testing.T) {
+	bin := bytes.Repeat([]byte("x"), 32<<20)
+	for _, format := range []string{"", "tar.gz", "zip"} {
+		t.Run("format="+format, func(t *testing.T) {
+			body := fetchBinaryBody(t, format, bin)
+			spec := &diff.FetchSpec{URL: "https://fixture.invalid/binary", SHA256: sha(body), Archive: format, BinaryPath: "fixture"}
+			if _, err := AcquireFetch(context.Background(), spec, fakeFetcher{bodies: map[string][]byte{spec.URL: body}}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestFetchBinaryAboveLimitStops(t *testing.T) {
+	bin := bytes.Repeat([]byte("x"), (32<<20)+1)
+	for _, format := range []string{"", "tar.gz", "zip"} {
+		t.Run("format="+format, func(t *testing.T) {
+			body := fetchBinaryBody(t, format, bin)
+			dest := filepath.Join(t.TempDir(), "fixture")
+			spec := &diff.FetchSpec{URL: "https://fixture.invalid/binary", SHA256: sha(body), Dest: dest, Archive: format, BinaryPath: "fixture"}
+			fetcher := fakeFetcher{bodies: map[string][]byte{spec.URL: body}}
+			if _, err := AcquireFetch(context.Background(), spec, fetcher); err == nil {
+				t.Fatal("acquisition accepted an oversized binary")
+			}
+			a := &Applier{Fetcher: fetcher}
+			res, err := a.Apply(cs(diff.FileDiff{Path: dest, Action: diff.Fetch, Fetch: spec}))
+			if err == nil || res.Failed == nil || len(res.Applied) != 0 || spec.PlacedSHA256 != "" {
+				t.Fatal("oversized FETCH did not fail without recording a placement")
+			}
+			if _, err := os.Stat(dest); !os.IsNotExist(err) {
+				t.Fatal("oversized FETCH wrote its destination")
+			}
+		})
 	}
 }
 

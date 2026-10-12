@@ -420,6 +420,9 @@ func AcquireFetch(ctx context.Context, spec *diff.FetchSpec, fetcher Fetcher) ([
 
 func decodeFetch(data []byte, spec *diff.FetchSpec) ([]byte, error) {
 	l := packagebundle.DefaultLimits
+	// Executable FETCH members may exceed the directory-package 16 MiB ceiling.
+	// Keep acquisition, total expansion, decoding and entry limits unchanged.
+	l.FileBytes = 32 << 20
 	if spec.Archive == "" {
 		if int64(len(data)) > l.FileBytes {
 			return nil, fmt.Errorf("FETCH file limit exceeded")
