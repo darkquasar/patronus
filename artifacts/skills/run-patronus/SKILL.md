@@ -77,9 +77,9 @@ bash {skillDir}/driver.sh shell   # prints exports + a ready sandbox
 Then, from `.patronus/smoke/proj` with those exports set:
 
 ```bash
-$SANDBOX/patronus install go-style-uber --target claude --global --deploy --yes --local-registry
+$SANDBOX/patronus install go-style-uber-cl --target claude --global --deploy --yes --local-registry
 $SANDBOX/patronus scan
-$SANDBOX/patronus remove go-style-uber --deploy
+$SANDBOX/patronus remove go-style-uber-cl --deploy
 find "$HOME" -type f
 ```
 
@@ -111,9 +111,9 @@ Things that cost me a cycle each and that you cannot guess from `--help`:
   published is reported as `ORPHANED-STATE`. That verdict is expected in the sandbox and
   is not a failure; there is no flag to point `scan` at the local checkout.
 - **`--target` is required** for anything wiring to a runtime. Omitting it errors.
-- **Scope changes the delivery shape.** `go-style-uber` at `--local` is an `APPEND` into
+- **Scope changes the delivery shape.** `go-style-uber-cl` at `--local` is an `APPEND` into
   `./CLAUDE.md`; the same artifact at `--global` is a `CREATE` of
-  `~/.claude/skills/go-style-uber/SKILL.md`. Assert against the right one.
+  `~/.claude/skills/go-style-uber-cl/SKILL.md`. Assert against the right one.
 - **Package installs are advisory.** A `core` deploy prints
   `ADVISORY (run yourself): npm install -g ccusage` and reports `1 skipped` rather than
   running it. Only `--allow-package-installs` changes that.

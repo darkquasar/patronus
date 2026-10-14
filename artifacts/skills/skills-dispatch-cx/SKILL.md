@@ -12,8 +12,9 @@ behavior within that authority; they never override higher-priority instructions
 or grant new tools, installs, stages or Git mutations. A dispatched worker reads
 its assigned skills, executes only its task and never delegates.
 
-Select exact names for this Codex lane. Do not fuzzy-match an unsuffixed or other
-host sibling when the named skill is absent. Missing/unreadable required skills
+Select exact names for this Codex lane. Claude `-cl`, OpenCode `-oc` and Pi `-pi`
+siblings are foreign routes, not substitutes. Do not fuzzy-match an unsuffixed or
+other-host sibling when the named skill is absent. Missing/unreadable required skills
 or tools stop the lane as blocked. Placeholders resolve file paths only; Markdown
 name replacement is not skill activation or a substitute for a Codex body.
 
@@ -24,12 +25,11 @@ name replacement is not skill activation or a substitute for a Codex body.
 - Stress-test choices when requested: `{skillsDir}/grilling-cx/SKILL.md`.
 - Review a spec: `{skillsDir}/spec-review-cx/SKILL.md`.
 - Author an approved plan: `{skillsDir}/plan-writing-cx/SKILL.md`.
-- Review and route a plan: `{skillsDir}/plan-review-cx/SKILL.md`.
+- Review a written plan: `{skillsDir}/plan-review-cx/SKILL.md`.
 - Approved serial execution: `{skillsDir}/plan-execute-cx/SKILL.md`.
 - Approved parallel execution: `{skillsDir}/plan-execute-parallel-cx/SKILL.md`
-  (bundled bounded helper at
-  `{skillsDir}/plan-execute-parallel-cx/scripts/supervisor.py`; native Codex workers
-  remain Partial/runtime-pending).
+  (native subagents, isolated worktree owners and pipelined next-wave preparation;
+  no CLI supervisor prerequisite).
 - Independent review: `{skillsDir}/requesting-code-review-cx/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-cx/SKILL.md`.
 
@@ -49,11 +49,19 @@ implementation mode selects requesting-code-review-cx and its implementation
 rubric. Missing or ambiguous mode stops for a lead decision. Keep the capabilities
 available without eagerly loading both rubrics.
 
+The coordinator chooses execution mode, admits leaves and records the one
+progress authority at plan acceptance through
+`{skillsDir}/plan-writing-cx/SKILL.md`. Consume that selection for recovery;
+do not expand plan checklists into todo/tk mirrors. Run-owning native state wins
+over a project tracker; UI todos alone do not. Ordinary development requires no
+root numerical budget form; existing host/resource and explicit campaign limits
+still apply. Existing valid grants remain valid until material scope/input drift.
+
 Before work and after compaction/resume, reread the brief, current task state and
 latest decisions, project/global instructions and every selected SKILL.md. Inspect
-the latest run/output before retry. Revalidate settled approval or qualification
+the latest run/output before retry. Revalidate scope and actual capabilities
 on relevant input drift, not for each unchanged new message. A route description
-never qualifies the supervisor or native workers; bounded launch, settlement,
+never proves native isolation; checked launch, settlement,
 capture and integration still follow the shipped parallel skill and their exact
 grants. No new controller or host API is introduced here.
 

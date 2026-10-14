@@ -7,14 +7,14 @@ pointer:
   summary: >-
     House style, always on: avoid em-dashes (prefer a comma, parentheses, a colon, or a full stop;
     headings are exempt), and keep commas and full stops OUTSIDE closing quotation marks (`the
-    "fail-closed" flag`, not `"fail-closed."`). For prose that reasons or teaches, load the
-    writing-editorial skill.
+    "fail-closed" flag`, not `"fail-closed."`). For reasoning prose, decide the claim,
+    ground it in mechanism/consequence, keep actor/action visible, preserve precision
+    and cut filler. This self-contained first pass invokes no editorial workflow.
 role: instruction
 name: writing-style-pointer
-description: "Always-on pointer to the house writing style. Inlines the two always-on mechanics (em-dashes, quote punctuation) so they reach every Slack message and commit body, and points at the writing-editorial skill for the meaning-led prose rules that govern anything carrying reasoning."
-version: 1.2.0
+description: "Self-contained house writing first pass: punctuation mechanics plus compact meaning checks. No editorial dependency, worker, ledger or report; full editorial review stays optional and explicit."
+version: 1.3.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:
   scope: project
-requires: [writing-editorial]

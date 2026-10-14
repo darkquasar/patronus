@@ -3,7 +3,10 @@ package harness
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/darkquasar/patronus/internal/adapter"
@@ -82,6 +85,7 @@ func Admit(d Descriptor, in *Admission) error {
 		in.Owners = owners
 	}
 	verified := func(r scan.Resource) bool { return verifiedResource(d, in.Owners, r) }
+	references := func(a, b scan.Resource) bool { return managedReferences(in, a, b) }
 	var roots []scan.SkillRoot
 	if skills && d.SkillRoots != nil {
 		var err error
@@ -94,7 +98,7 @@ func Admit(d Descriptor, in *Admission) error {
 		// selected root's policy.
 		roots = append(roots, in.Roots...)
 		if !in.InventoryResolved {
-			in.Inventory, err = scan.DiscoverSkills(roots, verified)
+			in.Inventory, err = scan.DiscoverSkills(roots, verified, references)
 			if err != nil {
 				return err
 			}
@@ -102,7 +106,7 @@ func Admit(d Descriptor, in *Admission) error {
 		} else if len(in.Roots) > 0 {
 			// A Prepare hook resolved the target's own inventory; the foreign
 			// roots are discovered separately and join it.
-			foreign, err := scan.DiscoverSkills(in.Roots, verified)
+			foreign, err := scan.DiscoverSkills(in.Roots, verified, references)
 			if err != nil {
 				return err
 			}
@@ -199,6 +203,194 @@ func verifiedResource(d Descriptor, owners []state.Item, r scan.Resource) bool {
 	return owned
 }
 
+// managedReferences verifies the whole declared installation, not just its
+// SKILL.md. State rows are the payload declaration; every row must match disk,
+// and every file in the bundle must be owned. Only the two named references and
+// the owner-approved callable writing-editorial skill can use this proof.
+func managedReferences(in *Admission, a, b scan.Resource) bool {
+	if !scan.ManagedSharedSkill(a) || !scan.ManagedSharedSkill(b) || a.Name != b.Name || a.Legacy || b.Legacy {
+		return false
+	}
+	av, ah, ok := referencePayload(in, a)
+	if !ok {
+		return false
+	}
+	bv, bh, ok := referencePayload(in, b)
+	return ok && av == bv && ah == bh
+}
+
+func referencePayload(in *Admission, r scan.Resource) (string, string, bool) {
+	dir := filepath.Dir(r.Path)
+	version, payload := "", ""
+	owned := false
+	for _, owner := range in.Owners {
+		claims := false
+		entryClaim := false
+		for _, file := range owner.Files {
+			if strings.HasPrefix(file.Path, dir+string(filepath.Separator)) {
+				claims = true
+			}
+			if file.Path == r.Path {
+				entryClaim = true
+			}
+		}
+		if !claims {
+			continue
+		}
+		if !entryClaim {
+			return "", "", false
+		}
+		if owner.Artifact != r.Name || owner.Type != "skill" || owner.ItemVersion == "" || !scan.NeutralReferenceConsumer(owner.Tool) {
+			return "", "", false
+		}
+		declared := map[string]string{}
+		for _, file := range owner.Files {
+			rel, err := filepath.Rel(dir, file.Path)
+			if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || file.Action != string(diff.Create) || file.Checksum == "" {
+				return "", "", false
+			}
+			if _, duplicate := declared[rel]; duplicate {
+				return "", "", false
+			}
+			if scan.SafePath(file.Path) != nil {
+				return "", "", false
+			}
+			raw, exists, err := readExisting(in, file.Path)
+			if err != nil || !exists || state.Checksum(raw) != file.Checksum || (file.Path == r.Path && !bytes.Equal(raw, r.Content)) {
+				return "", "", false
+			}
+			declared[rel] = file.Checksum
+		}
+		count := 0
+		err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if scan.SafePath(path) != nil {
+				return fmt.Errorf("unsafe reference payload")
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			rel, err := filepath.Rel(dir, path)
+			if err != nil || !entry.Type().IsRegular() || declared[rel] == "" {
+				return fmt.Errorf("unowned reference payload")
+			}
+			count++
+			return nil
+		})
+		if err != nil || count != len(declared) {
+			return "", "", false
+		}
+		var paths []string
+		for rel := range declared {
+			paths = append(paths, rel)
+		}
+		sort.Strings(paths)
+		var identity strings.Builder
+		for _, rel := range paths {
+			fmt.Fprintf(&identity, "%d:%s:%s\n", len(rel), rel, declared[rel])
+		}
+		hash := state.Checksum([]byte(identity.String()))
+		if owned && (version != owner.ItemVersion || payload != hash) {
+			return "", "", false
+		}
+		owned, version, payload = true, owner.ItemVersion, hash
+	}
+	return version, payload, owned
+}
+
+// plannedReferencePayload proves a fresh destination from the complete change
+// set. It is intentionally limited to CREATEs into an otherwise empty bundle:
+// existing destinations still require state-backed referencePayload proof.
+func plannedReferencePayload(in *Admission, r scan.Resource, selected diff.FileDiff) (string, string, bool) {
+	if in.Changes == nil || selected.Action != diff.Create || len(selected.Before) != 0 || selected.Version == "" || filepath.Base(selected.Path) != "SKILL.md" {
+		return "", "", false
+	}
+	dir := filepath.Dir(selected.Path)
+	declared := map[string]string{}
+	entry := false
+	for _, fd := range in.Changes.Diffs {
+		if fd.Path != dir && !strings.HasPrefix(fd.Path, dir+string(filepath.Separator)) {
+			continue
+		}
+		if fd.Artifact != selected.Artifact || fd.Version != selected.Version || fd.Tool != selected.Tool || fd.Scope != selected.Scope || fd.Type != "skill" || fd.Action != diff.Create || len(fd.Before) != 0 || fd.Native != nil || fd.Directory != nil || fd.IsDir {
+			return "", "", false
+		}
+		rel, err := filepath.Rel(dir, fd.Path)
+		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || scan.SafePath(fd.Path) != nil {
+			return "", "", false
+		}
+		if _, duplicate := declared[rel]; duplicate {
+			return "", "", false
+		}
+		if _, exists, err := readExisting(in, fd.Path); err != nil || exists {
+			return "", "", false
+		}
+		declared[rel] = state.Checksum(fd.After)
+		if fd.Path == r.Path && bytes.Equal(fd.After, r.Content) {
+			entry = true
+		}
+	}
+	if !entry || len(declared) == 0 {
+		return "", "", false
+	}
+	if _, err := os.Stat(dir); err == nil {
+		err = filepath.WalkDir(dir, func(path string, file fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if path == dir || file.IsDir() {
+				return nil
+			}
+			return fmt.Errorf("existing reference payload")
+		})
+		if err != nil {
+			return "", "", false
+		}
+	} else if !os.IsNotExist(err) {
+		return "", "", false
+	}
+	var paths []string
+	for rel := range declared {
+		paths = append(paths, rel)
+	}
+	sort.Strings(paths)
+	var identity strings.Builder
+	for _, rel := range paths {
+		fmt.Fprintf(&identity, "%d:%s:%s\n", len(rel), rel, declared[rel])
+	}
+	return selected.Version, state.Checksum([]byte(identity.String())), true
+}
+
+// ManagedReferenceCoexistence retains the existing discovery callback API for
+// the finite shared-skill set, including the explicitly named editorial workflow.
+// It supplies Admit's state-backed proof without mutating installed payloads.
+func ManagedReferenceCoexistence(owners []state.Item) func(scan.Resource, scan.Resource) bool {
+	in := &Admission{Owners: owners}
+	return func(a, b scan.Resource) bool { return managedReferences(in, a, b) }
+}
+
+func sharedReferenceOwner(in *Admission, fd diff.FileDiff, owner state.Item) bool {
+	if fd.Type != "skill" || fd.Action != diff.Skip || !bytes.Equal(fd.Before, fd.After) || owner.Scope != fd.Scope {
+		return false
+	}
+	entry := filepath.Join(filepath.Dir(fd.Path), "SKILL.md")
+	if filepath.Base(fd.Path) == "SKILL.md" {
+		entry = fd.Path
+	}
+	raw, exists, err := readExisting(in, entry)
+	if err != nil || !exists {
+		return false
+	}
+	r := scan.Resource{Kind: "skill", Name: fd.Artifact, Path: entry, Content: raw}
+	if !scan.ManagedSharedSkill(r) {
+		return false
+	}
+	version, _, ok := referencePayload(in, r)
+	return ok && fd.Version != "" && version == fd.Version
+}
+
 // structuredSettingEvidence reports whether fd carries structured setting
 // ownership: a forward SettingEdit, setting contributions, or (for an inverse)
 // a recorded SettingEdit of this target at the same path for any artifact the
@@ -245,6 +437,10 @@ func admitOwnership(d Descriptor, in *Admission, fd diff.FileDiff) error {
 				continue
 			}
 			if owner.Tool != d.Name || owner.Artifact != fd.Artifact || owner.Scope != fd.Scope {
+				if sharedReferenceOwner(in, fd, owner) {
+					owned, unchanged = true, true
+					continue
+				}
 				if owner.Tool == d.Name && owner.Scope == fd.Scope && sharedPlacedOwner(f, fd) {
 					// Another artifact of this target placed the identical file: a
 					// shared placed file is co-owned, not an incompatible owner.
@@ -529,6 +725,17 @@ func admitResources(d Descriptor, in *Admission, fd diff.FileDiff, roots []scan.
 			continue
 		}
 		if r.Path == fd.Path {
+			continue
+		}
+		if scan.ManagedSharedSkill(selected) || scan.ManagedSharedSkill(r) {
+			version, payload, ok := referencePayload(in, selected)
+			if !ok {
+				version, payload, ok = plannedReferencePayload(in, selected, fd)
+			}
+			foreignVersion, foreignPayload, foreignOK := referencePayload(in, r)
+			if !ok || !foreignOK || r.Name != selected.Name || version != fd.Version || version != foreignVersion || payload != foreignPayload {
+				return selectedConflictMessage(d.ErrorPrefix, matchedName(r, selected), r, selected)
+			}
 			continue
 		}
 		if policy == scan.RefuseDifferentBytesVerifiedException && (bytes.Equal(r.Content, fd.After) || verified(r)) {

@@ -1,0 +1,24 @@
+apiVersion: patronus/v2
+family: artifact
+type: hook
+role: capability
+name: skills-dispatch-activate-cl
+description: "Claude-only SessionStart activation: inject the exact skills-dispatch-cl body from the hook's installed scope. Global reads global only; local reads its project only. Missing selected skill emits a diagnostic without fallback."
+version: 2.0.0
+entry: ""
+files: [inject-skills-dispatch.sh]
+targets: [claude]
+defaults:
+  scope: project
+requires: [skills-dispatch-cl]
+hook:
+  event: SessionStart
+  matcher: startup|clear|compact
+  command: "{script}"
+  script: inject-skills-dispatch.sh
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Adapted from hooks/session-start. Patronus uses an installed sibling skill rather than upstream plugin-root indirection. The same SessionStart matcher and additionalContext approach are retained; lookup is limited to the hook's own installed scope. NOTICE preserves historical attribution."

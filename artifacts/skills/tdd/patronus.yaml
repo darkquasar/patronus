@@ -4,10 +4,10 @@ type: skill
 role: capability
 name: tdd
 description: "Test-driven development — vertical tracer-bullet slices (one test → one implementation), behavior tested through public interfaces, never horizontal 'all tests then all code'. Use to build features or fix bugs test-first."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
 files: [tests.md, mocking.md, refactoring.md]
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

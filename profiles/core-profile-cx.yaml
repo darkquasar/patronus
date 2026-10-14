@@ -2,9 +2,9 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-cx
-version: 1.2.0
+version: 1.3.0
 targets: [codex]
-summary: "Codex source lane: explicit planning, design, diagnosis, review and execution routes, scoped migration, isolated-worker helper and write/commit guards. Native loading, authentication and hook trust remain runtime-unverified."
+summary: "Codex source lane: explicit planning, design, diagnosis, review and native parallel execution routes, scoped migration and write/commit guards. Native loading, authentication and hook trust remain runtime-unverified."
 # Explicit membership, no extends edge to legacy core or Pi profiles.
 # The release contract is docs/compatibility/core-codex.yaml.
 layers:
@@ -23,7 +23,7 @@ layers:
     - grilling-cx
     - spec-brainstorming-cx
     - research-team-cx
-    - plan-execute-parallel-cx # Bundled helper; native Codex workers remain runtime-pending
+    - plan-execute-parallel-cx # Native subagents, allocated roots; no required CLI helper
     - diagnosing-bugs-cx
     - tdd-cx
     - using-git-worktrees-cx

@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: verification-before-completion-cl
+description: "Input-bound evidence before completion claims, matching retained checks may be reused while final composed aggregate verification stays fresh."
+version: 2.1.0
+entry: SKILL.md
+targets: [claude]
+requires: [tdd-cl]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Derived from the pinned upstream source. Active instructions are adapted for bounded Patronus review, evidence or TDD behavior; legal attribution and unchanged reference examples are retained."

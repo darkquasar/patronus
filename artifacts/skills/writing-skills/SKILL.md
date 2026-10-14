@@ -3,13 +3,13 @@ name: writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
 
-> **Patronus note:** vendored from superpowers. `superpowers:test-driven-development`
-> referenced below maps to the Patronus `tdd` skill; the
-> `../using-superpowers/references/*-tools.md` runtime tool-mapping files are
-> upstream-only — for the skills directory on your runtime, use your agent's own
-> skills path (`~/.claude/skills/`, the Codex/OpenCode equivalent). The
-> `render-graphs.js` helper ships with this skill (requires graphviz `dot`
-> installed to run; harmless if absent).
+> **Patronus note:** adapted from superpowers for Codex and OpenCode. References
+> to the upstream test-driven-development skill mean this host's installed TDD
+> companion. Upstream runtime-tool mapping documents are provenance only, not
+> bundled runtime references. Read this installed bundle from its exact skill
+> directory and companion skills from the same installation scope. The
+> `render-graphs.js` helper ships here and requires an already installed graphviz
+> `dot`; its absence grants no installation authority.
 
 # Writing Skills
 
@@ -17,13 +17,14 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
 
-**Personal skills live in your runtime's skills directory** — see [claude-code-tools.md](../using-superpowers/references/claude-code-tools.md), [codex-tools.md](../using-superpowers/references/codex-tools.md), [copilot-tools.md](../using-superpowers/references/copilot-tools.md), or [gemini-tools.md](../using-superpowers/references/gemini-tools.md) for the path on your runtime. Codex, Copilot CLI, and Gemini CLI all also recognize `~/.agents/skills/` as a cross-runtime alias.
+**Personal skills live in this host's configured skills directory.** Use the
+installed path supplied by the host and keep companion reads in the same scope.
 
 You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
 
 **Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
 
-**REQUIRED BACKGROUND:** You MUST understand superpowers:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
+**REQUIRED BACKGROUND:** You MUST understand this host's installed TDD skill before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
 
 **Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
 
@@ -288,8 +289,8 @@ wc -w skills/path/SKILL.md
 **When writing documentation that references other skills:**
 
 Use skill name only, with explicit requirement markers:
-- ✅ Good: `**REQUIRED SUB-SKILL:** Use superpowers:test-driven-development`
-- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand superpowers:systematic-debugging`
+- ✅ Good: `**REQUIRED SUB-SKILL:** Use this host's installed TDD skill`
+- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand this host's installed diagnosis skill`
 - ❌ Bad: `See skills/testing/test-driven-development` (unclear if required)
 - ❌ Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
 
@@ -398,7 +399,7 @@ Edit skill without testing? Same violation.
 - Don't "adapt" while running tests
 - Delete means delete
 
-**REQUIRED BACKGROUND:** The superpowers:test-driven-development skill explains why this matters. Same principles apply to documentation.
+**REQUIRED BACKGROUND:** This host's installed TDD skill explains why this matters. The same principles apply to documentation.
 
 ## Testing All Skill Types
 

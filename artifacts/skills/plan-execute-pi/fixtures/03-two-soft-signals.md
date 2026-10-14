@@ -1,5 +1,7 @@
 # Fixture 03: exactly two soft signals, three tasks
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: sdd
 Isolates: Rule 3, two soft signals with the task floor satisfied.
 Invocation: "Execute this plan."

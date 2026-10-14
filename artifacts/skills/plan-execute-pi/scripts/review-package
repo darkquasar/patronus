@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Generate a review package: commit list, stat summary, and the net
 # diff with extended context, written to a file the reviewer reads in one
-# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
-# tasks intact.
+# call. Using the recorded subject BASE (not HEAD~1) keeps multi-commit
+# review subjects intact; this helper does not admit a review.
 #
 # Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
 # Default OUTFILE: <plan-dir>/.sdd/<plan-stem>/review-<base7>..<head7>.diff
-# (named per range, so a re-review after fixes gets a distinct fresh file).
+# (named per range, so changed subjects do not overwrite earlier evidence).
 # PLAN_FILE locates the workspace; it is not read.
 set -euo pipefail
 

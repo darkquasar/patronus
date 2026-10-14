@@ -19,4 +19,17 @@ Check consequential file/symbol anchors against current source; a stale snapshot
 
 Return source/root/revision, input hashes, criteria checked, actual commands/results/logs, skipped checks/lenses, strengths, spec-compliance and quality verdicts, residual risks and full report text. Findings include stable ID, severity, section/quote, evidence, consequence and correction. Use Critical/Major/Medium/Low by consequence as defined in `{skillDir}/SKILL.md`, retaining original severity/source IDs on merged findings.
 
-The lead checks findings against source, reads returned bytes and writes shared output. Unresolved Critical/Major or more than two Medium findings block; up to two Medium residuals require explicit owner acceptance. Missing inputs, authority, tests or required independence also block. Review does not grant planning or editing. One fresh independent review and at most one bounded correction/disposition is the default budget, not an automatic retry loop.
+The lead checks findings against source, reads returned bytes and writes shared output. Unresolved Critical/Major or more than two distinct Medium findings block; up to two Medium residuals require explicit owner acceptance. Missing inputs, authority, tests or required independence also block. Review does not grant planning or editing. One fresh independent review and at most one bounded batched correction/disposition is the default structural bound, not an automatic retry loop.
+
+
+Return findings and stop. Do not admit correction or review successors. Preserve
+all source IDs and original labels when deduplicating by consequence. One reviewer
+per exact subject is the default; Low findings receive disposition, not an
+automatic review wave. The coordinator may resolve a fixed defect only after checking its cited
+failure against the exact corrected bytes and sufficient relevant positive,
+negative-path and regression evidence for the existing acceptance criterion.
+Retain this disposition in the original report as parent-verified, not
+independently re-reviewed. A changed public interface, safety invariant or
+acceptance scope, or an insufficient oracle, returns to the owner for a design
+decision or additional independent-review grant. Blockers remain blockers at
+the correction cap.

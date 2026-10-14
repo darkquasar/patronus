@@ -1,11 +1,11 @@
 ---
 name: dispatching-parallel-agents-cx
-description: "Codex only: bounded read-only parallel investigation of independent questions using qualified native workers."
+description: "Codex only: bounded read-only parallel investigation of independent questions using exposed native workers."
 ---
 
 # Bounded Codex dispatch
 
-Only the lead dispatches. A worker never nests delegation. Use parallel reads
+Only the coordinator admits and dispatches workers. A worker never nests delegation, adds review gates or admits successors. Use parallel reads
 when questions are independent and evidence can be checked separately. Shared
 state, causal dependencies or unresolved common design decisions require a lead
 ordering decision before launch. Dispatch is subordinate to stage authority.
@@ -20,15 +20,17 @@ or argument grammar is invented here. If required primitives are unavailable or
 auth-blocked, stop the lane as blocked. No CLI model request, provider/model
 change, inline retry or protocol fallback is authorized by this skill.
 
-Bind maximum concurrency, total worker count, timeout, retry budget and resource
-reserve before starting. Start with at most two lightweight read-only workers;
-raise concurrency only within measured capacity and the recorded budget.
-Serialize expensive tests under the project lock. Retry requires confirmed
-settlement, retained failed evidence and explicit remaining budget.
+The coordinator admits each leaf within available native capacity and existing
+host/resource limits. Ordinary development needs no root-wide numerical start,
+concurrency or deadline allocation, budget form or cumulative-start ledger.
+Explicit campaign limits still govern separately authorized campaigns.
+Serialize expensive tests under the project lock. Retry needs coordinator
+admission, confirmed settlement and retained failed evidence, never an automatic
+successor, reviewer or fixer chain.
 
 Each brief contains: one question, exact root/revision and allowed source paths,
 relevant instructions, exclusions, no-write/no-nesting rule, evidence criteria,
-output format and deadline. Workers return complete findings in final responses;
+output format and applicable resource limits. Workers return complete findings in final responses;
 the lead writes shared outputs. Workers must not edit report files, source,
 index/branches, graphs, caches or shared service configuration. Read-only intent
 is cooperative scope, not an operating-system sandbox.
@@ -42,11 +44,11 @@ and output hashes, and reconcile contradictions before synthesizing. Empty or
 missing results block acceptance; preserve partial evidence on failure.
 
 If a worker times out, use only approved native stop controls and confirm
-settlement before retry, validation or cleanup. Unknown liveness retains outputs
-and allocations for the lead. Do not relaunch a live worker or extend budgets.
+settlement before retry, capture or integration. Unknown liveness retains outputs
+and allocations for the lead. Do not relaunch a live worker.
 
 Writing requires separately approved isolated owners, disjoint path claims and
 confirmed settlement before serial integration. Native workers are not proof of
-write isolation. This milestone has no writer supervisor; read
-`{skillsDir}/plan-execute-parallel-cx/SKILL.md` for its Partial limit. Never run
+write isolation. Read `{skillsDir}/plan-execute-parallel-cx/SKILL.md` for native
+writers and pipelined read-only scouts with checked worktree ownership. Never run
 concurrent writers in the lead checkout, even on disjoint files.

@@ -15,8 +15,9 @@ file overlap or an expanded grant. Ask the lead/owner and wait for a real reply.
 Do not treat steering or a review suggestion as new authority. Workers never
 launch another reviewer or mutate shared status; they return complete findings.
 
-Within an approved correction grant, address blockers first, then one item at a
-time. Follow the testing strategy recorded in the existing correction brief. Select
+Within the one approved batched correction grant, address blockers first.
+Several focused edit/test iterations may fit this grant; do not admit one fixer
+per finding or launch successor reviewers. Follow the testing strategy recorded in the existing correction brief. Select
 `critical-tdd` for new or changed auth/secrets, migration/removal, ownership,
 concurrency/settlement/isolation behavior and reproducible behavior bugs. Read the
 installed tdd-oc SKILL.md when selected; use short public-behavior slices with an
@@ -37,15 +38,19 @@ defect ID. Severity follows consequence: Critical/Major/Medium/Low. No downgrade
 to fit acceptance thresholds. Return corrected file hashes, old/new evidence,
 actual commands/results and unresolved items for explicit lead disposition.
 
-Required fresh independent whole-change implementation review remains required
-even for small deliveries; only the owner may explicitly waive it. Per-task
-OpenCode review requires a named changed safety/compatibility invariant or irreversible
-boundary with its own acceptance point; existing shared-framework use alone is
-insufficient. Use one fresh independent review and at most one bounded
-correction/disposition per gate. Corrected bytes need explicit lead disposition;
-no automatic second review wave. Unresolved Critical/Major or more than two Medium block. Up to two Medium
-need explicit owner-accepted residuals; missing requirements/tests/authority
-independently block. Low correction is optional within the grant.
+The coordinator may resolve a fixed defect only after checking its cited
+failure against the exact corrected bytes and sufficient relevant positive,
+negative-path and regression evidence for the existing acceptance criterion.
+Retain this disposition in the original report as parent-verified, not
+independently re-reviewed. A changed public interface, safety invariant or
+acceptance scope, or an insufficient oracle, returns to the owner for a design
+decision or additional independent-review grant. Blockers remain blockers at
+the correction cap.
+
+Unresolved Critical/Major or more than two distinct Medium block. Up to two
+Medium residuals need explicit owner acceptance; missing requirements, tests
+or authority independently block. Retain Low dispositions without automatic
+review waves. Review admission belongs to the coordinator, not the fixer.
 
 Read `{skillsDir}/verification-before-completion-oc/SKILL.md` before saying an
 item is fixed. Unavailable/auth-blocked primitives stop the lane. Never change

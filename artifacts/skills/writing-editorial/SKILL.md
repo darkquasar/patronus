@@ -1,27 +1,21 @@
 ---
 name: writing-editorial
 description: >
-  The canonical writing and editorial style guide, and the on-demand action for critiquing prose
-  against it. This is the single source of truth for how written output should read: tone,
-  punctuation, and craft. Use it in two ways. (1) REFERENCE while composing: consult it whenever you
-  are writing prose a reader will see, so the house style is there from the first draft rather than
-  fixed afterwards. That covers notebook prose and .ipynb/marimo markdown cells, docstrings and
-  module headers, READMEs, design docs, ADRs, specs, PR descriptions, commit bodies, lessons and
-  topic explanations, Confluence pages, emails, and longer messages. (2) EDITORIAL REVIEW: invoke
-  WHENEVER the user asks to "review this draft", "critique my writing", "check this against my
-  style", "does this follow my rules", "edit this prose", "clean up this text", "make this sound
-  like me", or pastes a paragraph/doc/email/message and asks how to improve the writing. The rules
-  live in four tier files applied in sequence: tier-0 strips machine phrasings (ungated), tier-1
-  fixes mechanics and the mirrored swap (nearly everything), tier-2 removes machine tells and
-  protects the author's voice (gated on stakes), tier-3 works on meaning and movement (gated on
-  stakes, and the only pass that may restructure). Do NOT use it to change code logic, to lint code
-  style, or as a general writing-from-scratch generator; it governs how prose reads, not what it
-  says. A long draft can optionally be cut into sections and the tiers fanned out one subagent per
-  section, merging and running tier-3 whole-document; that is dispatch option 3, which the caller
-  chooses. Supply trail-root to get sections and span-anchored edit records as files.
+  Optional editorial review. Use only on an explicit editorial-review invocation:
+  "review this draft", "critique my writing", "check this against my style",
+  "edit this prose", or "clean up this text". General prose composition alone
+  does not activate this workflow. Applies the four bundled tiers to the selected
+  draft, preserving the author's voice and reporting edits. Optional section
+  fan-out requires the caller's choice. Supply trail-root for span-anchored records.
 ---
 
 # Writing editorial
+
+Activation requires an explicit editorial-review request. Do not load this
+workflow automatically while composing ordinary prose. A workflow caller that
+needs an editorial pass must explicitly invoke that pass on its selected draft.
+The tier gates below apply only after invocation; "every piece" describes the
+reviewed draft, not an implicit trigger for unrelated writing.
 
 This skill holds no rules. Every rule lives in a tier file, applied in sequence, so a caller can load
 one tier without paying for the other three.
@@ -97,51 +91,26 @@ a code comment, a commit subject line. That is the whole exception list. **When 
 live**, because short and high-stakes is exactly where these rules earn the most, and it is the case
 a length test gets wrong.
 
-## Dispatch: one subagent or four
+## Execution choice and local reads
 
-On invocation for a review, ask once:
+Apply the four tiers inline in order by default. Resolve `{skillDir}` to this
+installed skill's directory and read its own sidecars, never a same-name foreign
+copy. Carry tier-1's contrast ledger and tier-2's PRESERVE list into later passes.
+This workflow does not require a host-specific tool, mission API or companion skill.
 
-```
-Four tiers to apply. How do you want them run?
+Only the coordinator may admit optional fresh-context per-tier or independent
+section work through the host's available native tools under the existing task
+grant. Leaves return their assigned edits and stop; they never dispatch another
+pass. A trail-root binds outputs, not fanout. Sectioning may run inline when the
+caller needs records without delegation. Required independent isolation that is
+unavailable is a disclosed blocker, not permission to switch engines or modes.
 
-  [1] One subagent, all four tiers in sequence     cheaper, one context
-  [2] A fresh subagent per tier                    higher fidelity, ~4x tokens
-  [3] Per-section fan-out, then whole-document     highest fidelity, ~N x tokens
-
-  Recommended: [2] for anything published or high-stakes.
-```
-
-A fresh context per tier stops each pass from inheriting the previous pass's frame, which is the same
-reason the pipeline exists at all. The cost is roughly four times the tokens, because each agent
-re-reads the draft.
-
-Recommend per-tier when the prose has real stakes (a published post, a PR description, a design doc),
-and single-agent for quick passes. The skill recommends; the user decides.
-
-**Where nobody can be asked, do not ask.** In an unattended or non-interactive run the question has
-no answer, so take option 1 and say which option was taken and why. Option 3 still applies when
-`trail-root` is supplied, since that is the caller stating the choice rather than a user answering a
-prompt.
-
-**Option 3 is the default only when the caller supplies `trail-root`.** A user invoking this skill
-directly gets option 2's recommendation and today's cost unless they choose otherwise. **This choice
-governs compose mode too.** A compose invocation does not ask the question, so it takes option 3 when
-`trail-root` is supplied and runs whole-document otherwise. Be honest
-about the multiplier when recommending it: a ten-section essay is ten subagents for tiers 0 to 2, on
-top of whatever per-tier isolation was picked.
-
-Option 3 is governed by `{skillDir}/sectioning.md`, which owns the cut, the fan-out, the merge and
-the tier-3 projection.
-
-When run per-tier, each subagent receives the draft as it stands, its own tier file, and the state
-earlier tiers emitted: the **contrast ledger** from tier-1 and, for tier-3, the **PRESERVE list**
-from tier-2. It does **not** receive the other tier files, which is what keeps the perspectives from
-poisoning each other. Carrying the state is not the same as carrying the tier file, and a pass that
-composes without the ledger will spend an allowance it never saw.
-
-**Where subagent dispatch is unavailable**, skip the question, apply the four tiers in sequence
-within the single context, and say that fresh-context isolation was unavailable. The tiers still
-apply in order; only the isolation is lost.
+Each admitted per-tier leaf receives its own rubric, the current draft and prior
+emitted ledger/PRESERVE state, not earlier reasoning transcripts. The coordinator
+assigns disjoint outputs, settles all runs, reads complete results and merges in
+order. Read `{skillDir}/sectioning.md` and `{skillDir}/edit-record.md` when the
+caller requests section records or authorizes sectioning. These sidecars specify
+text mechanics, not delegation authority. No automatic review/fixer chain follows.
 
 ## Editorial review workflow
 
@@ -170,7 +139,7 @@ PRESERVE:        (from tier-2; carried forward, or "(none)")
 CONTRAST-LEDGER: (from tier-1; what is retained, what remains)
 ```
 
-Under option 3, the merge pass edits text the per-section agents had already settled, so it adds a
+Under sectioning, the merge pass edits the settled per-section text, so it adds a
 fourth block. **Report it whether or not `trail-root` is supplied**: without it this is the only
 account the caller gets of what the merge changed.
 
@@ -188,8 +157,9 @@ Lead with the edits that matter most, and skip preamble.
 exactly as above: review mode returns targeted edits, compose mode returns an edited draft, and
 nothing appears on disk.
 
-With `trail-root` supplied, the section artifacts described in `{skillDir}/sectioning.md` are written
-under it. The caller owns that path. **Never** invent one, resolve one from the repository, or ask
+With an authorized `trail-root` supplied, the section artifacts described in `{skillDir}/sectioning.md`
+may be written under it by their assigned owner. A read-only leaf returns full content for caller
+persistence. The caller owns that path. **Never** invent one, resolve one from the repository, or ask
 the user where a trail should live: that decision belongs to the calling skill.
 
 ## Adding rules

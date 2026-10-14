@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: skills-dispatch-pi
-description: "Discover relevant installed Pi skills and read their SKILL.md"
-version: 2.1.0
+description: "Read relevant installed Pi guidance and route coordinator-owned stages"
+version: 2.2.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]

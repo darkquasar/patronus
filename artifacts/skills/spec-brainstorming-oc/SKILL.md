@@ -9,13 +9,13 @@ Read the task brief, project instructions, recorded decisions, current source an
 
 ## Authority and workers
 
-Research, spec authorship, review, planning, implementation, integration, publication and cleanup are separate stage grants. Existing approval remains valid within its recorded root, files and budgets. A changed target, destructive action or unresolved design choice requires an explicit decision from the lead or owner. Stop and ask through the available OpenCode interaction surface; wait for the reply. Never infer approval from steering or skill completion.
+Research, spec authorship, review, planning, implementation, integration, publication and cleanup are separate stage grants. Existing approval remains valid within its recorded root, files and applicable resource limits. A changed target, destructive action or unresolved design choice requires an explicit decision from the lead or owner. Stop and ask through the available OpenCode interaction surface; wait for the reply. Never infer approval from steering or skill completion.
 
-Only the lead writes shared outputs and `meta.yaml`. A read-only worker returns complete findings or draft text to the lead, with source paths and hashes; it does not edit the shared checkout, delegate, commit or change workflow state. The lead checks actual returned bytes before saving them. Use native OpenCode subagents (the read-only `@patronus-researcher-oc` role through the Task tool) only if `opencode agent list` shows the role, it is qualified and separately authorized. Missing role or authentication blocks that lane. Do not invent another host's API, change model/provider, or substitute concurrent writers.
+Only the lead writes shared outputs and `meta.yaml`. A read-only worker returns complete findings or draft text to the lead, with source paths and hashes; it does not edit the shared checkout, delegate, commit or change workflow state. The lead checks actual returned bytes before saving them. Use native OpenCode subagents (the read-only `@patronus-researcher-oc` role through the Task tool) only if `opencode agent list` shows the role, read-only permissions and authentication are available, and the coordinator admits it. Missing role or authentication blocks that lane. Do not invent another host's API, change model/provider, or substitute concurrent writers.
 
 ## Explore and design
 
-- Read the folder's synthesis from `meta.yaml` and all supplied findings first. Clarify intent, constraints, success criteria and non-goals. When evidence already settles a choice, confirm it rather than reopen research.
+- Read the folder's synthesis from `meta.yaml` and all supplied findings first. Clarify intent, constraints, success criteria and non-goals. When evidence already settles a choice, reuse the decision rather than reopen research or ask for repeated consent.
 - For an unknown domain, propose a separately authorized research stage using `{skillsDir}/research-team-oc/SKILL.md`. Consume its one folder-level research synthesis here. Large known work needs decomposition into streams, not a second investigation.
 - Compare two or three plausible approaches with tradeoffs, recommend one, and present components, data flow, failure handling and verification at proportional depth. A small ASCII diagram can clarify a consequential seam.
 - Obtain decisions only for unresolved choices. Optional `{skillsDir}/grilling-oc/SKILL.md` can stress-test an approved design under its own grant. Spec authorship does not authorize coding.
@@ -46,7 +46,8 @@ streams:
 
 ## Author and validate
 
-Write requirement IDs, testable acceptance checks, scope/non-goals, source-verified interfaces, failure/rollback behavior, authority boundaries and evidence limits. Self-check missing sections, placeholders and contradictions. A self-check cannot replace an independent review.
+Write requirement IDs, testable acceptance checks, scope/non-goals, source-verified interfaces, failure/rollback behavior, authority boundaries and evidence limits. Check missing sections, placeholders and contradictions inline, without
+launching an author self-check worker. This cannot replace independent review.
 
 Run the bundled model-free validator, described in `{skillDir}/scripts/README.md`, against the absolute folder path:
 
@@ -58,6 +59,9 @@ Set `SPEC_FOLDER` to the actual absolute `docs/specs/NN-slug/` path before runni
 
 ## Review and handoff
 
-Under a review grant, request fresh independent `{skillsDir}/spec-review-oc/SKILL.md` with the exact spec, brief, research/source inputs and hashes. Include `{skillDir}/spec-document-reviewer-prompt.md` as a supplement, not another review cycle. Read-only reviewers return findings to the lead. The lead writes the report and dispositions material findings within the approved review budget.
+When a spec exists, require one independent spec review unless the owner
+explicitly declines that review subject in the existing brief. An owner-declined
+spec remains the separate ADR-0003 plan-only exception. No automatic second model
+or repeated consent. Under the review grant, request one fresh independent `{skillsDir}/spec-review-oc/SKILL.md` with the exact spec, brief, research/source inputs and hashes. Include `{skillDir}/spec-document-reviewer-prompt.md` as a supplement, not another review cycle. Read-only reviewers return findings to the lead. The lead writes the report and dispositions material findings through the existing spec-review disposition route.
 
-After acceptance, `{skillsDir}/plan-writing-oc/SKILL.md` is the planning destination. It must read the written spec and metadata, not infer requirements from a filename. Completion does not automatically start that stage: require a valid planning grant and settled review gate. Return actual file paths/hashes, checks with results, unverified claims, decisions and the next authorized action. Static delivery of these instructions is not native OpenCode qualification.
+After acceptance, `{skillsDir}/plan-writing-oc/SKILL.md` is the planning destination. It must read the written spec and metadata, not infer requirements from a filename. Completion does not automatically start that stage: require a valid planning grant and settled review gate. Return actual file paths/hashes, checks with results, unverified claims, decisions and the next authorized action.

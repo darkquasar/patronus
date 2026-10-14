@@ -37,8 +37,11 @@ Parallel reads need independent questions and recorded concurrency/count/deadlin
 budgets. Writes require approved isolated owners, disjoint path claims and
 settlement before serial integration. Native workers prove no write isolation;
 concurrent writers in the lead checkout are forbidden. Parallel implementation
-is Partial until the separately approved supervisor is qualified. A serial
-alternative needs explicit lead authorization, never failed-engine fallback.
+uses native Task subagents only with checked allocated roots and permitted tool
+targeting, not a mandatory CLI supervisor. A leaf may prepare only an exact
+allocation already authorized by the coordinator, never select successors.
+CLI workers require explicit user mode selection; optional worktree-only setup
+launches no agents. A serial alternative needs explicit lead authorization.
 
 Read complete worker outputs and checked patches, bind their hashes and report
 actual tests before acceptance. Use one fresh independent review and at most one

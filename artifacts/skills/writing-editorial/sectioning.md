@@ -1,7 +1,10 @@
 # Sectioning, fan-out and merge
 
-This file governs how the tiers are applied to a long draft. The tiers themselves are
-unchanged: what changes is how many agents apply them, and at what altitude.
+This file governs text sectioning, not delegation authority. Read SKILL.md first:
+inline sequential application is the default; only the coordinator may admit
+native workers. Leaves never delegate. A trail-root binds outputs, not fanout.
+The diagram describes the authorized parallel variant; the same text mechanics
+work inline when the caller requests section records without delegation.
 
 ```
  draft
@@ -57,8 +60,8 @@ that work as timestamps, and cutting on them yields dozens of sections a few sen
 section that short gives a subagent nothing to judge: tier-2's structural rules need a paragraph or
 more of runway, and a document cut this way spends its cost on fragments while inviting exactly the
 cross-section divergence this file exists to prevent. **Where the cut would produce many sections
-whose text runs shorter than a few paragraphs, say so and run whole-document instead**, at option 1
-or 2. Report the cut you declined and why, rather than fanning out silently.
+whose text runs shorter than a few paragraphs, say so and run whole-document instead**.
+Report the cut you declined and why, rather than fanning out silently.
 
 **Spans.** At cut time, split each section into paragraph-level spans, numbered in document
 order, giving span ids of the form `<section-id>/pNN`. Every edit anchors to one. The schema
@@ -70,7 +73,9 @@ against it. Under `trail-root` the snapshot is written to `sections/NN-slug.sour
 
 ## Fan-out: tiers 0, 1 and 2
 
-One subagent per section, in parallel. Each receives its section text, the tier files for 0
+For explicitly admitted parallel sectioning, the coordinator assigns an exclusive
+output per section, settles every worker, reads complete returned content and
+merges serially. Without this admission, apply sections inline. Each pass receives its section text, the tier files for 0
 through 2, its section id, and the shared decision sheet below. It returns the edited section
 and its edit record.
 
@@ -166,18 +171,12 @@ unusable.
 never resolve one from the repository, and never ask the user where a trail should live. That
 decision belongs to the calling skill.
 
-**Fan-out and emission are two separate switches, and this file governs only what happens when
-the first one is on:**
-
-| Dispatch option | Fan-out | `trail-root` | Result |
-|---|---|---|---|
-| 1 or 2 | no | either | this file does not apply; the tiers run whole-document as the router describes |
-| 3 | yes | absent | cut and fan out, write **nothing** to disk, return the inline report |
-| 3 | yes | supplied | cut, fan out, and write the artifacts above |
-
-Option 3 is what turns fan-out on, and the router says when it is chosen: the caller picks it, and
-it is the default only when `trail-root` is supplied. **A caller who took option 1 or 2 gets no
-sectioning at all**, which is what keeps a direct caller's cost unchanged.
+Sectioning, delegation and emission are independent choices. An ordinary inline
+pass needs none of them. A caller requesting section records may use these text
+mechanics inline; a separately admitted parallel run may return the same records.
+Without an authorized trail-root, return the draft and report without disk writes.
+With it, the assigned owner writes the following artifacts. Supplying a path
+alone never admits workers or a new review gate.
 
 ```
 <trail-root>/<slug>/

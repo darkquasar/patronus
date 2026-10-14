@@ -1,11 +1,11 @@
 ---
 name: plan-execute-pi
-description: "Execute approved plans with proportionate solo or fresh task review"
+description: "Execute approved plans inline or through phase-separated leaf assignments"
 ---
 
 # Plan execute
 
-Coordinator routing only. Leaves execute their assigned task and never delegate. Read the approved plan, exact source/root/base and current native state before selecting a mode. For independent disjoint lanes use plan-execute-parallel-pi with serial consumption/integration barriers; task count alone never justifies fanout.
+Coordinator routing only. Leaves execute their assigned task, return complete evidence and stop, without delegation or successor admission. Read the approved plan, exact source/root/base and current native state before selecting a mode. Prefer inline execution and parent verification when suitable. For independent disjoint lanes use plan-execute-parallel-pi with serial consumption/integration barriers; task count alone never justifies fanout.
 
 ## Scope and recovery
 
@@ -96,9 +96,11 @@ choose the other mode.
 
 ## Record and execute
 
-Cite the actual plan sections that triggered each risk, selected mode, authority and budgets. Read [solo.md](solo.md) or [sdd.md](sdd.md), not both by default. An existing execution grant permits continuation; a mode decision does not grant delegation, worktree deletion or integration. Both modes retain required fresh independent whole-change implementation review under requesting-code-review-pi, with budgets allocated before launch. Small change size is no exemption; only the owner may explicitly waive this gate. Hybrid means isolated independent lanes plus serial contract/integration gates, not overlapping writers or task-by-task silent mode switching.
+Cite the actual plan sections that triggered each risk, selected mode and authority. Read [solo.md](solo.md) or [sdd.md](sdd.md), not both by default. `solo` is sequential execution by the parent or one assigned writer; `sdd` is phase-separated execution, not fresh review after each task. A risk trigger selects execution structure, not reviewer admission. Weak deterministic verification, task count or framework use alone creates no earlier review gate. Earlier review needs a named changed safety/compatibility invariant or irreversible boundary and its acceptance point before dependent consumption.
 
-Before launch read using-git-worktrees-pi. Bind exclusive report paths; record run/session/mission/attempt lineage, source/output hashes, owners, open asks and budgets. Every promise must settle before transition or cleanup; await dependent runs.run and ordered runs.all results. Child async receipts are not completion. A missing tool/output or infrastructure failure preserves evidence and stops the lane for same-protocol recovery, never inline/model/provider fallback.
+An existing execution grant permits continuation; a mode decision does not grant delegation, worktree deletion or integration. Both modes retain one fresh independent aggregate implementation reviewer under requesting-code-review-pi. Only the owner may explicitly waive that gate. Batch accepted findings into at most one correction/disposition, with no automatic review/fix successors. Hybrid means isolated independent lanes plus serial consumption/integration barriers. Existing host/resource controls and explicitly authorized campaign limits apply; ordinary development needs no new root-wide numerical budget, form or cumulative start ledger.
+
+Before writer launch read using-git-worktrees-pi. Bind exclusive report paths; record run/session/mission/attempt lineage, source/output hashes, owners, open asks and applicable host controls. Every promise must settle before transition or cleanup; await dependent runs.run and ordered runs.all results. Child async receipts are not completion. A missing tool/output or infrastructure failure preserves evidence and stops the lane for coordinator disposition, never silent inline/model/provider fallback.
 
 ## Declared-target delivery barrier
 
@@ -112,4 +114,6 @@ Helpers [task-brief](scripts/task-brief), [review-package](scripts/review-packag
 
 Normalize by consequence to **Critical / Major / Medium / Low**: catastrophic security/data-loss impact; substantial requirement/correctness/safety failure; bounded material defect; or presentation/low-impact improvement, respectively. Preserve original severity and every source finding ID under a canonical defect ID, with location, evidence, consequence rationale, proposed correction and unresolved status. Never mechanically convert Important to Major or Minor to Low, or downgrade severity to fit a threshold. A reduction needs concrete consequence evidence and a recorded parent disposition.
 
-Use one fresh independent review and at most one bounded correction/disposition, not automatic two-cycle rituals. Unresolved Critical/Major findings block; Medium residuals need explicit owner acceptance. Preserve source finding IDs, consequences and old/new hashes. Required tests, authority, evidence and requirement coverage independently block. Corrected bytes are not retroactively independently reviewed; stop at the bound and return unresolved decisions to the parent.
+Use one independent reviewer per exact subject and at most one batched bounded correction/disposition, with no automatic reviewer/fixer successors. Unresolved Critical/Major or more than two distinct Medium findings block; one or two Medium residuals require explicit owner acceptance, never coordinator self-approval. Low findings receive recorded disposition. Required tests, authority, evidence and requirement coverage independently block. Preserve source IDs, consequences and old/new hashes.
+
+The coordinator may resolve a fixed defect only by checking the cited defect, corrected exact bytes and sufficient relevant positive, negative and regression evidence against the existing acceptance criterion. Retain that evidence in the original report as parent-verified, not independently re-reviewed. A changed public interface, safety invariant or acceptance scope, or an oracle insufficient to prove defect removal, stops self-clearance and needs an owner decision or additional independent-review grant. Critical/Major residuals cannot be waived into acceptance. Stop at the correction bound and return unresolved decisions; focused edit/test iterations inside the granted batch are not new review waves.

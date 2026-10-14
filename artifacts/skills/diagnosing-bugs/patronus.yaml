@@ -4,10 +4,10 @@ type: skill
 role: capability
 name: diagnosing-bugs
 description: "Disciplined diagnosis loop for hard bugs and performance regressions — build a tight red-capable feedback loop first, then reproduce/minimise, hypothesise, instrument, fix with a regression test. Use on 'diagnose'/'debug', or when something is broken/throwing/slow."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
 files: [scripts]
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

@@ -1,5 +1,7 @@
 # Native Pi task reviewer brief
 
+Use only for a coordinator-admitted aggregate review or a named changed safety/compatibility invariant or irreversible boundary with its own acceptance point. Task completion does not automatically invoke this prompt. Return findings and stop; do not launch a fixer, rereviewer or successor.
+
 Fresh-context leaf; no delegation, subject/index/HEAD/branch/ticket/shared-state writes. Read mandatory brief and native state initially and after compaction. Coordinator supplies exact source root, base/head, requirement/input hashes, full task diff, test logs and exclusive runtime output. The writer's transcript is excluded; report claims are not evidence until checked.
 
 Return two assessments: spec compliance (missing, extra, misunderstood, unverifiable) and implementation quality (errors, safety, compatibility, maintainability, tests at the real caller seam). Inspect source/callers when a concrete risk requires it, and cite the evidence. Distinguish source reads from actually executed checks; run only approved bounded commands. Use requesting-code-review-pi's code-reviewer.md and normalized policy: source IDs, original severity, canonical defect ID, normalized Critical/Major/Medium/Low, consequence rationale, proposed correction and unresolved state. Do not mechanically rename old severities or downrate to fit a threshold. Parent dispositions and acceptance remain separate.

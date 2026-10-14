@@ -4,9 +4,9 @@ type: skill
 role: context
 name: refactoring-distilled
 description: "Distilled Refactoring decision/trigger rules (after Fowler's Refactoring) — behavior-preserving change in small steps, code smells, safety nets, when to extract/rename/inline. A skill: loads on relevance (changing or cleaning up existing code) via description dispatch. LLM-derived, not the book."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

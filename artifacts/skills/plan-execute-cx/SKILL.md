@@ -6,9 +6,11 @@ description: "Codex only: execute an approved plan serially with evidence-based 
 # Execute an approved plan in Codex
 
 Read the approved spec/plan, project instructions, exact source root/base/head,
-owned paths, acceptance criteria, budgets and prior outputs. Verify that the
+owned paths, acceptance criteria, applicable resource limits and prior outputs. Verify that the
 execution grant covers this stage. A worker executes its assigned task only;
-only the lead selects the mode and requests reviews. Scope change, destructive
+only the coordinator admits workers, selects the mode and requests reviews.
+Implementers, fixers and reviewers are leaves: return complete evidence and stop,
+without delegating successors, adding gates or updating shared progress. Scope change, destructive
 action, overlap or architecture ambiguity needs lead/owner authorization.
 
 ## Select and record the mode
@@ -17,26 +19,26 @@ An explicit authorized mode request governs. Otherwise assess the actual plan:
 
 - A changed security/trust or ownership boundary, irreversible state change,
   concurrency correctness or public compatibility invariant selects serial
-  implementation with fresh independent per-task review when it has its own
+  implementation with a coordinator-admitted boundary review when it has its own
   acceptance point. Name the changed safety/compatibility invariant or irreversible
   boundary and its consequence. Weak deterministic verification or shared-framework
   use alone is insufficient.
 - Two or more soft signals prompt that same assessment only with at least two
   implementation tasks: a new architectural pattern, a cross-module invariant,
   paired producer/consumer change, qualitative acceptance without an oracle,
-  negative requirements or several plausible designs. Per-task review still needs
+  negative requirements or several plausible designs. Boundary review still needs
   the named changed invariant/boundary and its own acceptance point; otherwise use
   serial implementation with required independent whole-change review.
 - Otherwise the lead implements serially and obtains independent whole-change
   review at the end. Task count alone does not justify delegation.
 
-Cite actual plan sections for the chosen mode and each per-task acceptance point.
+Cite actual plan sections for the chosen mode and each boundary acceptance point.
 An explicit mode request does not remove the named-invariant requirement; resolve
 an unclear request with the lead before launch. All modes retain required fresh
 independent whole-change implementation review, even for small deliveries. Only
-an explicit owner decision may waive that gate. Per-task reviewers are read-only
-Codex workers, available only after current-session primitive/role qualification
-and budget admission. Serial lead implementation never means concurrent workers
+an explicit owner decision may waive that gate. Boundary reviewers are read-only
+Codex workers admitted using exposed native tools with available authentication,
+read-only scope and complete output delivery. Serial lead implementation never means concurrent workers
 writing in the lead checkout. A requested isolated implementer mode needs an
 approved isolation mechanism before any implementation starts. No automatic mode,
 provider, protocol or model changes when capabilities fail.
@@ -65,11 +67,16 @@ Only edit assigned files. Keep code and supporting source discoverable.
 The lead reads `{skillsDir}/verification-before-completion-cx/SKILL.md` before
 claims, then `{skillsDir}/requesting-code-review-cx/SKILL.md` for one fresh
 independent whole-change review of the exact base/head plus dirty patch hashes.
-Per-task review is required only in the selected reviewed mode at the named
+Boundary review is required only in the selected reviewed mode at the named
 invariant/boundary's acceptance point; it does not replace the whole-change gate.
 Read complete findings before accepting delivery.
 Use `{skillsDir}/receiving-code-review-cx/SKILL.md` for technical correction.
-Allow at most one bounded correction/disposition per review gate; unresolved
+Batch accepted fixes into at most one bounded correction/disposition per review
+subject, not one fixer per finding. Fixers return evidence and stop without
+launching reviewers. The coordinator checks corrected bytes and affected
+regressions. A changed interface, safety invariant or acceptance scope needs an
+owner decision, not an automatic review wave. Corrected bytes are parent-verified,
+not independently re-reviewed. Unresolved
 Critical/Major or more than two Medium block. Up to two Medium require explicit
 owner-accepted residuals. Never silently downgrade or automatically relaunch.
 

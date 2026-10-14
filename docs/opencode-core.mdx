@@ -3,10 +3,10 @@ title: "OpenCode core lane"
 description: "Install the explicit OpenCode working set and distinguish static delivery from native qualification."
 ---
 
-`core-profile-oc` 1.0.0 is an explicit OpenCode-only profile, not an extension
-of legacy `core`, Codex or Pi. It selects 21 `-oc` workflow skills, seven advisory
-instructions, eight native role agents, two best-effort guards, two permission
-settings, six unchanged neutral items and the shared `isolated-writer-supervisor`.
+`core-profile-oc` 2.0.0 is an explicit OpenCode-only profile, not an extension
+of legacy `core`, Codex or Pi. It selects the OpenCode workflow skills, advisory
+instructions, native role agents, best-effort guards, permission settings and
+audited neutral items. `isolated-writer-supervisor` is not a core member.
 The hook runner is adapter machinery, not another profile item. The compatibility
 contract is `docs/compatibility/core-opencode.yaml`.
 
@@ -39,10 +39,15 @@ and `.agents/skills`, including their global counterparts. Global
 names and descriptions beginning with "OpenCode only" help distinguish siblings;
 source naming does not prove native routing.
 
-Admission refuses same-name resources with different bytes. Identical unsuffixed
-neutral skills visible in multiple roots produce a warning naming both paths;
-OpenCode requires unique native names across locations, so duplicate visibility
-still needs qualification. Patronus-owned instruction sections use `oc:`.
+Admission refuses same-name resources by default. Two neutral references,
+`rust-style-reference` and `decision-clarity-reference`, plus the optional callable
+`writing-editorial`, have a finite exception. Editorial is one host-neutral bundle
+outside every core profile, not a reference or a general workflow allowance:
+an existing copy must be Patronus-managed and unchanged, and a second installed
+or proposed copy must match its artifact name, version and complete payload.
+Verified copies collapse to one logical resource. Unmanaged, edited, partial,
+version-mismatched and other same-name copies remain blocking, even when their
+entry files match. Patronus-owned instruction sections use `oc:`.
 A context path with a recorded foreign owner refuses an `oc:` write, including
 with `--force`. An already-present unknown selected section name is also
 refused. There is no mixed-context consent path. Every existing Patronus fence
@@ -72,10 +77,13 @@ OpenCode-owned `.opencode/package.json`, `package-lock.json`, `node_modules/` an
 `.gitignore` are not claimed or removed by Patronus.
 
 `skill-visibility-oc` computes `permission.skill` deny patterns only for detected
-foreign lane families in roots OpenCode reads, currently `*-cx` when Codex skills
-are present. Pi roots are not consulted. Preview/deploy names the count, suffix
-and config file, or reports nothing masked. After adding or removing foreign
-skills, run `patronus update skill-visibility-oc --target opencode --dry-run`,
+foreign lane families in roots OpenCode reads: `*-cx` when Codex skills are
+present and `*-cl` when Claude skills are present. The suffix convention also
+hides user-authored OpenCode-visible names ending in a detected foreign suffix;
+the mask does not infer first-party ownership. Pi roots are not consulted.
+Preview/deploy names the count, suffix and config file, or reports nothing masked.
+After adding or removing foreign skills, run
+`patronus update skill-visibility-oc --target opencode --dry-run`,
 review the intended scope, then authorize deployment. Computed settings refresh
 at the same artifact version and retire only unchanged owned obsolete leaves;
 edited leaves remain owned with a warning. Native masking is runtime-pending.
@@ -126,23 +134,19 @@ the writer allow edits; researcher/web-researcher and reviewers deny edits.
 Read-only prose and tool permissions are not an OS sandbox. Native enforcement
 and no-nesting behavior must be observed, not inferred from frontmatter.
 
-`plan-execute-parallel-oc` requires the shared supervisor. Never run concurrent
-writers in the lead checkout; one native subagent writer at most shares a cwd.
-Fresh worktrees contain tracked files only. Before launch, the working-set
-precheck requires the writer, both guards/scripts/registrations, runner and
-permission defaults at global scope, or tracked in the project's recorded base.
+`plan-execute-parallel-oc` uses native Task writers in checked, disjoint
+worktrees. Never run concurrent writers in the lead checkout. Task does not
+automatically change cwd or grant external worktree access, so verify the actual
+role/tools can target the assigned root before writing. Its Python-stdlib
+`prepare-worktrees.py` accepts only an exact allocation, launches no agents and
+produces no execution receipt. Read-only native scouts may prepare later-wave
+briefs while current writers run; the coordinator admits dependencies and
+integrates accepted patches serially.
 
-Each isolated worker uses `opencode run --format json --auto --agent
-patronus-writer-oc -m <provider/model> --dir <attempt worktree> <brief reference>`
-with a per-run inline `OPENCODE_CONFIG_CONTENT` grant for
-`agent.patronus-writer-oc.permission.external_directory."<runDir>/*" = allow`.
-The agent keeps `external_directory."*" = deny`. Trade: the worker may write
-anywhere under the recorded evidence root, not just its result file. Deny/allow
-merge semantics remain runtime-pending. `--auto` flips ask to allow only; it is
-not permission to widen denied paths. The supervisor result file is the contract,
-not process exit or undocumented JSON events. Missing results or unknown stop
-preserve work and block integration/cleanup. Retained fake-worker/precheck
-fixtures are historical, not native qualification.
+`isolated-writer-supervisor` is optional and loaded only after the user explicitly
+chooses headless CLI workers. That mode retains the working-set precheck, inline
+runDir permission trade-off and subprocess result contract in its conditional
+reference. It is not a native Task prerequisite or automatic fallback.
 
 ## Guards, migration and fresh sessions
 

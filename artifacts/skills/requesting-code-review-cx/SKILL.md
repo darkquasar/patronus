@@ -5,19 +5,22 @@ description: "Codex only: request a fresh independent read-only review of exact 
 
 # Request a Codex code review
 
-The lead owns review admission and disposition. A worker returns evidence and
+The coordinator admits one independent reviewer per exact subject by default.
+A second reviewer needs separate admission, not automatic discovery or retry.
+One matching aggregate review covers feature, branch and pre-merge triggers when
+inputs, scope and coverage match; finishing does not create another review. A worker returns evidence and
 never launches its own reviewer. Read the approved requirements, exact source
-root/base/head, dirty and untracked patch hashes, owned files, tests/logs and
+root/base/head, dirty, untracked and relevant ignored input hashes, owned files, tests/logs and
 known limitations. Review must cover the actual delivered bytes, including
 unstaged files, not just the last commit.
 
 1. Assemble a self-contained package with requirements, implementation summary,
    root/revision, exact changed-file inventory and hashes, approved commands,
-   actual results, skipped gates and Partial capabilities. Exclude reasoning
+   actual results, skipped gates and actual capability limits. Exclude reasoning
    transcripts that would frame the reviewer's judgment.
 2. Read `{skillDir}/code-reviewer.md`. Use a fresh independent read-only Codex
-   worker only when the session exposes a qualified native worker primitive,
-   required tools, wait mechanism and sufficient approved budget. Give it the
+   worker only when the session exposes a native worker primitive,
+   required tools, authentication and wait/stop controls. Give it the
    complete package and rubric. No source/index/branch mutations or shared
    report writes. If unavailable or auth-blocked, stop as blocked. Never replace
    independent review with self-review or a CLI model request.
@@ -31,11 +34,11 @@ unstaged files, not just the last commit.
    Medium block; up to two Medium need explicit owner-accepted residuals.
    Missing tests, requirements or authority independently block acceptance.
 5. Use `{skillsDir}/receiving-code-review-cx/SKILL.md` for at most one bounded
-   correction/disposition. Retain old/new hashes and tests. Corrected bytes are
+   batched correction/disposition, not one fixer per finding. Retain old/new hashes and tests. Corrected bytes are
    not retroactively independently reviewed. Stop at the bound and return open
    decisions to the owner; never automatically launch another review wave.
 
 Before any completion claim, read
-`{skillsDir}/verification-before-completion-cx/SKILL.md` and report fresh command
-results. Review is separate from integration, commit, publication and cleanup;
+`{skillsDir}/verification-before-completion-cx/SKILL.md` and report matching input-bound command
+results, with fresh final aggregate checks. Review is separate from integration, commit, publication and cleanup;
 none is implied by a favorable finding or by this skill.

@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: tdd-cl
+description: "Public-interface vertical RED/GREEN slices for critical behavioral bugs/boundaries and explicit test-first work; consume valid approval and retain relevant regressions."
+version: 2.1.0
+entry: SKILL.md
+files: [tests.md, mocking.md, refactoring.md]
+targets: [claude]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/mattpocock/skills
+  license: MIT
+  copyright: "Copyright (c) 2026 Matt Pocock"
+  commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
+  note: "Derived from the pinned upstream source. Active instructions are adapted for bounded Patronus review, evidence or TDD behavior; legal attribution and unchanged reference examples are retained."

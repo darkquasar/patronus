@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-execute-parallel-cl
+description: "Explicit native parallel execution of an accepted plan with coordinator-admitted leaf teammates, disjoint isolated ownership, settlement, serial integration and one independent aggregate review."
+version: 4.1.0
+entry: SKILL.md
+files: [TEAMMATE-TEMPLATE.md, PROVENANCE-GUIDE.md]
+targets: [claude]
+requires: [requesting-code-review-cl, tdd-cl]
+defaults:
+  scope: project

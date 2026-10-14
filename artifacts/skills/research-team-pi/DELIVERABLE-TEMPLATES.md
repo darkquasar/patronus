@@ -1,7 +1,9 @@
 # Deliverable Templates
 
 The coordinator synthesizes one deliverable — the consolidated `<slug>-research.md` — from the raw
-`*-findings.md` files produced by researchers, and writes the folder's `meta.yaml` streams skeleton.
+researcher findings persisted as `*-findings.md` by the qualified runtime or authorized
+coordinator, and writes the folder's `meta.yaml` streams skeleton. When a child cannot write,
+it returns complete content for runtime persistence; do not assume a worker-created file.
 The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-brainstorming-pi` and
 `plan-writing-pi`; research-team-pi does not write them.
 

@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: tdd-pi
-description: "Pi-scoped tdd discipline"
-version: 2.1.0
+description: "Test-first public-behavior slices for critical work and explicit test-first requests"
+version: 2.2.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
 targets: [pi]

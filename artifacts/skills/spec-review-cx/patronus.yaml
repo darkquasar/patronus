@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: spec-review-cx
 description: "Codex-only fresh read-only spec review against research and current source"
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [NOTICE, LICENSE, SOURCE.md, spec-reviewer.md]
 targets: [codex]

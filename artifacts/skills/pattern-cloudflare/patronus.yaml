@@ -4,9 +4,9 @@ type: skill
 role: context
 name: pattern-cloudflare
 description: "Cloudflare Workers design patterns (Queues, Workflows, D1, testing, OpenAPI, MCP debugging). Load-first index routing to seven full pattern files."
-version: 1.0.1
+version: 2.0.0
 entry: SKILL.md
 files: [patterns/]
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project

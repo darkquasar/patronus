@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: rust-style-pi
+description: "Pi only: Use when writing, reviewing or refactoring Rust code or Cargo manifests, or coordinating Rust builds, tests and parallel worktrees."
+version: 1.0.0
+entry: SKILL.md
+files: [SOURCE.md]
+targets: [pi]
+defaults:
+  scope: global
+requires: [rust-style-reference]

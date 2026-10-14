@@ -1,5 +1,7 @@
 # Fixture 06: qualitative wording, exact oracle elsewhere in the plan
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: solo
 Isolates: whether the gate reads the WHOLE plan before scoring a soft signal. Task 1's
 acceptance wording is qualitative; Global Constraints pins it to an exact number, so the

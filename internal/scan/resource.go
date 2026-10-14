@@ -80,7 +80,10 @@ func (r SkillRoot) safePath(path string) error {
 // resource is found, before the walk continues; conflicts under RefuseAlways
 // are detected over the complete inventory afterwards, so each target's walk
 // errors keep their historical precedence.
-func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource, error) {
+// The optional references callback proves full managed-payload equivalence for
+// the finite ManagedSharedSkill allowlist. Without it those duplicates fail closed,
+// even when SKILL.md is identical. Ordinary resources retain their root policy.
+func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool, references ...func(Resource, Resource) bool) ([]Resource, error) {
 	var out []Resource
 	var policies []SkillRoot
 	for _, root := range roots {
@@ -90,7 +93,7 @@ func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource
 		seen := append([]Resource(nil), out...)
 		found, err := walkSkillRoot(root, func(r Resource) error {
 			if root.DuplicatePolicy == RefuseDifferentBytesVerifiedException {
-				if err := ResourceConflict(seen, r, root.DuplicatePolicy, verified, root.ConflictMessage); err != nil {
+				if err := ResourceConflict(seen, r, root.DuplicatePolicy, verified, root.ConflictMessage, references...); err != nil {
 					return err
 				}
 			}
@@ -109,11 +112,26 @@ func DiscoverSkills(roots []SkillRoot, verified func(Resource) bool) ([]Resource
 		if policies[i].DuplicatePolicy != RefuseAlways {
 			continue
 		}
-		if err := ResourceConflict(out[:i], r, RefuseAlways, verified, policies[i].ConflictMessage); err != nil {
+		if err := ResourceConflict(out[:i], r, RefuseAlways, verified, policies[i].ConflictMessage, references...); err != nil {
 			return nil, err
 		}
 	}
-	return out, nil
+	// Only proven shared copies collapse. Keep the complete inventory until all
+	// conflicts have been checked, so a third unverified copy cannot disappear.
+	var logical []Resource
+	for _, r := range out {
+		duplicate := false
+		for _, other := range logical {
+			if ManagedSharedSkill(r) && sameReference(other, r, references) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			logical = append(logical, r)
+		}
+	}
+	return logical, nil
 }
 
 // walkSkillRoot discovers the resources below one root. found runs for each
@@ -222,19 +240,34 @@ func walkSkillDir(root SkillRoot, path string, add func(raw []byte, path string)
 // ResourceConflict judges selected against already discovered resources under
 // policy. Identity is kind-scoped and includes aliases. message nil uses a
 // generic text; verified may be nil (no exception).
-func ResourceConflict(resources []Resource, selected Resource, policy DuplicatePolicy, verified func(Resource) bool, message func(name string, a, b Resource) error) error {
+func ResourceConflict(resources []Resource, selected Resource, policy DuplicatePolicy, verified func(Resource) bool, message func(name string, a, b Resource) error, references ...func(Resource, Resource) bool) error {
 	if message == nil {
 		message = genericConflict
 	}
 	selectedNames := append([]string{selected.Name}, selected.Aliases...)
 	for _, other := range resources {
-		if other.Kind != selected.Kind || other.Path == selected.Path {
+		if other.Kind != selected.Kind {
 			continue
 		}
 		otherNames := append([]string{other.Name}, other.Aliases...)
 		for _, selectedName := range selectedNames {
 			for _, otherName := range otherNames {
 				if otherName != selectedName {
+					continue
+				}
+				if ManagedSharedSkill(other) || ManagedSharedSkill(selected) {
+					if sameReference(other, selected, references) {
+						continue
+					}
+					var copies []string
+					for _, copy := range append(append([]Resource(nil), resources...), selected) {
+						if copy.Kind == "skill" && copy.Name == selectedName {
+							copies = append(copies, fmt.Sprintf("%s (%s)", copy.Path, copy.Origin))
+						}
+					}
+					return fmt.Errorf("shared skill %q conflicts at %s; matching managed artifact, version and complete payload required", selectedName, strings.Join(copies, " and "))
+				}
+				if other.Path == selected.Path {
 					continue
 				}
 				if policy == RefuseDifferentBytesVerifiedException {
@@ -250,6 +283,34 @@ func ResourceConflict(resources []Resource, selected Resource, policy DuplicateP
 		}
 	}
 	return nil
+}
+
+// NeutralReference is the finite CL-02 exemption, not a suffix or role pattern.
+// Discovery alone never proves management or complete-payload equivalence.
+func NeutralReference(r Resource) bool {
+	return r.Kind == "skill" && (r.Name == "rust-style-reference" || r.Name == "decision-clarity-reference")
+}
+
+// ManagedSharedSkill is the exact owner-approved coexistence set. Editorial is
+// a callable workflow, not a neutral reference; no other workflow inherits it.
+// Discovery must still prove complete, unchanged managed payload equivalence.
+func ManagedSharedSkill(r Resource) bool {
+	return NeutralReference(r) || (r.Kind == "skill" && r.Name == "writing-editorial")
+}
+
+// NeutralReferenceConsumer is the declared consumer set of the two CL-02
+// bundles. An unknown owner cannot confer their narrow coexistence exception.
+func NeutralReferenceConsumer(tool string) bool {
+	switch tool {
+	case "claude", "codex", "opencode", "pi":
+		return true
+	default:
+		return false
+	}
+}
+
+func sameReference(a, b Resource, proofs []func(Resource, Resource) bool) bool {
+	return ManagedSharedSkill(a) && ManagedSharedSkill(b) && a.Name == b.Name && !a.Legacy && !b.Legacy && len(proofs) == 1 && proofs[0] != nil && proofs[0](a, b)
 }
 
 func genericConflict(name string, a, b Resource) error {

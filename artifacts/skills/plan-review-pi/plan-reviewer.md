@@ -1,8 +1,10 @@
 # Review exact plan coverage, ordering and interfaces before execution: reviewer brief
 
-Read the supplied exact plan AND the spec it implements, mandatory brief and native state first, including after compaction. Verify hashes before reviewing. You are a leaf, with no delegation or subject/index/HEAD/branch/ticket writes. Return complete report text for runtime persistence if write is unavailable. Bash is powerful: this is cooperative scope, not filesystem isolation.
+Read the supplied exact plan AND the spec it implements (or the explicit recorded owner-declined-spec exception), mandatory brief and run-owning native state first, including after compaction. Verify hashes before reviewing. You are a leaf, with no delegation or subject/index/HEAD/branch/ticket writes. Return complete report text for runtime persistence if write is unavailable. Bash is powerful: this is cooperative scope, not filesystem isolation.
 
 ## Rubric
+
+Check that author self-checks remain inline and the written plan has one independent reviewer, including one-task plans, unless its review was explicitly owner-declined. Execution mode and the sole progress authority are coordinator decisions at plan acceptance, not reviewer decisions. Run-owning native state remains authoritative; UI todos alone do not override a tracker. Reject checklist/todo/tk mirrors and new mandatory root numerical forms while retaining actual host/API limits. A second model requires explicit admission, never automatic discovery or a repeated-consent loop.
 
 Check requirement-to-task coverage; actual file paths/interfaces; predecessor dependencies; independently testable tasks; a recorded testing strategy/rationale per existing task brief; bounded public-behavior red/green slices when `critical-tdd` applies or approved focused postchecks when `focused-postcheck` applies; no placeholders; naming/type consistency across tasks; verification commands and negative cases; migration/rollback/ownership; user and developer states; scope proportionality. Verify important source anchors locally. Discover available code-intel schemas and call Serena initial_instructions before symbol queries when available; otherwise use source reads and disclose missing integrations. Do not launch services, rebuild a graph or treat a stale snapshot as current. State each skipped lens and why.
 
@@ -28,7 +30,7 @@ Retain required fresh independent whole-change implementation review even for
 small deliveries; only the owner may explicitly waive it. Preserve Pi's ban on
 task-by-task two-cycle review rituals.
 
-Inspect the full task range, not just the last commit. Read changed files/callers when necessary to test a concrete claim. Run only authorized checks under the project resource lock and budgets, or explicitly say source-read-only; never imply command execution.
+Inspect the full task range, not just the last commit. Read changed files/callers when necessary to test a concrete claim. Run only authorized checks under the project resource lock and applicable host/resource limits, or explicitly say source-read-only; never imply command execution.
 
 ## Return
 
@@ -38,4 +40,6 @@ Report exact source/root/revisions and input hashes, criteria checked, commands 
 
 Normalize by consequence to **Critical / Major / Medium / Low**: catastrophic security/data-loss impact; substantial requirement/correctness/safety failure; bounded material defect; or presentation/low-impact improvement, respectively. Preserve original severity and every source finding ID under a canonical defect ID, with location, evidence, consequence rationale, proposed correction and unresolved status. Never mechanically convert Important to Major or Minor to Low, or downgrade severity to fit a threshold. A reduction needs concrete consequence evidence and a recorded parent disposition.
 
-Use one fresh independent review and at most one bounded correction/disposition, not automatic two-cycle rituals. Unresolved Critical/Major findings block; Medium residuals need explicit owner acceptance. Preserve source finding IDs, consequences and old/new hashes. Required tests, authority, evidence and requirement coverage independently block. Corrected bytes are not retroactively independently reviewed; stop at the bound and return unresolved decisions to the parent.
+Use one independent reviewer per exact subject and at most one batched bounded correction/disposition, with no automatic reviewer/fixer successors. Unresolved Critical/Major or more than two distinct Medium findings block; one or two Medium residuals require explicit owner acceptance, never coordinator self-approval. Low findings receive recorded disposition. Required tests, authority, evidence and requirement coverage independently block. Preserve source IDs, consequences and old/new hashes.
+
+The coordinator may resolve a fixed defect only by checking the cited defect, corrected exact bytes and sufficient relevant positive, negative and regression evidence against the existing acceptance criterion. Retain that evidence in the original report as parent-verified, not independently re-reviewed. A changed public interface, safety invariant or acceptance scope, or an oracle insufficient to prove defect removal, stops self-clearance and needs an owner decision or additional independent-review grant. Critical/Major residuals cannot be waived into acceptance. Stop at the correction bound and return unresolved decisions; focused edit/test iterations inside the granted batch are not new review waves.

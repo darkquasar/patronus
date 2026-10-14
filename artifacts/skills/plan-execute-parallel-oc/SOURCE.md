@@ -91,8 +91,21 @@ Corrected source identities (SHA-256):
 
 - `dispatching-parallel-agents-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-execute-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
-- `isolated-writer-supervisor/scripts/supervisor.py` (and its schema/fixtures): required shared helper, verify installed/readable before use.
-- `{skillDir}/scripts/worker-precheck.sh`: bundled precheck, run before writing a request.
+- `using-git-worktrees-oc/SKILL.md`: exact allocated-root companion.
+- `{skillDir}/scripts/prepare-worktrees.py` and `{skillDir}/references/worktree-allocation.md`: bundled allocation-only utility, no supervisor dependency or agent launch.
+- `isolated-writer-supervisor/SKILL.md` and `{skillDir}/references/cli-workers.md`: read only after explicit user selection of CLI mode.
+- `{skillDir}/scripts/worker-precheck.sh`: bundled CLI-mode precheck only.
+
+## Current version 2.0.0
+
+Native Task writers and read-only next-wave scouts replace required subprocess
+supervision. Task does not automatically change cwd or grant worktree access;
+check actual tools/permissions before writing. The supervisor is removed from
+requires and the resolved core closure. The standalone allocation script is a
+byte-identical packaged mirror of the canonical Codex sibling, checked by its
+fixtures, with no runtime sibling import. Former CLI procedures remain in the declared conditional reference,
+with unchanged worker-precheck implementation and historical evidence above.
+No new native runtime qualification is claimed.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

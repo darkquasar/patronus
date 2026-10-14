@@ -48,6 +48,14 @@ and manifest distribution. This does not qualify native loading or execution.
 
 ## Active reads
 
+Current version 1.2.0 routes parallel work to native Task execution. The old
+required-helper route above is historical; optional worktree-only setup needs
+no CLI skill activation, and CLI orchestration requires explicit user choice.
+
+Version 1.2.0 identifies co-visible Claude skills by their exact `-cl` names
+instead of describing them as unsuffixed. Native `-oc` routes and the explicit
+CLI choice stay intact; this naming edit does not qualify runtime masking.
+
 - `grilling-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-execute-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-execute-parallel-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

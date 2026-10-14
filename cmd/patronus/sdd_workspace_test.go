@@ -10,11 +10,11 @@ import (
 	"testing"
 )
 
-// scriptPath resolves a plan-execute helper by absolute path, because the
+// scriptPath resolves a plan-execute-cl helper by absolute path, because the
 // helpers resolve their siblings from their own directory.
 func scriptPath(t *testing.T, name string) string {
 	t.Helper()
-	p, err := filepath.Abs(filepath.Join("../../artifacts/skills/plan-execute/scripts", name))
+	p, err := filepath.Abs(filepath.Join("../../artifacts/skills/plan-execute-cl/scripts", name))
 	if err != nil {
 		t.Fatalf("resolve %s: %v", name, err)
 	}

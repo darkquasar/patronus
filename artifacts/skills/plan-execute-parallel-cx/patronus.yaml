@@ -3,17 +3,17 @@ family: artifact
 type: skill
 role: capability
 name: plan-execute-parallel-cx
-description: "Codex only: isolated parallel writers via the required shared isolated-writer-supervisor; native Codex workers runtime-pending."
-version: 1.2.0
+description: "Codex only: approved parallel plan tasks through native subagents in allocated worktrees; no CLI supervisor prerequisite."
+version: 2.1.0
 entry: SKILL.md
-files: ["SOURCE.md", "NOTICE", "LICENSE"]
+files: ["SOURCE.md", "NOTICE", "LICENSE", "scripts/prepare-worktrees.py", "references/worktree-allocation.md", "fixtures/test_prepare_worktrees.py"]
 targets: [codex]
 defaults:
   scope: project
-requires: ["plan-execute-cx", "dispatching-parallel-agents-cx", "isolated-writer-supervisor"]
+requires: ["plan-execute-cx", "dispatching-parallel-agents-cx", "using-git-worktrees-cx"]
 attribution:
   upstream: "github.com/darkquasar/patronus"
   license: "GPL-3.0"
   copyright: "Patronus contributors"
   commit: "46247c13c3de38008c59995c5b1b697f78d3f9e5"
-  note: "Codex behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Supervisor helper is Patronus-authored and fake-worker tested; native Codex workers runtime-unverified."
+  note: "Codex native-delegation guidance; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Worktree isolation is cooperative."

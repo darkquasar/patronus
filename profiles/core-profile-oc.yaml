@@ -2,9 +2,9 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-oc
-version: 1.0.0
+version: 2.0.0
 targets: [opencode]
-summary: "OpenCode source lane: explicit workflow skills, advisory instructions, native roles, isolated-worker supervisor, best-effort guards and structured permission settings. Native loading and effects remain runtime-pending."
+summary: "OpenCode source lane: explicit workflow skills, advisory instructions, native Task roles, best-effort guards and structured permission settings. CLI supervision is optional; native loading and effects remain runtime-pending."
 # Explicit spec section 5 membership, no extends edge. Static delivery only.
 # Release contract: docs/compatibility/core-opencode.yaml.
 layers:
@@ -53,7 +53,6 @@ layers:
     - skill-visibility-oc
   orchestration:
     - dispatching-parallel-agents-oc
-    - isolated-writer-supervisor
     - patronus-researcher-oc
     - patronus-web-researcher-oc
     - patronus-spec-author-oc
@@ -65,4 +64,4 @@ layers:
 todo:
   - "Qualify opencode-ai 1.18.35 on Linux arm64 in both scopes and fresh sessions."
   - "Observe Bun runner loading, argument mapping, blocking, --pure and benign double-scope execution."
-  - "Observe native role permissions, skill masks, MCP authentication and runDir-only worker result grants."
+  - "Observe native Task role permissions, assigned-worktree access, skill masks and MCP authentication. Optional CLI runDir grants need separate qualification."

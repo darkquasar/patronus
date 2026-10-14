@@ -111,6 +111,13 @@ class Scratch:
                               capture_output=True, text=True, timeout=120)
         return proc
 
+    def allocation_request(self, tasks, integration=None):
+        path, req = self.request(tasks, integration=integration)
+        req.pop("maxConcurrency")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(req, handle)
+        return path, req
+
     def run(self, tasks, **kw):
         path, req = self.request(tasks, **kw)
         proc = self.supervise("run", path)
@@ -176,10 +183,141 @@ class SupervisorSafety(unittest.TestCase):
             with open(att["patch"], encoding="utf-8") as handle:
                 self.assertIn(rel, handle.read())
         self.assert_lead_untouched()
+
         # Integration is disabled by default and needs a separate explicit grant.
         refused = self.s.supervise("integrate", path)
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn("integration-disabled", refused.stdout + refused.stderr)
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_allocates_without_worker_command(self):
+        path, req = self.s.allocation_request([
+            {"key": "a", "ownedPaths": ["src/a/"]},
+            {"key": "b", "ownedPaths": ["src/b.txt"]},
+        ])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["status"], "allocated")
+        self.assertEqual(report["mode"], "worktrees-only")
+        with open(os.path.join(req["runDir"], "allocation.json"), encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle), report)
+        self.assertFalse(os.path.exists(os.path.join(req["runDir"], "run.json")))
+        for key, binding in report["tasks"].items():
+            self.assertEqual(binding["status"], "allocated")
+            self.assertEqual(binding["base"], self.s.base)
+            self.assertEqual(binding["ownedPaths"], req["tasks"][0 if key == "a" else 1]["ownedPaths"])
+            self.assertEqual(self.s.git("rev-parse", "HEAD", cwd=binding["root"]).strip(), self.s.base)
+            self.assertEqual(self.s.git("branch", "--show-current", cwd=binding["root"]).strip(), binding["branch"])
+            self.assertEqual(self.s.git("status", "--porcelain", cwd=binding["root"]), "")
+        self.assertNotEqual(report["tasks"]["a"]["root"], report["tasks"]["b"]["root"])
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_symlink_destination_before_mutation(self):
+        path, req = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/a/"]}])
+        outside = os.path.join(self.s.tmp, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, req["worktreeRoot"])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("symlink", proc.stdout)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertEqual(os.listdir(outside), [])
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_claim_through_base_symlink(self):
+        os.symlink("../../outside", os.path.join(self.s.repo, "src", "escape"))
+        self.s.git("add", "src/escape")
+        self.s.git("commit", "-q", "-m", "invented escaping symlink")
+        self.s.base = self.s.git("rev-parse", "HEAD").strip()
+        path, req = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/escape/out.txt"]}])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("symlink", proc.stdout)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(req["worktreeRoot"]))
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_preflights_all_branches(self):
+        path, req = self.s.allocation_request([
+            {"key": "a", "ownedPaths": ["src/a/"]},
+            {"key": "bad..name", "ownedPaths": ["src/b/"]},
+        ])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(req["worktreeRoot"]))
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_worker_argv_and_cannot_be_execution(self):
+        path, req = self.s.allocation_request([
+            self.s.writer("a", ["src/a.txt"], "--write", "src/a.txt=must not run\n"),
+        ])
+        checked = self.s.supervise("validate", path, "--worktrees-only")
+        self.assertEqual(checked.returncode, 2, checked.stdout + checked.stderr)
+        self.assertIn("command", checked.stdout)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(os.path.join(self.s.repo, "src/a.txt")))
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_unsafe_requests_without_allocation(self):
+        cases = [
+            ([{"key": "a", "ownedPaths": ["src/"]}, {"key": "b", "ownedPaths": ["src/b.txt"]}], None),
+            ([{"key": "a", "ownedPaths": ["../outside"]}], None),
+            ([{"key": "a", "ownedPaths": [".git/config"]}], None),
+            ([{"key": "a", "ownedPaths": ["src/a"], "predecessors": ["b"]},
+              {"key": "b", "ownedPaths": ["src/b"]}], None),
+            ([{"key": "a", "ownedPaths": ["src/a"]}], {"enabled": True}),
+        ]
+        for tasks, integration in cases:
+            with self.subTest(tasks=tasks, integration=integration):
+                path, req = self.s.allocation_request(tasks, integration=integration)
+                proc = self.s.supervise("run", path, "--worktrees-only")
+                self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+                self.assertFalse(os.path.exists(req["runDir"]))
+                self.assertFalse(os.path.exists(req["worktreeRoot"]))
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_branch_collision_before_allocation(self):
+        path, req = self.s.allocation_request([
+            {"key": "a", "ownedPaths": ["src/a"]}, {"key": "b", "ownedPaths": ["src/b"]},
+        ])
+        self.s.git("branch", "patronus-allocation/%s/b" % req["runId"])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(req["worktreeRoot"]))
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_rejects_destination_inside_another_checkout(self):
+        other = os.path.join(self.s.tmp, "other-checkout")
+        self.s.git("worktree", "add", "-q", "--detach", other, self.s.base)
+        path, req = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/a"]}])
+        req["worktreeRoot"] = os.path.join(other, "allocations")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(req, handle)
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(req["worktreeRoot"]))
+        self.assertEqual(self.s.git("status", "--porcelain", cwd=other), "")
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_preserves_partial_failure(self):
+        hook = os.path.join(self.s.repo, ".git", "hooks", "post-checkout")
+        with open(hook, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\nexit 1\n")
+        os.chmod(hook, 0o755)
+        path, req = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/a"]}])
+        proc = self.s.supervise("run", path, "--worktrees-only")
+        self.assertEqual(proc.returncode, 3, proc.stdout + proc.stderr)
+        with open(os.path.join(req["runDir"], "allocation.json"), encoding="utf-8") as handle:
+            record = json.load(handle)
+        self.assertEqual(record["status"], "blocked")
+        root = record["tasks"]["a"]["root"]
+        self.assertTrue(os.path.isdir(root), "partial allocation must not be removed")
+        self.assertEqual(self.s.git("rev-parse", "HEAD", cwd=root).strip(), self.s.base)
+        self.assertFalse(os.path.exists(os.path.join(req["runDir"], "run.json")))
         self.assert_lead_untouched()
 
     def test_a_to_b_order(self):

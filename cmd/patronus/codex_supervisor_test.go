@@ -15,11 +15,11 @@ import (
 	"testing"
 )
 
-// These tests execute the bundled plan-execute-parallel-cx supervisor against
+// These tests execute the optional shared isolated-writer supervisor against
 // invented fake-worker processes in scratch Git repositories. They never call a
 // Codex, Claude or Pi backend, and they do not qualify native Codex workers.
 
-var cxSvSkillDir = filepath.Join("..", "..", "artifacts", "skills", "plan-execute-parallel-cx")
+var cxSvSkillDir = filepath.Join("..", "..", "artifacts", "skills", "isolated-writer-supervisor")
 
 type cxSvAttempt struct {
 	Status              string                     `json:"status"`

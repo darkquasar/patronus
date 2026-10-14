@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "plan-execute-parallel-cx supervisor request",
-  "description": "Documents the request the bundled supervisor validates itself with the Python standard library. Paths are absolute unless stated. worktreeRoot and runDir lie outside the lead checkout and Git directory and are disjoint. Owned paths are repository-relative; a trailing slash claims a directory; claims never overlap across tasks.",
+  "title": "isolated-writer-supervisor request",
+  "description": "CLI-selected subprocess request validated by the supervisor with Python standard library. Paths are absolute unless stated. worktreeRoot and runDir lie outside the lead checkout and Git directory and are disjoint. Owned paths are repository-relative; a trailing slash claims a directory; claims never overlap across tasks. Allocation-only requests belong to the native parallel executor's worktree-allocation reference and helper.",
   "type": "object",
   "required": ["schemaVersion", "runId", "repository", "baseCommit", "brief", "worktreeRoot", "runDir", "tasks"],
   "additionalProperties": true,
@@ -15,7 +15,7 @@
       "required": ["path", "sha256"],
       "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
     },
-    "worktreeRoot": {"type": "string", "description": "Attempts are created at worktreeRoot/runId/task/attempt-N and are never removed by the supervisor."},
+    "worktreeRoot": {"type": "string", "description": "Subprocess attempts use worktreeRoot/runId/task/attempt-N and are never removed by the supervisor."},
     "runDir": {"type": "string", "description": "Evidence root. Must not exist; the run binding is immutable."},
     "maxConcurrency": {"type": "integer", "minimum": 1, "maximum": 8, "default": 1},
     "tasks": {

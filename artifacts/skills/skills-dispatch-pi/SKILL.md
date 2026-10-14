@@ -33,7 +33,11 @@ Leaves follow their assigned brief and mandatory reads, not coordinator routing.
 No nested delegation or shared mission-state writes. Before work and after
 compaction/resume, reread the brief, native mission state, latest decisions,
 project/global instructions and every runtime-selected SKILL.md, then inspect the
-latest run/output before retry. Revalidate settled approval or qualification when
+latest run/output before a bounded authorized action. Revalidate authority or capability evidence only when
 relevant inputs drift; an unchanged new message alone does not require replay.
 Missing required guidance or tools blocks the lane, with no tool, model, provider,
 protocol or isolation fallback.
+
+The coordinator selects execution mode and one progress authority once at plan acceptance using plan-writing-pi. Native mission state actually owning runs wins; trackers hold references only. UI todos alone do not override project trackers. Do not create checklist/todo/tk mirrors or mandatory root numerical forms. Existing host/API limits remain. Execution routes use plan-execute-pi and plan-execute-parallel-pi with phase-separated workflow-implement-pi operations; inline work and parent-direct verification are suitable defaults.
+
+Author checks stay inline. A written spec has one independent spec-review-pi review unless explicitly owner-declined; every written plan, including one task, has one plan-review-pi reviewer unless its review is explicitly owner-declined. The coordinator admits one aggregate implementation reviewer under requesting-code-review-pi. No automatic second-model discovery, repeated consent or self-review worker. Matching inputs reuse verification under verification-before-completion-pi; finishing-a-development-branch-pi consumes that evidence without another same-input suite/reviewer. Publication and cleanup remain separately granted.

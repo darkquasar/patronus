@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: eval
+name: spec-review-cl
+description: "One independent spec review before planning, retaining spec basics and engineering/design/DevEx/strategy lenses, consequence-based findings and blocking acceptance thresholds."
+version: 2.1.0
+entry: SKILL.md
+files: [spec-reviewer.md]
+targets: [claude]
+requires: [receiving-code-review-cl]
+defaults:
+  scope: project

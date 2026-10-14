@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: spec-brainstorming-cx
 description: "Codex-only ADR-0003 spec authorship and research-to-planning handoff"
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [NOTICE, LICENSE, SOURCE.md, spec-document-reviewer-prompt.md, scripts]
 targets: [codex]

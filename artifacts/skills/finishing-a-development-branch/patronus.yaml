@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: finishing-a-development-branch
 description: "Branch-completion discipline — when implementation is done and tests pass, decide how to integrate: presents structured options for merge, PR, or cleanup rather than ad-hoc finishing. The last step of a development workflow."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

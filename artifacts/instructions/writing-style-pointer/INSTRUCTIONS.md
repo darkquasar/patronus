@@ -25,13 +25,12 @@ exactly what was said and the punctuation belongs to your sentence.
 
 ## For prose that reasons or teaches
 
-Anything that makes a case, explains, or teaches — a design doc, an ADR, a
-proposal, a lesson, a longer message — is also governed by the meaning-led prose
-rules: decide the meaning before the sound, ground abstractions in a mechanism
-and a consequence, keep the actor and consequence visible, scale claims to the
-evidence, use contrast only to close a real interpretive branch, explain in the
-positive, and cut puffery and filler.
+Decide the claim before polishing the sentence. Ground abstract claims in a
+mechanism and consequence, keep the actor/action visible, distinguish observation
+from inference and scale claims to the evidence. Use contrast only to close a
+plausible, consequential misreading. Keep transitions that show a real relation
+and cut filler or repeated summaries. Preserve the author's voice and exact facts.
 
-Those rules carry their reasoning and worked examples, which is what makes them
-applicable rather than mechanical. Load the `writing-editorial` skill for them, and
-to review a draft against them.
+This is a self-contained first pass, not a review workflow or worker dispatch.
+It requires no companion skill, editorial tiers, ledger or report. An optional
+full editorial review applies only when explicitly requested and host-compatible.

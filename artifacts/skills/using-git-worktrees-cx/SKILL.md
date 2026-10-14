@@ -6,8 +6,9 @@ description: "Codex only: Use when feature work needs an isolated Git workspace 
 # Choose worktree ownership before work
 
 Isolation, source authoring, integration, publication and cleanup are separate
-grants. This skill grants none of them. A leaf uses its allocated root and never
-allocates another worktree. Worktrees provide cooperative Git isolation, not an OS
+grants. This skill grants none of them. A leaf uses its allocated root; it may
+execute only an exact allocation already authorized by the coordinator, never
+choose new roots, claims or successors. Worktrees provide cooperative Git isolation, not an OS
 sandbox or a restriction on tools that can reach other paths. Static route and
 placement checks do not establish native runtime behavior.
 
@@ -46,6 +47,14 @@ Missing permission, unavailable isolation, path collision, overlap or an unknown
 owner blocks the lane. No in-place fallback. Do not install dependencies or alter
 settings to make allocation succeed. Run only configured setup/baseline checks
 under their lock and budgets. A failing baseline needs an explicit disposition.
+
+Prefer native allocation when suitable, otherwise authorized Git allocation.
+If the parallel execution companion is installed, its allocation-only utility
+can prepare the coordinator's exact roots:
+`python3 {skillsDir}/plan-execute-parallel-cx/scripts/prepare-worktrees.py ALLOCATION.json`.
+No supervisor is required. This launches no agents and activates no CLI skill. It allocates from the named
+base only, without applying predecessor patches. Carry accepted dirty/untracked
+inputs separately before writers start. CLI supervision needs explicit user choice.
 
 ## Capture and retention
 

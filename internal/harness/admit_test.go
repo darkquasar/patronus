@@ -90,6 +90,268 @@ func toyName(raw []byte, path string) (string, error) {
 	return line, nil
 }
 
+func TestAdmitClaudeNeutralReferenceCoexistence(t *testing.T) {
+	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
+		t.Run(pair[0]+"+"+pair[1], func(t *testing.T) {
+			f := newAdmitFixture(t)
+			name := "decision-clarity-reference"
+			body := []byte("---\nname: " + name + "\ndescription: invented neutral reference\n---\nRead body.md at this exact installed path.\n")
+			var roots []scan.SkillRoot
+			var owners []state.Item
+			var selected string
+			for _, tool := range pair {
+				root := filepath.Join(f.project, tool, "skills")
+				path := filepath.Join(root, name, "SKILL.md")
+				selected = path
+				policy := scan.RefuseDifferentBytesVerifiedException
+				if tool == "pi" || tool == "claude" {
+					policy = scan.RefuseAlways
+				}
+				roots = append(roots, scan.SkillRoot{Path: root, Origin: tool, Name: scan.SkillDirName, DuplicatePolicy: policy})
+				owner := state.Item{Artifact: name, ItemVersion: "1.0.0", Type: "skill", Tool: tool, Scope: "local"}
+				for rel, bytes := range map[string][]byte{"SKILL.md": body, "body.md": []byte("invented shared decision guidance\n")} {
+					p := filepath.Join(filepath.Dir(path), rel)
+					f.write(t, p, bytes)
+					owner.Files = append(owner.Files, state.FileState{Path: p, Action: "CREATE", Checksum: state.Checksum(bytes)})
+				}
+				owners = append(owners, owner)
+			}
+			d := Descriptor{Name: pair[1], GlobalMarker: "~/." + pair[1], ResourcePhase: ResourceAfterContext, SkillName: scan.SkillDirName, SkillRoots: func(RootInputs) ([]scan.SkillRoot, error) { return roots, nil }}
+			fd := diff.FileDiff{Artifact: name, Version: "1.0.0", Tool: d.Name, Scope: "local", Type: "skill", Path: selected, Action: diff.Skip, Before: body, After: body}
+			in := f.admission(&diff.ChangeSet{Diffs: []diff.FileDiff{fd}}, owners)
+			if err := Admit(d, in); err != nil {
+				t.Fatalf("identical managed references refused: %v", err)
+			}
+			if len(in.Inventory) != 1 {
+				t.Fatalf("expected one logical reference, got %+v", in.Inventory)
+			}
+		})
+	}
+}
+
+func TestAdmitNeutralReferenceFreshSecondHost(t *testing.T) {
+	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
+		for _, scope := range []string{"local", "global"} {
+			t.Run(pair[0]+"+"+pair[1]+"/"+scope, func(t *testing.T) {
+				f := newAdmitFixture(t)
+				name := "rust-style-reference"
+				entry := []byte("---\nname: " + name + "\ndescription: invented neutral reference\n---\nRead body.md.\n")
+				sidecar := []byte("invented shared guidance\n")
+				foreignRoot := filepath.Join(f.project, pair[0], scope, "skills")
+				selectedRoot := filepath.Join(f.project, pair[1], scope, "skills")
+				foreignEntry := filepath.Join(foreignRoot, name, "SKILL.md")
+				foreignSidecar := filepath.Join(foreignRoot, name, "body.md")
+				f.write(t, foreignEntry, entry)
+				f.write(t, foreignSidecar, sidecar)
+				owner := state.Item{
+					Artifact: name, ItemVersion: "1.0.0", Type: "skill", Tool: pair[0], Scope: scope,
+					Files: []state.FileState{
+						{Path: foreignEntry, Action: "CREATE", Checksum: state.Checksum(entry)},
+						{Path: foreignSidecar, Action: "CREATE", Checksum: state.Checksum(sidecar)},
+					},
+				}
+				selectedEntry := filepath.Join(selectedRoot, name, "SKILL.md")
+				selectedSidecar := filepath.Join(selectedRoot, name, "body.md")
+				changes := &diff.ChangeSet{Diffs: []diff.FileDiff{
+					{Artifact: name, Version: "1.0.0", Tool: pair[1], Scope: scope, Type: "skill", Path: selectedEntry, Action: diff.Create, After: entry},
+					{Artifact: name, Version: "1.0.0", Tool: pair[1], Scope: scope, Type: "skill", Path: selectedSidecar, Action: diff.Create, After: sidecar},
+				}}
+				policy := scan.RefuseDifferentBytesVerifiedException
+				if pair[1] == "pi" {
+					policy = scan.RefuseAlways
+				}
+				d := Descriptor{
+					Name: pair[1], GlobalMarker: "~/." + pair[1], ResourcePhase: ResourceAfterContext,
+					SkillName: scan.SkillDirName,
+					SkillRoots: func(RootInputs) ([]scan.SkillRoot, error) {
+						return []scan.SkillRoot{
+							{Path: selectedRoot, Origin: "selected", Name: scan.SkillDirName, DuplicatePolicy: policy},
+							{Path: foreignRoot, Origin: "foreign", Name: scan.SkillDirName, DuplicatePolicy: scan.RefuseDifferentBytesVerifiedException},
+						}, nil
+					},
+				}
+				if err := Admit(d, f.admission(changes, []state.Item{owner})); err != nil {
+					t.Fatalf("fresh second-host reference create refused: %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestAdmitClaudeNeutralReferenceSamePathOwners(t *testing.T) {
+	f := newAdmitFixture(t)
+	name := "rust-style-reference"
+	root := filepath.Join(f.project, ".agents/skills")
+	path := filepath.Join(root, name, "SKILL.md")
+	body := []byte("---\nname: " + name + "\ndescription: invented\n---\nshared reference\n")
+	f.write(t, path, body)
+	owners := []state.Item{}
+	for _, tool := range []string{"codex", "opencode"} {
+		owners = append(owners, state.Item{Artifact: name, ItemVersion: "1.0.0", Type: "skill", Scope: "local", Tool: tool, Files: []state.FileState{{Path: path, Action: "CREATE", Checksum: state.Checksum(body)}}})
+	}
+	d := toyDescriptor(func(RootInputs) ([]scan.SkillRoot, error) {
+		return []scan.SkillRoot{{Path: root, Name: scan.SkillDirName, DuplicatePolicy: scan.RefuseDifferentBytesVerifiedException}}, nil
+	})
+	d.Name = "opencode"
+	fd := diff.FileDiff{Artifact: name, Version: "1.0.0", Type: "skill", Tool: d.Name, Scope: "local", Path: path, Action: diff.Skip, Before: body, After: body}
+	if err := Admit(d, f.admission(&diff.ChangeSet{Diffs: []diff.FileDiff{fd}}, owners)); err != nil {
+		t.Fatalf("same-path neutral owners refused: %v", err)
+	}
+	for _, fault := range []string{"version", "scope", "edit", "delete"} {
+		t.Run(fault, func(t *testing.T) {
+			other := append([]state.Item(nil), owners...)
+			selected := fd
+			switch fault {
+			case "version":
+				other[0].ItemVersion = "2.0.0"
+			case "scope":
+				other[0].Scope = "global"
+			case "edit":
+				selected.Action, selected.After = diff.Create, []byte("changed\n")
+			case "delete":
+				selected.Action, selected.After = diff.Delete, nil
+			}
+			if err := Admit(d, f.admission(&diff.ChangeSet{Diffs: []diff.FileDiff{selected}}, other)); err == nil {
+				t.Fatalf("same-path %s silently admitted", fault)
+			}
+		})
+	}
+}
+
+func neutralAdmission(t *testing.T, pair [2]string, name string) (Descriptor, *Admission, admitFixture) {
+	t.Helper()
+	f := newAdmitFixture(t)
+	body := []byte("---\nname: " + name + "\ndescription: invented\n---\nneutral guidance\n")
+	var roots []scan.SkillRoot
+	var owners []state.Item
+	var selected string
+	for _, tool := range pair {
+		root := filepath.Join(f.project, tool, "skills")
+		selected = filepath.Join(root, name, "SKILL.md")
+		policy := scan.RefuseDifferentBytesVerifiedException
+		if tool == "pi" || tool == "claude" {
+			policy = scan.RefuseAlways
+		}
+		roots = append(roots, scan.SkillRoot{Path: root, Origin: tool, Name: scan.SkillDirName, DuplicatePolicy: policy})
+		owner := state.Item{Artifact: name, ItemVersion: "1.0.0", Type: "skill", Tool: tool, Scope: "local"}
+		for rel, raw := range map[string][]byte{"SKILL.md": body, "body.md": []byte("own-lane shared guidance\n")} {
+			path := filepath.Join(filepath.Dir(selected), rel)
+			f.write(t, path, raw)
+			owner.Files = append(owner.Files, state.FileState{Path: path, Checksum: state.Checksum(raw), Action: "CREATE"})
+		}
+		owners = append(owners, owner)
+	}
+	d := Descriptor{Name: pair[1], GlobalMarker: "~/." + pair[1], ResourcePhase: ResourceAfterContext, SkillName: scan.SkillDirName, SkillRoots: func(RootInputs) ([]scan.SkillRoot, error) { return roots, nil }}
+	fd := diff.FileDiff{Artifact: name, Version: "1.0.0", Tool: d.Name, Scope: "local", Type: "skill", Path: selected, Action: diff.Skip, Before: body, After: body}
+	return d, f.admission(&diff.ChangeSet{Diffs: []diff.FileDiff{fd}}, owners), f
+}
+
+func TestAdmitClaudeNeutralReferenceSelectedVersionMismatch(t *testing.T) {
+	d, in, _ := neutralAdmission(t, [2]string{"claude", "opencode"}, "decision-clarity-reference")
+	in.Changes.Diffs[0].Version = "2.0.0"
+	if err := Admit(d, in); err == nil {
+		t.Fatal("selected version mismatch was admitted")
+	}
+}
+
+func TestAdmitManagedEditorialCoexistence(t *testing.T) {
+	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
+		t.Run(strings.Join(pair[:], "+"), func(t *testing.T) {
+			d, in, _ := neutralAdmission(t, pair, "writing-editorial")
+			if err := Admit(d, in); err != nil {
+				t.Fatalf("identical managed editorial copies refused: %v", err)
+			}
+			if len(in.Inventory) != 1 {
+				t.Fatalf("editorial copies did not reconcile once: %+v", in.Inventory)
+			}
+		})
+	}
+}
+
+func TestAdmitClaudeNeutralReferencePartialCoOwner(t *testing.T) {
+	d, in, f := neutralAdmission(t, [2]string{"claude", "opencode"}, "decision-clarity-reference")
+	sidecar := filepath.Join(f.project, "claude/skills/decision-clarity-reference/body.md")
+	in.Owners = append(in.Owners, state.Item{Artifact: "decision-clarity-reference", ItemVersion: "1.0.0", Tool: "codex", Type: "skill", Scope: "local", Files: []state.FileState{{Path: sidecar, Action: "CREATE", Checksum: state.Checksum([]byte("own-lane shared guidance\n"))}}})
+	if err := Admit(d, in); err == nil {
+		t.Fatal("partially owned co-owner was admitted")
+	}
+}
+
+func TestAdmitClaudeNeutralReferenceUnsafeCopies(t *testing.T) {
+	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
+		for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial"} {
+			for _, fault := range []string{"unmanaged", "one unmanaged", "edited entry", "edited sidecar", "different managed payload", "partial ownership", "missing sidecar", "extra file", "version mismatch", "empty version", "artifact mismatch", "foreign tool", "missing skill type"} {
+				t.Run(strings.Join(pair[:], "+")+"/"+name+"/"+fault, func(t *testing.T) {
+					d, in, f := neutralAdmission(t, pair, name)
+					foreignEntry := filepath.Join(f.project, pair[0], "skills", name, "SKILL.md")
+					sidecar := filepath.Join(filepath.Dir(foreignEntry), "body.md")
+					switch fault {
+					case "unmanaged":
+						in.Owners = nil
+					case "one unmanaged":
+						in.Owners = in.Owners[1:]
+					case "edited entry":
+						f.write(t, foreignEntry, []byte("---\nname: "+name+"\ndescription: changed\n---\nedited\n"))
+					case "edited sidecar":
+						f.write(t, sidecar, []byte("edited\n"))
+					case "different managed payload":
+						f.write(t, sidecar, []byte("different owned guidance\n"))
+						for i := range in.Owners[0].Files {
+							if in.Owners[0].Files[i].Path == sidecar {
+								in.Owners[0].Files[i].Checksum = state.Checksum([]byte("different owned guidance\n"))
+							}
+						}
+					case "partial ownership":
+						var files []state.FileState
+						for _, file := range in.Owners[0].Files {
+							if file.Path != sidecar {
+								files = append(files, file)
+							}
+						}
+						in.Owners[0].Files = files
+					case "missing sidecar":
+						if err := os.Remove(sidecar); err != nil {
+							t.Fatal(err)
+						}
+					case "extra file":
+						f.write(t, filepath.Join(filepath.Dir(foreignEntry), "unowned.md"), []byte("unmanaged\n"))
+					case "version mismatch":
+						in.Owners[0].ItemVersion = "2.0.0"
+					case "empty version":
+						in.Owners[0].ItemVersion = ""
+					case "artifact mismatch":
+						in.Owners[0].Artifact = "different-reference"
+					case "foreign tool":
+						in.Owners[0].Tool = "external"
+					case "missing skill type":
+						in.Owners[0].Type = ""
+					}
+					err := Admit(d, in)
+					if err == nil || !strings.Contains(err.Error(), foreignEntry) || !strings.Contains(err.Error(), in.Changes.Diffs[0].Path) || !strings.Contains(err.Error(), name) {
+						t.Fatalf("unsafe copy %s not refused with both identities/paths: %v", fault, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestAdmitClaudeNeutralReferenceOwnLaneRead(t *testing.T) {
+	d, in, f := neutralAdmission(t, [2]string{"claude", "opencode"}, "rust-style-reference")
+	in.Owners[0].ItemVersion = "2.0.0"
+	foreign := filepath.Join(f.project, "claude/skills/rust-style-reference/body.md")
+	local := filepath.Join(f.project, "opencode/skills/rust-style-reference/body.md")
+	f.write(t, foreign, []byte("Claude-only version two guidance\n"))
+	if err := Admit(d, in); err == nil {
+		t.Fatal("different versions silently resolved")
+	}
+	raw, err := os.ReadFile(local)
+	if err != nil || string(raw) != "own-lane shared guidance\n" {
+		t.Fatalf("own-lane reference selection: %q %v", raw, err)
+	}
+	// The fixture reads an exact installed path; it makes no native-loader claim.
+}
+
 func TestAdmitSelectionAndWarning(t *testing.T) {
 	f := newAdmitFixture(t)
 	var warned []string

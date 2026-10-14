@@ -1,0 +1,28 @@
+This artifact contains guidance DISTILLED from the Uber Go Style Guide.
+
+It paraphrases the guide's conventions and decision tables into compact,
+agent-actionable rules — it is NOT a reproduction of the guide's prose or code
+examples. For the full rationale, examples, and any updates, consult the upstream
+guide directly.
+
+Upstream: https://github.com/uber-go/guide  (style.md)
+Commit:   1d60a91aa5e87d443002e23c21903c49489dbde5
+License:  Apache License, Version 2.0
+Copyright (c) Uber Technologies, Inc.
+
+This material is licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a
+copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+----------------------------------------------------------------------
+
+Modifications by the Patronus project: the upstream guide (style.md) has been
+distilled into the condensed rule list in INSTRUCTIONS.md. No upstream NOTICE file
+was present in the source repository at the pinned commit.

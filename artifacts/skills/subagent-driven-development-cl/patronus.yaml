@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: orchestration
+name: subagent-driven-development-cl
+description: "Optional fresh serial implementer leaves for an accepted plan, with coordinator-only admission, named boundary review where justified, one aggregate review and at most one batched correction."
+version: 2.1.0
+entry: SKILL.md
+files: [implementer-prompt.md, task-reviewer-prompt.md, scripts]
+targets: [claude]
+requires: [requesting-code-review-cl, tdd-cl]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Derived from the pinned upstream source and adapted for the bounded Patronus lifecycle. Existing bundled script behavior and legal attribution are preserved; active instructions use coordinator-only admission, leaf delivery and one aggregate review with one batched correction."

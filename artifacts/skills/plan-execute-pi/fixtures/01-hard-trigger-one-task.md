@@ -1,5 +1,7 @@
 # Fixture 01: hard trigger, one implementation task
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: sdd
 Isolates: Rule 2 (hard trigger) beating Rule 3's two-task floor.
 Invocation: "Execute this plan."

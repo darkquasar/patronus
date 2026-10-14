@@ -1,5 +1,7 @@
 # Fixture 07: "schema migration" mentioned, not implemented
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: solo
 Isolates: hard triggers fire on what a plan DOES, not on vocabulary that appears in it.
 This plan writes documentation about a migration that already happened.

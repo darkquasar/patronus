@@ -28,6 +28,12 @@ Missing or ambiguous strategy, including a legacy brief without one, stops
 implementation for a coordinator decision. Unknown behavioral work does not
 qualify for focused postchecks. The workflow below applies to `critical-tdd`.
 
+Other behavioral features need an explicit strategy, not an ordinary-work exemption.
+Characterize uncertain legacy behavior before needed refactoring. Tests do not
+admit reviewers or successor workers. The coordinator owns aggregate review and
+any named early boundary review. Valid interface, behavior and plan approval
+carries through slices; ask again only for changed scope or an unresolved choice.
+
 ## Philosophy
 
 **Core principle**: Tests should verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't.
@@ -77,9 +83,9 @@ Before writing any code (an existing explicit approval satisfies the correspondi
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
 
-Ask: "What should the public interface look like? Which behaviors are most important to test?"
+When unresolved, ask: "What should the public interface look like? Which behaviors are most important to test?"
 
-**You can't test everything.** Confirm with the user exactly which behaviors matter most. Focus testing effort on critical paths and complex logic, not every possible edge case.
+**You can't test everything.** Use approved behavior priorities; clarify only unresolved choices. Focus testing effort on critical paths and complex logic, not every possible edge case.
 
 ### 2. Tracer Bullet
 

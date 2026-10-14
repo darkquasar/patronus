@@ -33,7 +33,7 @@ find_repo() {
 REPO="$(find_repo)" || { echo "error: run this from inside the patronus checkout (or set PATRONUS_REPO)" >&2; exit 1; }
 SANDBOX="$REPO/.patronus/smoke"   # under the gitignored .patronus/
 BIN="$SANDBOX/patronus"
-ITEM="${PATRONUS_SMOKE_ITEM:-go-style-uber}"
+ITEM="${PATRONUS_SMOKE_ITEM:-go-style-uber-cl}"
 
 # Captured BEFORE any sandboxing, so the containment check has a real baseline.
 REAL_HOME="$HOME"

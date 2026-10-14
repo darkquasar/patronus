@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: finishing-a-development-branch-oc
 description: "OpenCode only: Use when authorized implementation is ready for verification and a branch or captured worktree handoff."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md"]
 targets: [opencode]
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "OpenCode behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."
+  note: "OpenCode behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained."

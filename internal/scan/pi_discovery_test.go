@@ -57,6 +57,39 @@ func TestPiDiscoveryContext(t *testing.T) {
 	}
 }
 
+func TestPiDiscoveryManagedReferenceProof(t *testing.T) {
+	base := t.TempDir()
+	name := "rust-style-reference"
+	body := "---\nname: " + name + "\ndescription: invented reference\n---\nguidance\n"
+	var roots []PiResourceRoot
+	for _, lane := range []string{"codex", "pi"} {
+		root := filepath.Join(base, lane)
+		dp02Write(t, filepath.Join(root, name, "SKILL.md"), body)
+		roots = append(roots, PiResourceRoot{Kind: "skill", Path: root, Origin: lane})
+	}
+	if _, err := DiscoverPiResources(roots); err == nil {
+		t.Fatal("neutral duplicate admitted without proof")
+	}
+	proof := func(a, b Resource) bool { return string(a.Content) == body && string(b.Content) == body }
+	found, err := DiscoverPiResources(roots, proof)
+	if err != nil || len(found) != 1 || string(found[0].Content) != body {
+		t.Fatalf("managed reference discovery lost content or logical identity: %+v %v", found, err)
+	}
+	third := PiResource{Kind: "skill", Name: name, Path: filepath.Join(base, "unmanaged/SKILL.md"), Origin: "unmanaged", Content: []byte("edited")}
+	if _, err := ReconcilePiResources(append(found, third), proof); err == nil {
+		t.Fatal("prepared inventory silently accepted unmanaged foreign copy")
+	}
+	ordinary := []PiResource{{Kind: "skill", Name: "workflow", Path: "/one/SKILL.md"}, {Kind: "skill", Name: "workflow", Path: "/two/SKILL.md"}}
+	if _, err := ReconcilePiResources(ordinary, func(Resource, Resource) bool { return true }); err == nil {
+		t.Fatal("workflow acquired neutral exception")
+	}
+	legacy := found[0]
+	legacy.Path, legacy.Legacy = filepath.Join(base, "legacy/SKILL.md"), true
+	if _, err := ReconcilePiResources(append(found, legacy), proof); err == nil {
+		t.Fatal("legacy reference acquired exception")
+	}
+}
+
 func TestPiDiscoverySources(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")

@@ -70,6 +70,213 @@ func shaState(b []byte) string {
 	return "sha256:" + hex.EncodeToString(s[:])
 }
 
+func TestClaudeNamingManagedCutoverPreservesOtherScope(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", "local")
+			f.install(t, "fixture-route", "global")
+			// The catalog has retired the old identity, but recorded ownership is
+			// sufficient for a scoped remove preview and explicit retirement.
+			if err := os.Remove(filepath.Join(f.root, "artifacts/skills/fixture-route/patronus.yaml")); err != nil {
+				t.Fatal(err)
+			}
+			other := "global"
+			if scope == "global" {
+				other = "local"
+			}
+			unrelated := f.skillPath(scope, "user-skill", "SKILL.md")
+			dp02File(t, unrelated, "User-authored unrelated callable skill.\n")
+			otherBefore := dp02Snapshot(t, f.scopeRoot(other))
+			before := dp02Snapshot(t, f.home, f.root)
+			out, stderr, err := execRemove(t, "fixture-route", "--target", "claude", "--"+scope)
+			if err != nil || !strings.Contains(out, "fixture-route") || !strings.Contains(out, "DELETE") {
+				t.Fatalf("old-name preview: %v\n%s\n%s", err, out, stderr)
+			}
+			out, stderr, err = runInstall(t, "fixture-route-cl", "--target", "claude", "--"+scope)
+			if err != nil || !strings.Contains(out, "fixture-route-cl") || !strings.Contains(out, "rust-style-reference") {
+				t.Fatalf("new-name preview: %v\n%s\n%s", err, out, stderr)
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("migration previews changed bytes or ownership")
+			}
+			f.install(t, "fixture-route-cl", scope)
+			// This is the barrier, not just an exit-code check: every new payload
+			// and dependency byte, identity, version and checksum must be owned.
+			f.assertInstalled(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "rust-style-reference", scope)
+			f.assertInstalled(t, "fixture-route", scope)
+			if out, stderr, err := execRemove(t, "fixture-route", "--target", "claude", "--"+scope, "--deploy"); err != nil {
+				t.Fatalf("explicit retirement: %v\n%s\n%s", err, out, stderr)
+			}
+			oldDir := filepath.Dir(f.skillPath(scope, "fixture-route", "SKILL.md"))
+			if _, err := os.Stat(oldDir); !os.IsNotExist(err) {
+				t.Fatalf("owned empty retired directory remains: %v", err)
+			}
+			s, err := state.Load(filepath.Join(f.scopeRoot(scope), ".patronus/state.json"))
+			if err != nil || len(s.Find("fixture-route", "claude", scope)) != 0 {
+				t.Fatalf("old ownership remains: %+v %v", s, err)
+			}
+			f.assertInstalled(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "rust-style-reference", scope)
+			if !reflect.DeepEqual(otherBefore, dp02Snapshot(t, f.scopeRoot(other))) || string(mustRead(t, unrelated)) != "User-authored unrelated callable skill.\n" {
+				t.Fatal("cutover changed the opposite scope or unrelated user bytes")
+			}
+		})
+	}
+}
+
+func TestClaudeNamingEditedOldPayloadRemainsPartial(t *testing.T) {
+	for _, file := range []string{"SKILL.md", "guide.md"} {
+		t.Run(file, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", "local")
+			f.install(t, "fixture-route-cl", "local")
+			f.assertInstalled(t, "fixture-route-cl", "local")
+			f.assertInstalled(t, "rust-style-reference", "local")
+			before, err := state.Load(filepath.Join(f.root, ".patronus/state.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			oldOwnership := before.Find("fixture-route", "claude", "local")
+			edited := f.skillPath("local", "fixture-route", file)
+			dp02File(t, edited, "User-edited old payload. Preserve this.\n")
+			out, stderr, err := execRemove(t, "fixture-route", "--target", "claude", "--local", "--deploy")
+			if err != nil || !strings.Contains(stderr, "modified since install") || !strings.Contains(out, "skipped") {
+				t.Fatalf("expected an explicitly partial, non-forced removal: %v\n%s\n%s", err, out, stderr)
+			}
+			if string(mustRead(t, edited)) != "User-edited old payload. Preserve this.\n" {
+				t.Fatal("edited old file was lost")
+			}
+			s, err := state.Load(filepath.Join(f.root, ".patronus/state.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows := s.Find("fixture-route", "claude", "local")
+			// Legacy removal conservatively retains the whole row when any file
+			// is skipped, including ownership records for already-removed files.
+			if !reflect.DeepEqual(rows, oldOwnership) {
+				t.Fatalf("partial migration falsely retired or adopted edited ownership: %+v", rows)
+			}
+			for _, other := range []string{"SKILL.md", "guide.md", "NOTICE"} {
+				if other != file {
+					if _, err := os.Stat(f.skillPath("local", "fixture-route", other)); !os.IsNotExist(err) {
+						t.Fatalf("unchanged owned payload was not removed: %s %v", other, err)
+					}
+				}
+			}
+			f.assertInstalled(t, "fixture-route-cl", "local")
+			f.assertInstalled(t, "rust-style-reference", "local")
+		})
+	}
+}
+
+func TestClaudeNamingRetirementPreservesUnownedFiles(t *testing.T) {
+	f := newClaudeNamingFixture(t)
+	f.install(t, "fixture-route", "local")
+	f.install(t, "fixture-route-cl", "local")
+	userFile := f.skillPath("local", "fixture-route", "user-notes.md")
+	// The same retired callable exists globally, but has never been tracked.
+	untracked := f.skillPath("global", "fixture-route", "SKILL.md")
+	untrackedBody := "---\nname: fixture-route\n---\nUnmanaged old callable.\n"
+	dp02File(t, userFile, "User file under the retired directory.\n")
+	dp02File(t, untracked, untrackedBody)
+	if _, _, err := execRemove(t, "fixture-route", "--target", "claude", "--local", "--deploy"); err != nil {
+		t.Fatal(err)
+	}
+	if string(mustRead(t, userFile)) != "User file under the retired directory.\n" || string(mustRead(t, untracked)) != untrackedBody {
+		t.Fatal("retirement removed unrelated or untracked files")
+	}
+	if _, _, err := execRemove(t, "fixture-route", "--target", "claude", "--global", "--deploy"); err == nil {
+		t.Fatal("state-backed removal adopted an unmanaged old route")
+	}
+	if _, err := os.Stat(untracked); err != nil {
+		t.Fatal("unmanaged callable was lost")
+	}
+	f.assertInstalled(t, "fixture-route-cl", "local")
+	f.assertInstalled(t, "rust-style-reference", "local")
+}
+
+func TestClaudeNamingRemoveRefusesForeignTargetsAndAmbiguousScope(t *testing.T) {
+	for _, args := range [][]string{
+		{"--target", "unknown-fixture", "--local"},
+		{"--target", "codex", "--local"},
+		{"--target", "opencode", "--global"},
+		{"--target", "claude", "--local", "--global"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", "local")
+			f.install(t, "fixture-route", "global")
+			before := dp02Snapshot(t, f.home, f.root)
+			args = append([]string{"fixture-route", "--deploy"}, args...)
+			if _, _, err := execRemove(t, args...); err == nil {
+				t.Fatal("invalid removal selection accepted")
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("invalid removal changed files or ownership")
+			}
+		})
+	}
+}
+
+func TestClaudeNamingInterruptedRemovalRetainsDurableOwnership(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", scope)
+			f.install(t, "fixture-route-cl", scope)
+			sp := filepath.Join(f.scopeRoot(scope), ".patronus/state.json")
+			original, err := state.Load(sp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			durable := mustRead(t, sp)
+			selected := original.Find("fixture-route", "claude", scope)
+			inverse, err := remove.Compute(selected, func(path string) ([]byte, bool, error) {
+				b, err := os.ReadFile(path)
+				return b, err == nil, err
+			}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd := newRemoveCmd(nil, testRegistry(t))
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			err = runRemove(cmd, inverse.ChangeSet, inverse.Ledger, selected, map[string]*state.State{scope: original}, removeStateOpts{Harness: testRegistry(t), home: f.home, projectDir: f.root, saveState: func(string, *state.State) error { return errors.New("injected naming removal state-save failure") }})
+			if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), f.skillPath(scope, "fixture-route", "SKILL.md")) {
+				t.Fatalf("missing interrupted-removal diagnostic: %v", err)
+			}
+			if !bytes.Equal(durable, mustRead(t, sp)) {
+				t.Fatal("failed save lost durable old ownership")
+			}
+			for _, file := range []string{"SKILL.md", "guide.md", "NOTICE"} {
+				if _, err := os.Stat(f.skillPath(scope, "fixture-route", file)); !os.IsNotExist(err) {
+					t.Fatalf("expected actual partial retirement: %s %v", file, err)
+				}
+			}
+			f.assertInstalled(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "rust-style-reference", scope)
+			beforePreview := dp02Snapshot(t, f.home, f.root)
+			if _, _, err := execRemove(t, "fixture-route", "--target", "claude", "--"+scope); err != nil {
+				t.Fatalf("fresh interrupted-state preview: %v", err)
+			}
+			if !reflect.DeepEqual(beforePreview, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("interrupted-state preview wrote files")
+			}
+			if _, _, err := execRemove(t, "fixture-route", "--target", "claude", "--"+scope, "--deploy"); err != nil {
+				t.Fatal(err)
+			}
+			settled, err := state.Load(sp)
+			if err != nil || len(settled.Find("fixture-route", "claude", scope)) != 0 {
+				t.Fatalf("explicit retry did not settle absent owned paths: %+v %v", settled, err)
+			}
+			f.assertInstalled(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "rust-style-reference", scope)
+		})
+	}
+}
+
 // seedLocalInstall writes a fake local install (a CREATEd skill + an APPENDed
 // instruction section) into a temp project dir, records it in the local state
 // file, chdirs there, and returns the project dir. It mirrors what a real

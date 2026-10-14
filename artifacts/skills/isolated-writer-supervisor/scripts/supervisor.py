@@ -5,6 +5,7 @@ Standard library only. POSIX only (Linux and macOS); other platforms are blocked
 
   supervisor.py validate REQUEST.json
   supervisor.py run REQUEST.json
+  supervisor.py run REQUEST.json --worktrees-only
   supervisor.py integrate REQUEST.json --grant-integration
 
 Each writer attempt runs in a new worktree and branch created from the recorded
@@ -676,6 +677,8 @@ class Run:
 
 def integrate(req, granted):
     """Serially apply verified captures in dependency order. Never commits."""
+    if os.path.lexists(os.path.join(req["runDir"], "allocation.json")):
+        return EXIT_FAILED, {"status": "allocation-only", "detail": "allocation is not completed execution"}
     integration = req["integration"]
     if not integration.get("enabled") or not granted:
         return EXIT_FAILED, {"status": "integration-disabled",
@@ -729,12 +732,41 @@ def integrate(req, granted):
 
 # ------------------------------------------------------------------- main ---
 
+def proxy_allocator(request, validate=False):
+    """Delegate allocation-only mode to the installed native executor helper."""
+    skill_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    skills_root = os.path.dirname(skill_root)
+    candidates = [
+        os.path.join(skills_root, name, "scripts", "prepare-worktrees.py")
+        for name in ("plan-execute-parallel-cx", "plan-execute-parallel-oc")
+    ]
+    candidates = [path for path in candidates if os.path.isfile(path)]
+    if not candidates:
+        print(json.dumps({"status": "blocked", "reason":
+                          "no installed native parallel allocator; install the matching executor"}))
+        return EXIT_BLOCKED
+    if len({sha256_file(path) for path in candidates}) != 1:
+        print(json.dumps({"status": "blocked", "reason":
+                          "installed native parallel allocators differ; select a matching executor"}))
+        return EXIT_BLOCKED
+    argv = [sys.executable, candidates[0], request]
+    if validate:
+        argv.append("--validate")
+    proc = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True)
+    sys.stdout.buffer.write(proc.stdout)
+    sys.stderr.buffer.write(proc.stderr)
+    return proc.returncode
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="command", required=True)
     for name in ("validate", "run", "integrate"):
         cmd = sub.add_parser(name)
         cmd.add_argument("request")
+        if name in ("validate", "run"):
+            cmd.add_argument("--worktrees-only", action="store_true",
+                             help="allocate worktrees only; never launch or monitor workers")
         if name == "integrate":
             cmd.add_argument("--grant-integration", action="store_true",
                              help="explicit separate integration grant; disabled by default")
@@ -742,6 +774,8 @@ def main(argv=None):
     if os.name != "posix" or not hasattr(os, "killpg"):
         print(json.dumps({"status": "blocked", "reason": "unsupported-platform"}))
         return EXIT_BLOCKED
+    if getattr(args, "worktrees_only", False):
+        return proxy_allocator(args.request, validate=args.command == "validate")
     try:
         req = load_request(args.request)
         if args.command == "validate":

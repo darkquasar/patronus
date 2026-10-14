@@ -82,3 +82,33 @@ func TestSkillMaskEditsExactKey(t *testing.T) {
 		t.Fatal("quote characters leaked into the key")
 	}
 }
+
+func TestSkillMaskClaudeConditions(t *testing.T) {
+	shared := []scan.SkillRoot{{Path: "/invented/.claude/skills"}}
+	target := Descriptor{Name: "opencode", ItemSuffix: "oc", SkillMask: SkillMask{File: "opencode.json", Format: "jsonc", Dotted: "permission.skill", Value: "deny"}}
+	claude := DescriptorRoots{Descriptor: Descriptor{Name: "claude", ItemSuffix: "cl"}, Roots: shared}
+	for _, tc := range []struct {
+		name   string
+		roots  []scan.SkillRoot
+		skills []scan.Resource
+		count  int
+	}{
+		{"matching", shared, []scan.Resource{{Kind: "skill", Name: "workflow-cl"}}, 1},
+		{"user suffix also matches", shared, []scan.Resource{{Kind: "skill", Name: "user-cl"}}, 1},
+		{"neutral references not masked", shared, []scan.Resource{{Kind: "skill", Name: "decision-clarity-reference"}}, 0},
+		{"bare suffix not masked", shared, []scan.Resource{{Kind: "skill", Name: "-cl"}}, 0},
+		{"no skills", shared, nil, 0},
+		{"no shared roots", []scan.SkillRoot{{Path: "/elsewhere"}}, []scan.Resource{{Kind: "skill", Name: "workflow-cl"}}, 0},
+		{"empty roots", nil, []scan.Resource{{Kind: "skill", Name: "workflow-cl"}}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			edits, messages := SkillMaskEdits(target, tc.roots, tc.skills, []DescriptorRoots{claude})
+			if len(edits) != tc.count || len(messages) != tc.count {
+				t.Fatalf("edits=%+v messages=%v", edits, messages)
+			}
+			if tc.count == 1 && (edits[0].Dotted != `permission.skill."*-cl"` || edits[0].ScalarValue != "deny") {
+				t.Fatalf("Claude mask: %+v", edits)
+			}
+		})
+	}
+}

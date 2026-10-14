@@ -396,3 +396,119 @@ func TestSkillMaskComputedLeaves(t *testing.T) {
 		t.Fatalf("empty roots: %+v %v", cs.Diffs, messages)
 	}
 }
+
+func TestSkillMaskClaudeProductionRegistry(t *testing.T) {
+	reg := testRegistry(t)
+	home, project := t.TempDir(), t.TempDir()
+	env := func(string) (string, bool) { return "", false }
+	oc, _ := reg.Lookup("opencode")
+	roots, err := oc.SkillRoots(harness.RootInputs{Home: home, Project: project, Env: env})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var others []harness.DescriptorRoots
+	for _, d := range reg.Descriptors() {
+		if d.Name == "opencode" || d.SkillRoots == nil {
+			continue
+		}
+		r, err := d.SkillRoots(harness.RootInputs{Home: home, Project: project, Config: filepath.Join(home, strings.TrimPrefix(d.GlobalMarker, "~/")), Env: env})
+		if err != nil {
+			t.Fatal(err)
+		}
+		others = append(others, harness.DescriptorRoots{Descriptor: d, Roots: r})
+	}
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			claudeRoot := filepath.Join(project, ".claude/skills")
+			if scope == "global" {
+				claudeRoot = filepath.Join(home, ".claude/skills")
+			}
+			name := scope + "-cl"
+			path := filepath.Join(claudeRoot, name, "SKILL.md")
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte("---\nname: "+name+"\ndescription: invented\n---\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			discovered, err := scan.DiscoverSkills(roots, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			edits, _ := harness.SkillMaskEdits(oc, roots, discovered, others)
+			if len(edits) != 1 || edits[0].Dotted != `permission.skill."*-cl"` {
+				t.Fatalf("Claude production mask: %+v", edits)
+			}
+			before := []byte(`{"permission":{"skill":{"*":"ask","*-cx":"deny","*-pi":"deny","user":"allow"},"bash":{"*":"ask"}}}`)
+			out, err := adapter.MergeSettings(before, manifest.FileTarget{File: "opencode.json", Format: "jsonc"}, edits[0].Dotted, edits[0].ScalarValue)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for key, want := range map[string]string{`permission.skill."*-cl"`: "deny", `permission.skill."*-cx"`: "deny", `permission.skill."*-pi"`: "deny", `permission.skill."*"`: "ask", `permission.skill.user`: "allow", `permission.bash."*"`: "ask"} {
+				got, ok, err := adapter.ReadDotted(out, manifest.FileTarget{File: "opencode.json", Format: "jsonc"}, key)
+				if err != nil || !ok || got != want {
+					t.Fatalf("leaf %s lost: %s %v", key, out, err)
+				}
+			}
+		})
+	}
+}
+
+func TestSkillMaskClaudeCutoverRequiresOpenCodeUpdate(t *testing.T) {
+	in, _ := maskFixture(t)
+	in.tool, in.harness = "opencode", testRegistry(t)
+	art := in.cat.Artifacts[0].Manifest
+	art.Targets = []string{"opencode"}
+	ad, err := manifest.DecodeAdapter([]byte("apiVersion: patronus/v2\nfamily: adapter\ntool: opencode\nlayout:\n  setting:\n    project: {file: opencode.json, format: jsonc}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in.adapters = map[string]*manifest.Adapter{"host": ad, "opencode": ad}
+	project := writeMaskCatalog(t, in)
+	home := in.res.ExpandHome("~")
+	t.Setenv("HOME", home)
+	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
+	t.Setenv("OPENCODE_CONFIG", "")
+	t.Setenv("OPENCODE_CONFIG_CONTENT", "")
+	t.Setenv("OPENCODE_CONFIG_DIR", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Chdir(project)
+	writeSkill := func(root, name string) {
+		t.Helper()
+		path := filepath.Join(root, name, "SKILL.md")
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("---\nname: "+name+"\ndescription: invented\n---\nguidance\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeSkill(filepath.Join(project, ".agents/skills"), "prior-cx")
+	config := filepath.Join(project, "opencode.json")
+	if err := os.WriteFile(config, []byte(`{"permission":{"skill":{"*":"ask","unmanaged":"allow"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runWith(t, newInstallCmd(in.harness), art.Name, "--target", "opencode", "--local", "--local-registry", "--deploy")
+	if err != nil {
+		t.Fatalf("earlier OpenCode mask install: %v\n%s", err, out)
+	}
+	before := mustRead(t, config)
+	writeSkill(filepath.Join(project, ".claude/skills"), "cutover-cl")
+	if !reflect.DeepEqual(before, mustRead(t, config)) {
+		t.Fatal("Claude placement silently recomputed OpenCode settings")
+	}
+	ft := manifest.FileTarget{File: "opencode.json", Format: "jsonc"}
+	if _, present, err := adapter.ReadDotted(before, ft, `permission.skill."*-cl"`); err != nil || present {
+		t.Fatalf("pre-update cl mask was not stale: %s %v", before, err)
+	}
+	out, err = runWith(t, newUpdateCmd(in.harness), "--all", "--target", "opencode", "--local-registry", "--deploy")
+	if err != nil || !strings.Contains(out, "computed setting, recomputing at 1.0.0") {
+		t.Fatalf("OpenCode update: %v\n%s", err, out)
+	}
+	for key, want := range map[string]string{`permission.skill."*-cl"`: "deny", `permission.skill."*-cx"`: "deny", `permission.skill."*"`: "ask", `permission.skill.unmanaged`: "allow"} {
+		got, present, err := adapter.ReadDotted(mustRead(t, config), ft, key)
+		if err != nil || !present || got != want {
+			t.Fatalf("updated leaf %s: %s %v", key, mustRead(t, config), err)
+		}
+	}
+}

@@ -30,7 +30,7 @@ func TestDefaultRegistryDescriptors(t *testing.T) {
 	}{
 		{"codex", flags{"cx", "AGENTS.md", "", "~/.codex", "codex admission", "codex", "core-profile-cx", "AGENTS.override.md", harness.ResourceAfterContext, true, true, true, true, true, true, false, true, true}},
 		{"pi", flags{"pi", "AGENTS.md", "pi:", "~/.pi/agent", "", "pi", "core-profile-pi", "", harness.ResourceBeforeOwnership, true, false, true, false, false, true, true, true, true}},
-		{"claude", flags{"", "CLAUDE.md", "", "~/.claude", "", "", "", "", 0, false, false, false, false, false, false, false, false, false}},
+		{"claude", flags{"cl", "CLAUDE.md", "", "~/.claude", "", "", "", "", harness.ResourceAfterContext, false, false, false, false, false, false, false, true, false}},
 		{"opencode", flags{"oc", "AGENTS.md", "oc:", "~/.config/opencode", "opencode admission", "opencode", "core-profile-oc", "", harness.ResourceAfterContext, true, true, true, true, false, true, false, true, true}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestDefaultRegistryRootsAgreeWithAdapters(t *testing.T) {
 	for _, ad := range adapters {
 		byTool[ad.Tool] = ad
 	}
-	for _, name := range []string{"codex", "pi", "opencode"} {
+	for _, name := range []string{"codex", "pi", "claude", "opencode"} {
 		t.Run(name, func(t *testing.T) {
 			d, _ := reg.Lookup(name)
 			ad, ok := byTool[name]

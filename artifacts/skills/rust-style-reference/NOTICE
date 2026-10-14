@@ -1,0 +1,13 @@
+Vendored Rust rules: leonardomso/rust-skills v1.5.1, commit
+fd2a861ab0406a4ac536a55274d14ea6fd1ca9c9.
+Copyright (c) 2025 Leonardo Maldonado. MIT terms retained in
+references/LICENSE-rust-skills.
+
+Microsoft Pragmatic Rust Guidelines, retrieved 2026-10-07.
+Copyright (c) Microsoft Corporation. MIT terms retained in
+references/LICENSE-microsoft-rust-guidelines.
+
+156 curated Rust rules and their supporting index/licenses/guidelines are
+adapted from the retained Pi skill. Missing-category links are labeled not bundled;
+rule text/examples and license terms remain intact. New portable guidance and compilation
+reference are authored for Patronus under GPL-3.0 (LICENSE).

@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-writing-cl
+description: "Author requirement-covered behavior-sized implementation plans, with inline checks, explicit verification strategy and one independent plan-review handoff."
+version: 4.1.0
+entry: SKILL.md
+files: []
+targets: [claude]
+requires: [plan-review-cl, receiving-code-review-cl, tdd-cl]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Adapted from the pinned upstream source. Active planning/routing instructions use inline author checks, coordinator-only admission, one review per subject and one progress authority. Original attribution/legal bytes are retained."

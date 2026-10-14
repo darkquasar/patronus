@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: research-team-cl
+description: "Team research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md. Hands off to spec-brainstorming-cl to author the spec."
+version: 5.0.0
+entry: SKILL.md
+files: [RESEARCHER-TEMPLATE.md, DELIVERABLE-TEMPLATES.md, LESSONS-FORMAT.md]
+targets: [claude]
+defaults:
+  scope: project

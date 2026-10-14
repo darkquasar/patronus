@@ -1,6 +1,6 @@
 # Spec completeness supplement
 
-Use with `{skillsDir}/spec-review-oc/SKILL.md` under the same review grant and budget, not another mandatory review cycle. The lead supplies the exact spec path/hash, task brief, research, recorded decisions and source root/revision.
+Use with `{skillsDir}/spec-review-oc/SKILL.md` under the same review subject and grant, not another reviewer start or review cycle. The lead supplies the exact spec path/hash, task brief, research, recorded decisions and source root/revision.
 
 Read every supplied input before reviewing. Check missing sections, placeholders, contradictory requirements, two plausible interpretations, implementable scope, failure/rollback paths and unrequested complexity. Quote the source section that proves each material defect and explain the consequence and proposed correction. Follow the spec-review rubric for severity, skipped lenses and full report fields.
 

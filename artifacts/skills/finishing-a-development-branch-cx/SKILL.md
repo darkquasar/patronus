@@ -9,27 +9,30 @@ Implementation, integration, publication and cleanup are separate grants.
 Default to retaining work and reporting evidence, not automatically merging,
 pushing, opening a PR or deleting a branch. A leaf returns its complete handoff
 to the lead; only the lead decides acceptance and the next authorized action.
-Static source/placement checks are not native runtime qualification.
 
 ## Verify exact bytes
 
 Reread the brief and current work state. Read
-`{skillsDir}/verification-before-completion-cx/SKILL.md` and run the project's
-configured checks with the recorded resource lock and budgets. Include actual
+`{skillsDir}/verification-before-completion-cx/SKILL.md` and reuse checks whose exact inputs, commands/options, dependency/tool/environment
+identity and acceptance scope still match. Run missing or invalidated required
+checks under the project's resource lock and applicable limits. Final aggregate
+checks stay fresh for the final composed inputs; a new stage label alone does
+not require another suite. Include actual
 commands, exits, case names and full log paths. Unavailable or skipped checks are
-blocked, not passed. Do not install tools, rerun broad suites without budget or
-claim native qualification from static checks.
+blocked, not passed. Do not install tools or rerun broad suites just for reporting.
 
 Inspect root, branch, HEAD, base, index and dirty/untracked files. Capture complete
 patches and result bytes with hashes, including seeded source if authorized.
 Settle every started worker before handoff. Unknown settlement or missing capture
 retains work and blocks integration, retry and cleanup.
 
-Require the approved fresh independent review through
+Consume the matching independent aggregate review through
 `{skillsDir}/requesting-code-review-cx/SKILL.md`, with at most one bounded
-correction/disposition. Missing requirements/tests/authority and unresolved
-Critical/Major findings independently block. The lead dispositions findings;
-corrected bytes are not automatically independently reviewed.
+batched correction/disposition. Finishing adds no second review for unchanged
+inputs, scope and coverage. Missing requirements/tests/authority, unresolved
+Critical/Major or more than two distinct Medium block. Up to two Medium residuals
+need explicit owner acceptance. Consume the coordinator's retained disposition;
+parent-verified corrected bytes are not independently re-reviewed.
 
 ## Decide within explicit grants
 
@@ -54,4 +57,4 @@ unknown roots. Failed/partial attempts and upstream handoff evidence stay intact
 
 Report source root/base/head, branch, changed files, no-staged-files observation,
 input/output hashes, commands/exits/logs, review disposition, residual risks and
-unresolved asks. A local result is not remote publication or native readiness.
+unresolved asks. A local result is not remote publication.

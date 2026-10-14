@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: finishing-a-development-branch-pi
 description: "Produce a verified handoff without inferring merge, push or deletion"
-version: 2.0.0
+version: 2.1.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]

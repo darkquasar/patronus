@@ -6,12 +6,80 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/darkquasar/patronus/internal/registry"
 	"github.com/darkquasar/patronus/internal/state"
 )
+
+func TestClaudeNamingRetiredUpdateLeavesRecordedScopesUntouched(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", scope)
+			if err := os.Remove(filepath.Join(f.root, "artifacts/skills/fixture-route/patronus.yaml")); err != nil {
+				t.Fatal(err)
+			}
+			before := dp02Snapshot(t, f.home, f.root)
+			for _, args := range [][]string{{"fixture-route"}, {"fixture-route", "--deploy"}} {
+				out, stderr, err := runUpdate(t, args...)
+				if err != nil || out != "fixture-route: not in registry — leaving as-is\n" {
+					t.Fatalf("retired update: %v\n%s\n%s", err, out, stderr)
+				}
+				if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+					t.Fatal("retired update mutated bytes/state or installed a replacement")
+				}
+			}
+		})
+	}
+}
+
+func TestClaudeNamingSharedSurvivorUpdateCannotReroute(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", scope)
+			path := filepath.Join(f.root, "artifacts/skills/fixture-route/patronus.yaml")
+			body := strings.ReplaceAll(string(mustRead(t, path)), "targets: [claude]", "targets: [codex, opencode]")
+			dp02File(t, path, strings.ReplaceAll(body, "version: 1.0.0", "version: 2.0.0"))
+			before := dp02Snapshot(t, f.home, f.root)
+			for _, args := range [][]string{{"fixture-route"}, {"fixture-route", "--deploy"}} {
+				out, stderr, err := runUpdate(t, args...)
+				if err == nil || !strings.Contains(err.Error(), `artifact "fixture-route" does not target tool "claude"`) || strings.Contains(out, "up to date") {
+					t.Fatalf("surviving old identity did not reject its recorded target: %v\n%s\n%s", err, out, stderr)
+				}
+				if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+					t.Fatal("target-mismatched update wrote or rerouted the Claude installation")
+				}
+			}
+			f.assertInstalled(t, "fixture-route", scope)
+		})
+	}
+}
+
+func TestClaudeNamingUpdateRefusesUnknownTargetsAndScopeFlags(t *testing.T) {
+	for _, args := range [][]string{
+		{"--target", "unknown-fixture"},
+		{"--local"},
+		{"--global"},
+		{"--local", "--global"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", "local")
+			before := dp02Snapshot(t, f.home, f.root)
+			args = append([]string{"fixture-route", "--deploy"}, args...)
+			if _, _, err := runUpdate(t, args...); err == nil {
+				t.Fatal("invalid update selection accepted")
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("invalid update changed bytes or recorded scope")
+			}
+		})
+	}
+}
 
 // TestUpdateInstalledItemFollowsNewerVersion drives the real commands end-to-end:
 // install a fixture item at its catalog baseline (state records it), mutate the

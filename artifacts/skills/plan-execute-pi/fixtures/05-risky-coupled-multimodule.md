@@ -1,5 +1,7 @@
 # Fixture 05: risky and tightly coupled multi-module change
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: sdd
 Isolates: the two-mode decision on a plan that is genuinely risky but NOT parallelizable
 (the tasks share files and must land in order, so plan-review sent it here rather than to

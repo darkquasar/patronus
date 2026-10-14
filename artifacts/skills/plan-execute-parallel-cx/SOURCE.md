@@ -9,7 +9,7 @@ Bodies are behaviorally authored for Codex, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
-## Supervisor helper
+## Historical supervisor helper
 
 `scripts/supervisor.py`, `references/request.schema.json`,
 `fixtures/test_supervisor.py` and `fixtures/fake_worker.py` were new
@@ -24,7 +24,7 @@ The fake-worker suite runs invented local processes only; it is not native Codex
 qualification. The captured predecessor and its failed/partial evidence remain
 upstream provenance, not a new qualification claim.
 
-## Migration
+## Historical 1.1.x to 1.2.0 migration
 
 Existing 1.1.x installs keep ownership of the old sidecar paths; `patronus update` reports
 `obsolete owned path retained; explicit removal required` for them. Run
@@ -35,7 +35,20 @@ explicitly, before relying on the shared supervisor.
 
 - `dispatching-parallel-agents-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-execute-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
-- `isolated-writer-supervisor/scripts/supervisor.py` (and its schema/fixtures): required shared helper, verify installed/readable before use.
+- `using-git-worktrees-cx/SKILL.md`: exact allocated-root companion.
+- `{skillDir}/scripts/prepare-worktrees.py` and `{skillDir}/references/worktree-allocation.md`: bundled allocation-only utility, no supervisor dependency or agent launch.
+- `isolated-writer-supervisor/SKILL.md`: optional explicit-user CLI mode only, not read for native execution.
+
+## Current version 2.0.0
+
+Native Codex delegation replaces the mandatory CLI helper route. First-wave
+decomposition asks reuse existing approval; read-only next-wave preparation
+overlaps writers without admitting unaccepted dependencies. The shared utility
+is no longer in requires or the resolved core closure. The standalone allocation
+script here is canonical; OpenCode packages a byte-identical mirror checked by
+the allocation fixtures. Allocated roots, dirty-input preservation, settlement,
+serial integration, TDD and aggregate review remain. Source checks and a native
+allocation trial do not qualify all installed harness/runtime combinations.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

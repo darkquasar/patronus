@@ -7,7 +7,7 @@ Coordinator fills this before launch, with actual paths/IDs rather than unresolv
 - Consumed predecessor interfaces and artifact identities plus the durable handoff expected by successors.
 - Bounded initial context: approved spec section, predecessor interfaces, relevant source anchors, project instructions, and selected current SKILL.md reads. Do not copy an accumulated transcript or predict every future read.
 - Grant issuer/time, execution actions/outputs, revalidation/expiry conditions; explicit exclusions for native mission state, other writers, integration/publication/cleanup.
-- Selected `critical-tdd` or `focused-postcheck` strategy and rationale; authorized initial commands, memory/concurrency/deadline budgets, and log destination.
+- Selected `critical-tdd` or `focused-postcheck` strategy and rationale; authorized initial commands, applicable host/resource or explicitly authorized campaign limits, and log destination. No new root numerical budget form is required.
 - Exclusive runtime output binding, complete report contract, and stop plus non-prescriptive return conditions.
 
 This brief must not introduce a packet loader, global read/skill table, `requiredSkills` array, read-key graph, rubric hashes, or a perfect-context predictor. Reference shared approved evidence by identity instead of duplicating it.

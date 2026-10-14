@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: using-git-worktrees-oc
 description: "OpenCode only: Use when feature work needs an isolated Git workspace or an approved plan assigns worktree ownership."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md"]
 targets: [opencode]

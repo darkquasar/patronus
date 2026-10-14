@@ -66,6 +66,50 @@ func TestDiscoverSkillsCodexRules(t *testing.T) {
 	}
 }
 
+func TestDiscoverSkillsClaudeNeutralReferenceProof(t *testing.T) {
+	for _, name := range []string{"rust-style-reference", "decision-clarity-reference"} {
+		t.Run(name, func(t *testing.T) {
+			base := t.TempDir()
+			var roots []SkillRoot
+			for _, lane := range []string{"claude", "opencode", "pi"} {
+				root := filepath.Join(base, lane)
+				writeResource(t, filepath.Join(root, name, "SKILL.md"), name+"\nidentical\n")
+				roots = append(roots, toyRoot(root, RefuseDifferentBytesVerifiedException))
+			}
+			if _, err := DiscoverSkills(roots[:2], func(Resource) bool { return true }); err == nil || !strings.Contains(err.Error(), "complete payload required") {
+				t.Fatalf("single-file verification bypassed neutral proof: %v", err)
+			}
+			proof := func(a, b Resource) bool {
+				return !strings.Contains(a.Path, "/pi/") && !strings.Contains(b.Path, "/pi/")
+			}
+			found, err := DiscoverSkills(roots[:2], nil, proof)
+			if err != nil || len(found) != 1 {
+				t.Fatalf("proven logical reference: %+v %v", found, err)
+			}
+			if _, err := DiscoverSkills(roots, nil, proof); err == nil || !strings.Contains(err.Error(), "/pi/") {
+				t.Fatalf("third unverified copy disappeared: %v", err)
+			}
+			if _, err := DiscoverSkills(roots, nil, proof); err == nil || !strings.Contains(err.Error(), "/claude/") || !strings.Contains(err.Error(), "/opencode/") || !strings.Contains(err.Error(), "/pi/") {
+				t.Fatalf("duplicate diagnostics lost a known copy: %v", err)
+			}
+			roots[1].Legacy = true
+			if _, err := DiscoverSkills(roots[:2], nil, func(Resource, Resource) bool { return true }); err == nil {
+				t.Fatal("legacy copy benefited from neutral exception")
+			}
+		})
+	}
+	base := t.TempDir()
+	var roots []SkillRoot
+	for _, lane := range []string{"codex", "pi"} {
+		root := filepath.Join(base, lane)
+		writeResource(t, filepath.Join(root, "workflow/SKILL.md"), "workflow\n")
+		roots = append(roots, toyRoot(root, RefuseAlways))
+	}
+	if _, err := DiscoverSkills(roots, nil, func(Resource, Resource) bool { return true }); err == nil {
+		t.Fatal("workflow inherited neutral exception")
+	}
+}
+
 func TestDiscoverSkillsPiRules(t *testing.T) {
 	root := t.TempDir()
 	writeResource(t, filepath.Join(root, "alpha/SKILL.md"), "alpha\n")

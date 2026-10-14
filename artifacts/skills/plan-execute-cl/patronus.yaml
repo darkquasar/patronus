@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: plan-execute-cl
+description: "Execute an accepted plan serially, choosing solo context or fresh implementer leaves from concrete risk and context needs. Coordinator-only admission, one independent aggregate review and at most one batched correction; named changed boundaries may receive distinct earlier review."
+version: 3.1.0
+entry: SKILL.md
+files: [solo.md, sdd.md, implementer-prompt.md, task-reviewer-prompt.md, scripts, fixtures]
+targets: [claude]
+requires: [requesting-code-review-cl, tdd-cl]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Derived from the pinned upstream source and adapted for the bounded Patronus lifecycle. Existing bundled script behavior and legal attribution are preserved; active instructions use coordinator-only admission, leaf delivery and one aggregate review with one batched correction."

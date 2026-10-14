@@ -4,9 +4,9 @@ type: skill
 role: orchestration
 name: dispatching-parallel-agents
 description: "Orchestration discipline — when facing 2+ INDEPENDENT problem domains (different test files, subsystems, bugs with no shared state), dispatch one focused subagent per domain and run them concurrently, then review and integrate. Use to parallelize independent investigations instead of working them sequentially."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

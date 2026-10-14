@@ -3,17 +3,17 @@ family: artifact
 type: skill
 role: capability
 name: plan-execute-parallel-oc
-description: "OpenCode only: isolated parallel writers via the required shared isolated-writer-supervisor and headless opencode run workers; native OpenCode workers runtime-pending."
-version: 1.1.0
+description: "OpenCode only: native Task writers in allocated worktrees, pipelined read-only preparation and explicitly selected optional CLI mode."
+version: 2.1.0
 entry: SKILL.md
-files: ["SOURCE.md", "NOTICE", "LICENSE", "scripts/worker-precheck.sh", "fixtures/test_worker_precheck.py"]
+files: ["SOURCE.md", "NOTICE", "LICENSE", "references/cli-workers.md", "references/worktree-allocation.md", "scripts/prepare-worktrees.py", "scripts/worker-precheck.sh", "fixtures/test_worker_precheck.py"]
 targets: [opencode]
 defaults:
   scope: project
-requires: ["plan-execute-oc", "dispatching-parallel-agents-oc", "isolated-writer-supervisor"]
+requires: ["plan-execute-oc", "dispatching-parallel-agents-oc", "using-git-worktrees-oc"]
 attribution:
   upstream: "github.com/darkquasar/patronus"
   license: "GPL-3.0"
   copyright: "Patronus contributors"
   commit: "46247c13c3de38008c59995c5b1b697f78d3f9e5"
-  note: "OpenCode behavioral adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Supervisor helper is Patronus-authored and fake-worker tested; the worker precheck is fixture-tested; native OpenCode workers runtime-unverified. Static guidance, runtime-unverified."
+  note: "OpenCode native-execution adaptation; upstream attribution retained where applicable. See SOURCE.md and LICENSE. Standalone allocation and conditional CLI precheck are fixture-tested."

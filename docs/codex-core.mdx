@@ -3,14 +3,14 @@ title: "Codex core lane"
 description: "Preview the explicit Codex profile, migrate owned roots safely and distinguish local checks from native qualification."
 ---
 
-`core-profile-cx` 1.1.0 selects Codex-specific planning, research, diagnosis,
+`core-profile-cx` 1.3.0 selects Codex-specific planning, research, diagnosis,
 design, testing, review and execution skills, seven advisory instructions,
 three audited neutral context skills, two write/commit guard scripts and the
 `context7`, `github` and `gitleaks` recipes. Membership is explicit: it does not
 extend legacy `core` or a Pi profile.
 
-The source lane includes a scoped migration command and a bundled isolated-worker
-supervisor. Local fixtures do not qualify native Codex loading, routing,
+The source lane includes a scoped migration command and native parallel execution
+with a bundled allocation-only worktree helper. Local fixtures do not qualify native Codex loading, routing,
 authentication, hook trust or platform behavior. The release contract is
 `docs/compatibility/core-codex.yaml`; each legacy core member has an explicit
 disposition, endpoints, outcome, reason and evidence state.
@@ -123,18 +123,22 @@ audits require separately authorized bounded work. Cloudflare sidecars are
 local-first; unavailable remote capabilities block that path and their numeric
 platform assumptions are unverified.
 
-`plan-execute-parallel-cx` bundles a Python-stdlib supervisor, request schema and
-fake-worker fixtures. The fixture results are historical; the current
-development gates do not run them. It binds roots/base/brief/owned paths/results, bounds
-concurrency/timeouts/retries, orders predecessors and retains failed attempts.
-Supervisor faults/interruption attempt bounded settlement of every started
-worker; unknown stop blocks capture, retry, integration and cleanup. Integration
-is disabled by default and needs a separate explicit grant.
+`plan-execute-parallel-cx` uses native subagents assigned to checked, disjoint
+worktrees. Its Python-stdlib `prepare-worktrees.py` accepts only an exact
+allocation, launches no agents and produces no execution receipt. If a plan has
+no writer-ready split, the executor asks whether to decompose the first wave;
+read-only scouts can prepare later briefs while current writers work. The lead
+checks patches, settles workers and integrates serially.
+
+`isolated-writer-supervisor` is outside the core closure. It is available only
+when the user explicitly chooses CLI subprocess workers. Its worktree-only
+compatibility flag proxies to the installed native executor allocator; it is not
+a native-execution prerequisite or failed-route fallback.
 
 This is cooperative Git/process isolation, not an OS filesystem sandbox. Processes
 outside both group/cwd boundaries are invisible; cwd discovery is Linux-only.
-SIGKILL/host loss cannot run settlement, and repeated interruptions or indefinitely
-stalled external operations remain unqualified. Native Codex worker behavior is
+Native worker prompts do not enforce cwd or filesystem access, and host loss can
+leave liveness uncertain. Such allocations are retained. Native Codex worker behavior is
 still Partial/runtime-pending. Never fall back to concurrent lead-checkout writers.
 
 ## Guards and lifecycle

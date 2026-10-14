@@ -39,9 +39,23 @@ This is historical evidence of the fixtures at the recorded revision. It is
 NOT RUN in the application or catalog gates and does not mark any native row
 passed.
 
-## Migration
+## Historical 1.1.x to 1.2.0 migration
 
 Existing 1.1.x installs keep ownership of the old sidecar paths; `patronus update` reports
 `obsolete owned path retained; explicit removal required` for them. Run
 `patronus remove plan-execute-parallel-cx` then reinstall, or remove the listed paths
 explicitly, before relying on the shared supervisor.
+
+## Current version 2.0.0
+
+CLI orchestration is explicit-only, with an immediate native/CLI choice gate.
+Codex's declared agents/openai.yaml disables implicit invocation; OpenCode's
+explicit-only boundary is instructional, not a claimed native invocation switch.
+Full CLI procedures move to references/cli-workers.md, read only for that mode.
+The public --worktrees-only compatibility flag delegates to the installed
+plan-execute-parallel-cx/oc allocator after verifying any discovered copies are
+byte-identical. It contains no second allocation implementation. The strict
+allocation request accepts only repository/base/brief/output roots and task
+names/claims; execution, scheduling, predecessor, retry/result and integration
+fields are rejected. Allocation output is not completed execution evidence.
+The historical moved-file hashes above describe 1.0.0, not the amended payload.

@@ -3,13 +3,13 @@ family: artifact
 type: hook
 role: capability
 name: skills-heartbeat
-description: "Per-turn re-grounding — a UserPromptSubmit hook that re-asserts the skill-dispatch rule on every human turn (the natural stopping point), so the discipline stays at the recent, high-attention end of a long context instead of decaying after the one-time SessionStart injection. Injects the 1%-rule plus the current installed-skill name list. Claude-only today (Codex/OpenCode have no wired hook surface — see the adapter TODO); wire it flavoured as skills-heartbeat@claude."
-version: 1.0.1
+description: "Claude-only UserPromptSubmit reminder plus installed-skill names from the hook's own scope. Defaults to project like skills-dispatch-cl and its activation hook. A missing selected directory emits a diagnostic; no other scope is read. Wire as skills-heartbeat@claude."
+version: 1.1.0
 entry: ""
 files: [skills-heartbeat.sh]
 targets: [claude]
 defaults:
-  scope: global
+  scope: project
 hook:
   event: UserPromptSubmit
   command: "{script}"

@@ -449,8 +449,9 @@ PRESERVE: ["forecast contract"          - coined term, load-bearing
 ```
 
 **PRESERVE is pipeline-scoped, not tier-scoped.** Once emitted it travels with the draft through
-every later stage, including both voice models and the merge in `writing-like-me`. The voice stage is
-where the risk is highest, because it is the one stage permitted to rewrite freely.
+every later authorized stage, including any optional voice pass and its merge. No voice companion
+is required by this skill; a caller must separately discover and authorize any voice workflow.
+A voice pass has high risk because it may rewrite freely within its specific editing grant.
 
 Entries are **advisory with disclosure**. A later stage may override one when it has a reason, and
 must then say which entry it overrode and why. Silent removal is a failure; disclosed removal is a

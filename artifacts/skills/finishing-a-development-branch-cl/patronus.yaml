@@ -1,0 +1,18 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: finishing-a-development-branch-cl
+description: "Consume accepted implementation evidence and hand off or execute a separately authorized integration/publication action, without duplicate suites or automatic cleanup."
+version: 2.1.0
+entry: SKILL.md
+targets: [claude]
+requires: [receiving-code-review-cl, verification-before-completion-cl]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Derived from the pinned upstream source. Active instructions are adapted for bounded Patronus review, evidence or TDD behavior; legal attribution and unchanged reference examples are retained."

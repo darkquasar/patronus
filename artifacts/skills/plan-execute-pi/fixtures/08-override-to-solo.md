@@ -1,5 +1,7 @@
 # Fixture 08: explicit solo override on a hard-trigger plan
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: solo
 Isolates: Rule 1. The plan has a clear hard trigger, and the user's explicit request wins
 outright. The record must say the mode was requested, not assessed, and it should note

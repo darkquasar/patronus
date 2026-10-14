@@ -675,7 +675,17 @@ func computedSettings(in planInputs, names []string, read adapter.ReadExisting) 
 			if err != nil {
 				return nil, err
 			}
-			discovered, err := scan.DiscoverSkills(roots, nil)
+			var ownerPaths []string
+			for _, root := range []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", tool, "local")} {
+				ownerPaths = append(ownerPaths, filepath.Join(root, ".patronus", "state.json"))
+			}
+			owners, err := loadOwners(ownerPaths, nil, func(_ int, path string, err error) error {
+				return fmt.Errorf("read computed setting ownership in %s: %w", path, err)
+			}, in.policy)
+			if err != nil {
+				return nil, err
+			}
+			discovered, err := scan.DiscoverSkills(roots, nil, harness.ManagedReferenceCoexistence(owners))
 			if err != nil {
 				return nil, err
 			}
@@ -695,16 +705,6 @@ func computedSettings(in planInputs, names []string, read adapter.ReadExisting) 
 			maskTarget.SkillMask.File, maskTarget.SkillMask.Format = path, ft.Format
 			edits, messages := harness.SkillMaskEdits(maskTarget, roots, discovered, others)
 			before, _, err := read(path)
-			if err != nil {
-				return nil, err
-			}
-			var ownerPaths []string
-			for _, root := range []string{in.res.ExpandHome("~"), in.res.ResolveMarker(".", tool, "local")} {
-				ownerPaths = append(ownerPaths, filepath.Join(root, ".patronus", "state.json"))
-			}
-			owners, err := loadOwners(ownerPaths, nil, func(_ int, path string, err error) error {
-				return fmt.Errorf("read computed setting ownership in %s: %w", path, err)
-			}, in.policy)
 			if err != nil {
 				return nil, err
 			}

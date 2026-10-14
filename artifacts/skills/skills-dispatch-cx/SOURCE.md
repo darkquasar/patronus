@@ -9,6 +9,12 @@ Bodies are behaviorally authored for Codex, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Consumer cutover, version 1.3.0
+
+Claude workflow siblings now use exact `-cl` names. The dispatcher distinguishes
+them from Codex `-cx` routes without substituting a foreign sibling. The native
+parallel route remains unchanged; this naming edit is not runtime qualification.
+
 ## Active reads
 
 - `grilling-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.

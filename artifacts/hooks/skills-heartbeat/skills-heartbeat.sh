@@ -7,13 +7,16 @@
 # any skill body (bodies still lazy-load via the Skill tool only when one applies).
 #
 # Deliberately tiny: it pays its cost on EVERY turn, so it lists names, not bodies.
-# Fails open — no skills directory means no reminder (exit 0), never a wedge.
+# A missing selected directory emits a diagnostic, never a cross-scope fallback
+# or a session-blocking failure.
 
 set -euo pipefail
 
-SKILLS_DIR="${HOME}/.claude/skills"
+# The installed hook directory, not cwd or HOME, selects the trust scope.
+HOOK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+SKILLS_DIR="${HOOK_DIR}/../skills"
 
-# Collect installed skill names (one dir each). Absent dir -> empty list.
+# Collect installed skill names in exactly this scope.
 names=""
 if [ -d "$SKILLS_DIR" ]; then
   for d in "$SKILLS_DIR"/*/; do
@@ -24,7 +27,9 @@ if [ -d "$SKILLS_DIR" ]; then
 fi
 
 reminder="Before acting on this turn: if any installed skill might apply (even a 1% chance), invoke it via the Skill tool FIRST — this holds across the whole installed set, not one family."
-if [ -n "$names" ]; then
+if [ ! -d "$SKILLS_DIR" ]; then
+  reminder="Patronus skills heartbeat unavailable: no skills directory at ${SKILLS_DIR}. No alternate scope was read."
+elif [ -n "$names" ]; then
   reminder="${reminder} Installed skills: ${names}."
 fi
 

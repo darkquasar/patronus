@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: using-git-worktrees
 description: "Workspace-isolation discipline — start feature work (or a plan execution) in an isolated workspace via the runtime's native worktree support or a git worktree fallback, so in-progress work never collides with the current tree."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

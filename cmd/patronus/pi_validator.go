@@ -86,13 +86,38 @@ func (piValidator) Prepare(d harness.Descriptor, in *harness.Admission) error {
 	if err != nil {
 		return err
 	}
-	discovered, err := scan.DiscoverPiResources(roots)
+	// Prepare precedes shared owner loading. Reference discovery needs that same
+	// both-scope state evidence before it can judge duplicate payloads.
+	if in.LoadOwners != nil {
+		in.Owners, err = in.LoadOwners()
+		if err != nil {
+			return err
+		}
+	}
+	proof := harness.ManagedReferenceCoexistence(in.Owners)
+	discovered, err := scan.DiscoverPiResources(roots, proof)
 	if err != nil {
 		return err
 	}
+	if len(in.Roots) > 0 {
+		foreign, err := scan.DiscoverSkills(in.Roots, nil, proof)
+		if err != nil {
+			return err
+		}
+		for _, r := range foreign {
+			discovered = append(discovered, scan.PiResource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases, Content: r.Content, Legacy: r.Legacy})
+		}
+		discovered, err = scan.ReconcilePiResources(discovered, proof)
+		if err != nil {
+			return err
+		}
+		// Prepare resolved both inventories. Do not append the same foreign roots
+		// again in shared admission, which would undo logical-reference collapse.
+		in.Roots = nil
+	}
 	in.Inventory = make([]scan.Resource, 0, len(discovered))
 	for _, r := range discovered {
-		in.Inventory = append(in.Inventory, scan.Resource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases})
+		in.Inventory = append(in.Inventory, scan.Resource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases, Content: r.Content, Legacy: r.Legacy})
 	}
 	return nil
 }

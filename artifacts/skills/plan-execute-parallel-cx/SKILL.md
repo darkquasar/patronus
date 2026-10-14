@@ -1,107 +1,128 @@
 ---
 name: plan-execute-parallel-cx
-description: "Codex only: run disjoint isolated writers through the required shared isolated-writer-supervisor. Native Codex worker qualification is runtime-pending (Partial)."
+description: "Codex only: Use when executing approved, independent plan tasks with native subagents assigned isolated worktrees. No CLI supervisor is required."
 ---
 
 # Parallel execution in Codex
 
-This skill uses the required shared supervisor helper `{skillsDir}/isolated-writer-supervisor/scripts/supervisor.py`
-(Python 3 standard library, POSIX only). Its isolation, timeout, ownership and
-integration rules are exercised by that skill's fake-worker suite
-`{skillsDir}/isolated-writer-supervisor/fixtures/test_supervisor.py`, which drives real local processes in
-invented scratch repositories. Native Codex workers under the supervisor are
-**Partial**: runtime-pending until a separately authorized native qualification.
-Native Codex workers do not establish write isolation by themselves; only the
-supervisor's per-attempt worktrees do.
-Never run concurrent writers in the lead checkout.
+Use Codex's available native subagent tools for work the harness can perform
+natively. Do not invoke `codex exec`, another harness or
+`isolated-writer-supervisor` to replace native delegation. CLI orchestration is
+a separate, explicitly user-selected mode, not this skill's prerequisite or an
+automatic fallback. Native subagents do not depend on a subprocess supervisor.
 
-Read the approved spec/plan, `meta.yaml`, research, effective project instructions,
-root/base/head, assigned files, prior outputs and stage/Git grants. Confirm one
-research effort in `docs/specs/NN-slug/`, one shared synthesis and one spec/plan
-pair per stream. File presence is not execution authorization.
+Read the approved plan/spec, effective instructions, current source/base/head and
+latest handoff. Existing scope approval remains valid. This skill grants no
+additional Git mutations, integration, deployment, publication or cleanup.
 
-## Request binding
+## Split by actual dependencies
 
-Write a request matching `{skillsDir}/isolated-writer-supervisor/references/request.schema.json` and check it
-with `python3 {skillsDir}/isolated-writer-supervisor/scripts/supervisor.py validate REQUEST.json` before any
-launch. The request binds the recorded base commit, the task brief and its hash,
-the evidence directory, a worktree root outside the lead checkout, maximum
-concurrency and, per task: worker argv, exclusive owned paths, timeout, grace
-period, bounded retry budget (`maxAttempts`, default one) and predecessors.
-Overlapping claims, escaping or `.git` paths, unknown predecessors, cycles and a
-reused run identity are rejected before anything is created.
+Parallelize independent deliverables, not merely numbered tasks. Distinguish an
+input needed to start authoring from an output needed to integrate or verify.
+For example, a registry change and skill-package renames can be authored in
+parallel in separate worktrees, then joined before consumer and catalog checks.
+Keep common files and final integration with one owner. Use the existing plan or
+handoff for ownership and progress; do not add a scheduler, request JSON, result
+schema, duplicated tracker or per-task review wave.
 
-## Writers
+If the plan lacks writer-ready, non-overlapping tasks, do not invent an execution
+split or simply refuse parallelism. Explain the missing decomposition and ask
+whether the user wants the first wave decomposed before writers start. Reuse an
+existing explicit decomposition grant. Within that grant, use read-only native
+scouts to propose task briefs from approved requirements, then admit only checked
+claims and accepted interfaces. Keep the decomposition in the existing plan.
 
-`python3 {skillsDir}/isolated-writer-supervisor/scripts/supervisor.py run REQUEST.json` starts every attempt in
-a new worktree and branch from the recorded base, never the lead checkout. The
-worker receives its bindings and a supervisor-owned result path through
-`PATRONUS_SUPERVISOR_*` variables and must write a result whose run, task,
-attempt, root and base match. Independent writers may overlap up to the
-concurrency limit. A dependent writer waits until its predecessor is verified and
-captured, then receives that captured patch applied in its fresh worktree, with
-the input manifest at `PATRONUS_SUPERVISOR_INPUTS`.
+## Prepare the next wave while this one writes
 
-On timeout the supervisor signals the worker's process group with SIGTERM, waits
-the bounded grace period, escalates to SIGKILL and must confirm stop before
-validation, retry or capture. A descendant that outlives its worker is stopped the
-same way and the attempt is rejected. Unknown stop state (a surviving member, or a
-Linux process still working inside the worktree) blocks the run and preserves all
-evidence; nothing further launches. Supervisor errors or SIGINT/SIGTERM interruption
-cancel admission and attempt bounded stop/settlement of every started worker before
-exit. Concurrent workers cannot capture after the run is blocked. Unknown state
-blocks capture, integration, retry and cleanup; retain the worktrees, logs and
-result evidence for an explicit owner decision, never infer permission to replay.
+Once the first wave is admitted, overlap its writers with read-only native scouts
+for independent next-wave questions, through
+`{skillsDir}/dispatching-parallel-agents-cx/SKILL.md`. Give each scout a stable
+revision/read snapshot, relevant requirements, expected interface and one brief
+to return. No source/report writes, builds, environment mutation or delegation.
+Do not scout work whose brief is already sufficient.
 
-Acceptance rejects a missing or malformed result, binding mismatch, nonzero exit,
-worker-reported failure, HEAD or branch drift (including commits), non-owned
-changes, staged residue, ignored-file residue, unreported changes and claimed but
-absent changes. Intended uncommitted edits inside the owned paths are the capture,
-not a dirty result. Accepted attempts are captured as exact binary patches with
-patch and per-file SHA-256 after confirmed settlement; rejected settled attempts
-keep an evidence patch. A retry is explicit and bounded, uses a fresh worktree from
-the recorded base and retains every failed attempt. The supervisor never deletes a
-worktree or branch; cleanup is a separate grant after capture is verified.
+The coordinator checks returned briefs and reconciles ownership, anchors and
+assumptions against accepted current-wave outputs. Preparation may overlap
+implementation; dependent writers start only after their actual input/acceptance
+barriers clear. Re-scout changed seams only. Continue this pipeline while useful
+independent work and native capacity remain, leaving capacity for preparation
+and integration rather than filling every slot with writers. Existing host and
+resource limits still apply. This is one plan and handoff, not another scheduler,
+progress ledger, root budget or automatic review wave.
 
-## Integration
+## Allocate isolated writers
 
-Integration is disabled by default. It needs `integration.enabled`, the checked
-integration head and worktree in the request, plus a separate explicit grant
-passed as `integrate REQUEST.json --grant-integration`. Captures apply serially in
-dependency order against the latest checked integration head; head drift, a dirty
-or drifted tree, a changed capture hash or a patch that does not apply cleanly
-(`merge-conflict`) stops before mutation. It never commits. Commit, push, discard
-and worktree removal remain separate grants. No automatic cleanup follows from a
-completion notification.
+Inspect the native launch, completion/wait and stop controls actually exposed in
+the session. Use the current model/provider and existing authentication; do not
+change engines. Report missing capabilities precisely.
 
-## Limits
+Under the approved Git grant, allocate one worktree per writer at the agreed
+base outside the lead checkout, following
+`{skillsDir}/using-git-worktrees-cx/SKILL.md`. Preserve dirty and untracked
+predecessor inputs: a clean base worktree omits them. Explicitly carry required
+accepted inputs into the allocated roots and bind their hashes, or report a
+missing input. Never stash, commit or discard owner changes to manufacture a
+baseline.
 
-Ownership is cooperative, enforced from Git's view of the worktree. It is not an
-OS filesystem sandbox: a process can write outside its worktree or through a
-symlink without detection, and a descendant that leaves the process group and the
-worktree directory is not observable. Process discovery uses `/proc` on Linux and
-a process-group probe elsewhere; Windows is blocked. Conflict detection is
-conservative (`git apply --check`, no three-way merge). SIGKILL, host loss or another
-uncatchable hard kill cannot run settlement; retained evidence alone then does not
-prove workers stopped. Process-group/cwd observation does not detect arbitrary
-escaped processes outside both boundaries. Only the invented Linux fixtures are
-observed here, not native Codex or qualification of other platforms. Fake-worker tests do not
-qualify native Codex workers, their authentication or their sandbox.
+Give each native worker its absolute allocated root, base, owned paths,
+predecessors, task and acceptance checks, applicable skills, existing resource
+limits and return format. The worker verifies the allocated root before its first
+write and uses that root explicitly for file and shell operations. The native
+tool may begin in the lead cwd; prompting is cooperative, not tool-enforced
+isolation. If tools cannot target the assigned root, do not admit parallel
+writers. Read-only native assistance may still be useful within its grant.
 
-## Migration from 1.1.x
+Workers are leaves: no nested delegation, new CLI agent sessions, shared progress
+writes, commits, integration or cleanup. They write only owned files. Never run
+concurrent writers in the lead checkout, even with disjoint paths.
 
-Existing 1.1.x installs keep ownership of the old sidecar paths; `patronus update` reports
-`obsolete owned path retained; explicit removal required` for them. Run
-`patronus remove plan-execute-parallel-cx` then reinstall, or remove the listed paths
-explicitly, before relying on the shared supervisor.
+When native worktree creation is unavailable, use authorized Git allocation or
+the bundled allocation-only script:
+`python3 {skillDir}/scripts/prepare-worktrees.py ALLOCATION.json`.
+Read `{skillDir}/references/worktree-allocation.md` only when using this script.
+The coordinator approves exact roots/base/claims first. A leaf may carry out that
+specific allocation, not choose new allocations or launch agents. This utility
+creates worktrees only; native launch/wait/stop remain with the coordinator.
+No supervisor installation, CLI skill or worker argv/result contract is needed.
+Missing optional allocation tooling does not itself block a usable native/Git
+allocation path, and cannot authorize CLI worker launch.
 
-## Authorized alternative
+## Collect, check and integrate
 
-If the supervisor, Git, Python or native workers are unavailable or auth-blocked,
-stop the lane as blocked with partial evidence retained, report the Partial limit
-and ask the lead/owner. Serial execution via `{skillsDir}/plan-execute-cx/SKILL.md`
-needs explicit lead authorization; it is never a failed-engine fallback. Never
-change model, provider, protocol or isolation to make progress.
+Launch only ready independent tasks within the host and approved resource limits.
+Keep critical-TDD and focused-postcheck strategies from their briefs; serialize
+resource-heavy checks under the existing project lock. Capture command results
+and complete final worker responses. A finished message alone is not acceptance.
 
-Read-only parallel investigation may be separately authorized through
-`{skillsDir}/dispatching-parallel-agents-cx/SKILL.md`. It grants no writer access.
+Use native wait/stop controls. Before retry, capture or integration, confirm the
+worker and any started background jobs have stopped. Unknown liveness retains
+allocations and blocks those actions. No automatic retry or relaunch.
+
+Check each settled root's base/head, complete tracked/untracked diff, file
+ownership, required-input hashes and actual tests. Preserve complete patches and
+return evidence in the existing handoff. Do not manufacture JSON receipts or
+attestation files for native workers. A worker claim of green tests does not
+replace reading the command results.
+
+With the separate integration grant, apply accepted patches serially to the
+checked integration state. Preserve dirty predecessor work; on drift, conflicting
+patches or unexpected edits, stop the affected integration and report the exact
+problem. Run fresh composed checks and the planned independent whole-change review,
+with at most one bounded batched correction/disposition. Fixers are leaves and
+cannot launch reviewers; changed interfaces, safety invariants or acceptance
+scope return to the owner. Earlier reviews require a named changed safety or
+compatibility invariant and its acceptance point before dependent consumption;
+they never replace aggregate review. Do not add reviews simply because tasks
+were delegated. Commits, push and worktree removal remain separate grants.
+
+## Limits and reporting
+
+Worktrees and ownership checks provide cooperative isolation, not an OS sandbox.
+Native tools do not automatically allocate or enforce separate roots. Report
+observed launch, settlement, capture and verification behavior for this run.
+
+If the native route is unavailable, retain evidence and ask for direction. Do not
+silently substitute CLI workers or serial execution. If the user explicitly
+chooses subprocess automation, read the installed
+`{skillsDir}/isolated-writer-supervisor/SKILL.md` and its mode gate under that
+separate grant. It is optional and must not be loaded for ordinary native work.

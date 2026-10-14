@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resolve and ensure the working-tree directory SDD uses for its short-lived
-# artifacts: task briefs, implementer reports, review packages, and the
-# progress ledger. Print the directory's absolute path.
+# artifacts: task briefs, implementer reports and review packages.
+# Print the directory's absolute path, not a progress ledger.
 #
 # The workspace lives beside the plan it belongs to, under
 # <plan-dir>/.sdd/<plan-stem>/, so run state travels with the plan rather than
@@ -28,8 +28,8 @@ plan=$1
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
 # Resolve the plan through any symlink first. Two spellings of one plan must land
-# on one workspace, or a resume that used the other spelling sees no ledger and
-# re-dispatches finished tasks.
+# on one scratch workspace. Recovery still reconciles native state and retained
+# evidence; an absent scratch file never authorizes redispatch.
 plan_dir=$(cd "$(dirname "$plan")" && pwd -P)
 plan_base=$(basename "$plan")
 hops=0

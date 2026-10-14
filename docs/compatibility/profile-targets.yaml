@@ -10,6 +10,7 @@
 # only. It does not claim native harness support, loading, trust or behaviour.
 #
 # Legacy profiles list their documented baseline delivery target (claude).
+# Their Claude skill members use exact -cl names; profile identities stay stable.
 # Lane profiles list only their own lane target; the CLI refuses other targets,
 # and the gate checks that a lane-only profile refuses `--target claude`.
 # Adding a profile means adding its entry here; no Go or shell change is needed.
@@ -37,4 +38,4 @@ profiles:
   terse: {targets: [claude]}
   visual: {targets: [claude]}
   web-dev: {targets: [claude]}
-  writing: {targets: [claude]}
+  writing: {targets: [claude, codex, opencode, pi]}

@@ -1,5 +1,7 @@
 # Fixture 02: exactly one soft signal
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: solo
 Isolates: one soft signal does not reach Rule 3's threshold of two.
 Invocation: "Execute this plan."

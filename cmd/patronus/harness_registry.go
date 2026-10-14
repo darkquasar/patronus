@@ -7,8 +7,8 @@ import (
 
 // defaultRegistry builds the production target registry once, in main. Codex,
 // Pi and OpenCode carry their behaviour as flags plus stateless validators;
-// claude exists for target-enum parity with every flag false and no validator,
-// so the legacy shared-lane semantics are unchanged.
+// Claude participates in identity and discovery, with admission flags false
+// and no validator, so its legacy shared-lane semantics are unchanged.
 func defaultRegistry() (*harness.Registry, error) {
 	return harness.NewRegistry(
 		harness.Descriptor{
@@ -60,9 +60,13 @@ func defaultRegistry() (*harness.Registry, error) {
 			Validator:           piValidator{},
 		},
 		harness.Descriptor{
-			Name:         "claude",
-			ContextFile:  "CLAUDE.md",
-			GlobalMarker: "~/.claude",
+			Name:          "claude",
+			ItemSuffix:    "cl",
+			ContextFile:   "CLAUDE.md",
+			GlobalMarker:  "~/.claude",
+			SkillRoots:    claudeSkillRoots,
+			SkillName:     scan.SkillDirName,
+			ResourcePhase: harness.ResourceAfterContext, // inert while admission remains disabled
 		},
 		harness.Descriptor{
 			Name:                "opencode",
@@ -92,6 +96,10 @@ func defaultRegistry() (*harness.Registry, error) {
 			Validator:           opencodeValidator{},
 		},
 	)
+}
+
+func claudeSkillRoots(in harness.RootInputs) ([]scan.SkillRoot, error) {
+	return scan.ClaudeSkillRoots(in.Home, in.Project), nil
 }
 
 func openCodeSkillRoots(in harness.RootInputs) ([]scan.SkillRoot, error) {

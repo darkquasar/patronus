@@ -8,8 +8,7 @@ Do not delegate, install tools, change model/provider or invoke a CLI model.
 Read all changed files and relevant current callers/tests. Assess requirement
 coverage, ownership boundaries, compatibility, error/timeout behavior, trust,
 authentication, declared references and independent acceptance evidence.
-Invented-fixture tests establish only their observed behavior; static placement
-establishes no native runtime readiness. Report blocked checks honestly.
+Report actual checked scope and blocked checks honestly.
 
 Return the complete report to the lead, including:
 
@@ -25,3 +24,18 @@ Return the complete report to the lead, including:
 
 No severity downgrade to fit a threshold. The lead deduplicates findings,
 dispositions residuals and admits transitions after all dependent work settles.
+
+
+Return findings and stop. Do not admit correction or review successors. Preserve
+all source IDs and original labels when deduplicating by consequence. One reviewer
+per exact subject is the default; Low findings receive disposition, not an
+automatic review wave. Unresolved Critical/Major or more than two distinct Medium block; up to two
+Medium residuals need explicit owner acceptance.
+The coordinator may resolve a fixed defect only after checking its cited
+failure against the exact corrected bytes and sufficient relevant positive,
+negative-path and regression evidence for the existing acceptance criterion.
+Retain this disposition in the original report as parent-verified, not
+independently re-reviewed. A changed public interface, safety invariant or
+acceptance scope, or an insufficient oracle, returns to the owner for a design
+decision or additional independent-review grant. Blockers remain blockers at
+the correction cap.

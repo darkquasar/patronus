@@ -2,8 +2,8 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 1.2.0
-summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `quiet` (no diagrams)."
+version: 2.0.0
+summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd-cl skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `quiet` (no diagrams)."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
 # exists in-repo today and installs.
@@ -12,33 +12,32 @@ layers:
     - agents-spine                         # the AGENTS.md format spine
     - diagram-explain                      # ASCII diagrams on by default, appended into CLAUDE.md/AGENTS.md
     - branch-first                         # new work goes on a branch unless told otherwise (taught, advisory)
-    - writing-style-pointer                  # pointer — the two always-on mechanics inlined, the meaning-led rules behind the writing-editorial skill
+    - writing-style-pointer                # self-contained first pass: punctuation mechanics and compact meaning checks
   capabilities:
-    - skills-dispatch                      # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
-    - skills-dispatch-activate             # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch)
+    - skills-dispatch-cl                   # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
+    - skills-dispatch-activate-cl          # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch-cl)
     - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
     - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + docs/lessons (externalized state); Claude-only, conditional on what's present
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
-    - plan-writing                         # plan a multi-step task before touching code
-    - plan-execute                         # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review])
-    - grilling                             # interrogate a plan before building
-    - diagnosing-bugs                      # disciplined diagnosis loop for hard bugs
-    - tdd                                  # test-first tracer-bullet discipline (the chosen TDD skill)
-    - spec-brainstorming                   # explore intent + requirements + design, then author the spec, BEFORE any creative work
-    - using-git-worktrees                  # start feature work in an isolated workspace
-    - finishing-a-development-branch       # decide how to integrate finished work (merge/PR/cleanup)
-    - writing-skills                       # author/edit/verify skills (the meta-skill)
-    - writing-editorial                    # the house writing style as four sequenced tier files + the editorial review that applies them
-    - research-team@claude                 # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
-    - plan-execute-parallel@claude         # the parallel arm of plan-review's fork (Claude tools; codex flavour is a separate artifact)
+    - plan-writing-cl                      # plan a multi-step task before touching code
+    - plan-execute-cl                      # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review-cl])
+    - grilling-cl                          # interrogate a plan before building
+    - diagnosing-bugs-cl                   # disciplined diagnosis loop for hard bugs
+    - tdd-cl                               # test-first tracer-bullet discipline (the chosen TDD skill)
+    - spec-brainstorming-cl                # explore intent + requirements + design, then author the spec, BEFORE any creative work
+    - using-git-worktrees-cl               # start feature work in an isolated workspace
+    - finishing-a-development-branch-cl    # decide how to integrate finished work (merge/PR/cleanup)
+    - writing-skills-cl                    # author/edit/verify skills (the meta-skill)
+    - research-team-cl@claude              # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
+    - plan-execute-parallel-cl@claude      # the parallel arm of plan-review-cl's fork (Claude tools; codex flavour is a separate artifact)
   context:
-    - codebase-design                      # deep-module design vocabulary
-    - domain-modeling                      # ubiquitous-language + ADR discipline
-    - ddd-distilled                        # distilled DDD discipline — dispatched when designing/modeling a domain
-    - refactoring-distilled                # distilled refactoring discipline — dispatched when changing existing code
+    - codebase-design-cl                   # deep-module design vocabulary
+    - domain-modeling-cl                   # ubiquitous-language + ADR discipline
+    - ddd-distilled-cl                     # distilled DDD discipline — dispatched when designing/modeling a domain
+    - refactoring-distilled-cl             # distilled refactoring discipline — dispatched when changing existing code
     - context7                             # live, version-specific library docs (hosted MCP)
-    - pattern-cloudflare                   # in-repo context skill
-    - pattern-mcp                          # in-repo context skill
+    - pattern-cloudflare-cl                # in-repo context skill
+    - pattern-mcp-cl                       # in-repo context skill
   tools:
     - github                               # L5 default — GitHub issues/PRs/code search (hosted MCP)
   # No memory daemon in core. What core does ship is the durable, in-repo half:
@@ -48,15 +47,15 @@ layers:
   # compaction and travels with the repo. A running memory layer stays opt-in via
   # the `memory-engram` recipe.
   eval:
-    # Test-first is TAUGHT here (the `tdd` skill above), not mechanically enforced.
+    # Test-first is TAUGHT here (the `tdd-cl` skill above), not mechanically enforced.
     # The hard PreToolUse gate (tdd-guard recipe + tdd-guard-hook) is opt-in via the
     # `tdd-enforced` profile — it blocks every edit lacking a failing test, which is
     # too aggressive for the default (it can't tell impl code from a YAML/docs edit).
-    - spec-review                          # advisory gate — closes the spec phase (4-lens rubric) before plan-writing
-    - plan-review                          # advisory gate — closes the planning phase (coverage vs the spec) before implementation
-    - verification-before-completion       # evidence-before-claims discipline
-    - requesting-code-review               # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
-    - receiving-code-review                # act on review feedback with technical rigor, not performative agreement
+    - spec-review-cl                       # advisory gate — closes the spec phase (4-lens rubric) before plan-writing-cl
+    - plan-review-cl                       # advisory gate — closes the planning phase (coverage vs the spec) before implementation
+    - verification-before-completion-cl    # evidence-before-claims discipline
+    - requesting-code-review-cl            # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
+    - receiving-code-review-cl             # act on review feedback with technical rigor, not performative agreement
   guardrails:
     - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
     - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through
@@ -70,7 +69,7 @@ layers:
   orchestration:
     - ticket                               # work-graph discipline (AGENTS.md APPEND) — `requires: [tk]`, so the tk binary recipe is pulled into the install/lock closure automatically
     - session-completion                   # end-of-session discipline: file follow-ups, run the gates, commit, PUSH — tracker-agnostic, no requires edge
-    - dispatching-parallel-agents          # fan out independent problem domains to concurrent subagents
+    - dispatching-parallel-agents-cl       # fan out independent problem domains to concurrent subagents
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
   - "L8 eval: promptfoo CI gate (P7.5.6)."

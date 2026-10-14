@@ -1,5 +1,7 @@
 # Fixture 04: twenty mechanical tasks, no triggers
 
+> Retained historical routing case. Current `solo` means inline/sequential execution; `sdd` means phase-separated leaf assignments. Expected mode admits no reviewer, fixer or runtime campaign. See README.md for current use.
+
 Expected mode: solo
 Isolates: raw task count is not a criterion beyond Rule 3's floor.
 Invocation: "Execute this plan."

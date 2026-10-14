@@ -4,9 +4,9 @@ type: skill
 role: eval
 name: receiving-code-review
 description: "Discipline for acting on code-review feedback — verify each suggestion technically before implementing it, push back on unclear or wrong feedback with evidence, and avoid performative agreement or blind application. The receiving half of the review loop."
-version: 1.0.0
+version: 2.0.0
 entry: SKILL.md
-targets: [claude, codex, opencode]
+targets: [codex, opencode]
 defaults:
   scope: project
 attribution:

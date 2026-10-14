@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -34,6 +35,225 @@ func runInstall(t *testing.T, args ...string) (string, string, error) {
 	cmd.SetArgs(args)
 	err := cmd.Execute()
 	return out.String(), errBuf.String(), err
+}
+
+// Claude naming fixtures use invented payloads and the real command/adapter
+// interfaces. The neutral reference identity is intentional: it models the
+// explicitly admitted reference exception, not an unsuffixed workflow alias.
+type claudeNamingFixture struct {
+	root, home string
+}
+
+func newClaudeNamingFixture(t *testing.T) claudeNamingFixture {
+	t.Helper()
+	f := claudeNamingFixture{root: fixtureCatalog(t)}
+	f.home = withRemoteEnv(t, &servingFetcher{bodies: map[string][]byte{}})
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Chdir(f.root)
+	for _, name := range []string{"fixture-route", "fixture-route-cl", "rust-style-reference"} {
+		version, requires := "1.0.0", ""
+		if name == "fixture-route-cl" {
+			version, requires = "2.0.0", "requires: [rust-style-reference]\n"
+		}
+		dir := filepath.Join(f.root, "artifacts", "skills", name)
+		dp02File(t, filepath.Join(dir, "patronus.yaml"), fmt.Sprintf("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: capability\nname: %s\ndescription: Invented naming fixture\nversion: %s\nentry: SKILL.md\nfiles: [guide.md, NOTICE]\ntargets: [claude]\ndefaults:\n  scope: project\n%s", name, version, requires))
+		body := "---\nname: " + name + "\ndescription: Invented fixture\n---\n\n# " + name + "\n"
+		if name == "fixture-route-cl" {
+			body += "Read {skillsDir}/rust-style-reference/SKILL.md in this installation scope.\n"
+		}
+		dp02File(t, filepath.Join(dir, "SKILL.md"), body)
+		dp02File(t, filepath.Join(dir, "guide.md"), "Invented bundled guide. No executable actions.\n")
+		dp02File(t, filepath.Join(dir, "NOTICE"), "Invented fixture provenance. No upstream material.\n")
+	}
+	return f
+}
+
+func (f claudeNamingFixture) scopeRoot(scope string) string {
+	if scope == "global" {
+		return f.home
+	}
+	return f.root
+}
+
+func (f claudeNamingFixture) skillPath(scope, name, file string) string {
+	return filepath.Join(f.scopeRoot(scope), ".claude", "skills", name, file)
+}
+
+func (f claudeNamingFixture) install(t *testing.T, name, scope string) {
+	t.Helper()
+	if out, stderr, err := runInstall(t, name, "--target", "claude", "--"+scope, "--deploy", "--yes"); err != nil {
+		t.Fatalf("install %s/%s: %v\n%s\n%s", name, scope, err, out, stderr)
+	}
+}
+
+func (f claudeNamingFixture) payload(t *testing.T, name, scope, file string) []byte {
+	t.Helper()
+	expected := string(mustRead(t, filepath.Join(f.root, "artifacts", "skills", name, file)))
+	skillsDir := filepath.Join(".claude", "skills")
+	if scope == "global" {
+		skillsDir = filepath.Join(f.home, skillsDir)
+	}
+	return []byte(strings.ReplaceAll(expected, "{skillsDir}", skillsDir))
+}
+
+func (f claudeNamingFixture) assertInstalled(t *testing.T, name, scope string) {
+	t.Helper()
+	s, err := state.Load(filepath.Join(f.scopeRoot(scope), ".patronus", "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := s.Find(name, "claude", scope)
+	wantVersion := "1.0.0"
+	if name == "fixture-route-cl" {
+		wantVersion = "2.0.0"
+	}
+	if len(rows) != 1 || rows[0].ItemVersion != wantVersion || len(rows[0].Files) != 3 {
+		t.Fatalf("incomplete identity/version/payload ownership for %s/%s: %+v", name, scope, rows)
+	}
+	owned := map[string]state.FileState{}
+	for _, file := range rows[0].Files {
+		owned[file.Path] = file
+	}
+	for _, file := range []string{"SKILL.md", "guide.md", "NOTICE"} {
+		path := f.skillPath(scope, name, file)
+		expected := f.payload(t, name, scope, file)
+		actual := mustRead(t, path)
+		if !bytes.Equal(actual, expected) || owned[path].Checksum != state.Checksum(actual) || owned[path].Action != "CREATE" {
+			t.Fatalf("bytes/provenance/ownership mismatch at %s: %+v\nwant %q\ngot  %q", path, owned[path], expected, actual)
+		}
+	}
+}
+
+func TestClaudeNamingUnmanagedNewCopiesAreNeverAdopted(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		for _, equal := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/equal=%t", scope, equal), func(t *testing.T) {
+				f := newClaudeNamingFixture(t)
+				f.install(t, "fixture-route", scope)
+				unowned := map[string][]byte{}
+				for _, file := range []string{"SKILL.md", "guide.md", "NOTICE"} {
+					path := f.skillPath(scope, "fixture-route-cl", file)
+					body := f.payload(t, "fixture-route-cl", scope, file)
+					if !equal {
+						body = append(body, []byte("User-authored differences.\n")...)
+					}
+					dp02File(t, path, string(body))
+					unowned[path] = body
+				}
+				out, stderr, err := runInstall(t, "fixture-route-cl", "--target", "claude", "--"+scope, "--deploy", "--yes")
+				if (equal && err != nil) || (!equal && (err == nil || !strings.Contains(err.Error(), "ownership unresolved"))) || !strings.Contains(out, "skipped") {
+					t.Fatalf("unexpected unmanaged-copy result: %v\n%s\n%s", err, out, stderr)
+				}
+				for path, want := range unowned {
+					if !bytes.Equal(want, mustRead(t, path)) {
+						t.Fatalf("unmanaged payload overwritten: %s", path)
+					}
+				}
+				s, err := state.Load(filepath.Join(f.scopeRoot(scope), ".patronus/state.json"))
+				if err != nil || len(s.Find("fixture-route-cl", "claude", scope)) != 0 {
+					t.Fatalf("unmanaged new identity acquired ownership: %+v %v", s, err)
+				}
+				// The command can have installed a nonconflicting dependency before
+				// reporting partial failure. That is not authority to retire old.
+				f.assertInstalled(t, "fixture-route", scope)
+				f.assertInstalled(t, "rust-style-reference", scope)
+			})
+		}
+	}
+}
+
+func TestClaudeNamingInstallRefusesTargetsAndAmbiguousScopeBeforeWrites(t *testing.T) {
+	for _, args := range [][]string{
+		{"--target", "unknown-fixture", "--local"},
+		{"--target", "codex", "--local"},
+		{"--target", "opencode", "--global"},
+		{"--target", "claude", "--local", "--global"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", "local")
+			before := dp02Snapshot(t, f.home, f.root)
+			args = append([]string{"fixture-route-cl", "--deploy", "--yes"}, args...)
+			if out, stderr, err := runInstall(t, args...); err == nil {
+				t.Fatalf("invalid selection accepted:\n%s\n%s", out, stderr)
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("invalid install changed files or state")
+			}
+		})
+	}
+}
+
+func TestClaudeNamingInterruptedInstallCannotAdoptEqualRetry(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			f.install(t, "fixture-route", scope)
+			sp := filepath.Join(f.scopeRoot(scope), ".patronus/state.json")
+			durable := mustRead(t, sp)
+			cmd := newInstallCmd(testRegistry(t))
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			planned, err := planInstall(cmd, installPlanRequest{Names: []string{"fixture-route-cl"}, Tool: "claude", Scope: scope, Home: f.home, ProjectDir: f.root, Harness: testRegistry(t)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = runDeploy(cmd, planned.Changes, planned.Resolver, deployOptions{Harness: testRegistry(t), home: f.home, projectDir: f.root, yes: true, saveState: func(string, *state.State) error { return errors.New("injected naming state-save failure") }})
+			if err == nil || !strings.Contains(err.Error(), "ownership uncertain") || !strings.Contains(err.Error(), f.skillPath(scope, "fixture-route-cl", "SKILL.md")) {
+				t.Fatalf("missing partial deployment diagnostic: %v", err)
+			}
+			if !bytes.Equal(durable, mustRead(t, sp)) {
+				t.Fatal("failed save changed durable old ownership")
+			}
+			for _, name := range []string{"fixture-route-cl", "rust-style-reference"} {
+				for _, file := range []string{"SKILL.md", "guide.md", "NOTICE"} {
+					if !bytes.Equal(f.payload(t, name, scope, file), mustRead(t, f.skillPath(scope, name, file))) {
+						t.Fatalf("partial deployment did not preserve committed bytes: %s/%s", name, file)
+					}
+				}
+			}
+			beforeRetry := dp02Snapshot(t, f.home, f.root)
+			// Plain equal SKIPs can return zero without recording ownership. An
+			// exit code is not the new-install verification barrier.
+			if out, stderr, err := runInstall(t, "fixture-route-cl", "--target", "claude", "--"+scope, "--deploy", "--yes"); err != nil || !strings.Contains(out, "skipped") {
+				t.Fatalf("equal retry: %v\n%s\n%s", err, out, stderr)
+			}
+			if !reflect.DeepEqual(beforeRetry, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("equal retry changed bytes or durable ownership")
+			}
+			loaded, err := state.Load(sp)
+			if err != nil || len(loaded.Find("fixture-route-cl", "claude", scope)) != 0 || len(loaded.Find("rust-style-reference", "claude", scope)) != 0 {
+				t.Fatalf("equal retry adopted uncertain installation: %+v %v", loaded, err)
+			}
+			f.assertInstalled(t, "fixture-route", scope)
+		})
+	}
+}
+
+func TestClaudeNamingFreshInstallLocalAndGlobal(t *testing.T) {
+	for _, scope := range []string{"local", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newClaudeNamingFixture(t)
+			before := dp02Snapshot(t, f.home, f.root)
+			out, stderr, err := runInstall(t, "fixture-route-cl", "--target", "claude", "--"+scope)
+			if err != nil || !strings.Contains(out, "dry run") || !strings.Contains(out, "fixture-route-cl") || !strings.Contains(out, "rust-style-reference") {
+				t.Fatalf("incomplete preview: %v\n%s\n%s", err, out, stderr)
+			}
+			if !reflect.DeepEqual(before, dp02Snapshot(t, f.home, f.root)) {
+				t.Fatal("fresh install preview wrote files")
+			}
+			f.install(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "fixture-route-cl", scope)
+			f.assertInstalled(t, "rust-style-reference", scope)
+			if _, err := os.Stat(f.skillPath(scope, "fixture-route", "SKILL.md")); !os.IsNotExist(err) {
+				t.Fatalf("fresh install exposed the retired route: %v", err)
+			}
+			entries, err := os.ReadDir(filepath.Join(f.scopeRoot(scope), ".claude", "skills"))
+			if err != nil || len(entries) != 2 {
+				t.Fatalf("fresh install included unexpected routes: %v %v", entries, err)
+			}
+		})
+	}
 }
 
 func TestInstallSkillDryRun(t *testing.T) {

@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: spec-brainstorming-oc
 description: "OpenCode only: ADR-0003 spec authorship and research-to-planning handoff"
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: [NOTICE, LICENSE, SOURCE.md, spec-document-reviewer-prompt.md, scripts]
 targets: [opencode]
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "OpenCode behavioral adaptation of Patronus spec brainstorming sources; MIT upstream notice retained. Authored changes and validator follow repository licensing. See SOURCE.md. Static guidance, runtime-unverified."
+  note: "OpenCode behavioral adaptation of Patronus spec brainstorming sources; MIT upstream notice retained. Authored changes and validator follow repository licensing. See SOURCE.md."

@@ -115,7 +115,7 @@ In one line each:
 - **L1 Instructions** = *what you tell the agent to always do.* You write it; it's static prose;
   Patronus **appends** it into `CLAUDE.md`/`AGENTS.md`. Example in this repo: `agent-principles`.
 - **L2 Capabilities** = *what the agent can do on demand.* Invocable skills/agents/commands;
-  Patronus **creates** them as files. Examples: `research-team`, `plan-execute-parallel`, `pattern-cloudflare`.
+  Patronus **creates** them as files. Claude examples: `research-team-cl`, `plan-execute-parallel-cl`, `pattern-cloudflare-cl`.
 - **L3 Memory** = *what the agent remembers on its own.* A running store the agent writes to;
   Patronus **fetches and wires** an external engine. Example recipe: `memory-ai-memory`.
 
@@ -425,9 +425,9 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 ┌───────────────────────┬─────────────────────────────────────────────────┬───────────┬─────────────┬─────────────┬────────┬───────┐
 │ Artifact              │ Impacted path(s)                                │ Operation │ Type        │ Role        │ Tool   │ Scope │
 ├───────────────────────┼─────────────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
-│ pattern-cloudflare    │ ./.claude/skills/pattern-cloudflare/ (8…)       │ CREATE    │ skill       │ context     │ claude │ local │
-│ plan-execute-parallel │ ./.claude/skills/plan-execute-parallel/SKILL.md │ CREATE    │ skill       │ capability  │ claude │ local │
-│ research-team         │ ./.claude/skills/research-team/SKILL.md         │ CREATE    │ skill       │ capability  │ claude │ local │
+│ pattern-cloudflare-cl │ ./.claude/skills/pattern-cloudflare-cl/ (8…)    │ CREATE    │ skill       │ context     │ claude │ local │
+│ plan-execute-parallel-cl │ ./.claude/skills/plan-execute-parallel-cl/SKILL.md │ CREATE │ skill     │ capability  │ claude │ local │
+│ research-team-cl      │ ./.claude/skills/research-team-cl/SKILL.md      │ CREATE    │ skill       │ capability  │ claude │ local │
 │ agent-principles      │ ./CLAUDE.md                                     │ APPEND    │ instruction │ instruction │ claude │ local │
 │ memory-ai-memory      │ ai-memory install-hooks --agent claude          │ EXEC      │ fetch+run   │ memory      │ claude │ local │
 │ memory-ai-memory      │ ai-memory install-mcp   --client claude         │ EXEC      │ fetch+run   │ memory      │ claude │ local │
@@ -436,14 +436,14 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 ./
 ├── .claude/
 │   └── skills/
-│       ├── pattern-cloudflare/          # L4 context — a whole pattern set
+│       ├── pattern-cloudflare-cl/       # L4 context — a whole pattern set
 │       │   ├── SKILL.md  (new)  # CREATE — role: context
 │       │   └── patterns/
 │       │       ├── pattern-001.md  (new)  # CREATE — role: context
 │       │       └── … (006 more)  (new)  # CREATE — role: context
-│       ├── plan-execute-parallel/       # L2 capability
+│       ├── plan-execute-parallel-cl/    # L2 capability
 │       │   └── SKILL.md  (new)  # CREATE — role: capability
-│       └── research-team/               # L2 capability
+│       └── research-team-cl/            # L2 capability
 │           └── SKILL.md  (new)  # CREATE — role: capability
 └── CLAUDE.md  (appended)  # APPEND — role: instruction   ← your prose preserved
 
@@ -534,6 +534,78 @@ agent-principles: 1.0.0 -> 1.1.0
 $ patronus update agent-principles --deploy
 agent-principles: up to date (1.1.0)
 ```
+
+### Claude skill names: explicit clean cutover
+
+Claude workflow entrypoints now use canonical `-cl` names, for example `tdd-cl`.
+Fresh installs use these names, not unsuffixed compatibility aliases. Approved
+neutral reference packages, such as `rust-style-reference`, keep their shared
+names and are installed through the required dependency closure. Use a Patronus
+binary and catalog that both support this cutover before changing an installation.
+
+The optional `writing-editorial` is a separate, explicitly named callable-skill
+exception: one host-neutral bundle supports Claude, Codex, OpenCode and Pi, outside
+every core profile. The writing overlay adds it; its voice companion remains
+Claude-only. Superseded `writing-editorial-cl` and `writing-editorial-pi` catalog
+entries are retired, not aliases or automatic live migrations. Only this skill
+and the two named neutral references may coexist across host roots when every
+copy is Patronus-managed, unchanged and identical in name, version and complete
+declared payload. Unmanaged, partial, edited or mismatched copies still block.
+
+Existing installations are not renamed automatically. For each tracked old skill,
+choose one scope and preview both operations, deploy the new identity, verify it,
+then explicitly retire the old identity. For a project-local `tdd` installation:
+
+```console
+$ patronus remove tdd --target claude --local
+$ patronus install tdd-cl --target claude --local
+$ patronus install tdd-cl --target claude --local --deploy
+```
+
+Before continuing, check every new entrypoint, bundled file and provenance file,
+plus all required dependencies. Confirm their canonical names, versions, resolved
+references and checksums against the catalog and the selected scope's
+`.patronus/state.json`. A preview or a zero exit status does not prove a complete,
+owned installation. Only after this verification barrier:
+
+```console
+$ patronus remove tdd --target claude --local --deploy
+```
+
+```text
++------------------+   explicit deploy   +------------------+   scoped remove   +-------------+
+| Preview old/new  | ==================> | Verify new bytes | =================> | Retire old  |
++------------------+                     | and ownership    |                    +-------------+
+                                         +------------------+
+```
+
+Use `--global` instead of `--local` for the user installation, then repeat
+separately for any project installations. Scope selection must not change the
+opposite scope or unrelated skills. `install` and `remove` accept these scope
+flags; Claude `update` reads recorded scopes and does not accept them.
+
+An old identity removed from the catalog reports `not in registry — leaving as-is`
+on update and preserves its files and ownership. If the old identity survives
+only for another host, a newer-version update of its recorded Claude installation
+rejects the target mismatch. It does not reroute to Codex or OpenCode. Neither
+case performs the name migration.
+
+Do not use `--force` for this cutover. Edited old files are warned about and
+preserved with retained ownership; unchanged files may already have been removed.
+That is a partial migration even when `remove` returns zero. Unmanaged new-name
+copies are not silently adopted, whether equal or different: equal copies may
+return zero with `SKIP` while still lacking ownership. Untracked old callable
+copies and user files under an old directory also survive state-backed removal.
+Empty retired directories are pruned, but a surviving old callable means cutover
+is not complete. Inspect and resolve such copies separately, preserving user work.
+
+Interrupted state saves report uncertain ownership and may leave actual writes
+or deletions ahead of the durable record. Preserve the diagnostics, re-preview
+current bytes and inspect state before an explicitly authorized repair. Retrying
+an equal new-name payload does not establish ownership, so do not remove the old
+skill on that basis. After a verified cutover, an existing OpenCode mask can remain
+stale until you explicitly recompute it with
+`patronus update --all --target opencode --deploy`.
 
 ---
 

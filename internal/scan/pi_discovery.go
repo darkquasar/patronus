@@ -186,6 +186,8 @@ func piOtherSections(raw []byte) bool {
 type PiResource struct {
 	Kind, Name, Path, Origin string
 	Aliases                  []string
+	Content                  []byte
+	Legacy                   bool
 }
 type PiResourceRoot struct {
 	Kind, Path, Origin string
@@ -194,11 +196,12 @@ type PiResourceRoot struct {
 
 // DiscoverPiResources inventories explicit qualified roots. Pi skills/prompts
 // use package-before-native first-wins; subagents use builtin/package/user/project
-// last-wins (package roots first-wins internally). All duplicates are conflicts.
+// last-wins (package roots first-wins internally). Duplicates are conflicts,
+// except finite neutral references with the caller's full managed-payload proof.
 // Skill roots walk through the shared DiscoverSkills rules (leaf directories,
 // ignore files, dot-directory skip, loose markdown); agent and command roots
 // keep their own walk below.
-func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
+func DiscoverPiResources(roots []PiResourceRoot, references ...func(Resource, Resource) bool) ([]PiResource, error) {
 	var out []PiResource
 	for _, root := range roots {
 		if root.Kind == "skill" {
@@ -271,9 +274,28 @@ func DiscoverPiResources(roots []PiResourceRoot) ([]PiResource, error) {
 			return nil, err
 		}
 	}
-	for i, r := range out {
-		if err := PiResourceConflict(out[:i], r); err != nil {
+	return ReconcilePiResources(out, references...)
+}
+
+// ReconcilePiResources checks a complete prepared/foreign inventory before
+// collapsing proven neutral copies. Ordinary identities still refuse shadowing.
+func ReconcilePiResources(resources []PiResource, references ...func(Resource, Resource) bool) ([]PiResource, error) {
+	for i, r := range resources {
+		if err := PiResourceConflict(resources[:i], r, references...); err != nil {
 			return nil, err
+		}
+	}
+	var out []PiResource
+	for _, r := range resources {
+		duplicate := false
+		for _, other := range out {
+			if sameReference(piSharedResource(other), piSharedResource(r), references) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			out = append(out, r)
 		}
 	}
 	return out, nil
@@ -321,11 +343,11 @@ func piSkillName(raw []byte, path string) (string, error) {
 }
 
 func piResourceFromShared(r Resource) PiResource {
-	return PiResource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases}
+	return PiResource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases, Content: r.Content, Legacy: r.Legacy}
 }
 
 func piSharedResource(r PiResource) Resource {
-	return Resource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases}
+	return Resource{Kind: r.Kind, Name: r.Name, Path: r.Path, Origin: r.Origin, Aliases: r.Aliases, Content: r.Content, Legacy: r.Legacy}
 }
 
 func piResourceConflictMessage(name string, a, b Resource) error {
@@ -376,7 +398,7 @@ func piResourceFile(root PiResourceRoot, path string) (PiResource, error) {
 			return PiResource{}, fmt.Errorf("pi agent source %s: %w", path, err)
 		}
 	}
-	return PiResource{Kind: root.Kind, Name: name, Aliases: aliases, Path: path, Origin: root.Origin}, nil
+	return PiResource{Kind: root.Kind, Name: name, Aliases: aliases, Path: path, Origin: root.Origin, Content: raw}, nil
 }
 
 // piNativeAgentAliases mirrors the native loader's alias selection and finite
@@ -535,13 +557,14 @@ func piMarkdownFields(raw []byte) (map[string]any, error) {
 }
 
 // PiResourceConflict refuses any same-identity resource of the same kind at
-// another path: the RefuseAlways policy of the shared ResourceConflict.
-func PiResourceConflict(resources []PiResource, selected PiResource) error {
+// another path: the RefuseAlways policy of the shared ResourceConflict, with
+// only the same optional managed neutral-reference proof as discovery.
+func PiResourceConflict(resources []PiResource, selected PiResource, references ...func(Resource, Resource) bool) error {
 	shared := make([]Resource, 0, len(resources))
 	for _, r := range resources {
 		shared = append(shared, piSharedResource(r))
 	}
-	return ResourceConflict(shared, piSharedResource(selected), RefuseAlways, nil, piResourceConflictMessage)
+	return ResourceConflict(shared, piSharedResource(selected), RefuseAlways, nil, piResourceConflictMessage, references...)
 }
 
 // PiMCPSource inventory uses the selected 3.0.0 loader order, low to high.

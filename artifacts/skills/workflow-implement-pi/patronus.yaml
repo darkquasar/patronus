@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: workflow-implement-pi
-description: "Runnable bounded implement workflow using upstream execution authority"
-version: 1.3.0
+description: "Phase-separated implement operations with parent-owned admission"
+version: 1.4.0
 entry: SKILL.md
 files: ["workflow.js", "request.schema.json", "fixtures/workflow.test.mjs", "fixtures/request.json"]
 targets: [pi]
