@@ -4,13 +4,13 @@ type: skill
 role: capability
 name: finishing-a-development-branch-cx
 description: "Codex only: Use when authorized implementation is ready for verification and a branch or captured worktree handoff."
-version: 1.1.0
+version: 1.1.1
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md"]
 targets: [codex]
 defaults:
   scope: project
-requires: ["using-git-worktrees-cx", "verification-before-completion-cx", "requesting-code-review-cx"]
+requires: ["using-git-worktrees", "verification-before-completion-cx", "requesting-code-review-cx"]
 attribution:
   upstream: github.com/obra/superpowers
   license: MIT

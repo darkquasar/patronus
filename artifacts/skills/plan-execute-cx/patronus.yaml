@@ -3,14 +3,14 @@ family: artifact
 type: skill
 role: capability
 name: plan-execute-cx
-description: "Codex only: Approved serial execution with independent review."
-version: 1.3.0
+description: "Codex only: Approved serial or parallel-ready execution with independent review."
+version: 1.4.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]
 defaults:
   scope: project
-requires: ["requesting-code-review-cx", "verification-before-completion-cx", "receiving-code-review-cx"]
+requires: ["requesting-code-review-cx", "verification-before-completion-cx", "receiving-code-review-cx", "dispatching-parallel-subagents", "using-git-worktrees"]
 attribution:
   upstream: "github.com/obra/superpowers"
   license: "MIT"

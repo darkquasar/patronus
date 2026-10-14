@@ -173,3 +173,14 @@ Prefer a record that **names the artifact** (a filename, a ticket id) over one t
 about it** (`true`). The first can be verified against the thing. The second can only be believed.
 See also [ADR-0002](0002-tests-assert-behavior-not-artifacts.md), which is the same rule applied to
 tests.
+
+## Amendment, 2026-10-14: `epic:` ownership
+
+The decision text above, which says `plan-execute-parallel` "fills in `epic:`
+when it seeds the graph", is retained as accepted history. Current skills fill
+optional `epic:`/`tasks:` references only through an explicitly authorized
+tracker owner, and only when tk is the selected progress authority. No
+execution skill seeds a tracker automatically. The Claude, Codex and OpenCode
+`plan-execute-parallel` skills are retired: parallel-ready execution lives in
+`plan-execute-{cl,cx,oc}`, and plans render their task graph in an
+`## Execution graph` section rather than in a tracker.

@@ -206,7 +206,8 @@ func verifiedResource(d Descriptor, owners []state.Item, r scan.Resource) bool {
 // managedReferences verifies the whole declared installation, not just its
 // SKILL.md. State rows are the payload declaration; every row must match disk,
 // and every file in the bundle must be owned. Only the two named references and
-// the owner-approved callable writing-editorial skill can use this proof.
+// the owner-approved callable skills (writing-editorial,
+// dispatching-parallel-subagents and using-git-worktrees) can use this proof.
 func managedReferences(in *Admission, a, b scan.Resource) bool {
 	if !scan.ManagedSharedSkill(a) || !scan.ManagedSharedSkill(b) || a.Name != b.Name || a.Legacy || b.Legacy {
 		return false

@@ -43,6 +43,11 @@ project idioms and independently testable deliverables), engineering/build order
 user-facing design, developer-facing DevEx and strategy/scope lenses. Skip only
 inapplicable lenses and state why; skipped does not mean clean. Check actual source
 anchors and interface/predecessor availability, not merely the author's claims.
+The ownership bullet also checks the recorded or defaulted `Slicing:` value and
+the execution graph: agreement with task text, consistent IDs, no missing edges or
+cycles, correct `start`/`join` labels, shared-file hazards resolved by one owner,
+serialization or an authorized seam split, no unaccepted owned collaborators
+hidden behind mocks, and J/C/R barriers present.
 
 Consume complete findings, preserve source IDs and original severities, and
 deduplicate by defect without dropping evidence. Use Critical/Major/Medium/Low by

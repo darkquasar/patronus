@@ -53,6 +53,13 @@ clean one.
   import a foreign style?
 - **Right-sized tasks**, is each task an independently testable deliverable, or does "done" only
   exist at the end?
+- **Interfaces and ownership**, do owned paths, consumed/produced interfaces and predecessors line
+  up? Check that `Slicing:` is recorded or defaulted; `## Execution graph` agrees with the task
+  text; task IDs are consistent, with no missing edges or cycles; `start` (authoring) and `join`
+  (integration) labels are used correctly; shared-file hazards are named and resolved by one
+  owner, serialization or an authorized seam split; writers depending on unaccepted owned
+  collaborators aren't hidden behind mocks; and J, C and R barriers are present. Report
+  feasibility; never choose execution mode.
 - **Verify code-anchored claims**, when the plan cites a specific `file:line` or symbol name, VERIFY it against the codebase rather than trusting the anchor. Prefer **serena** (`mcp__serena__initial_instructions`, then `find_symbol` / `find_referencing_symbols`) for symbol-precise claims and **graphify** (`query_graph` / `get_neighbors`) for architecture, impact, and where-consumed claims, when those tools are available; fall back to Read/Grep otherwise. This is VERIFY-THE-CLAIM, not USE-THE-TOOL: if reading the file settles it the review is done, so do not manufacture tool ceremony. A stale or wrong anchor (renamed symbol, missed call site, different signature) is a finding graded by its actual consequence, not automatically Critical.
 
 ### Engineering lens

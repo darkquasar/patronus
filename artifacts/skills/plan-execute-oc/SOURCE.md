@@ -30,8 +30,23 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Parallel-ready section (version 1.3.0)
+
+The "Parallel-ready tasks" section and the outer serial/parallel-ready choice fold
+in the retired `plan-execute-parallel-oc/SKILL.md` (lines 17-77, SHA-256
+`808cdf6b351db0c82d249b3a4a83f7c974f1cd93d2aa36cb69b6bef77ab5f369`)
+as Patronus-authored routing.
+Its allocator copy moves to `using-git-worktrees`; its scout route moves to
+`dispatching-parallel-subagents`; its CLI-only reference, precheck and fixture
+move to `isolated-writer-supervisor`. The section matches the Codex sibling's
+except for the `-oc` review route.
+The serial arm's mode assessment is unchanged.
+
 ## Active reads
 
+- `dispatching-parallel-subagents/SKILL.md`: shared dispatcher, parallel-ready arm only; verify installed/readable before use.
+- `using-git-worktrees/SKILL.md`: shared isolated-root preparation, parallel-ready arm only; verify installed/readable before use.
+- `isolated-writer-supervisor/SKILL.md`: optional explicit-user CLI mode only, not read for native execution.
 - `receiving-code-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `requesting-code-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `verification-before-completion-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

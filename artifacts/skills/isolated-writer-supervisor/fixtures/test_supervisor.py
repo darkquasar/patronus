@@ -20,6 +20,8 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SUPERVISOR = os.path.join(os.path.dirname(HERE), "scripts", "supervisor.py")
+ALLOCATOR = os.path.join(os.path.dirname(os.path.dirname(HERE)), "using-git-worktrees",
+                         "scripts", "prepare-worktrees.py")
 WORKER = os.path.join(HERE, "fake_worker.py")
 
 
@@ -318,6 +320,39 @@ class SupervisorSafety(unittest.TestCase):
         self.assertTrue(os.path.isdir(root), "partial allocation must not be removed")
         self.assertEqual(self.s.git("rev-parse", "HEAD", cwd=root).strip(), self.s.base)
         self.assertFalse(os.path.exists(os.path.join(req["runDir"], "run.json")))
+        self.assert_lead_untouched()
+
+    def installed_proxy(self, allocator_skill):
+        """Invented installed skills root holding the supervisor and one allocator copy."""
+        skills = tempfile.mkdtemp(prefix="installed-skills-", dir=self.s.tmp)
+        sup_dir = os.path.join(skills, "isolated-writer-supervisor", "scripts")
+        alloc_dir = os.path.join(skills, allocator_skill, "scripts")
+        os.makedirs(sup_dir)
+        os.makedirs(alloc_dir)
+        shutil.copy(SUPERVISOR, sup_dir)
+        shutil.copy(ALLOCATOR, alloc_dir)
+        return os.path.join(sup_dir, "supervisor.py")
+
+    def test_worktrees_only_proxy_uses_shared_worktree_skill(self):
+        supervisor = self.installed_proxy("using-git-worktrees")
+        path, _ = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/a/"]}])
+        proc = subprocess.run([sys.executable, supervisor, "run", path, "--worktrees-only"],
+                              env=self.s.env, capture_output=True, text=True, timeout=120)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["status"], "allocated")
+        self.assert_lead_untouched()
+
+    def test_worktrees_only_proxy_ignores_retired_executor_path(self):
+        supervisor = self.installed_proxy("plan-execute-parallel-cx")
+        path, req = self.s.allocation_request([{"key": "a", "ownedPaths": ["src/a/"]}])
+        proc = subprocess.run([sys.executable, supervisor, "run", path, "--worktrees-only"],
+                              env=self.s.env, capture_output=True, text=True, timeout=120)
+        self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["status"], "blocked")
+        self.assertIn("using-git-worktrees", report["reason"])
+        self.assertFalse(os.path.exists(req["runDir"]))
+        self.assertFalse(os.path.exists(req["worktreeRoot"]))
         self.assert_lead_untouched()
 
     def test_a_to_b_order(self):

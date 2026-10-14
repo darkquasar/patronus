@@ -291,11 +291,22 @@ func NeutralReference(r Resource) bool {
 	return r.Kind == "skill" && (r.Name == "rust-style-reference" || r.Name == "decision-clarity-reference")
 }
 
-// ManagedSharedSkill is the exact owner-approved coexistence set. Editorial is
-// a callable workflow, not a neutral reference; no other workflow inherits it.
-// Discovery must still prove complete, unchanged managed payload equivalence.
+// ManagedSharedSkill is the exact owner-approved coexistence set. The callable
+// workflows are writing-editorial and the two shared parallel-work primitives;
+// no other workflow inherits it. Discovery must still prove complete, unchanged
+// managed payload equivalence.
 func ManagedSharedSkill(r Resource) bool {
-	return NeutralReference(r) || (r.Kind == "skill" && r.Name == "writing-editorial")
+	if NeutralReference(r) {
+		return true
+	}
+	if r.Kind != "skill" {
+		return false
+	}
+	switch r.Name {
+	case "writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees":
+		return true
+	}
+	return false
 }
 
 // NeutralReferenceConsumer is the declared consumer set of the two CL-02

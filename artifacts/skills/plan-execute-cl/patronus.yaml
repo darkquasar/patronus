@@ -3,12 +3,12 @@ family: artifact
 type: skill
 role: capability
 name: plan-execute-cl
-description: "Execute an accepted plan serially, choosing solo context or fresh implementer leaves from concrete risk and context needs. Coordinator-only admission, one independent aggregate review and at most one batched correction; named changed boundaries may receive distinct earlier review."
-version: 3.2.0
+description: "Execute an accepted plan through one coordinator-owned choice: serially, with solo context or fresh implementer leaves chosen from concrete risk and context needs, or as parallel-ready tasks whose accepted start inputs and disjoint owned paths admit isolated leaf writers. Coordinator-only admission, one independent aggregate review and at most one batched correction; named changed boundaries may receive distinct earlier review."
+version: 3.3.0
 entry: SKILL.md
-files: [solo.md, sdd.md, implementer-prompt.md, task-reviewer-prompt.md, scripts, fixtures]
+files: [solo.md, sdd.md, implementer-prompt.md, task-reviewer-prompt.md, scripts, fixtures, PROVENANCE-GUIDE.md, LICENSE-GPL-3.0]
 targets: [claude]
-requires: [requesting-code-review-cl, tdd-cl]
+requires: [requesting-code-review-cl, tdd-cl, dispatching-parallel-subagents, using-git-worktrees]
 defaults:
   scope: project
 attribution:
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Derived from the pinned upstream source and adapted for the bounded Patronus lifecycle. Existing bundled script behavior and legal attribution are preserved; active instructions use coordinator-only admission, leaf delivery and one aggregate review with one batched correction."
+  note: "Derived from the pinned upstream source and adapted for the bounded Patronus lifecycle. Existing bundled script behavior and legal attribution are preserved; active instructions use coordinator-only admission, leaf delivery and one aggregate review with one batched correction. PROVENANCE-GUIDE.md is Patronus-authored under GPL-3.0 (LICENSE-GPL-3.0), scoped in NOTICE."

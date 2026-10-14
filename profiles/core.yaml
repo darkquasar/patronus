@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 2.1.1
+version: 2.2.0
 summary: "Claude core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution, aggregate review and scoped completion. Secret/diff guards and ccusage observability are included. Enforcement, sandbox and diagram overrides remain optional overlays."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
@@ -25,11 +25,10 @@ layers:
     - diagnosing-bugs-cl                   # disciplined diagnosis loop for hard bugs
     - tdd-cl                               # test-first tracer-bullet discipline (the chosen TDD skill)
     - spec-writing-cl                      # author an approved stream spec from design and existing research
-    - using-git-worktrees-cl               # start feature work in an isolated workspace
+    - using-git-worktrees@claude           # shared worktree ownership, prepared baselines and capture (Claude/Codex/OpenCode)
     - finishing-a-development-branch-cl    # consume exact checked evidence; integration/publication/cleanup need their own grants
     - writing-skills-cl                    # author/edit/verify skills (the meta-skill)
     - research-team-cl@claude              # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
-    - plan-execute-parallel-cl@claude      # coordinator-admitted native leaves in disjoint isolated worktrees
   context:
     - codebase-design-cl                   # deep-module design vocabulary
     - domain-modeling-cl                   # ubiquitous-language + ADR discipline
@@ -69,7 +68,7 @@ layers:
   orchestration:
     - ticket                               # tk remains available; seed/update only when selected authority and tracking policy permit
     - session-completion                   # scoped local handoff; no automatic commit/push/rebase/cleanup or duplicate same-input checks
-    - dispatching-parallel-agents-cl       # fan out independent problem domains to concurrent subagents
+    - dispatching-parallel-subagents@claude # shared leaf launch/wait/collect/settle primitive (Claude/Codex/OpenCode)
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."
   - "L8 eval: promptfoo CI gate (P7.5.6)."

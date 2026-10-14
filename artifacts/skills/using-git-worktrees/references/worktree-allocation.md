@@ -1,11 +1,12 @@
 # Allocate worktrees only
 
 Use only for an exact coordinator-approved allocation with Git authority. Native
-launch, admission, wait/stop and integration stay with the coordinator.
+launch, admission, wait/stop and integration stay with the coordinator. The
+script is `scripts/prepare-worktrees.py` (in this skill's directory):
 
 ```sh
-python3 {skillDir}/scripts/prepare-worktrees.py ALLOCATION.json --validate
-python3 {skillDir}/scripts/prepare-worktrees.py ALLOCATION.json
+python3 scripts/prepare-worktrees.py ALLOCATION.json --validate
+python3 scripts/prepare-worktrees.py ALLOCATION.json
 ```
 
 Example input (replace the full base and brief hash with actual checked values):

@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-cx
-version: 1.4.1
+version: 1.5.0
 targets: [codex]
 summary: "Codex core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution in isolated worktrees, aggregate review and scoped completion. Scoped migration and write/commit guards remain included."
 # Explicit membership, no extends edge to legacy core or Pi profiles.
@@ -23,10 +23,9 @@ layers:
     - grilling-cx
     - spec-writing-cx
     - research-team-cx
-    - plan-execute-parallel-cx # Native subagents, allocated roots; no required CLI helper
     - diagnosing-bugs-cx
     - tdd-cx
-    - using-git-worktrees-cx
+    - using-git-worktrees
     - finishing-a-development-branch-cx
     - writing-skills-cx
   context:
@@ -50,7 +49,7 @@ layers:
     - block-secrets-cx # Write-time best effort; native trust/semantics pending
     - gitleaks-guard-cx # Staged-commit guard; native trust/semantics pending
   orchestration:
-    - dispatching-parallel-agents-cx
+    - dispatching-parallel-subagents
 todo:
   - "Qualify native Codex skill loading, cross-skill routing and fresh-session lifecycle."
   - "Qualify installed design/diagnosis/TDD/worktree/meta-skill and Cloudflare routes in both scopes; editorial remains explicitly excluded."

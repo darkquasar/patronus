@@ -4,13 +4,13 @@ type: skill
 role: context
 name: codebase-design-cx
 description: "Codex only: Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary."
-version: 1.0.0
+version: 1.1.0
 entry: SKILL.md
 files: ["DEEPENING.md", "DESIGN-IT-TWICE.md", "LICENSE", "NOTICE", "SOURCE.md"]
 targets: [codex]
 defaults:
   scope: project
-requires: ["dispatching-parallel-agents-cx"]
+requires: ["dispatching-parallel-subagents"]
 attribution:
   upstream: github.com/mattpocock/skills
   license: MIT

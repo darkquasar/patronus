@@ -54,7 +54,7 @@ Before defining tasks, map out which files will be created or modified and what 
 
 - Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
 - You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
-- Files that change together should live together. Split by responsibility, not by technical layer.
+- Files that change together should live together. Split by responsibility, not by technical layer. This is about file organization: it doesn't forbid horizontal plan slicing (see Plan Slicing) and isn't the TDD "horizontal slices" anti-pattern.
 - In existing codebases, follow established patterns. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
@@ -66,6 +66,48 @@ configuration, scaffolding, and documentation steps into the task whose
 deliverable needs them; split where interfaces, ownership or acceptance can be checked independently,
 not to manufacture reviewer gates. Each task ends with an
 independently testable deliverable.
+
+## Plan Slicing
+
+Record the strategy once in the plan header: `Slicing: horizontal (default)` or
+`Slicing: vertical tracer (user-selected)`. Horizontal (tasks by responsibility
+or component) is the default; an absent value means the default and adds no
+approval stop. Use a vertical tracer (thin end-to-end capabilities) only when the
+user chooses it, and reuse a valid prior choice instead of asking again. Offer
+the tracer alternative with one simple same-feature example only when useful,
+for example CSV export: horizontal is query, formatter and button tasks plus an
+endpoint that composes them; tracer is one thin query-to-button path, then
+denial, then quoting and empty results. A strategy change, or a chosen slicing
+that proves unsafe or infeasible, returns to the owner with the exact conflict.
+Never swap silently.
+
+Keep three meanings separate: **plan slicing** (how tasks divide), **test
+slicing** (red-green-refactor loops inside each task, owned by tdd-cl and
+unchanged) and **parallel ownership** (exact disjoint paths and accepted inputs).
+Neither slicing strategy makes overlapping writers safe. Tasks stay behavior-sized.
+
+## Execution Graph
+
+Every plan has a `## Execution graph` section rendered from the tasks' existing
+`Consumes:` labels. It is not a second task list, runtime admission, status,
+colors, a YAML ledger or input to any engine. A one-task or purely serial plan
+uses one line, such as `T1 -> J -> C -> R`. Otherwise draw a compact ASCII graph
+(at most 100 columns, spaces only) with node IDs matching task headings: serial
+sections, candidate parallel branches, `=>` start edges, `~>` join edges, each
+named shared-file hazard with its resolution (one owner, serialization or an
+authorized seam split), then J (serial integration), C (fresh composed checks)
+and R (one aggregate review):
+
+```text
+legend: => start (accepted bytes needed first)   ~> join (needed at integration)
+SERIAL     [H0 contracts] => [H1 query], [H2 csv], [H4 UI]   (candidate parallel)
+DEPENDENT  [H1 query], [H2 csv] => [H3 endpoint] ~> [H4 UI]
+HAZARD     server/export.ts wanted by H1 and H2: owned by H1 only
+SERIAL     [J integrate H0..H4] -> [C fresh checks] -> [R one review]
+```
+
+Reuse an accepted graph and revise only changed seams under existing revision
+authority.
 
 ## Bite-Sized Task Granularity
 
@@ -83,9 +125,11 @@ independently testable deliverable.
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** The coordinator selects plan-execute-cl or
-> plan-execute-parallel-cl from ownership/dependencies. Steps are intent, not a
+> **For agentic workers:** The coordinator runs plan-execute-cl (serial or
+> parallel-ready tasks) from ownership/dependencies. Steps are intent, not a
 > second mutable progress system. Read the accepted brief and current source.
+
+Slicing: horizontal (default)
 
 **Goal:** [One sentence describing what this builds]
 
@@ -99,6 +143,11 @@ independently testable deliverable.
 naming and copy rules, platform requirements, one line each, with exact
 values copied verbatim from the spec. Every task's requirements implicitly
 include this section.]
+
+## Execution graph
+
+[`T1 -> J -> C -> R` for a one-task or purely serial plan, otherwise the
+compact graph described in Execution Graph.]
 
 ---
 ```
@@ -122,7 +171,9 @@ needs an owner decision. Adapt the example; do not force a red cycle on prose.
 - Test: `tests/exact/path/to/test.py`
 
 **Interfaces:**
-- Consumes: [what this task uses from earlier tasks, exact signatures]
+- Consumes: [what this task uses from earlier tasks, exact signatures; label
+  each predecessor `start: Task M` (accepted bytes needed before work) or
+  `join: Task M` (needed only at integration or verification)]
 - Produces: [what later tasks rely on, exact function names, parameter
   and return types. A task's implementer sees only their own task; this
   block is how they learn the names and types neighboring tasks use.]
@@ -209,9 +260,11 @@ receiving-code-review-cl. Corrected bytes are parent-verified, not independently
 re-reviewed; material changes or insufficient proof require an owner decision.
 Use the existing review/evidence routes, not another ledger or automatic wave.
 
-The coordinator selects execution mode from concrete ownership/dependencies:
-disjoint isolated owners may use plan-execute-parallel-cl; shared/ordered work
-uses plan-execute-cl, whose solo/SDD choice never creates automatic task reviews.
+The coordinator selects execution mode from concrete ownership/dependencies in
+plan-execute-cl: its parallel-ready section admits disjoint isolated owners whose
+`start` inputs are accepted; shared/ordered work stays serial, and the solo/SDD
+choice never creates automatic task reviews. A plan without a usable split
+returns here for a revision under existing revision authority.
 Pass relevant requirements, source/interface anchors, paths, settled predecessors,
 strategy, acceptance and evidence references, not a growing transcript.
 Verify real tool/auth/read-only/isolation/settlement requirements before launch.

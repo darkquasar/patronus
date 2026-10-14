@@ -9,9 +9,16 @@ Bodies are behaviorally authored for Codex, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Shared dispatcher route, version 1.1.2
+
+The leaf launch and collection route now names the shared
+`dispatching-parallel-subagents` skill, which replaced the retired
+`dispatching-parallel-agents-cx` bundle. Pointer rename only; research
+questions, evidence standards and synthesis are unchanged.
+
 ## Active reads
 
-- `dispatching-parallel-agents-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
+- `dispatching-parallel-subagents/SKILL.md`: exact shared companion read, verify installed/readable before use.
 - `grilling-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `spec-writing-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 

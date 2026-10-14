@@ -41,13 +41,51 @@ ownership/interfaces and deliverables are genuinely separable. Keep scaffolding,
 configuration and docs with the deliverable needing them, not separate gate tasks.
 Task count alone adds neither reviewers nor progress surfaces.
 
+## Slicing
+
+Record the strategy once in the plan header: `Slicing: horizontal (default)` or
+`Slicing: vertical tracer (user-selected)`. Horizontal (tasks by responsibility
+or component) is the default; an absent value means the default and adds no
+approval stop. A vertical tracer (thin end-to-end capabilities) needs the user's
+choice; reuse a valid prior choice instead of asking again. Offer the tracer with
+one simple same-feature example only when useful (CSV export: horizontal query,
+formatter and button tasks plus a composing endpoint, versus one thin
+query-to-button path, then denial, then quoting and empty results). A strategy
+change, or a chosen slicing found unsafe or infeasible, returns to the owner with
+the exact conflict; never swap silently. Keep plan slicing (how tasks divide),
+test slicing (red-green-refactor loops inside each task, owned by the TDD skills)
+and parallel ownership (exact disjoint paths and accepted inputs) separate.
+Neither strategy makes overlapping writers safe. Tasks stay behavior-sized.
+
+## Execution graph
+
+Every plan has `## Execution graph`, rendered from existing task predecessor
+fields, not a second task list, runtime admission, status, colors, YAML ledger or
+engine input. A one-task or purely serial plan uses one line, such as
+`T1 -> J -> C -> R`. Otherwise draw a compact ASCII graph (at most 100 columns,
+spaces only, node IDs matching task headings) showing serial sections, candidate
+parallel branches, `=>` start and `~>` join edges, named shared-file hazards with
+their resolution (one owner, serialization or an authorized seam split), J
+(serial integration), C (fresh composed checks) and R (one aggregate review):
+
+```text
+legend: => start (accepted bytes needed first)   ~> join (needed at integration)
+SERIAL     [H0 contracts] => [H1 query], [H2 csv], [H4 UI]   (candidate parallel)
+DEPENDENT  [H1 query], [H2 csv] => [H3 endpoint] ~> [H4 UI]
+HAZARD     server/export.ts wanted by H1 and H2: owned by H1 only
+SERIAL     [J integrate H0..H4] -> [C fresh checks] -> [R one review]
+```
+
+Reuse an accepted graph and revise only changed seams under existing revision
+authority.
+
 ## File Structure
 
 Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
 
 - Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
 - You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
-- Files that change together should live together. Split by responsibility, not by technical layer.
+- Files that change together should live together. Split by responsibility, not by technical layer. This is file organization; it doesn't forbid horizontal plan slicing and isn't the TDD "horizontal slices" anti-pattern.
 - In existing codebases, follow established patterns. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
@@ -57,7 +95,9 @@ This structure informs the task decomposition. Each task should produce self-con
 Each task is an independently testable deliverable with:
 
 - exact create/modify/test paths and current source anchors;
-- owned/excluded files, input/predecessor barriers and build order;
+- owned/excluded files, input/predecessor barriers and build order, each
+  predecessor labelled `start: <task>` (accepted bytes needed before work) or
+  `join: <task>` (needed only at integration or verification);
 - consumed and produced interfaces, exact signatures/types/names and invariants;
 - testing strategy/rationale, exact public behavior/negative paths and acceptance;
 - concrete one-action steps with actual code/content, commands and expected oracle;
@@ -138,8 +178,11 @@ Return complete plan/output hashes, coverage, actual validation commands/exits/
 logs, decisions, limitations and next authorized action. Read-only leaves return
 complete text through native delivery; coordinator persists shared outputs.
 Only the coordinator chooses execution mode after plan acceptance and execution
-authorization. Disjoint native writers require checked isolated roots/ownership,
-settlement and serial integration; ordered/shared-file tasks remain serial.
+authorization, through own-host `{skillsDir}/plan-execute-cx/SKILL.md` or
+`{skillsDir}/plan-execute-oc/SKILL.md` (serial or parallel-ready tasks; ready
+means accepted `start` inputs and disjoint owned paths). Disjoint native writers
+require checked isolated roots/ownership, settlement and serial integration;
+ordered/shared-file tasks remain serial.
 Final composed verification and independent aggregate implementation review remain.
 Plan delivery grants no worker launches, commits, integration, publication or
 cleanup. Local handoff is sufficient when publication is ungranted; then stop.

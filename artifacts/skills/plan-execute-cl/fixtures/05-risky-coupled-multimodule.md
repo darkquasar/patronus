@@ -2,8 +2,8 @@
 
 Expected mode: sdd
 Isolates: the two-mode decision on a plan that is genuinely risky but NOT parallelizable
-(the tasks share files and must land in order, so the coordinator selects this route rather than
-plan-execute-parallel-cl).
+(the tasks share files and must land in order, so the coordinator selects the serial arm rather
+than the in-skill "Parallel-ready tasks" section).
 Invocation: "Execute this plan."
 
 **Goal:** Replace the per-request mutex in the rate limiter with a sharded token bucket

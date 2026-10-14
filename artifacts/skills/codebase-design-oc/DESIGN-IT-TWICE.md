@@ -15,9 +15,11 @@ not a new implementation stage.
    and explain the consequence for callers and tests. Do not automatically edit
    source or advance to implementation.
 
-Optional independent comparison must be separately authorized by the lead, with a total
-worker count, deadline, output binding and read-only ownership. Read the existing
-`{skillsDir}/dispatching-parallel-agents-oc/SKILL.md`; do not invent another worker
+Optional independent comparison must be separately authorized by the lead, with an
+output binding and read-only ownership. The coordinator admits only useful independent
+designs within actual native capacity; applicable host/resource or explicitly
+authorized campaign limits apply, and ordinary comparisons need no new count or deadline. Read the existing
+`{skillsDir}/dispatching-parallel-subagents/SKILL.md`; do not invent another worker
 framework. A leaf never delegates. Workers return complete findings to the lead,
 who alone writes shared outputs. Missing runtime capability blocks that optional
 route; it does not authorize a substitute provider or in-place writer fallback.

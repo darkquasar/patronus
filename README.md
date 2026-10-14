@@ -115,7 +115,7 @@ In one line each:
 - **L1 Instructions** = *what you tell the agent to always do.* You write it; it's static prose;
   Patronus **appends** it into `CLAUDE.md`/`AGENTS.md`. Example in this repo: `agent-principles`.
 - **L2 Capabilities** = *what the agent can do on demand.* Invocable skills/agents/commands;
-  Patronus **creates** them as files. Claude examples: `research-team-cl`, `plan-execute-parallel-cl`, `pattern-cloudflare-cl`.
+  Patronus **creates** them as files. Claude examples: `research-team-cl`, `plan-execute-cl`, `pattern-cloudflare-cl`.
 - **L3 Memory** = *what the agent remembers on its own.* A running store the agent writes to;
   Patronus **fetches and wires** an external engine. Example recipe: `memory-ai-memory`.
 
@@ -426,7 +426,7 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 │ Artifact              │ Impacted path(s)                                │ Operation │ Type        │ Role        │ Tool   │ Scope │
 ├───────────────────────┼─────────────────────────────────────────────────┼───────────┼─────────────┼─────────────┼────────┼───────┤
 │ pattern-cloudflare-cl │ ./.claude/skills/pattern-cloudflare-cl/ (8…)    │ CREATE    │ skill       │ context     │ claude │ local │
-│ plan-execute-parallel-cl │ ./.claude/skills/plan-execute-parallel-cl/SKILL.md │ CREATE │ skill     │ capability  │ claude │ local │
+│ plan-execute-cl       │ ./.claude/skills/plan-execute-cl/ (12…)         │ CREATE    │ skill       │ capability  │ claude │ local │
 │ research-team-cl      │ ./.claude/skills/research-team-cl/SKILL.md      │ CREATE    │ skill       │ capability  │ claude │ local │
 │ agent-principles      │ ./CLAUDE.md                                     │ APPEND    │ instruction │ instruction │ claude │ local │
 │ memory-ai-memory      │ ai-memory install-hooks --agent claude          │ EXEC      │ fetch+run   │ memory      │ claude │ local │
@@ -441,7 +441,7 @@ warning: profile "cloudflare" is a stub: layers marked TODO are not yet populate
 │       │   └── patterns/
 │       │       ├── pattern-001.md  (new)  # CREATE — role: context
 │       │       └── … (006 more)  (new)  # CREATE — role: context
-│       ├── plan-execute-parallel-cl/    # L2 capability
+│       ├── plan-execute-cl/             # L2 capability
 │       │   └── SKILL.md  (new)  # CREATE — role: capability
 │       └── research-team-cl/            # L2 capability
 │           └── SKILL.md  (new)  # CREATE — role: capability

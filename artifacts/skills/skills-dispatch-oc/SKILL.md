@@ -32,9 +32,8 @@ skill activation or a substitute for an OpenCode body.
 - Review a spec: `{skillsDir}/spec-review-oc/SKILL.md`.
 - Author an approved plan: `{skillsDir}/plan-writing-oc/SKILL.md`.
 - Review a written plan: `{skillsDir}/plan-review-oc/SKILL.md`.
-- Approved serial execution: `{skillsDir}/plan-execute-oc/SKILL.md`.
-- Approved parallel execution: `{skillsDir}/plan-execute-parallel-oc/SKILL.md`
-  (native Task subagents, checked allocated roots and next-wave preparation;
+- Approved execution, serial or parallel-ready: `{skillsDir}/plan-execute-oc/SKILL.md`
+  (admitted parallel leaves use native Task subagents and checked allocated roots;
   CLI workers require explicit user choice).
 - Independent review: `{skillsDir}/requesting-code-review-oc/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-oc/SKILL.md`.
@@ -72,7 +71,7 @@ latest decisions, project/global instructions and every selected skill. Inspect
 the latest run/output before retry. Revalidate scope and actual capabilities
 on relevant input drift, not for each unchanged new message. A route description
 never proves native isolation; checked launch, settlement,
-capture and integration still follow the shipped parallel skill and their exact
+capture and integration still follow the shipped execution skill and their exact
 grants. No new controller or host API is introduced here.
 
 An available name proves neither tool activation nor authentication. Delegation

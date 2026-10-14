@@ -29,7 +29,7 @@ After saving the plan, the lead updates only this stream's `plan:` and `updated:
 
 ## Write a buildable plan
 
-Start with the goal, source spec/hash, architecture, tech stack and exact global constraints. Map every requirement ID to a task and acceptance check. Each task names owned files/source anchors, consumed and produced interfaces, predecessor dependencies and an independently testable deliverable. Fold scaffolding and docs into the deliverable that needs them. Split only where ownership and evidence can be independent.
+Start with the goal, source spec/hash, architecture, tech stack and exact global constraints. Map every requirement ID to a task and acceptance check. Each task names owned files/source anchors, consumed and produced interfaces, predecessor dependencies labelled `start: <task>` (accepted bytes needed before work) or `join: <task>` (needed only at integration or verification) and an independently testable deliverable. Fold scaffolding and docs into the deliverable that needs them. Split only where ownership and evidence can be independent.
 
 Use the installed tdd-oc defaults and record strategy/rationale in the existing
 brief/handoff. Explicit test-first requests and required project checks govern.
@@ -49,6 +49,24 @@ direction. Keep existing safety tests. Tests do not admit successor reviewers.
 Include real code/signatures and known commands/results, never vague "handle edge cases" steps or references to undefined interfaces. Record unknown decisions as blockers instead of inventing approved code. Commits are optional steps only under a separate Git grant.
 
 Include negative paths, migration/rollback, ownership, applicable host/resource limits and a durable handoff. Retain required fresh independent whole-change implementation review even for small deliveries; only the owner may explicitly waive it. Earlier boundary OpenCode review requires a named changed safety/compatibility invariant or irreversible boundary with its own acceptance point and consequence. Using an existing shared framework alone is insufficient. A saved local plan is not evidence that another checkout can read it. The lead binds source/base, output paths, authority and dependencies in the existing project work record; there is no mandatory foreign-host mission or ticket API here.
+
+## Slicing
+
+Record the strategy once in the plan header: `Slicing: horizontal (default)` or `Slicing: vertical tracer (user-selected)`. Horizontal (tasks by responsibility or component) is the default; an absent value means the default and adds no approval stop. A vertical tracer (thin end-to-end capabilities) needs the user's choice; reuse a valid prior choice instead of asking again. Offer the tracer with one simple same-feature example only when useful (CSV export: horizontal query, formatter and button tasks plus a composing endpoint, versus one thin query-to-button path, then denial, then quoting and empty results). A strategy change, or a chosen slicing found unsafe or infeasible, returns to the owner with the exact conflict; never swap silently. Keep plan slicing (how tasks divide), test slicing (red-green-refactor loops inside each task, owned by tdd-oc) and parallel ownership (exact disjoint paths and accepted inputs) separate. Neither strategy makes overlapping writers safe. Tasks stay behavior-sized.
+
+## Execution graph
+
+Every plan has `## Execution graph`, rendered from the existing task predecessor fields: not a second task list, runtime admission, status, colors, YAML ledger or engine input. A one-task or purely serial plan uses one line, such as `T1 -> J -> C -> R`. Otherwise draw a compact ASCII graph (at most 100 columns, spaces only, node IDs matching task headings) showing serial sections, candidate parallel branches, `=>` start and `~>` join edges, named shared-file hazards with their resolution (one owner, serialization or an authorized seam split), J (serial integration), C (fresh composed checks) and R (one aggregate review):
+
+```text
+legend: => start (accepted bytes needed first)   ~> join (needed at integration)
+SERIAL     [H0 contracts] => [H1 query], [H2 csv], [H4 UI]   (candidate parallel)
+DEPENDENT  [H1 query], [H2 csv] => [H3 endpoint] ~> [H4 UI]
+HAZARD     server/export.ts wanted by H1 and H2: owned by H1 only
+SERIAL     [J integrate H0..H4] -> [C fresh checks] -> [R one review]
+```
+
+Reuse an accepted graph and revise only changed seams under existing revision authority.
 
 ## Progress authority
 
@@ -74,4 +92,4 @@ request one fresh independent `{skillsDir}/plan-review-oc/SKILL.md` with the exa
 model, discovery loop or repeated consent for already valid grants. Read-only reviewers return complete findings to the lead; the lead writes the report and dispositions them.
 
 Review acceptance does not authorize implementation. Once the gate is settled and execution is granted, the coordinator selects the
-execution mode, not the reviewer. Use `{skillsDir}/plan-execute-oc/SKILL.md` for ordered/shared-file tasks. Disjoint writers use `{skillsDir}/plan-execute-parallel-oc/SKILL.md` with native subagents and checked allocated worktrees. Separate authoring dependencies from integration barriers, and let read-only scouts prepare later waves while admitted writers work. If the plan lacks a usable split, ask whether to decompose the first wave, reusing any existing decomposition grant. No CLI supervisor or extra tracker is required; native delegation alone does not prove isolation. Return saved file hashes, actual validation, decisions, residuals and the next authorized action.
+execution mode, not the reviewer. Use `{skillsDir}/plan-execute-oc/SKILL.md` for serial and parallel-ready tasks: ordered/shared-file tasks stay serial, and disjoint writers whose `start` inputs are accepted use its parallel-ready section with native subagents and checked allocated worktrees. The plan's `start`/`join` labels separate authoring dependencies from integration barriers; read-only scouts may prepare later waves while admitted writers work. A plan without a usable split returns to plan writing for a revision under existing revision authority, not ad hoc decomposition at execution time. No CLI supervisor or extra tracker is required; native delegation alone does not prove isolation. Return saved file hashes, actual validation, decisions, residuals and the next authorized action.

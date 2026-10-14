@@ -20,7 +20,7 @@ stress-tester — anything with a design tree (a raw idea, research, or a spec) 
 spirit hands the sharpened idea back **upstream** (to research or design-settling) or lets the user
 proceed. **grilling-cl has NO forward hop into planning or execution.** It produces clarity, not an
 artifact, so it has no edge into the plan stage; that routing is `plan-review-cl`'s, not grilling-cl's.
-Do not suggest `plan-writing-cl`, `plan-review-cl`, `executing-plans-cl`, or `plan-execute-parallel-cl`.
+Do not suggest `plan-writing-cl`, `plan-review-cl`, `executing-plans-cl`, or `plan-execute-cl`.
 
 **Tailor the outbound suggestion to where you entered from.** Detect it cheaply from files in the
 current `docs/specs/NN-slug/` effort — whether a `<slug>-research.md` and/or a `<stream>-spec.md`

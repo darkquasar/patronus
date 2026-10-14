@@ -733,23 +733,15 @@ def integrate(req, granted):
 # ------------------------------------------------------------------- main ---
 
 def proxy_allocator(request, validate=False):
-    """Delegate allocation-only mode to the installed native executor helper."""
+    """Delegate allocation-only mode to the installed shared worktree skill's allocator."""
     skill_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     skills_root = os.path.dirname(skill_root)
-    candidates = [
-        os.path.join(skills_root, name, "scripts", "prepare-worktrees.py")
-        for name in ("plan-execute-parallel-cx", "plan-execute-parallel-oc")
-    ]
-    candidates = [path for path in candidates if os.path.isfile(path)]
-    if not candidates:
+    candidate = os.path.join(skills_root, "using-git-worktrees", "scripts", "prepare-worktrees.py")
+    if not os.path.isfile(candidate):
         print(json.dumps({"status": "blocked", "reason":
-                          "no installed native parallel allocator; install the matching executor"}))
+                          "no installed allocator; install the shared using-git-worktrees skill"}))
         return EXIT_BLOCKED
-    if len({sha256_file(path) for path in candidates}) != 1:
-        print(json.dumps({"status": "blocked", "reason":
-                          "installed native parallel allocators differ; select a matching executor"}))
-        return EXIT_BLOCKED
-    argv = [sys.executable, candidates[0], request]
+    argv = [sys.executable, candidate, request]
     if validate:
         argv.append("--validate")
     proc = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True)

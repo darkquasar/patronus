@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: skills-dispatch-cx
 description: "Codex only: Exact installed skill reads and Codex workflow routes."
-version: 1.5.1
+version: 1.6.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]

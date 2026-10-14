@@ -46,11 +46,16 @@ for a decision/additional grant. No automatic reviewer/fixer chain.
 
 The preserved reviewer rubric checks requirement coverage, bite-sized actions,
 placeholders, type consistency, project idioms and right-sized tasks, plus
-engineering/build order, applicable UI design, DevEx and strategy lenses.
+engineering/build order, applicable UI design, DevEx and strategy lenses. Its
+interfaces and ownership bullet checks the recorded or defaulted `Slicing:`
+value and the execution graph: agreement with task text, consistent task IDs,
+no missing edges or cycles, correct `start`/`join` labels, shared-file hazards
+named and resolved by one owner, serialization or an authorized seam split, no
+unaccepted owned collaborators hidden behind mocks, and J/C/R barriers present.
 
 The coordinator, not this reviewer, selects execution mode from ownership and
-dependencies. Disjoint isolated owners may use plan-execute-parallel-cl; shared/
-ordered work uses plan-execute-cl. Risk or task count does not add task reviewers.
+dependencies; the reviewer reports feasibility only. plan-execute-cl runs serial
+and parallel-ready tasks. Risk or task count does not add task reviewers.
 Return the accepted subject, complete findings/disposition and exact evidence
 references; do not automatically invoke implementation.
 

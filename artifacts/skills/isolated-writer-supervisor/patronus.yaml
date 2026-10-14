@@ -3,16 +3,17 @@ family: artifact
 type: skill
 role: orchestration
 name: isolated-writer-supervisor
-description: "Explicit-only CLI worker orchestration with a native-mode gate; optional worktree-only proxy delegates to an installed native executor allocator."
-version: 2.0.0
+description: "Explicit-only CLI worker orchestration with a native-mode gate; optional worktree-only proxy delegates to the shared using-git-worktrees allocator."
+version: 2.1.0
 entry: SKILL.md
-files: ["SOURCE.md", "NOTICE", "LICENSE", "agents/openai.yaml", "scripts/supervisor.py", "references/request.schema.json", "references/cli-workers.md", "fixtures/test_supervisor.py", "fixtures/fake_worker.py"]
+files: ["SOURCE.md", "NOTICE", "LICENSE", "agents/openai.yaml", "scripts/supervisor.py", "references/request.schema.json", "references/cli-workers.md", "references/opencode-cli-workers.md", "scripts/opencode-worker-precheck.sh", "fixtures/test_supervisor.py", "fixtures/fake_worker.py", "fixtures/test_opencode_worker_precheck.py"]
 targets: [codex, opencode]
 defaults:
   scope: project
+requires: [using-git-worktrees, dispatching-parallel-subagents]
 attribution:
   upstream: "github.com/darkquasar/patronus"
   license: "GPL-3.0"
   copyright: "Patronus contributors"
   commit: "46247c13c3de38008c59995c5b1b697f78d3f9e5"
-  note: "Patronus-authored optional CLI supervisor, schema and fake-worker fixtures; worktree-only mode proxies to the native executor allocator. Upstream attribution retained where applicable. See SOURCE.md and LICENSE. Native workers runtime-unverified."
+  note: "Patronus-authored optional CLI supervisor, schema and fake-worker fixtures; worktree-only mode proxies to the shared using-git-worktrees allocator; OpenCode CLI precheck and reference relocated from plan-execute-parallel-oc. Upstream attribution retained where applicable. See SOURCE.md and LICENSE. Native workers runtime-unverified."

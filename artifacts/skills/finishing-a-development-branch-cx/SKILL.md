@@ -50,7 +50,7 @@ A publication grant must name the remote and action. Do not infer it from a
 successful local handoff.
 
 For any authorized cleanup read
-`{skillsDir}/using-git-worktrees-cx/SKILL.md`. Directory naming is not ownership.
+`{skillsDir}/using-git-worktrees/SKILL.md`. Directory naming is not ownership.
 Capture and settlement must be verified first; managed cleanup belongs to its
 recorded owner. Never prune unrelated registrations or force-remove retained or
 unknown roots. Failed/partial attempts and upstream handoff evidence stay intact.

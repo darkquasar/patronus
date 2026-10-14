@@ -22,7 +22,7 @@ read-only worker; a launch receipt or completion notification is insufficient.
 1. Survey current source and existing research. Define independent questions,
    source paths, exclusions and evidence requirements. Present the scope and
    outputs for approval if they are not already authorized.
-2. Read `{skillsDir}/dispatching-parallel-agents-cx/SKILL.md`. Use only the
+2. Read `{skillsDir}/dispatching-parallel-subagents/SKILL.md`. Use only the
    Codex native worker primitive actually exposed in the current session, with
    an observed read-only role. Respect applicable existing host/resource or explicitly
    authorized campaign limits; ordinary research needs no numerical root-budget

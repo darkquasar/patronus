@@ -26,9 +26,16 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Shared worktree route, version 1.1.1
+
+The cleanup route and `requires` entry now name the shared
+`using-git-worktrees` skill, which replaced the retired
+`using-git-worktrees-oc` bundle. Pointer rename only; integration,
+publication and cleanup grants are unchanged.
+
 ## Active reads
 
-- `using-git-worktrees-oc/SKILL.md`: exact installed OpenCode companion, verify readable before use; not a stage grant.
+- `using-git-worktrees/SKILL.md`: exact installed shared companion, verify readable before use; not a stage grant.
 - `verification-before-completion-oc/SKILL.md`: exact installed OpenCode companion, verify readable before use; not a stage grant.
 - `requesting-code-review-oc/SKILL.md`: exact installed OpenCode companion, verify readable before use; not a stage grant.
 

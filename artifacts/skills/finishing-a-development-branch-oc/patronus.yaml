@@ -4,13 +4,13 @@ type: skill
 role: capability
 name: finishing-a-development-branch-oc
 description: "OpenCode only: Use when authorized implementation is ready for verification and a branch or captured worktree handoff."
-version: 1.1.0
+version: 1.1.1
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md"]
 targets: [opencode]
 defaults:
   scope: project
-requires: ["using-git-worktrees-oc", "verification-before-completion-oc", "requesting-code-review-oc"]
+requires: ["using-git-worktrees", "verification-before-completion-oc", "requesting-code-review-oc"]
 attribution:
   upstream: github.com/obra/superpowers
   license: MIT

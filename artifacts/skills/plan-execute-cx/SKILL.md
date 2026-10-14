@@ -1,6 +1,6 @@
 ---
 name: plan-execute-cx
-description: "Codex only: execute an approved plan serially with evidence-based mode selection and independent review."
+description: "Codex only: execute an approved plan serially or as parallel-ready isolated tasks, with evidence-based mode selection and independent review."
 ---
 
 # Execute an approved plan in Codex
@@ -14,6 +14,17 @@ without delegating successors, adding gates or updating shared progress. Scope c
 action, overlap or architecture ambiguity needs lead/owner authorization.
 
 ## Select and record the mode
+
+First record one coordinator-owned plan-level choice, once, in the mode record:
+
+- **parallel-ready** when the accepted execution graph has at least two candidate
+  tasks with disjoint owned paths and isolated roots are available. Mixed graphs use
+  this arm; a serial section is one ready task at a time. Follow "Parallel-ready
+  tasks" below. Named-invariant boundary reviews keep the rule below.
+- **serial** otherwise. The assessment below applies unchanged inside this arm.
+
+Both arms end with one serial integration, fresh composed checks and one aggregate
+review for the whole plan.
 
 An explicit authorized mode request governs. Otherwise assess the actual plan:
 
@@ -42,6 +53,36 @@ read-only scope and complete output delivery. Serial lead implementation never m
 writing in the lead checkout. A requested isolated implementer mode needs an
 approved isolation mechanism before any implementation starts. No automatic mode,
 provider, protocol or model changes when capabilities fail.
+
+## Parallel-ready tasks
+
+Only the parallel-ready arm reads this section. The coordinator admits every leaf.
+
+- **Readiness:** a task is ready when its `start:` inputs are accepted and its owned
+  paths are disjoint from every running writer. Wave numbers are only presentation;
+  `join:` inputs are needed only at integration or verification.
+- **Scouts:** optional read-only next-wave scouts run through
+  `{skillsDir}/dispatching-parallel-subagents/SKILL.md` on stable snapshots.
+  Re-scout only changed seams.
+- **Writers:** prepare one isolated root per writer through
+  `{skillsDir}/using-git-worktrees/SKILL.md`, then launch each ready task as a leaf
+  writer through the dispatcher. Never write concurrently in the lead checkout.
+- **Settlement and inspection:** a writer is settled only when it, its started
+  background jobs and their descendants have stopped. Before consumption, verify its
+  complete tracked and untracked capture against its prepared baseline, the required
+  input hashes, base/head, path ownership and actual check results.
+- **Fail closed:** input or base drift, a conflicting patch, an unexpected or unowned
+  path change, or a failed or incomplete capture stops acceptance and integration of
+  the affected work and keeps its root and evidence. Unaffected accepted work
+  proceeds. Nothing is repaired, retried or reviewed automatically.
+- **Join:** integrate accepted patches serially under the integration grant, run
+  fresh composed checks, then admit one aggregate review through
+  `{skillsDir}/requesting-code-review-cx/SKILL.md`, with at most one batched
+  correction as described below.
+- **No usable split:** return to plan-writing for a plan revision under existing
+  revision authority. Do not decompose ad hoc at execution time.
+- **CLI supervisor:** `{skillsDir}/isolated-writer-supervisor/SKILL.md` only by
+  explicit user choice, never as a native fallback.
 
 ## Execute and verify
 

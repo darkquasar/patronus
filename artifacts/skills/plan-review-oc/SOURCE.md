@@ -37,8 +37,7 @@ are inherited. Only entry and manifest-declared sidecars are distributed.
 
 ## Active reads
 
-- `plan-execute-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
-- `plan-execute-parallel-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
+- `plan-execute-oc/SKILL.md`: exact OpenCode companion read (serial and parallel-ready tasks), verify installed/readable before use.
 - `plan-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `spec-writing-oc/scripts/README.md`: exact OpenCode companion read, verify installed/readable before use.
 

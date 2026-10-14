@@ -11,8 +11,15 @@ Bodies and sidecars adapt host calls and scope grants. Source placeholders
 `{skillDir}` and `{skillsDir}` are expanded only by the installer.
 Static route and placement checks do not prove native Codex execution.
 
+## Shared worktree route, version 1.1.1
+
+The cleanup route and `requires` entry now name the shared
+`using-git-worktrees` skill, which replaced the retired
+`using-git-worktrees-cx` bundle. Pointer rename only; integration,
+publication and cleanup grants are unchanged.
+
 ## Active reads
 
-- `using-git-worktrees-cx/SKILL.md`: exact installed Codex companion, verify readable before use; not a stage grant.
+- `using-git-worktrees/SKILL.md`: exact installed shared companion, verify readable before use; not a stage grant.
 - `verification-before-completion-cx/SKILL.md`: exact installed Codex companion, verify readable before use; not a stage grant.
 - `requesting-code-review-cx/SKILL.md`: exact installed Codex companion, verify readable before use; not a stage grant.

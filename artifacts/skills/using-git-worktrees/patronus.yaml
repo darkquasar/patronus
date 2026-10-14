@@ -3,15 +3,17 @@ family: artifact
 type: skill
 role: capability
 name: using-git-worktrees
-description: "Workspace-isolation discipline — start feature work (or a plan execution) in an isolated workspace via the runtime's native worktree support or a git worktree fallback, so in-progress work never collides with the current tree."
-version: 2.0.0
+description: "Use when feature work needs an isolated Git workspace, or an approved plan assigns writer roots, prepared baselines or worktree ownership."
+version: 3.0.0
 entry: SKILL.md
-targets: [codex, opencode]
+files: ["LICENSE", "LICENSE-GPL-3.0", "NOTICE", "SOURCE.md", "scripts/prepare-worktrees.py", "references/worktree-allocation.md", "fixtures/test_prepare_worktrees.py"]
+targets: [claude, codex, opencode]
 defaults:
   scope: project
+requires: []
 attribution:
   upstream: github.com/obra/superpowers
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Vendored verbatim from the upstream `using-git-worktrees` skill (skills/using-git-worktrees/SKILL.md)."
+  note: "SKILL.md is a shared behavioral adaptation of the upstream skill (MIT terms in LICENSE). File-scoped: scripts/prepare-worktrees.py, references/worktree-allocation.md and fixtures/test_prepare_worktrees.py are Patronus-authored (Patronus contributors, GPL-3.0, terms in LICENSE-GPL-3.0). See NOTICE and SOURCE.md. Static guidance, runtime-unverified."

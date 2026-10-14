@@ -115,10 +115,10 @@ Follow the [Coordination Protocol](#coordination-protocol) at the end of this sk
    - Optionally `run_in_background: true` to run async and be notified on completion.
    Researchers need no git worktrees: they do not write files, including reports.
 
-Verify actual Agent read-only role, permissions/authentication and native result,
-wait/stop controls before launch. Missing primitives stop the lane without model/
-provider/CLI fallback. The coordinator controls concurrent admission, persists
-complete findings and synthesizes only after all required results settle.
+Admission preflight, settlement and failure boundaries come from
+`{skillsDir}/dispatching-parallel-subagents/SKILL.md` (read-only mode). The coordinator
+controls concurrent admission, persists complete findings and synthesizes only after
+all required results settle.
 
 ### Critical Spawn Rules
 
@@ -270,7 +270,14 @@ before they harden into a spec.)
 This is the protocol the Team Lead follows end-to-end. Researchers are **read-only**:
 they investigate the codebase/web within the approved scope and return complete findings text.
 Only the lead persists `*-findings.md` files. Researchers need **no git worktrees, no branches, and no merge step** because they write no files. That isolation
-machinery is only for teammates that write code (that is plan-execute-parallel-cl's job, not this one's).
+machinery is only for writers that change code (that is `plan-execute-cl`'s job, not this one's).
+
+**Leaf launch and collection route through the shared dispatcher.** Read
+`{skillsDir}/dispatching-parallel-subagents/SKILL.md` and apply its read-only mode to
+every admitted researcher. It owns admission preflight (native launch, wait/stop controls,
+read-only role, authentication and output delivery), result association, settlement and
+failure boundaries. This skill keeps the research-specific parts: questions, researcher
+brief, evidence standard, retained findings, synthesis, metadata and lessons.
 
 **Team sizing:** the coordinator admits independent questions within available
 capacity and applicable limits. Each leaf owns one clearly separable question;
@@ -282,44 +289,36 @@ merge overlap rather than manufacture extra starts or an obligatory count.
 2. Native UI tasks are optional only when selected/available; no compulsory board
    or tk mirror. Synthesis follows substantive retained results, not status flags.
 
-### Step 2: Spawn researchers
-Launch admitted independent researchers with native `Agent` calls within actual
-capacity. For each: `subagent_type: "Explore"` (read-only), a stable `name` (for result
-association and messaging when exposed), and a `prompt` carrying the stream question + brief. Optionally
-`run_in_background: true` for async completion notifications. Tell each researcher to return
-complete findings in its final response. The coordinator persists findings and
-updates only the selected authority. Researchers write neither source nor reports.
+### Step 2: Brief and launch researchers
+Build each brief from [RESEARCHER-TEMPLATE.md](RESEARCHER-TEMPLATE.md): the stream question,
+approach, evidence required and relevant brief/source anchors. Launch through the dispatcher's
+read-only mode with `subagent_type: "Explore"` and a stable `name` (e.g. `researcher-auth`)
+for result association. Each researcher returns complete findings in its final response and
+writes neither source nor reports. Do not assume `Explore` has file-write, `SendMessage` or
+`TaskUpdate` tools.
 
-### The lead collects complete results and persists the evidence
+### Step 3: Retain the findings
+1. **Choose a retained output path for each stream** at launch, such as
+   `<research-dir>/<stream>-findings.md`. This is the lead's write target, not a researcher assignment.
+2. **Collect each complete final response** under the dispatcher's output and settlement rules.
+   A receipt, status or short summary is not the findings. Validate the evidence against current
+   source, then persist the full findings at the chosen path with its limitations and unresolved
+   questions. Mark the stream complete only after the substantive result is retained and readable.
+3. **An absent researcher-created file is expected, not failed research.** Do not rerun completed
+   investigation because no researcher wrote a file, synthesize from a status or switch to a
+   write-capable role. Missing or incomplete results follow the dispatcher's failure boundaries;
+   retain partial evidence and report it.
 
-1. **Choose a retained output path for each stream** at spawn, such as
-   `<research-dir>/<stream>-findings.md`. This is the lead's write target, not a worker assignment.
-2. **Wait for the researcher to settle and retrieve its complete final response** through the
-   native result mechanism exposed by the session. A receipt, status or short summary is not
-   the findings. Do not assume `Explore` has file-write, `SendMessage` or `TaskUpdate` tools.
-3. **Read and validate the returned evidence, then persist the full findings** at the chosen
-   path. Preserve limitations and unresolved questions, not just a success summary. The lead
-   marks the task complete only after the substantive result is retained and readable.
-4. **An absent worker-created file is expected, not failed research.** Do not rerun completed
-   investigation merely because no worker wrote a file. If the actual result is missing or
-   incomplete, retrieve available output or request the missing evidence within the existing
-   grant and applicable limits. If delivery or persistence remains blocked, retain partial evidence and report it;
-   do not synthesize from a status or silently switch to a write-capable role.
+### Step 4: Coordinate
+- Use `SendMessage` when exposed to share cross-stream context or redirect a researcher that
+  hits a dead end. Otherwise reconcile from the returned findings.
+- The lead owns task status, result collection and persistence. A progress board is not evidence.
 
-A completion notification is a cue to collect the result. While the researcher is running,
-wait through the available native mechanism rather than polling for a file it cannot create.
-
-### Step 3: Coordinate
-- Use `SendMessage` when exposed for the selected agent to share cross-stream context or
-  redirect a researcher that hits a dead end. Do not require workers to call unavailable tools.
-- The lead owns task status, result collection and persistence. Read the complete results
-  after each agent settles rather than treating a progress board as evidence.
-
-### Step 4: Collect & synthesize
-As each researcher settles, collect its complete findings response and persist its `*-findings.md`.
-When all streams are in, synthesize the one `<slug>-research.md` yourself (the Team Lead's core
-job) and write the `meta.yaml` streams skeleton. You do NOT author the specs or plans — those are
-downstream stages. The findings files are the audit trail; there is nothing to merge or clean up.
+### Step 5: Synthesize
+When every admitted stream's findings are retained, synthesize the one `<slug>-research.md`
+yourself (the Team Lead's core job) and write the `meta.yaml` streams skeleton. You do NOT author
+the specs or plans — those are downstream stages. The findings files are the audit trail; there
+is nothing to merge or clean up.
 
 ---
 

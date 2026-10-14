@@ -46,6 +46,13 @@ route. No helper is added or moved; native workers remain Partial/runtime-pendin
 A focused content regression checks the concrete Python route's file existence
 and manifest distribution. This does not qualify native loading or execution.
 
+## Execution route, version 1.5.0
+
+Serial and parallel-ready execution now share one route,
+`plan-execute-oc/SKILL.md`. The separate `plan-execute-parallel-oc` route
+listed by earlier versions is retired; its parallel guidance folded into
+`plan-execute-oc`. This is routing guidance, not runtime qualification.
+
 ## Active reads
 
 Current version 1.2.0 routes parallel work to native Task execution. The old
@@ -58,7 +65,6 @@ CLI choice stay intact; this naming edit does not qualify runtime masking.
 
 - `grilling-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-execute-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
-- `plan-execute-parallel-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `requesting-code-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

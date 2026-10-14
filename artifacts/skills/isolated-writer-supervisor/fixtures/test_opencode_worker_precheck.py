@@ -1,11 +1,11 @@
-"""Invented-data fixtures for scripts/worker-precheck.sh.
+"""Invented-data fixtures for scripts/opencode-worker-precheck.sh.
 
 Historical, not run by the development gates (same status as the supervisor
 fake-worker suite). Every repository, agent, hook registration, guard script and
 opencode.json below is invented in a scratch directory; no real guard script or
 user configuration is read. Run with:
 
-    python3 artifacts/skills/plan-execute-parallel-oc/fixtures/test_worker_precheck.py -v
+    python3 artifacts/skills/isolated-writer-supervisor/fixtures/test_opencode_worker_precheck.py -v
 """
 import json
 import os
@@ -17,7 +17,7 @@ import sys
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "worker-precheck.sh"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "opencode-worker-precheck.sh"
 
 AGENT = "---\nname: patronus-writer-oc\ndescription: invented writer role\nmode: subagent\n---\n\nInvented body.\n"
 RUNNER = "// invented hook runner placeholder\nexport const PatronusHookRunner = async () => ({});\n"

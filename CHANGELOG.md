@@ -5,6 +5,34 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ## Unreleased
 
+### Catalogue: shared parallel-subagent coordination (Claude, Codex, OpenCode)
+
+- **New shared `dispatching-parallel-subagents` 1.0.0** replaces
+  `dispatching-parallel-agents`, `-cl`, `-cx` and `-oc`. It is the
+  coordinator-used primitive for admitted leaf launch, wait/stop, complete
+  collection and settlement. It covers read-only investigation and separately
+  authorized isolated writers, with short Claude, Codex and OpenCode sections.
+- **`using-git-worktrees` 3.0.0 is now the one corrected worktree skill** for
+  the same three hosts. It replaces `using-git-worktrees-cl`, `-cx` and `-oc`,
+  and drops the legacy automatic ignore-file commit, in-place fallback and
+  dependency setup. It owns prepared baselines (accepted dirty/untracked
+  carry-forward), capture and retention, and ships the single
+  `prepare-worktrees.py` allocator. The two packaged mirrors are gone.
+- **`plan-execute-parallel-cl`, `-cx` and `-oc` are retired.**
+  `plan-execute-{cl,cx,oc}` now choose serial or parallel-ready execution.
+  OpenCode's CLI-only worker reference and working-set precheck moved to
+  `isolated-writer-supervisor`, whose `--worktrees-only` proxy now looks only
+  in the shared worktree skill.
+- **Plans record `Slicing:`** (horizontal by default, vertical tracer by user
+  choice) and an `## Execution graph` with `start:`/`join:` dependencies. Plan
+  review checks the graph.
+- **What changes on your machine:** nothing is migrated, aliased or deleted.
+  Retired names refuse to install (`unknown artifact`), and already installed
+  copies stay where they are until you remove them. The scanner's finite
+  managed shared-skill set now also admits identical, Patronus-managed copies
+  of the two shared skills; edited, partial, unmanaged or mismatched copies
+  still block. Pi routes are unchanged.
+
 ### Catalogue: OpenCode core
 
 `core-profile-oc` 1.0.0 selects explicit OpenCode workflow skills, seven advisory

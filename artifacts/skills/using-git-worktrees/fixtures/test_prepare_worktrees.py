@@ -1,4 +1,4 @@
-"""Public CLI tests for both standalone native worktree allocators, stdlib only."""
+"""Public CLI tests for the standalone worktree allocator, stdlib only."""
 import hashlib
 import json
 import os
@@ -9,9 +9,7 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CX_SCRIPT = os.path.join(os.path.dirname(HERE), "scripts", "prepare-worktrees.py")
-OC_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(HERE)),
-                         "plan-execute-parallel-oc", "scripts", "prepare-worktrees.py")
+SCRIPT = os.path.join(os.path.dirname(HERE), "scripts", "prepare-worktrees.py")
 
 
 class Scratch:
@@ -59,8 +57,8 @@ class Scratch:
         shutil.rmtree(self.tmp)
 
 
-class PrepareWorktreesCX(unittest.TestCase):
-    script = CX_SCRIPT
+class PrepareWorktrees(unittest.TestCase):
+    script = SCRIPT
 
     def setUp(self):
         self.s = Scratch()
@@ -198,16 +196,6 @@ class PrepareWorktreesCX(unittest.TestCase):
         with open(os.path.join(req["runDir"], "allocation.json"), encoding="utf-8") as handle:
             self.assertEqual(json.load(handle), report)
         self.assertEqual(self.s.git("status", "--porcelain"), "")
-
-
-class PrepareWorktreesOC(PrepareWorktreesCX):
-    script = OC_SCRIPT
-
-
-class PackagedMirror(unittest.TestCase):
-    def test_both_payloads_match_the_canonical_allocator(self):
-        with open(CX_SCRIPT, "rb") as cx, open(OC_SCRIPT, "rb") as oc:
-            self.assertEqual(cx.read(), oc.read())
 
 
 if __name__ == "__main__":

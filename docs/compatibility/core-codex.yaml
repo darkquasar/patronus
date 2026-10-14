@@ -103,11 +103,11 @@ entries:
     outcome: Partial
     reason: "Codex-specific spec authoring and bundled ADR-0003 validator. TestCodexSpecFolderMetaInvariants and native research-to-spec route required."
     evidence: runtime-pending
-  - core_item: using-git-worktrees-cl
-    disposition: port-cx
-    codex_items: [using-git-worktrees-cx]
+  - core_item: using-git-worktrees@claude
+    disposition: reuse-unsuffixed
+    codex_items: [using-git-worktrees]
     outcome: Partial
-    reason: "Codex worktree guidance preserves explicit allocation, stage and cleanup grants; no dependency installation, automatic commits or in-place fallback. Source contracts pass; native execution remains pending."
+    reason: "One shared corrected using-git-worktrees 3.0.0 bundle for Claude, Codex and OpenCode replaces the retired -cl/-cx/-oc copies. It owns allocation, prepared baselines with accepted dirty/untracked carry-forward, capture against that baseline and retention, and ships the single allocator. No automatic ignore commit, in-place fallback or dependency setup. Identical managed copies coexist only through the finite shared-skill exception. Native isolation remains runtime-pending."
     evidence: runtime-pending
   - core_item: finishing-a-development-branch-cl
     disposition: port-cx
@@ -126,12 +126,6 @@ entries:
     codex_items: [research-team-cx]
     outcome: Partial
     reason: "Codex read-only workers return findings to the lead; TestCodexResearchTeamCollectsFindings checks static contract. Native worker/auth qualification is deferred."
-    evidence: runtime-pending
-  - core_item: plan-execute-parallel-cl@claude
-    disposition: port-cx
-    codex_items: [plan-execute-parallel-cx]
-    outcome: Partial
-    reason: "Version 2.0.0 uses native subagents with allocated roots, optional first-wave decomposition and read-only next-wave preparation. No required CLI helper; worktrees-only utility is optional, CLI mode explicit-only. The 1.2.0 shared-helper move and retained fixture results remain historical provenance in SOURCE.md, not native proof. Cooperative isolation is not an OS sandbox; installed native loading/auth remain runtime-pending."
     evidence: runtime-pending
   - core_item: codebase-design-cl
     disposition: port-cx
@@ -253,9 +247,9 @@ entries:
     outcome: Partial
     reason: "Codex completion instruction preserves separate integration/publication/cleanup grants and explicit follow-ups; native instruction loading pending."
     evidence: runtime-pending
-  - core_item: dispatching-parallel-agents-cl
-    disposition: port-cx
-    codex_items: [dispatching-parallel-agents-cx]
+  - core_item: dispatching-parallel-subagents@claude
+    disposition: reuse-unsuffixed
+    codex_items: [dispatching-parallel-subagents]
     outcome: Partial
-    reason: "Read-only native Codex research/scout guidance; shared writes belong to lead. Isolated writers use native parallel execution; CLI supervision is optional and requires explicit choice. Installed worker/auth qualification remains pending."
+    reason: "One shared dispatching-parallel-subagents 1.0.0 bundle replaces the retired dispatching-parallel-agents{,-cl,-cx,-oc} identities. It is the coordinator-used primitive for admitted leaf launch, wait/stop, complete collection and settlement in read-only or separately authorized isolated-writer mode, with short Claude, Codex and OpenCode sections. Parallel-ready execution now lives in plan-execute-cx. Native worker/auth behavior remains runtime-pending."
     evidence: runtime-pending

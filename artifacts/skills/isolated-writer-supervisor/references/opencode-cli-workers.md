@@ -11,8 +11,8 @@ content and `opencode.json` are therefore invisible to a worker unless they are
 committed on the recorded base. Before writing any request, run
 
 ```sh
-sh {skillDir}/scripts/worker-precheck.sh <base-ref>            # tracked at the base
-sh {skillDir}/scripts/worker-precheck.sh <base-ref> --global   # installed at global scope
+sh {skillDir}/scripts/opencode-worker-precheck.sh <base-ref>            # tracked at the base
+sh {skillDir}/scripts/opencode-worker-precheck.sh <base-ref> --global   # installed at global scope
 ```
 
 It exits 0 only when the complete working set is present in the checked place:
@@ -169,4 +169,4 @@ authorization; it is never a failed-engine fallback. Never change model,
 provider, protocol or isolation to make progress.
 
 Read-only parallel investigation may be separately authorized through
-`{skillsDir}/dispatching-parallel-agents-oc/SKILL.md`. It grants no writer access.
+`{skillsDir}/dispatching-parallel-subagents/SKILL.md`. It grants no writer access.

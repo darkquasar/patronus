@@ -15,7 +15,7 @@ forbidden_tokens:            # substring, case-sensitive, applied to every .md/.
   claude: ["Agent tool", "Task tool for Claude", "claude --", "CLAUDE.md"]
   collab: ["Collab", "collab mode"]
 exempt_paths: ["artifacts/hooks/block-secrets-oc/block-secrets.py", "artifacts/hooks/gitleaks-guard-oc/gitleaks-guard.py", "**/LICENSE", "**/NOTICE"]
-neutral_handoffs: [isolated-writer-supervisor, domain-modeling, ddd-distilled, refactoring-distilled, rust-style-reference]
+neutral_handoffs: [isolated-writer-supervisor, dispatching-parallel-subagents, using-git-worktrees, domain-modeling, ddd-distilled, refactoring-distilled, rust-style-reference]
 pinned_scripts:              # checked only when the file exists (presence-aware)
   artifacts/hooks/block-secrets-oc/block-secrets.py: cfd78d4f424b39a7577f52f8a41d1c515ac28a67681b98ca786369dae5a46fa5
   artifacts/hooks/gitleaks-guard-oc/gitleaks-guard.py: 172606b6a0ca3cae4f5ca16a5c32c9fe1c08baa1057a6fb581f4d64d312473e5

@@ -65,7 +65,13 @@ clean one.
 - **Ownership and delivery**: check disjoint isolated writer claims, predecessor
   barriers, settlement/capture and serial integration. Native worker presence alone
   is not isolation. Green leaf tests do not prove composition; final aggregate
-  checks and independent implementation review remain required.
+  checks and independent implementation review remain required. Check that
+  `Slicing:` is recorded or defaulted; `## Execution graph` agrees with task text;
+  task IDs are consistent, with no missing edges or cycles; `start` (authoring)
+  and `join` (integration) labels are used correctly; shared-file hazards are
+  named and resolved by one owner, serialization or an authorized seam split;
+  writers depending on unaccepted owned collaborators aren't hidden behind mocks;
+  and J, C and R barriers are present. Report feasibility; never choose mode.
 - **Evidence and authority**: verify real commands/options, expected oracle,
   input/dependency/environment identity and scope. Reuse exact matching retained
   evidence with readable logs/exits; final composed checks stay fresh. Existing

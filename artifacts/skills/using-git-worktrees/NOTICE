@@ -1,13 +1,33 @@
-This artifact vendors the "using-git-worktrees" skill from obra/superpowers.
+This artifact combines files of two origins. Each file keeps its own terms.
+This notice preserves those terms; it is not a relicensing or a license
+compatibility conclusion. See SOURCE.md for prior paths and hashes.
 
-Vendored file (upstream path):
-  - skills/using-git-worktrees/SKILL.md
+File-by-file origin and terms:
 
-Copied verbatim; no modifications.
+  SKILL.md
+    Adapted from the "using-git-worktrees" skill of obra/superpowers
+    (upstream path skills/using-git-worktrees/SKILL.md). Not a verbatim copy:
+    the body is a Patronus behavioral adaptation shared by Claude, Codex and
+    OpenCode.
+    Upstream:  https://github.com/obra/superpowers
+    Commit:    896224c4b1879920ab573417e68fd51d2ccc9072
+    Copyright: Copyright (c) 2025 Jesse Vincent
+    License:   MIT. Full terms in LICENSE and below.
 
-Upstream: https://github.com/obra/superpowers
-Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
-License:  MIT
+  scripts/prepare-worktrees.py
+  references/worktree-allocation.md
+  fixtures/test_prepare_worktrees.py
+    Patronus-authored, relocated from artifacts/skills/plan-execute-parallel-cx
+    (Source: artifacts/skills/plan-execute-parallel at
+    46247c13c3de38008c59995c5b1b697f78d3f9e5). The script is byte-identical;
+    the reference and fixture are adapted to this skill's own paths.
+    Upstream:  github.com/darkquasar/patronus
+    Commit:    46247c13c3de38008c59995c5b1b697f78d3f9e5
+    Copyright: Patronus contributors
+    License:   GPL-3.0. Full terms in LICENSE-GPL-3.0.
+
+  patronus.yaml, NOTICE, SOURCE.md
+    Patronus packaging metadata for this artifact.
 
 ----------------------------------------------------------------------
 

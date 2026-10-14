@@ -15,11 +15,17 @@ Claude workflow siblings now use exact `-cl` names. The dispatcher distinguishes
 them from Codex `-cx` routes without substituting a foreign sibling. The native
 parallel route remains unchanged; this naming edit is not runtime qualification.
 
+## Execution route, version 1.6.0
+
+Serial and parallel-ready execution now share one route,
+`plan-execute-cx/SKILL.md`. The separate `plan-execute-parallel-cx` route
+listed by earlier versions is retired; its parallel guidance folded into
+`plan-execute-cx`. This is routing guidance, not runtime qualification.
+
 ## Active reads
 
 - `grilling-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-execute-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
-- `plan-execute-parallel-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-writing-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `requesting-code-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.

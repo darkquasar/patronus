@@ -217,7 +217,7 @@ func TestManagedReferencePiForeignInventoryWiring(t *testing.T) {
 }
 
 func TestManagedReferenceFreshSecondHostInstall(t *testing.T) {
-	for _, name := range []string{"rust-style-reference", "writing-editorial"} {
+	for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees"} {
 		for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
 			for _, scope := range []string{"local", "global"} {
 				t.Run(name+"/"+strings.Join(pair[:], "+")+"/"+scope, func(t *testing.T) {
@@ -266,6 +266,41 @@ func TestManagedReferenceFreshSecondHostInstall(t *testing.T) {
 					}
 				})
 			}
+		}
+	}
+}
+
+// A shared payload naming {skillDir} renders a different path per host, so the
+// installed bytes differ and the second host's copy is refused. This records
+// why shared payloads must not carry the placeholder.
+func TestManagedSharedPlaceholderPayloadRefused(t *testing.T) {
+	const name = "dispatching-parallel-subagents"
+	root, home := fixtureCatalog(t), t.TempDir()
+	t.Chdir(root)
+	t.Setenv("HOME", home)
+	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	for _, key := range []string{"OPENCODE_CONFIG_DIR", "OPENCODE_CONFIG", "OPENCODE_CONFIG_CONTENT", "XDG_CONFIG_HOME"} {
+		t.Setenv(key, "")
+	}
+
+	dir := filepath.Join(root, "artifacts", "skills", name)
+	codexWrite(t, filepath.Join(dir, "patronus.yaml"), []byte("apiVersion: patronus/v2\nfamily: artifact\ntype: skill\nrole: context\nname: "+name+"\ndescription: invented shared skill\nversion: 1.0.0\nentry: SKILL.md\nfiles: [body.md]\ntargets: [claude, codex, opencode, pi]\ndefaults: {scope: project}\n"))
+	codexWrite(t, filepath.Join(dir, "SKILL.md"), []byte("---\nname: "+name+"\ndescription: invented shared skill\n---\nRead {skillDir}/body.md.\n"))
+	codexWrite(t, filepath.Join(dir, "body.md"), []byte("invented shared guidance\n"))
+
+	if out, stderr, err := runInstall(t, name, "--target", "claude", "--local", "--deploy", "--yes"); err != nil {
+		t.Fatalf("first-host install: %v\n%s\n%s", err, out, stderr)
+	}
+	out, stderr, err := runInstall(t, name, "--target", "opencode", "--local", "--deploy", "--yes")
+	if err == nil {
+		t.Fatalf("placeholder payload admitted on second host:\n%s\n%s", out, stderr)
+	}
+	first := filepath.Join(root, ".claude", "skills", name, "SKILL.md")
+	second := filepath.Join(root, ".opencode", "skills", name, "SKILL.md")
+	for _, want := range []string{"\"" + name + "\"", first, second} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("second-host refusal is not the selected conflict naming %q: %v\n%s\n%s", want, err, out, stderr)
 		}
 	}
 }

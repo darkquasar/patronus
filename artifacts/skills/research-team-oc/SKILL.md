@@ -22,7 +22,7 @@ for a read-only researcher; a child-session title or Task receipt is insufficien
 1. Survey current source and existing research. Define independent questions,
    source paths, exclusions and evidence requirements. Present the scope and
    outputs for approval if they are not already authorized.
-2. Read `{skillsDir}/dispatching-parallel-agents-oc/SKILL.md`. Dispatch through
+2. Read `{skillsDir}/dispatching-parallel-subagents/SKILL.md`. Dispatch through
    the OpenCode Task tool to the `@patronus-researcher-oc` role; when web access
    is separately authorized, `@patronus-web-researcher-oc` may take the web
    questions. Before launch run `opencode agent list` and confirm each role is

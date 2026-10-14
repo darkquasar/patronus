@@ -26,9 +26,8 @@ name replacement is not skill activation or a substitute for a Codex body.
 - Review a spec: `{skillsDir}/spec-review-cx/SKILL.md`.
 - Author an approved plan: `{skillsDir}/plan-writing-cx/SKILL.md`.
 - Review a written plan: `{skillsDir}/plan-review-cx/SKILL.md`.
-- Approved serial execution: `{skillsDir}/plan-execute-cx/SKILL.md`.
-- Approved parallel execution: `{skillsDir}/plan-execute-parallel-cx/SKILL.md`
-  (native subagents, isolated worktree owners and pipelined next-wave preparation;
+- Approved execution, serial or parallel-ready: `{skillsDir}/plan-execute-cx/SKILL.md`
+  (admitted parallel leaves use native subagents and isolated worktree owners;
   no CLI supervisor prerequisite).
 - Independent review: `{skillsDir}/requesting-code-review-cx/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-cx/SKILL.md`.
@@ -66,7 +65,7 @@ latest decisions, project/global instructions and every selected SKILL.md. Inspe
 the latest run/output before retry. Revalidate scope and actual capabilities
 on relevant input drift, not for each unchanged new message. A route description
 never proves native isolation; checked launch, settlement,
-capture and integration still follow the shipped parallel skill and their exact
+capture and integration still follow the shipped execution skill and their exact
 grants. No new controller or host API is introduced here.
 
 An available name proves neither tool activation nor authentication. If a native

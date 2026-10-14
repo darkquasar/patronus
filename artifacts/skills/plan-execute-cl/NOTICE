@@ -2,7 +2,8 @@ This artifact is authored for Patronus and contains material derived from the
 "subagent-driven-development" and "executing-plans" skills of obra/superpowers.
 
 Authored (no upstream counterpart):
-  - SKILL.md      the proportionality gate and decision record
+  - SKILL.md      the serial/parallel-ready choice, proportionality gate,
+                  decision record and parallel-ready section
   - solo.md       the sequential mode
 
 Authored from the upstream discipline, not lifted from it:
@@ -21,6 +22,14 @@ Vendored and adapted:
         <plan-dir>/.sdd/<plan-stem>/, so run state lives beside the plan it
         belongs to rather than in a central directory at the repository root.
         sdd-workspace and review-package take the plan file as an argument.
+
+Patronus-authored under GPL-3.0, not derived from obra/superpowers:
+  - PROVENANCE-GUIDE.md
+        relocated byte-identically from the retired Claude parallel
+        plan-execution skill (version 4.2.0). This file alone is licensed
+        under the GNU General Public License v3.0; full terms in
+        LICENSE-GPL-3.0. The MIT license below does not cover it, and
+        GPL-3.0 covers no other file in this artifact.
 
 Upstream forks these two skills on subagent CAPABILITY: executing-plans is the
 no-subagent fallback, subagent-driven-development the intended path where

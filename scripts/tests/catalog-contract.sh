@@ -171,6 +171,40 @@ if grep -E -- '-cx|-pi|@claude' "$oc_closure"; then
   fail "OpenCode core closure selects a foreign workflow lane"
 fi
 
+run_install_dry() { # name target -> exit status; isolated HOME and project per case
+  local n=$1 t=$2 c=install-$1--$2 home project
+  home=$out/home/$c
+  project=$out/source/.patronus-cases/$c
+  mkdir -p "$home" "$project"
+  git -C "$project" init --quiet
+  (cd "$project" && env -u OPENCODE_CONFIG HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" \
+     XDG_DATA_HOME="$home/.local/share" CODEX_HOME="$home/.codex" \
+     OPENCODE_CONFIG_DIR="$home/.config/opencode" PI_CODING_AGENT_DIR="$home/.pi/agent" \
+     "$patronus" install "$n" --target "$t" --local --local-registry --dry-run --json \
+     >"$out/logs/$c.out" 2>"$out/logs/$c.err")
+}
+
+step "retired parallel-work names refuse as unknown artifacts"
+for pair in dispatching-parallel-agents:codex dispatching-parallel-agents:opencode \
+            dispatching-parallel-agents-cl:claude dispatching-parallel-agents-cx:codex \
+            dispatching-parallel-agents-oc:opencode using-git-worktrees-cl:claude \
+            using-git-worktrees-cx:codex using-git-worktrees-oc:opencode \
+            plan-execute-parallel-cl:claude plan-execute-parallel-cx:codex \
+            plan-execute-parallel-oc:opencode; do
+  n=${pair%%:*} t=${pair##*:}
+  if run_install_dry "$n" "$t"; then fail "retired $n still resolves for $t"; fi
+  grep -q "unknown artifact \"$n\"" "$out/logs/install-$n--$t.err" || fail "retired $n refused for another reason"
+  [ ! -e "$out/source/.patronus-cases/install-$n--$t/.patronus" ] || fail "retired $n wrote state"
+done
+
+step "surviving parallel-work names resolve"
+for pair in dispatching-parallel-subagents:claude dispatching-parallel-subagents:codex \
+            dispatching-parallel-subagents:opencode using-git-worktrees:claude \
+            using-git-worktrees:codex using-git-worktrees:opencode using-git-worktrees-pi:pi; do
+  n=${pair%%:*} t=${pair##*:}
+  run_install_dry "$n" "$t" || { cat "$out/logs/install-$n--$t.err" >&2; fail "$n does not resolve for $t"; }
+done
+
 step "catalog-check ledger coverage against public closure locks"
 "$check" --source "$root" --index "$index" --closures "$out/closures"
 

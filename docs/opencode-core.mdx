@@ -134,10 +134,13 @@ the writer allow edits; researcher/web-researcher and reviewers deny edits.
 Read-only prose and tool permissions are not an OS sandbox. Native enforcement
 and no-nesting behavior must be observed, not inferred from frontmatter.
 
-`plan-execute-parallel-oc` uses native Task writers in checked, disjoint
-worktrees. Never run concurrent writers in the lead checkout. Task does not
-automatically change cwd or grant external worktree access, so verify the actual
-role/tools can target the assigned root before writing. Its Python-stdlib
+`plan-execute-oc` runs an accepted plan serially or, when its execution graph
+has disjoint ready tasks, in parallel-ready mode with native Task writers in
+checked, disjoint worktrees. Never run concurrent writers in the lead checkout.
+Task does not automatically change cwd or grant external worktree access, so
+verify the actual role/tools can target the assigned root before writing. Leaf
+launch and settlement follow the shared `dispatching-parallel-subagents` skill;
+roots come from the shared `using-git-worktrees` skill, whose Python-stdlib
 `prepare-worktrees.py` accepts only an exact allocation, launches no agents and
 produces no execution receipt. Read-only native scouts may prepare later-wave
 briefs while current writers run; the coordinator admits dependencies and

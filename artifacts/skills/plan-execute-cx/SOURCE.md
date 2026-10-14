@@ -9,8 +9,21 @@ Bodies are behaviorally authored for Codex, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Parallel-ready section (version 1.4.0)
+
+The "Parallel-ready tasks" section and the outer serial/parallel-ready choice fold
+in the retired `plan-execute-parallel-cx/SKILL.md` (lines 18-116, SHA-256
+`d8d9471a3a9a33ace6df5270e8b5d414bd21d2c7bf94be021119b376e966ea82`)
+as Patronus-authored routing.
+Its allocator, allocation reference and fixture move to `using-git-worktrees`;
+its scout route moves to `dispatching-parallel-subagents`.
+The serial arm's mode assessment is unchanged.
+
 ## Active reads
 
+- `dispatching-parallel-subagents/SKILL.md`: shared dispatcher, parallel-ready arm only; verify installed/readable before use.
+- `using-git-worktrees/SKILL.md`: shared isolated-root preparation, parallel-ready arm only; verify installed/readable before use.
+- `isolated-writer-supervisor/SKILL.md`: optional explicit-user CLI mode only, not read for native execution.
 - `receiving-code-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `requesting-code-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `verification-before-completion-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.

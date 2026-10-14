@@ -99,11 +99,11 @@ entries:
     outcome: Partial
     reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/spec-writing-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
     evidence: runtime-pending
-  - core_item: using-git-worktrees-cl
-    disposition: port-oc
-    opencode_items: [using-git-worktrees-oc]
+  - core_item: using-git-worktrees@claude
+    disposition: reuse-unsuffixed
+    opencode_items: [using-git-worktrees]
     outcome: Partial
-    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/using-git-worktrees-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    reason: "One shared corrected using-git-worktrees 3.0.0 bundle for Claude, Codex and OpenCode replaces the retired -cl/-cx/-oc copies. It owns allocation, prepared baselines with accepted dirty/untracked carry-forward, capture against that baseline and retention, and ships the single allocator. No automatic ignore commit, in-place fallback or dependency setup. Identical managed copies coexist only through the finite shared-skill exception. Native isolation remains runtime-pending."
     evidence: runtime-pending
   - core_item: finishing-a-development-branch-cl
     disposition: port-oc
@@ -122,12 +122,6 @@ entries:
     opencode_items: [research-team-oc]
     outcome: Partial
     reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/research-team-oc/SOURCE.md. OpenCode Task tool read-only native researcher roles, bounded fanout and no nested delegation."
-    evidence: runtime-pending
-  - core_item: plan-execute-parallel-cl@claude
-    disposition: port-oc
-    opencode_items: [plan-execute-parallel-oc]
-    outcome: Partial
-    reason: "Version 2.0.0 defaults to native Task writers and read-only next-wave scouts in allocated roots; actual worktree access must be checked, not inferred from prompts. Supervisor removed from requires/core; optional worktrees-only utility launches no agents. CLI precheck and runDir grants apply only after explicit user choice. Prior source hashes/results remain historical in SOURCE.md; Task permissions and installed behavior remain runtime-pending, not an OS sandbox."
     evidence: runtime-pending
   - core_item: codebase-design-cl
     disposition: port-oc
@@ -249,11 +243,11 @@ entries:
     outcome: Partial
     reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/instructions/session-completion-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
     evidence: runtime-pending
-  - core_item: dispatching-parallel-agents-cl
-    disposition: port-oc
-    opencode_items: [dispatching-parallel-agents-oc]
+  - core_item: dispatching-parallel-subagents@claude
+    disposition: reuse-unsuffixed
+    opencode_items: [dispatching-parallel-subagents]
     outcome: Partial
-    reason: "OpenCode Task read-only roles and next-wave scouts; isolated writers route to native Task execution without a supervisor prerequisite. Historical adaptation and native permission limits remain recorded in SOURCE.md."
+    reason: "One shared dispatching-parallel-subagents 1.0.0 bundle replaces the retired dispatching-parallel-agents{,-cl,-cx,-oc} identities. It is the coordinator-used primitive for admitted leaf launch, wait/stop, complete collection and settlement in read-only or separately authorized isolated-writer mode, with short Claude, Codex and OpenCode sections. Parallel-ready execution now lives in plan-execute-oc. Native worker/auth behavior remains runtime-pending."
     evidence: runtime-pending
 additional_items:
   - items: [patronus-researcher-oc]

@@ -33,11 +33,14 @@ Each finding has ID, severity, task/section/quote, evidence, consequence and pro
 Use one fresh independent review and at most one bounded batched correction/disposition per exact subject. Unresolved Critical/Major findings block; up to two distinct Medium residuals need explicit owner acceptance, and more than two block. Missing tests, requirements, evidence or authority independently block. Only the lead/owner dispositions findings and grants transition. Corrected bytes need explicit disposition; never launch another review wave automatically.
 
 The coordinator chooses execution mode after acceptance under an execution
-grant, using `{skillsDir}/plan-execute-oc/SKILL.md` or
-`{skillsDir}/plan-execute-parallel-oc/SKILL.md`. The reviewer checks dependency,
-ownership, isolation and settlement feasibility without choosing or starting
-execution. Parallel work uses disjoint allocated roots, never concurrent
-writers in the lead checkout; mode changes need coordinator admission, not a
-failed-engine fallback.
+grant, using `{skillsDir}/plan-execute-oc/SKILL.md` for serial and
+parallel-ready tasks. The reviewer checks dependency, ownership, isolation and
+settlement feasibility, plus the recorded or defaulted slicing and the execution
+graph (task agreement, consistent IDs, no missing edges or cycles, correct
+`start`/`join`, resolved shared-file hazards, no unaccepted collaborators hidden
+behind mocks, J/C/R barriers), without choosing or starting execution.
+Parallel work uses disjoint allocated roots, never concurrent writers in the
+lead checkout; mode changes need coordinator admission, not a failed-engine
+fallback.
 
 Return exact source/root/revision and input hashes, coverage map, actual commands/results, skipped lenses, canonical findings, residuals and full report bytes. Acceptance plus a valid execution grant may permit a later execution stage; review completion alone cannot start it.

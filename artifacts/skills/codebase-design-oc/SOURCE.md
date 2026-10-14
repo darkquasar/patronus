@@ -29,9 +29,20 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Shared dispatcher route and comparison admission, version 1.1.0
+
+The optional independent-comparison route in `DESIGN-IT-TWICE.md` now names the
+shared `dispatching-parallel-subagents` skill, which replaced the retired
+`dispatching-parallel-agents-oc` bundle. Comparison admission no longer requires a mandatory worker count or
+deadline: the coordinator admits useful independent designs within actual
+capacity and applicable host/resource or explicitly authorized campaign limits
+(aggregate review PSC-I-01). The dispatcher
+declares no `requires`, so this edge adds no worktree or execution skill to
+the design closure.
+
 ## Active reads
 
-- `dispatching-parallel-agents-oc/SKILL.md`: exact installed OpenCode companion, verify readable before use; not a stage grant.
+- `dispatching-parallel-subagents/SKILL.md`: exact installed shared companion, verify readable before use; not a stage grant.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

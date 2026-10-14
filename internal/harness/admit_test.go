@@ -254,17 +254,48 @@ func TestAdmitClaudeNeutralReferenceSelectedVersionMismatch(t *testing.T) {
 	}
 }
 
-func TestAdmitManagedEditorialCoexistence(t *testing.T) {
-	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
-		t.Run(strings.Join(pair[:], "+"), func(t *testing.T) {
-			d, in, _ := neutralAdmission(t, pair, "writing-editorial")
-			if err := Admit(d, in); err != nil {
-				t.Fatalf("identical managed editorial copies refused: %v", err)
-			}
-			if len(in.Inventory) != 1 {
-				t.Fatalf("editorial copies did not reconcile once: %+v", in.Inventory)
-			}
-		})
+func TestAdmitManagedSharedCallableCoexistence(t *testing.T) {
+	for _, name := range []string{"writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees"} {
+		pairs := [][2]string{{"claude", "opencode"}, {"codex", "opencode"}}
+		if name == "writing-editorial" {
+			// Retain the pre-existing editorial codex+pi coverage.
+			pairs = append(pairs, [2]string{"codex", "pi"})
+		}
+		for _, pair := range pairs {
+			t.Run(name+"/"+strings.Join(pair[:], "+"), func(t *testing.T) {
+				d, in, _ := neutralAdmission(t, pair, name)
+				if err := Admit(d, in); err != nil {
+					t.Fatalf("identical managed %s copies refused: %v", name, err)
+				}
+				if len(in.Inventory) != 1 {
+					t.Fatalf("%s copies did not reconcile once: %+v", name, in.Inventory)
+				}
+			})
+		}
+	}
+}
+
+// Names outside the finite ManagedSharedSkill set keep the existing OpenCode
+// identical-bytes policy: they are admitted but never reconciled by the managed
+// proof, and their sidecars are not compared. Only listed names get the
+// full-payload proof.
+func TestAdmitUnlistedCallableGetsNoManagedProof(t *testing.T) {
+	pair := [2]string{"claude", "opencode"}
+	for _, name := range []string{"dispatching-parallel-agents", "plan-execute-parallel", "research-team"} {
+		for _, fault := range []string{"identical", "edited sidecar"} {
+			t.Run(name+"/"+fault, func(t *testing.T) {
+				d, in, f := neutralAdmission(t, pair, name)
+				if fault == "edited sidecar" {
+					f.write(t, filepath.Join(f.project, pair[0], "skills", name, "body.md"), []byte("edited\n"))
+				}
+				if err := Admit(d, in); err != nil {
+					t.Fatalf("unlisted callable %s (%s) refused under identical-bytes policy: %v", name, fault, err)
+				}
+				if len(in.Inventory) != 2 {
+					t.Fatalf("unlisted callable %s (%s) received managed reconciliation: %+v", name, fault, in.Inventory)
+				}
+			})
+		}
 	}
 }
 
@@ -279,7 +310,7 @@ func TestAdmitClaudeNeutralReferencePartialCoOwner(t *testing.T) {
 
 func TestAdmitClaudeNeutralReferenceUnsafeCopies(t *testing.T) {
 	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
-		for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial"} {
+		for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees"} {
 			for _, fault := range []string{"unmanaged", "one unmanaged", "edited entry", "edited sidecar", "different managed payload", "partial ownership", "missing sidecar", "extra file", "version mismatch", "empty version", "artifact mismatch", "foreign tool", "missing skill type"} {
 				t.Run(strings.Join(pair[:], "+")+"/"+name+"/"+fault, func(t *testing.T) {
 					d, in, f := neutralAdmission(t, pair, name)

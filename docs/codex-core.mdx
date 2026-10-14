@@ -123,17 +123,21 @@ audits require separately authorized bounded work. Cloudflare sidecars are
 local-first; unavailable remote capabilities block that path and their numeric
 platform assumptions are unverified.
 
-`plan-execute-parallel-cx` uses native subagents assigned to checked, disjoint
-worktrees. Its Python-stdlib `prepare-worktrees.py` accepts only an exact
-allocation, launches no agents and produces no execution receipt. If a plan has
-no writer-ready split, the executor asks whether to decompose the first wave;
-read-only scouts can prepare later briefs while current writers work. The lead
-checks patches, settles workers and integrates serially.
+`plan-execute-cx` runs an accepted plan serially or, when its execution graph
+has disjoint ready tasks, in parallel-ready mode. Leaf launch, wait/stop and
+settlement go through the shared `dispatching-parallel-subagents` skill; isolated
+roots come from the shared `using-git-worktrees` skill, whose Python-stdlib
+`prepare-worktrees.py` accepts only an exact allocation, launches no agents and
+produces no execution receipt. A plan without a usable split returns to
+plan-writing for revision. Read-only scouts can prepare later briefs while
+current writers work. The lead checks captures, settles workers and integrates
+serially.
 
 `isolated-writer-supervisor` is outside the core closure. It is available only
 when the user explicitly chooses CLI subprocess workers. Its worktree-only
-compatibility flag proxies to the installed native executor allocator; it is not
-a native-execution prerequisite or failed-route fallback.
+compatibility flag proxies to the allocator in the installed shared
+`using-git-worktrees` skill; it is not a native-execution prerequisite or
+failed-route fallback.
 
 This is cooperative Git/process isolation, not an OS filesystem sandbox. Processes
 outside both group/cwd boundaries are invisible; cwd discovery is Linux-only.
