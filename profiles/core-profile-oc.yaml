@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-oc
-version: 2.2.0
+version: 2.3.0
 targets: [opencode]
 summary: "OpenCode core: design, planning, diagnosis and tiered TDD, one progress authority, native Task leaves, isolated writers, aggregate review and scoped completion. Best-effort guards and structured permissions remain included; CLI supervision is explicit-only."
 # Explicit spec section 5 membership, no extends edge. Static delivery only.
@@ -28,6 +28,7 @@ layers:
     - using-git-worktrees
     - finishing-a-development-branch-oc
     - writing-skills-oc
+    - decision-clarity-oc
   context:
     - domain-modeling
     - ddd-distilled

@@ -1,0 +1,12 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: decision-clarity-reference
+description: "Shared decision-communication body, consumed only by the decision-clarity-* entrypoints at their exact installed path; not independently invoked and not loaded for every response."
+version: 1.0.0
+entry: SKILL.md
+files: ["LICENSE", "NOTICE", "SOURCE.md", "references/examples.md"]
+targets: [claude, codex, pi, opencode]
+defaults:
+  scope: project

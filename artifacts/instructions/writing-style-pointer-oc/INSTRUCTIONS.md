@@ -12,6 +12,15 @@ Explain from the subject's structure; use contrast only to close a plausible,
 consequential misreading. Keep transitions that show a real relationship and cut
 filler or repeated summaries. Preserve the author's voice and exact facts.
 
+When the coordinator must ask the human for an unresolved choice, a material
+missing fact or a required permission, first load the installed
+`decision-clarity-oc` skill with the OpenCode `skill` tool (or read its resolved
+SKILL.md). Use that exact name; another host's sibling is not a substitute. Do
+not load it for every message, routine update or leaf handoff. It shapes how a
+required question is asked, not whether approval is required. A missing-fact or
+permission question needs no invented alternatives; spec writing's two-to-three
+design approaches apply only to design choices.
+
 This pointer is self-contained advisory guidance. It invokes no editorial worker,
 requires no unreadable sibling and grants no authoring, file writes or fanout.
 An optional editorial skill needs a separate host-compatibility audit and grant

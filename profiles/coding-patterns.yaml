@@ -1,0 +1,22 @@
+apiVersion: patronus/v2
+family: profile
+role: lifecycle
+name: coding-patterns
+version: 1.0.0
+summary: "Optional Rust and Go guidance; compose with the chosen harness core."
+# A language-guidance overlay for Claude, Codex, Pi and OpenCode. No extends edge:
+# compose it with the selected harness core instead of inheriting Claude core.
+# Host entrypoints use target selectors; rust-style-reference is the one shared
+# bundle (each rust-style-* also requires it, and resolution dedups on base name).
+# Skills load on relevance; no toolchains, recipes or package installs.
+layers:
+  context:
+    - rust-style-cl@claude
+    - rust-style-cx@codex
+    - rust-style-pi@pi
+    - rust-style-oc@opencode
+    - rust-style-reference
+    - go-style-uber-cl@claude
+    - go-style-uber@codex
+    - go-style-uber@opencode
+    - go-style-uber-pi@pi

@@ -31,6 +31,10 @@ name replacement is not skill activation or a substitute for a Codex body.
   no CLI supervisor prerequisite).
 - Independent review: `{skillsDir}/requesting-code-review-cx/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-cx/SKILL.md`.
+- Coordinator must ask the human for an unresolved choice, material missing fact
+  or required permission: `{skillsDir}/decision-clarity-cx/SKILL.md`. Not for
+  routine updates, test results or leaf handoffs; missing-fact and permission
+  questions need no invented alternatives, and approval requirements are unchanged.
 
 These are installed profile companion reads, not permission to advance stages.
 Check the selected file exists and is readable before using its route. An offered

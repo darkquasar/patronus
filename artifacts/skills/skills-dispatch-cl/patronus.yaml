@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: skills-dispatch-cl
 description: "Select exact applicable Claude skill routes within the grant, preserving coordinator-only admission, one progress authority and settled-work recovery."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: []
 targets: [claude]

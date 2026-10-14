@@ -21,6 +21,7 @@ profiles:
   code-intel: {targets: [claude]}
   code-intel-pi: {targets: [pi]}
   code-intel-pi-runtime: {targets: [claude]}
+  coding-patterns: {targets: [claude, codex, pi, opencode]}
   core: {targets: [claude]}
   core-profile-cx: {targets: [codex]}
   core-profile-oc: {targets: [opencode]}

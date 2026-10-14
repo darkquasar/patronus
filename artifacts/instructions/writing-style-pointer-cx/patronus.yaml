@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: writing-style-pointer-cx
 description: "Codex only: Self-contained advisory house writing style."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]

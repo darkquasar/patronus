@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: skills-dispatch-pi
 description: "Read relevant installed Pi guidance and route coordinator-owned stages"
-version: 2.3.1
+version: 2.4.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]

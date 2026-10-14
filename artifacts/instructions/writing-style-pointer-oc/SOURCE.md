@@ -19,9 +19,18 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Decision asks, version 1.1.0
+
+A new paragraph routes genuine human choice, missing-fact and permission asks to
+the exact `decision-clarity-oc` skill through the OpenCode `skill` tool or its
+resolved file. It is OpenCode-specific prose, not a rename of the Codex
+sibling's route. This is guidance, not runtime qualification.
+
 ## Active reads
 
-- No sibling reads.
+- `decision-clarity-oc/SKILL.md`: exact OpenCode companion read added in version 1.1.0,
+  only for a genuine human choice, missing-fact or permission ask; verify
+  installed/readable before use.
 
 Mandatory runtime dependencies are named in requires. This instruction declares
 none. No name substitution, placement or content test proves native loading.

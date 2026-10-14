@@ -16,6 +16,8 @@ Classification: `*-pi` skill references are selected Pi closure reads, not tool 
 
 ## Active selected Pi reads
 
-None. The punctuation rules are inline and require no skill read.
+`decision-clarity-pi`, added in version 2.1.0 and read only when the coordinator
+must ask the human for an unresolved choice, missing fact or permission. The
+punctuation rules stay inline and require no skill read.
 
 These are source-reviewed invocation classifications, not a second executable catalog membership oracle. Historical source filenames above are not active invocation aliases.

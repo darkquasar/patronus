@@ -31,6 +31,18 @@ from inference and scale claims to the evidence. Use contrast only to close a
 plausible, consequential misreading. Keep transitions that show a real relation
 and cut filler or repeated summaries. Preserve the author's voice and exact facts.
 
+## Asking a human to decide
+
+When the coordinator must ask a human for an unresolved choice, a material
+missing fact or a required permission, first load the decision-clarity skill
+installed for this harness by its exact host-suffixed name, as listed in this
+harness's dispatch guidance. Do not substitute another harness's sibling. This
+is not a demand to load it for every message, routine update or leaf handoff.
+It changes how a required question is phrased, not whether approval is needed.
+A missing-fact or permission question needs no invented alternatives; the
+two-to-three design approaches of spec writing apply only to design choices.
+
 This is a self-contained first pass, not a review workflow or worker dispatch.
-It requires no companion skill, editorial tiers, ledger or report. An optional
+Ordinary house-style guidance needs no companion skill, editorial tiers, ledger
+or report; only a genuine decision ask uses the exact host companion above. An optional
 full editorial review applies only when explicitly requested and host-compatible.

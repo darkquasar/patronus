@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 2.2.0
+version: 2.3.0
 summary: "Claude core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution, aggregate review and scoped completion. Secret/diff guards and ccusage observability are included. Enforcement, sandbox and diagram overrides remain optional overlays."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
@@ -28,6 +28,7 @@ layers:
     - using-git-worktrees@claude           # shared worktree ownership, prepared baselines and capture (Claude/Codex/OpenCode)
     - finishing-a-development-branch-cl    # consume exact checked evidence; integration/publication/cleanup need their own grants
     - writing-skills-cl                    # author/edit/verify skills (the meta-skill)
+    - decision-clarity-cl                  # plain-language human choice/fact/permission asks; requires decision-clarity-reference
     - research-team-cl@claude              # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
   context:
     - codebase-design-cl                   # deep-module design vocabulary

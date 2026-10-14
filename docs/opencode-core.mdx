@@ -3,10 +3,14 @@ title: "OpenCode core lane"
 description: "Install the explicit OpenCode working set and distinguish static delivery from native qualification."
 ---
 
-`core-profile-oc` 2.0.0 is an explicit OpenCode-only profile, not an extension
+`core-profile-oc` 2.3.0 is an explicit OpenCode-only profile, not an extension
 of legacy `core`, Codex or Pi. It selects the OpenCode workflow skills, advisory
 instructions, native role agents, best-effort guards, permission settings and
 audited neutral items. `isolated-writer-supervisor` is not a core member.
+`decision-clarity-oc` handles genuine questions to the human (an unresolved
+choice, material missing fact or required permission); its `requires` edge brings
+the shared neutral `decision-clarity-reference` into the closure once. It adds no
+approval gate, is not loaded for every message and remains runtime-pending.
 The hook runner is adapter machinery, not another profile item. The compatibility
 contract is `docs/compatibility/core-opencode.yaml`.
 

@@ -10,10 +10,12 @@ pointer:
     "fail-closed" flag`, not `"fail-closed."`). For reasoning prose, decide the claim,
     ground it in mechanism/consequence, keep actor/action visible, preserve precision
     and cut filler. This self-contained first pass invokes no editorial workflow.
+    For a genuine human choice, missing fact or permission ask, load this harness's
+    exact decision-clarity skill; missing-fact and permission asks need no invented options.
 role: instruction
 name: writing-style-pointer
 description: "Self-contained house writing first pass: punctuation mechanics plus compact meaning checks. No editorial dependency, worker, ledger or report; full editorial review stays optional and explicit."
-version: 1.3.0
+version: 1.4.0
 entry: INSTRUCTIONS.md
 targets: [claude, codex, opencode]
 defaults:

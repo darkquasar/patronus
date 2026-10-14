@@ -11,7 +11,9 @@ are inherited. Only entry and manifest-declared sidecars are distributed.
 
 ## Active reads
 
-- No sibling reads.
+- `decision-clarity-cx/SKILL.md`: exact Codex companion read added in version 1.1.0,
+  only for a genuine human choice, missing-fact or permission ask; verify
+  installed/readable before use.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

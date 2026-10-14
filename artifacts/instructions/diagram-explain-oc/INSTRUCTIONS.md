@@ -2,7 +2,9 @@
 
 The requested format and output constraints win. For a nontrivial architecture,
 flow or state transition, include a small ASCII diagram alongside the prose.
-Skip it for a one-line fact or when the format forbids diagrams.
+Skip it for a one-line fact or when the format forbids diagrams. A short question
+asking the human to decide gets a diagram only when it materially clarifies the
+choice, still subject to higher-priority instructions and the user's format.
 
 Use labeled `+---+` boxes, directional `>` `<` `^` `v` arrowheads, `|` and `-`
 connectors, `=>` for synchronous and `~>` for asynchronous edges. Annotate edges

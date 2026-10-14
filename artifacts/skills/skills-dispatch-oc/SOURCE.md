@@ -53,6 +53,12 @@ Serial and parallel-ready execution now share one route,
 listed by earlier versions is retired; its parallel guidance folded into
 `plan-execute-oc`. This is routing guidance, not runtime qualification.
 
+## Decision asks, version 1.6.0
+
+One route names `decision-clarity-oc` for genuine coordinator asks to the human:
+an unresolved choice, material missing fact or required permission. It is a
+profile companion read, not a requires edge, approval gate or per-message load.
+
 ## Active reads
 
 Current version 1.2.0 routes parallel work to native Task execution. The old
@@ -63,6 +69,7 @@ Version 1.2.0 identifies co-visible Claude skills by their exact `-cl` names
 instead of describing them as unsuffixed. Native `-oc` routes and the explicit
 CLI choice stay intact; this naming edit does not qualify runtime masking.
 
+- `decision-clarity-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `grilling-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-execute-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

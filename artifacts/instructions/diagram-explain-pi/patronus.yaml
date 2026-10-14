@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: diagram-explain-pi
 description: "Accompany non-trivial explanations with a compact ASCII diagram (architecture, flow, or state) using a consistent charset when the user's format permits. Inline Pi context guidance."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 targets: [pi]
 defaults:

@@ -9,7 +9,9 @@ alongside the prose. The diagram is a complement to the explanation, not a
 replacement: keep the words, add the picture.
 
 Skip the diagram only when the answer is a single fact or a one-line change where a
-drawing would add nothing.
+drawing would add nothing. A short question asking a human to decide is not a
+non-trivial explanation by default: add a diagram only when it materially clarifies
+the choice, and higher-priority instructions or the user's requested format still win.
 
 ## Charset & conventions
 

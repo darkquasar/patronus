@@ -5,6 +5,28 @@ person upgrading: it leads with what will behave differently on their machine.
 
 ## Unreleased
 
+### Catalogue: decision clarity in every core profile
+
+- **New `decision-clarity-cl`, `-cx`, `-pi` and `-oc` skills**, one per core
+  profile, all reading one shared `decision-clarity-reference` body. They shape
+  how a coordinator asks a human for a choice, a missing fact or permission: a
+  concrete example, real choices with consequences, a recommendation with its
+  assumption, and one answerable question. They add no approval gate, interview,
+  editorial worker or tracker. Writing-style and dispatch guidance route to the
+  matching host skill; diagram guidance now uses a diagram for a short decision
+  ask only when it materially helps.
+- `decision-clarity-reference` is a neutral bundle installed through the
+  entrypoints' dependency closure. Identical Patronus-managed copies may coexist
+  across hosts; edited, partial, unmanaged or mismatched copies block.
+
+### Catalogue: optional coding-patterns overlay
+
+- **New `coding-patterns` profile** for Claude, Codex, OpenCode and Pi, with each
+  host's Rust and Go guidance plus `rust-style-reference` once per closure. It
+  doesn't extend core: compose it with your harness core using an explicit
+  `--local` or `--global`. `golang` is unchanged and remains the reproducible
+  Claude core-plus-Go lock. No toolchains or packages are installed.
+
 ### Catalogue: shared parallel-subagent coordination (Claude, Codex, OpenCode)
 
 - **New shared `dispatching-parallel-subagents` 1.0.0** replaces

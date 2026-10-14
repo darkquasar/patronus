@@ -117,6 +117,12 @@ entries:
     outcome: Partial
     reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/writing-skills-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
     evidence: runtime-pending
+  - core_item: decision-clarity-cl
+    disposition: port-oc
+    opencode_items: [decision-clarity-oc]
+    outcome: Partial
+    reason: "OpenCode-only entrypoint for genuine coordinator asks to the human (unresolved choice, material missing fact or required permission). It requires the shared neutral decision-clarity-reference, resolved once through requires and read at its exact installed path; no rubric copy, approval gate, editorial worker or tracker. Native skill loading, co-visibility handling and agent compliance remain unqualified."
+    evidence: runtime-pending
   - core_item: research-team-cl@claude
     disposition: port-oc
     opencode_items: [research-team-oc]

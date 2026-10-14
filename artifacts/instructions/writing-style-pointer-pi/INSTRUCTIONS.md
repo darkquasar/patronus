@@ -22,3 +22,15 @@ exactly what was said and the punctuation belongs to your sentence.
 
 > **Don't:** The flag is called "fail-closed."
 > **Do:** The flag is called "fail-closed".
+
+## Asking a human to decide
+
+When the coordinator must ask the human for an unresolved choice, a material
+missing fact or a required permission, first read the installed
+`decision-clarity-pi` SKILL.md with Pi read. Use that exact name; another host's
+sibling is not a substitute. Do not load it for every message, routine update or
+leaf handoff. Restricted leaves keep their assigned output schema and return
+evidence to the coordinator instead of asking. It shapes how a required question
+is asked, not whether approval is required. A missing-fact or permission
+question needs no invented alternatives; spec writing's two-to-three design
+approaches apply only to design choices.

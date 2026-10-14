@@ -47,8 +47,13 @@ existing host/resource and separately authorized campaign limits remain applicab
 ## Small handoffs
 
 Explain real consequences and material assumptions in plain language, not opaque
-ledger IDs. Ask only for changed scope or a genuine unresolved choice. Preserve
-valid approval across stage labels. Named safety/compatibility boundary review
-does not waive aggregate review. Verification-before-completion-cl owns matching
-evidence reuse and final composed freshness; finishing consumes it without a new
-suite or reviewer just for another message. Publication and cleanup stay separate.
+ledger IDs. Ask only for changed scope or a genuine unresolved choice. When the
+coordinator must ask the human for an unresolved choice, material missing fact or
+required permission, first load decision-clarity-cl with the Skill tool; routine
+updates, test results and leaf handoffs do not trigger it. Missing-fact and
+permission questions need no invented alternatives. It shapes the question, not
+whether approval is required. Preserve valid approval across stage labels. Named
+safety/compatibility boundary review does not waive aggregate review.
+Verification-before-completion-cl owns matching evidence reuse and final composed
+freshness; finishing consumes it without a new suite or reviewer just for another
+message. Publication and cleanup stay separate.

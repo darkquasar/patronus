@@ -22,8 +22,15 @@ Serial and parallel-ready execution now share one route,
 listed by earlier versions is retired; its parallel guidance folded into
 `plan-execute-cx`. This is routing guidance, not runtime qualification.
 
+## Decision asks, version 1.7.0
+
+One route names `decision-clarity-cx` for genuine coordinator asks to the human:
+an unresolved choice, material missing fact or required permission. It is a
+profile companion read, not a requires edge, approval gate or per-message load.
+
 ## Active reads
 
+- `decision-clarity-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `grilling-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-execute-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `plan-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.

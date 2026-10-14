@@ -37,6 +37,10 @@ skill activation or a substitute for an OpenCode body.
   CLI workers require explicit user choice).
 - Independent review: `{skillsDir}/requesting-code-review-oc/SKILL.md`.
 - Completion evidence: `{skillsDir}/verification-before-completion-oc/SKILL.md`.
+- Coordinator must ask the human for an unresolved choice, material missing fact
+  or required permission: `{skillsDir}/decision-clarity-oc/SKILL.md`. Not for
+  routine updates, test results or leaf handoffs; missing-fact and permission
+  questions need no invented alternatives, and approval requirements are unchanged.
 
 These are installed profile companion reads, not permission to advance stages.
 Check the selected file exists and is readable before using its route. An offered

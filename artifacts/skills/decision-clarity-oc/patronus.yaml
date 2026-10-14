@@ -1,0 +1,13 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: context
+name: decision-clarity-oc
+description: "OpenCode only: Use when the coordinator must ask a human for an unresolved choice, a material missing fact or a required permission, including during execution, correction or integration; not for routine updates, test results or leaf handoffs."
+version: 1.0.0
+entry: SKILL.md
+files: [SOURCE.md]
+targets: [opencode]
+defaults:
+  scope: project
+requires: [decision-clarity-reference]

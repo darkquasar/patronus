@@ -148,8 +148,9 @@ flowchart TB
   tool-agnostic form; adapters translate them to each tool's on-disk shape.
 - **Recipes** — point at an external binary (a memory engine, a sandbox runner, an MCP server),
   fetch + verify it, and wire it into each tool's config.
-- **Profiles** — curated bundles (`golang`, `python`, `cloudflare`) that select items across every
-  layer, so one install reproduces a whole opinionated environment.
+- **Profiles** — curated bundles (`golang`, `python`, `cloudflare`, the cross-harness
+  `coding-patterns` overlay) that select items across every layer, so one install reproduces a
+  whole opinionated environment.
 
 > **The rule:** plain words → **artifact** (lives here). Binary / Docker / bigger-than-a-file →
 > **recipe** (fetched). This resolves every layer's "filled by" column above.
@@ -535,12 +536,33 @@ $ patronus update agent-principles --deploy
 agent-principles: up to date (1.1.0)
 ```
 
+### Optional coding-patterns overlay
+
+`coding-patterns` is the one optional language-guidance profile for Claude, Codex,
+OpenCode and Pi. It selects each host's Rust and Go guidance (`rust-style-*`,
+`go-style-uber*`) plus the shared `rust-style-reference`. Each skill's description
+is written to trigger only for work in its language; native relevance loading
+is intended, not runtime-qualified. It does not extend or replace a core profile:
+install your harness core first, then the overlay, with an explicit scope.
+
+```sh
+patronus install --profile core-profile-cx --target codex --local --deploy
+patronus install --profile coding-patterns --target codex --local --deploy
+```
+
+Without `--local`/`--global`, per-artifact default scopes split the install on
+Claude, Codex and OpenCode (the Go guide defaults to project scope and the Rust
+guides to global), and Pi refuses the mixed-default selection. So the commands
+above set a scope explicitly. A `patronus.lock` pins one profile, so it can't
+reproduce core plus overlay as one closure. If you need that, keep using `golang`,
+which still pins Claude core plus Go guidance as one lock.
+
 ### Claude skill names: explicit clean cutover
 
 Claude workflow entrypoints now use canonical `-cl` names, for example `tdd-cl`.
 Fresh installs use these names, not unsuffixed compatibility aliases. Approved
-neutral reference packages, such as `rust-style-reference`, keep their shared
-names and are installed through the required dependency closure. Use a Patronus
+neutral reference packages, such as `rust-style-reference` and
+`decision-clarity-reference`, keep their shared names and are installed through the required dependency closure. Use a Patronus
 binary and catalog that both support this cutover before changing an installation.
 
 The optional `writing-editorial` is a separate, explicitly named callable-skill

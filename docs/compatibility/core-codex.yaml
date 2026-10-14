@@ -121,6 +121,12 @@ entries:
     outcome: Partial
     reason: "Codex meta-skill bundles adapted authoring/testing/example sidecars. Audits require a separately authorized bounded lead grant; no automatic nested workers or foreign tool mapping. Placement/routes pass; native behavior pending."
     evidence: runtime-pending
+  - core_item: decision-clarity-cl
+    disposition: port-cx
+    codex_items: [decision-clarity-cx]
+    outcome: Partial
+    reason: "Codex-only entrypoint for genuine coordinator asks to the human (unresolved choice, material missing fact or required permission). It requires the shared neutral decision-clarity-reference, resolved once through requires and read at its exact installed path; no rubric copy, approval gate, editorial worker or tracker. Native skill loading and agent compliance remain unqualified."
+    evidence: runtime-pending
   - core_item: research-team-cl@claude
     disposition: port-cx
     codex_items: [research-team-cx]

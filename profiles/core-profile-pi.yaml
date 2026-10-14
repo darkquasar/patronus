@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-pi
-version: 3.2.1
+version: 3.3.0
 targets: [pi]
 summary: "Pi core: design, planning, diagnosis and tiered TDD, one native run-owning progress authority, phase-separated leaf workflows, isolated writers, aggregate review and scoped completion. Native subagents and DDG web delivery remain included."
 # Deliberately no extends edge to the Claude core. Membership is catalog data,
@@ -33,6 +33,7 @@ layers:
     - workflow-peer-review-pi
     - plan-execute-parallel-pi
     - web-research-pi
+    - decision-clarity-pi
   context:
     - codebase-design-pi
     - domain-modeling-pi

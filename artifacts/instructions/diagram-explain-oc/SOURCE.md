@@ -21,6 +21,14 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+## Decision asks, version 1.1.0
+
+One sentence now limits diagrams in short human decision questions to cases
+where a diagram materially clarifies the choice, subject to higher-priority
+instructions and the user's format. The same sentence was added to the Codex
+sibling, so the reuse-with-rename relation holds; the hashes above remain the
+original source. This is guidance, not runtime qualification.
+
 ## Active reads
 
 - No sibling reads.

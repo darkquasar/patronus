@@ -2,7 +2,7 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle
 name: core-profile-cx
-version: 1.5.0
+version: 1.6.0
 targets: [codex]
 summary: "Codex core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution in isolated worktrees, aggregate review and scoped completion. Scoped migration and write/commit guards remain included."
 # Explicit membership, no extends edge to legacy core or Pi profiles.
@@ -28,6 +28,7 @@ layers:
     - using-git-worktrees
     - finishing-a-development-branch-cx
     - writing-skills-cx
+    - decision-clarity-cx
   context:
     - domain-modeling
     - ddd-distilled
