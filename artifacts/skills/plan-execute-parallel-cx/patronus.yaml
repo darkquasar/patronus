@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-parallel-cx
 description: "Codex only: approved parallel plan tasks through native subagents in allocated worktrees; no CLI supervisor prerequisite."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE", "scripts/prepare-worktrees.py", "references/worktree-allocation.md", "fixtures/test_prepare_worktrees.py"]
 targets: [codex]

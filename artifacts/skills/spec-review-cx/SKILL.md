@@ -5,13 +5,13 @@ description: "Codex only: independently review the exact ADR-0003 stream spec ag
 
 # Spec review for Codex
 
-Use after `{skillsDir}/spec-brainstorming-cx/SKILL.md`, before `{skillsDir}/plan-writing-cx/SKILL.md`. Read `{skillDir}/spec-reviewer.md`. Review checks whether this is the right thing to build; plan review checks whether the implementation promise is buildable.
+Use after `{skillsDir}/spec-writing-cx/SKILL.md`, before `{skillsDir}/plan-writing-cx/SKILL.md`. Read `{skillDir}/spec-reviewer.md`. Review checks whether this is the right thing to build; plan review checks whether the implementation promise is buildable.
 
 ## Scope and inputs
 
 Require a review grant, exact task brief, project instructions, decisions, source root/revision, spec and research paths/hashes, constraints and test evidence. After context loss, reread inputs and the latest saved report before retrying. Existing approval covers only its recorded root, files, actions and budgets. Ask the lead or owner about material ambiguity and wait for an explicit answer. Review grants no authorship, execution, Git, integration, publication or cleanup authority.
 
-Preserve ADR-0003: `docs/specs/NN-slug/`, one research effort, one `meta.yaml`, one folder-level research synthesis and one spec/plan pair per stream. Read parsed metadata and the selected stream's actual spec. Check every named file exists and every `*-spec.md` / `*-plan.md` in the folder is named. The checker is documented at `{skillsDir}/spec-brainstorming-cx/scripts/README.md`; run it only under authorized host checks and resource limits. A missing spec or explicitly declined spec blocks spec coverage claims. Do not fabricate it or fill a completeness flag.
+Preserve ADR-0003: `docs/specs/NN-slug/`, one research effort, one `meta.yaml`, one folder-level research synthesis and one spec/plan pair per stream. Read parsed metadata and the selected stream's actual spec. Check every named file exists and every `*-spec.md` / `*-plan.md` in the folder is named. The checker is documented at `{skillsDir}/spec-writing-cx/scripts/README.md`; run it only under authorized host checks and resource limits. A missing spec or explicitly declined spec blocks spec coverage claims. Do not fabricate it or fill a completeness flag.
 
 ## Independent reader
 

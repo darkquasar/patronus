@@ -1,25 +1,40 @@
-# Session completion
+# Complete the authorized stage
 
-**Work is not complete until it is pushed.** A commit that only exists on your machine is work the next session — and the human — cannot see. Finish the job.
+Completion is a checked handoff, not automatic publication or cleanup. Reread the
+brief, latest decisions and actual source. Existing approval remains valid within
+scope; a stage label alone does not require reconfirmation.
 
-When ending a work session, complete all of these:
+1. Consume retained evidence for exact relevant inputs, command/options,
+   environment and acceptance scope. Reuse readable matching logs and actual
+   exits. Relevant dirty/untracked/ignored drift or missing evidence invalidates
+   reuse. Fresh final aggregate checks cover composed delivery. Finishing alone
+   does not trigger another identical suite or whole-change review.
+2. Read complete worker findings and checked patches and settle dependencies before
+   transition. Unknown liveness, ownership or failed capture blocks integration
+   and cleanup; retain partial work. Read-only workers return complete text for
+   the coordinator/runtime to persist, not rerun because they cannot write.
+3. Consume one independent review of the exact subject and at most one bounded
+   batched correction/disposition by default. Unresolved Critical/Major or more
+   than two Medium block. Up to two Medium residuals require explicit owner
+   acceptance. Missing requirements, authority or tests independently block.
+   Coordinator-verified corrections are parent-verified, not independently
+   re-reviewed. Changed interfaces/invariants/scope or insufficient correction
+   evidence require an owner decision, not automatic successor reviewers.
+4. The coordinator updates only the progress authority recorded at plan acceptance.
+   Qualified native run-owning state remains authoritative; trackers receive
+   references only. Without it use the selected/existing tracker or durable
+   plan-associated record. Do not mirror UI todos or seed a competing tracker.
+   Record unfinished work there when authorized, otherwise include it in the
+   handoff. Workers return evidence and stop without shared progress mutations.
+5. Hand off changed files and root/base/head/patch identity, actual commands,
+   exits/logs, review dispositions, skipped checks, residual risks, unfinished
+   work and the next authorized action. Local checks do not prove native
+   readiness or remote publication.
 
-1. **File follow-ups.** Anything discovered but not done becomes a tracked item in whatever work-graph or issue tracker this project uses. If none is wired, say so plainly in your hand-off rather than letting the follow-up evaporate.
-2. **Run the quality gates** (if code changed) — the project's tests, linters, and build. Do not push red.
-3. **Update the status of what you touched.** Close what you finished; mark what is still in flight. Closing is what unblocks the next ready item — work left open stalls whoever picks up next.
-4. **Push to the remote.** This is the step that is most often skipped, and the only one that makes the work durable:
-   ```bash
-   git pull --rebase
-   git push
-   git status          # must report the branch is up to date with its remote
-   ```
-5. **Clean up.** Drop stashes you no longer need; prune stale remote branches.
-6. **Verify.** Everything is committed *and* pushed — not one or the other.
-7. **Hand off.** State what changed, what is unfinished, and where the next session should start.
-
-## Rules
-
-- **Never stop before pushing.** That strands the work locally, where a lost machine or a fresh clone erases it.
-- **Never say "ready to push when you are."** Pushing is your job, not a suggestion handed back to the human.
-- **If the push fails, resolve it and retry** until it succeeds — a failed push is an unfinished session, not a completed one with a footnote.
-- **Do not push to a protected branch to satisfy this.** If you are on `main` (or the work belongs on a branch), branch first, then push the branch. "Push" means "get the work onto the remote where it belongs," never "bypass the project's review flow."
+Commit, integration, publication and destructive cleanup are separate grants.
+No automatic pull, rebase, push, stash deletion, branch/worktree removal or prune
+follows from completion. Publish only to an authorized target after required
+checks. Report a failed push with retained output and the scoped next decision,
+not an unlimited retry mandate. Preserve captures before separately granted
+cleanup. A valid local handoff completes its stage when publication was not
+requested; it does not claim publication.

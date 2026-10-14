@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: tdd-cx
-description: "Codex only: Test-first public-behavior slices for critical-tdd tasks or explicit test-first requests; routine prose/manifests use focused postchecks."
-version: 1.2.0
+description: "Codex only: Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
+version: 1.3.0
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
 targets: [codex]

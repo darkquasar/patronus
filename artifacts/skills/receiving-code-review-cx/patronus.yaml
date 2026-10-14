@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: receiving-code-review-cx
 description: "Codex only: Technical correction and bounded lead disposition."
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]

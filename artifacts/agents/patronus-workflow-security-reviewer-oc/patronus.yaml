@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-workflow-security-reviewer-oc
 description: "OpenCode only. Review authority lifecycle trust and failure boundaries without subject writes"
-version: 1.0.0
+version: 1.1.1
 entry: agent.md
 files: []
 targets: [opencode]

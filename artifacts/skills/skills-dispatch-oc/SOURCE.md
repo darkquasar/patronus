@@ -63,7 +63,7 @@ CLI choice stay intact; this naming edit does not qualify runtime masking.
 - `plan-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `requesting-code-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `research-team-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
-- `spec-brainstorming-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
+- `spec-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `spec-review-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `verification-before-completion-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 

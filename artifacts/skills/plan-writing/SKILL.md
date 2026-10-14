@@ -1,51 +1,45 @@
 ---
 name: plan-writing
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Use when authoring or revising an authorized requirement-covered implementation plan from an approved stream spec
 ---
 
-# Plan Writing
+# Write a buildable implementation plan
 
-## Overview
+This optional Codex/OpenCode identity remains available. Author plans, not specs or
+production code. Read approved brief/spec/decisions, effective instructions and
+actual source/interfaces initially and after resume. Existing grants remain valid
+within scope; changed targets, destructive actions or material unresolved choices
+need owner direction, not another consent request merely for a stage label.
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+## Spec and folder contract
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+Use ADR-0003 `docs/specs/NN-slug/`: one effort/synthesis and one spec/plan pair per
+stream. Resolve the approved stream spec from parsed `meta.yaml` and confirm the
+named file exists. Missing spec redirects to installed own-host spec authoring guidance
+(`{skillsDir}/spec-writing-cx/SKILL.md` for Codex,
+`{skillsDir}/spec-writing-oc/SKILL.md` for OpenCode),
+not a guessed spec from research or an orphan plan. The only plan-only exception
+is an explicit owner-declined spec, retaining `spec: null` and `spec_declined:` and
+disclosing that spec coverage cannot be checked. Preserve reviewed/user-edited
+plans; an existing valid revision grant suffices, otherwise ask revise or supersede.
 
-**Announce at start:** "I'm using the plan-writing skill to create the implementation plan."
+Save `<stream>-plan.md` beside its spec unless the owner selected another path.
+Respect actual repository ignore/tracking policy; do not assume `docs/specs/` or
+`.tickets/` is tracked or ignored, change ignore rules, or manufacture Git authority.
+Only the coordinator updates this stream's `plan:` filename and `updated:` after
+saving the file, preserving other streams/specs/research. `plan: null` remains until
+bytes exist. Validate references in both directions with authorized project checks:
+every named artifact exists and every stream spec/plan is named. Missing tooling
+blocks that check honestly, without installation or a fabricated pass.
 
-## Spec Gate (run this FIRST)
+## Plan shape and coverage
 
-plan-writing is **plan-only**. It does not author specs. Before planning anything, confirm a spec
-exists for this stream — a plan is a promise to build a spec, and there is nothing to promise
-without one.
-
-Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`streams[].spec:`)
-**and resolves on disk.** This is a check for the SPEC specifically — a folder can have a
-`meta.yaml` and a `research.md` but no spec, and that still redirects. Do not read the "create
-`meta.yaml` if absent" step below as license to proceed without a spec.
-
-- **No spec named, or the named file is absent** → **STOP.** Suggest `spec-brainstorming` for this
-  stream: "This stream has no spec. Author it with `spec-brainstorming` first — it reads the
-  research (if any) and specifies what to build; I'll plan from that." Do NOT synthesize a spec, do
-  NOT infer one from `research.md`, and do NOT proceed to planning.
-- **A `<stream>-plan.md` already exists for this stream** (an older `research-team` or a prior run
-  may have written one) → do NOT silently overwrite reviewed or edited work. Report it and ask:
-  revise in place, or supersede? And note the two spec cases:
-  - **plan exists + its spec exists** → ask revise-vs-supersede as above.
-  - **plan exists but NO spec** (an orphan plan) → treat the missing spec as the signal: redirect to
-    `spec-brainstorming` to author the spec first. A plan with no upstream spec cannot be
-    spec-reviewed for coverage; do not reverse-engineer a spec from the plan.
-- **Spec present (no plan yet)** → plan normally (the rest of this skill).
-
-Spec ownership stays with `spec-brainstorming`. plan-writing sets `streams[].plan:` only, never
-`streams[].spec:`.
-
-**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement — one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml` — name the file (`plan: <stream>-plan.md`), never assert `plan: true` — and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-brainstorming` skill's "Spec folder & meta.yaml" for the shape). `docs/specs/` is gitignored — do not commit the plan. (User preferences for plan location override this default.)
-- (User preferences for plan location override this default)
-
-## Scope Check
-
-If the spec covers multiple independent subsystems, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
+Start with goal, approved spec/hash (or explicit spec decline), architecture,
+tech stack, exact global constraints and source anchors. Map every requirement ID
+to at least one task and acceptance check. Split independent streams only where
+ownership/interfaces and deliverables are genuinely separable. Keep scaffolding,
+configuration and docs with the deliverable needing them, not separate gate tasks.
+Task count alone adds neither reviewers nor progress surfaces.
 
 ## File Structure
 
@@ -58,252 +52,94 @@ Before defining tasks, map out which files will be created or modified and what 
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
 
-## Task Right-Sizing
+## Task structure
 
-A task is the smallest unit that carries its own test cycle and is worth a
-fresh reviewer's gate. When drawing task boundaries: fold setup,
-configuration, scaffolding, and documentation steps into the task whose
-deliverable needs them; split only where a reviewer could meaningfully
-reject one task while approving its neighbor. Each task ends with an
-independently testable deliverable.
+Each task is an independently testable deliverable with:
 
-## Bite-Sized Task Granularity
+- exact create/modify/test paths and current source anchors;
+- owned/excluded files, input/predecessor barriers and build order;
+- consumed and produced interfaces, exact signatures/types/names and invariants;
+- testing strategy/rationale, exact public behavior/negative paths and acceptance;
+- concrete one-action steps with actual code/content, commands and expected oracle;
+- required regressions, migration/rollback, applicable host/resource limits,
+  evidence return and durable handoff references.
 
-**Each step is one action (2-5 minutes):**
-- "Write the failing test" - step
-- "Run it to make sure it fails" - step
-- "Implement the minimal code to make the test pass" - step
-- "Run the tests and make sure they pass" - step
-- "Commit" - step
+Show real code/signatures and known commands, not speculative approved decisions.
+A behavioral RED must expose the intended missing behavior, not an import/syntax/
+fixture/tool error. State exploratory unknowns as blockers rather than plausible
+code. Commits are optional steps only under a separate grant, not frequent-commit
+rituals. Checkboxes may organize intent; they are not another mutable status owner.
 
-## Plan Document Header
+## Testing defaults
 
-**Every plan MUST start with this header:**
-
-```markdown
-# [Feature Name] Implementation Plan
-
-> **For agentic workers:** Use the plan-execute skill to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
-**Goal:** [One sentence describing what this builds]
-
-**Architecture:** [2-3 sentences about approach]
-
-**Tech Stack:** [Key technologies/libraries]
-
-## Global Constraints
-
-[The spec's project-wide requirements — version floors, dependency limits,
-naming and copy rules, platform requirements — one line each, with exact
-values copied verbatim from the spec. Every task's requirements implicitly
-include this section.]
-
----
-```
-
-## Task Structure
-
-````markdown
-### Task N: [Component Name]
-
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
-
-**Interfaces:**
-- Consumes: [what this task uses from earlier tasks — exact signatures]
-- Produces: [what later tasks rely on — exact function names, parameter
-  and return types. A task's implementer sees only their own task; this
-  block is how they learn the names and types neighboring tasks use.]
-
-- [ ] **Step 1: Write the failing test**
-
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
-
-- [ ] **Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
-````
+Use the installed own-host TDD defaults, `tdd-cx` for Codex or `tdd-oc` for
+OpenCode. Explicit test-first requests and required project checks govern.
+Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
+removal and reproducible bugs require public-behavior TDD. Other features/behavior
+changes default to TDD; exceptions need concrete reason and owner agreement unless
+already approved. Use `critical-tdd` where a field exists for short invented-data
+intended RED, minimum GREEN and relevant negative/legacy regression slices.
+Pure behavior-preserving refactors use green coverage and characterize uncertain
+legacy behavior first. Nonbehavioral prose/manifests/mechanical wiring without a
+changed safety invariant uses `focused-postcheck`, not invented RED or prose-
+substring tests. Omitted strategy applies these defaults and records selection in
+the existing brief/handoff. Genuine classification/conflict/exception ambiguity
+needs owner direction; omission alone does not block or require a new ledger.
 
 ## No Placeholders
 
-Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+Every step must contain the actual content an engineer needs. These are **plan failures** : never write them:
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
-- "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
+- "Similar to Task N" (repeat the code : the engineer may be reading tasks out of order)
 - Steps that describe what to do without showing how (code blocks required for code steps)
 - References to types, functions, or methods not defined in any task
 
-## Remember
-- Exact file paths always
-- Complete code in every step — if a step changes code, show the code
-- Exact commands with expected output
-- DRY, YAGNI, TDD, frequent commits
+## Inline author check and independent review
 
-## Self-Review
+Check coverage, placeholders, types/names/paths, interface/predecessor consistency,
+verification feasibility and plan shape inline. Fix assigned defects without
+launching an author “self-review” worker. Every written plan, including a single
+task, needs one independent plan review unless explicitly owner-declined for that
+subject and retained in the brief. Spec review is a separate accepted subject,
+not repeated by plan writing. Only the coordinator admits reviewers, persists
+complete returned findings and authorizes one bounded batched correction.
 
-**Dispatch a reviewer. If subagents are available, dispatch one.** A fresh subagent starts with a
-clean context window, unsullied by the accumulated context of the session that produced the work. If
-the host has no subagents, do it inline and say so.
+Use own-host installed `{skillsDir}/plan-writing-cx/SKILL.md` or
+`{skillsDir}/plan-writing-oc/SKILL.md` for native planning guidance, and own-host
+`{skillsDir}/plan-review-cx/SKILL.md` or `{skillsDir}/plan-review-oc/SKILL.md` for
+an admitted native review. The retained optional `plan-review` entry and its rubric
+are also available when selected. These are optional own-host routes, not a
+cross-host requires edge or substitute for a missing explicitly selected route.
+No automatic second-model discovery, permanent reviewer-choice config, task-level
+review chains, CLI model fallback or repeated consent follows from this skill.
 
-*The author cannot have fresh eyes on their own work.* You know what each step *meant*; a reviewer
-with a clean context reads only what each step *says*. That gap is the entire value of the review —
-running the checklist against yourself closes none of it.
+Unresolved Critical/Major or more than two distinct Medium block. Up to two Medium
+residuals require explicit owner acceptance, Low receives disposition and missing
+authority/requirements/tests independently block. Preserve finding IDs/severities.
+The coordinator resolves corrected exact bytes with sufficient evidence against
+the cited criterion, labelled parent-verified, not independent re-review. Changed
+interface/safety invariant/acceptance or inadequate oracle needs owner direction
+or an additional independent-review grant, never automatic successor waves.
 
-Give the reviewer the plan and the spec, and this checklist:
+## One progress authority and handoff
 
-1. **Spec coverage:** point to the task implementing each spec requirement. List the gaps.
-2. **Placeholder scan:** any "TBD", "add appropriate error handling", "similar to Task N", or a step
-   that says *what* without showing *how*?
-3. **Type consistency:** do the types, signatures, and names in later tasks match what earlier tasks
-   defined? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+At plan acceptance the coordinator records one mutable progress authority in the
+existing brief: qualified native state that actually owns delegated runs first;
+without it, explicit project selection, otherwise existing tracker or one durable
+plan-associated record. UI todo alone does not outrank the tracker. Specs/plans
+hold intent, metadata indexes artifacts and logs retain observations, not mirrored
+status. Seed selected tickets once under one owner only when that tracker is
+selected, using exact task/plan pointers and actual tracking policy. There is no
+mandatory tk mirror, ledger, ticket commit or automatic checkpoint reconciliation.
 
-Fix what it finds. If a spec requirement has no task, add the task.
-
-## Mirror the plan into the tk work-graph
-
-A plan in a gitignored markdown file does not survive a hand-off. The `tk` graph does — it is plain
-markdown under `.tickets/`, committed with the code. **Mirror the plan before execution begins**
-(`tk` is at `~/.patronus/bin/tk`; resolve with `command -v tk || echo ~/.patronus/bin/tk`).
-
-```sh
-# ONE epic per plan. It GROUPS and DISPLAYS. It does not schedule — ready/blocked
-# read only `deps`, never `parent`.
-EPIC=$(tk create "<Feature name> — implementation" -t epic -p 1 \
-  --external-ref docs/specs/NN-slug/<stream>-plan.md)
-
-# ONE task per PLAN TASK (not per step — a task is the reviewable unit).
-# Capture each id as you go: meta.yaml records them, and sdd mode resolves a plan
-# task to its ticket through that record.
-TASK_N=$(tk create "<Task N's title>" \
-  -t task \
-  -p <from the plan's build order; 0 = highest, and `tk ready` SORTS BY IT> \
-  --parent "$EPIC" \
-  --tags <stream> \
-  --acceptance "<the plan task's verification step, verbatim — the ONE check that closes it>" \
-  -d "PLAN: docs/specs/NN-slug/<stream>-plan.md → '<the task's section heading, VERBATIM>'.
-      NOTE: docs/specs/ is GITIGNORED — that path exists only in a working tree that has it.
-      Files expected to change: path/a.go, path/b.go.
-      <what to build, in a sentence>" \
-  --external-ref docs/specs/NN-slug/<stream>-plan.md)
-
-# ORDER with edges, from the plan's build order. This — and ONLY this — is what
-# `tk ready` computes from.
-tk dep <task> <depends-on-task>
-```
-
-Then record the epic's id **and every task's id** in this stream's `meta.yaml` entry — ids you can
-resolve, not a boolean you can only believe — bump `updated:`, and **commit `.tickets/`**:
-
-```yaml
-streams:
-  - slug: <stream>
-    epic: pat-a1b2
-    tasks:
-      - {number: 1, id: pat-c3d4, name: extract-token-parser}
-      - {number: 2, id: pat-e5f6, name: wire-retry-backoff}
-```
-
-`number` is the plan's task number, `id` is what tk generated, and `name` is a short kebab-case
-reduction (roughly three to five words) of the task's title, so a reader can scan `meta.yaml`
-without running `tk show` on every row. **`id` is the sole lookup key.** `name` is descriptive
-only: a stale or hand-edited one must never break resolution.
-
-Record the ids because nothing else can. tk's ids are opaque and generated at creation, so a later
-skill that wants to close "the ticket for Task 3" has no way to compute the answer — `plan-execute`'s
-sdd mode reads exactly this field.
-
-**Epics group; only `tk dep` orders.** `tk ready` and `tk blocked` read **only `deps`**, never
-`parent`. Use `--parent`/`--tags` to group a plan's tasks; use `tk dep` to encode the build order.
-
-### ⚠️ The pointer must RESOLVE. A ticket nobody can follow is a ticket nobody can do.
-
-**`--external-ref` names the PLAN FILE, not the folder.** A folder holds **many** plans (a stream is
-one spec + one plan, and a folder has many streams — ADR-0003), so a folder ref is ambiguous **by
-construction**. An agent handed `docs/specs/NN-slug` has to open the folder, notice there are two
-plans, infer which one from the tag, then count to task N. That is not a pointer; it is a riddle.
-
-**The description names the task's SECTION HEADING, verbatim.** Not "Plan Task 4" — a *number* is a
-pointer into a document that may be reordered, and it forces the reader to count. Copy the heading:
-
-```sh
-# Copy the headings; do not retype them. (Retyping em-dashes and backticks from memory
-# does not survive recall.)
-grep -n '^## Task' docs/specs/NN-slug/<stream>-plan.md
-```
-
-**Say that `docs/specs/` is gitignored.** Every one of these pointers aims into an ignored directory.
-A fresh clone gets a graph full of refs to a path that **is not there**, and nothing tells it so.
-State it in the ticket, and tell the reader to ask rather than improvise from a heading it cannot
-open.
-
-**Then VERIFY every pointer resolves — against the plan file, not against your memory of it:**
-
-```sh
-# Every heading a ticket cites must exist in the plan it cites.
-for f in .tickets/*.md; do
-  ref=$(grep -m1 "^PLAN: " "$f") || continue
-  plan=${ref#PLAN: }; plan=${plan%% →*}
-  head=$(printf '%s' "$ref" | sed -E "s/.*→ '(.*)'.*/\1/")
-  grep -qxF "$head" "$plan" \
-    && echo "  ok      $(basename "$f" .md)" \
-    || echo "  BROKEN  $(basename "$f" .md) -> $plan :: $head"
-done
-```
-
-**A pointer you have not followed is a claim, not a reference.**
-
-**Three things that go wrong if you skip a flag:**
-- **No `-p`** → every ticket defaults to `2`, and `tk ready` — which **sorts by priority** — hands
-  back your work in no meaningful order. The ordering signal is dead.
-- **No `--acceptance`** → "one ticket = one verifiable outcome" becomes unenforceable. Each plan
-  task already *has* its verification step. Copy it in.
-- **No `tk dep`** → the plan's build order exists only in the prose you just gitignored.
-
-If ticket is absent or the user declines, the plan's `- [ ]` checkboxes are the source of truth. Say
-which one you are using, so the next session knows where to look.
-
-## Execution Handoff
-
-After saving the plan, run the **plan-review** skill. That is the next step: a fresh reviewer reads
-what each step *says*, where you know what each step *meant*. It applies the same coverage /
-placeholder / type-consistency checks the Self-Review above uses, plus engineering, design, DevEx,
-and strategy lenses, and it reaches for a second model where one is available, so the findings are
-not confined to one model family's blind spots.
-
-It is advisory. It closes planning, it does not block it, and you decide what to act on.
-
-Once the findings are addressed, plan-review forks the build path itself, sending a plan whose tasks
-split into disjoint file-owning boundaries to **plan-execute-parallel** and everything else to
-**plan-execute**. plan-execute then assesses the plan and chooses its own execution mode: a
-sequential single-context run, or a fresh implementer subagent per task with an independent reviewer
-after each. It states which mode it picked and why, citing the plan sections that drove the choice,
-then proceeds. Both modes end with an independent whole-branch review.
-
-**Next:** the plan is written. Run **`plan-review`**, then build from what it finds.
+Return complete plan/output hashes, coverage, actual validation commands/exits/
+logs, decisions, limitations and next authorized action. Read-only leaves return
+complete text through native delivery; coordinator persists shared outputs.
+Only the coordinator chooses execution mode after plan acceptance and execution
+authorization. Disjoint native writers require checked isolated roots/ownership,
+settlement and serial integration; ordered/shared-file tasks remain serial.
+Final composed verification and independent aggregate implementation review remain.
+Plan delivery grants no worker launches, commits, integration, publication or
+cleanup. Local handoff is sufficient when publication is ungranted; then stop.

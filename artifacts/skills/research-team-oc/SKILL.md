@@ -26,14 +26,15 @@ for a read-only researcher; a child-session title or Task receipt is insufficien
    the OpenCode Task tool to the `@patronus-researcher-oc` role; when web access
    is separately authorized, `@patronus-web-researcher-oc` may take the web
    questions. Before launch run `opencode agent list` and confirm each role is
-   listed as a subagent with its read-only permission rules. Bind maximum
-   concurrency (start with at most two, never more than four), total subagent
-   count, deadline and retry budget before launch. If a role is absent from the
+   listed as a subagent with its read-only permission rules. Respect applicable
+   existing host/resource or explicitly authorized campaign limits; ordinary
+   research needs no numerical root-budget form or cumulative start ledger.
+   Admit only useful independent leaf questions. If a role is absent from the
    list or authentication is unavailable, report blocked and stop the lane. Do
    not substitute the built-in `general` or `explore` agents, invoke a CLI
    model, change provider or model, or silently investigate inline.
 3. Give each subagent a self-contained question, root/revision, allowed reads,
-   no-write/no-nesting rule (native subagent depth is 1), source paths, budget
+   no-write/no-nesting rule (native subagent depth is 1), source paths, applicable limits
    and findings format. Name the installed `-oc` skills it must read explicitly
    with the OpenCode `skill` tool. Ask for observations separately from
    inferences, file:line citations or sanitized source URLs, limitations and
@@ -61,7 +62,7 @@ for a read-only researcher; a child-session title or Task receipt is insufficien
                                                     +----------------------------+
 ```
 
-Offer `{skillsDir}/spec-brainstorming-oc/SKILL.md` to author a spec from the
+Offer `{skillsDir}/spec-writing-oc/SKILL.md` to author a spec from the
 validated synthesis, or `{skillsDir}/grilling-oc/SKILL.md` to stress-test unresolved
 design choices. Offers require stage authorization; never auto-advance.
 

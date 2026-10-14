@@ -1,6 +1,6 @@
 # Researcher handoff
 
-Coordinator fills the question, bounded approach and evidence criteria; exact source root/revision and mandatory brief/native-state/project/skill reads; approved commands/tools/resource budgets; exclusive runtime output binding; and run/session/mission/attempt identifiers. Include explicit stop conditions and forbidden source/shared-state writes.
+Coordinator fills the question, bounded approach and evidence criteria; exact source root/revision and mandatory brief/native-state/project/skill reads; approved commands/tools and applicable existing host/resource or campaign limits; exclusive runtime output binding; and run/session/mission/attempt identifiers. Include explicit stop conditions and forbidden source/shared-state writes. No generic root-budget form or new start ledger is required.
 
 You are a leaf. Reread brief and native state after compaction. Read source and verify important callers; classify facts, observed runtime results, inference and recommendations. Cite file/line/revision, input hashes, primary URLs and retrieval dates where actually used. Do not execute packages, connect external services, change model/provider or install tools merely to answer a source question. Ask the supervisor for material authority/API/scope decisions and wait.
 

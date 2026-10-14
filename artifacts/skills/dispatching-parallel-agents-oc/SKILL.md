@@ -68,3 +68,12 @@ files. Isolated parallel writers go through
 `{skillsDir}/plan-execute-parallel-oc/SKILL.md`, using native Task subagents only
 when their tools/permissions can target the assigned roots. Read-only next-wave
 scouts may overlap current writers; no CLI supervisor is a native prerequisite.
+
+## Testing classification in briefs
+
+When proposing an implementation brief, apply this testing classification:
+critical behavior requires TDD; other features/behavior default to TDD;
+behavior-preserving refactors use green coverage/characterization; nonbehavioral
+work uses focused postchecks. Omission records the default in the existing brief,
+not another approval stop. Genuine classification/conflict/exception ambiguity
+needs owner direction. Read-only scouts gain no edits, builds or command authority.

@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-plan-author-oc
 description: "OpenCode only. Write authorized requirement-covered implementation plans"
-version: 1.0.0
+version: 1.1.1
 entry: agent.md
 files: []
 targets: [opencode]

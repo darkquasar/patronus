@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: tdd-cl
-description: "Public-interface vertical RED/GREEN slices for critical behavioral bugs/boundaries and explicit test-first work; consume valid approval and retain relevant regressions."
-version: 2.1.0
+description: "Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
+version: 2.2.0
 entry: SKILL.md
 files: [tests.md, mocking.md, refactoring.md]
 targets: [claude]

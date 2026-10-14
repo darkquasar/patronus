@@ -4,9 +4,10 @@ type: skill
 role: eval
 name: receiving-code-review-cl
 description: "Verify complete review feedback against source, then perform one authorized batched correction with exact defect/bytes/oracle evidence and owner disposition."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 targets: [claude]
+requires: [tdd-cl]
 defaults:
   scope: project
 attribution:

@@ -15,8 +15,11 @@ implementation, green and relevant negative/legacy regressions. Routine
 prose/manifests/mechanical wiring without a changed safety invariant use
 `focused-postcheck` with exact diff and positive/negative case inspection plus
 approved focused checks. Explicit test-first requests and project-required checks
-govern; existing safety tests remain. Missing or ambiguous strategy (including a
-legacy brief without one) blocks implementation for a coordinator decision. A
+govern; existing safety tests remain. Other features/behavior default to TDD unless
+an approved concrete exception applies. Behavior-preserving refactors use green
+coverage and characterize uncertainty. Omission applies and records installed
+tdd-pi defaults in the existing brief without another approval stop; genuine
+classification/conflict/exception ambiguity needs owner direction. A
 focused-postcheck task is not defective for lacking invented red evidence; do not
 require prose-substring tests or one red cycle per file/task.
 

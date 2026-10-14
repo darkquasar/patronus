@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-parallel-oc
 description: "OpenCode only: native Task writers in allocated worktrees, pipelined read-only preparation and explicitly selected optional CLI mode."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE", "references/cli-workers.md", "references/worktree-allocation.md", "scripts/prepare-worktrees.py", "scripts/worker-precheck.sh", "fixtures/test_worker_precheck.py"]
 targets: [opencode]

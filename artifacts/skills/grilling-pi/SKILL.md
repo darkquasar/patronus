@@ -49,25 +49,25 @@ exist. Entry-awareness only tunes *which upstream offer to surface*; it never ro
   research): file presence cannot tell "grilling to harden a fresh spec" from "grilling a spec
   that's already sharp," so **ASK, do not auto-route**:
 
-  > "The spec looks sharper now. Want me to harden it further with `spec-brainstorming-pi` — fold what
+  > "The spec looks sharper now. Want me to harden it further with `spec-writing-pi` — fold what
   > we surfaced back into the spec — or return the findings without changing stage?"
 
 - **Research only** (a `<slug>-research.md` exists, no spec yet):
 
-  > "The findings look sharp now. Author the spec from them with `spec-brainstorming-pi`,
+  > "The findings look sharp now. Author the spec from them with `spec-writing-pi`,
   > if you authorize that stage? Or return the findings?"
 
   Do NOT re-suggest `research-team-pi` here — that's a loop.
 
 - **Entered from research-team-pi** (research exists, you were called to stress-test before the spec):
-  same as research-only — offer `spec-brainstorming-pi`; do not loop back to `research-team-pi`.
+  same as research-only — offer `spec-writing-pi`; do not loop back to `research-team-pi`.
 
 - **Called cold** (no `research.md` and no `<stream>-spec.md` present) — the full two-option menu:
 
   > "The idea looks sharp now. Two possible directions for your approval:
   > - **The domain has real unknowns** (several things you'd have to go investigate before the
   >   design is even tractable) → the `research-team-pi` skill.
-  > - **You know the domain; it's the design that needs settling** → the `spec-brainstorming-pi` skill.
+  > - **You know the domain; it's the design that needs settling** → the `spec-writing-pi` skill.
   >
   > Or neither; I can return the findings without changing stage."
 

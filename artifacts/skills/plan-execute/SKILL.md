@@ -1,144 +1,112 @@
 ---
 name: plan-execute
-description: Use when you have a written implementation plan to execute and the tasks do not split into disjoint file-owning boundaries
+description: Use when executing an approved ordered or shared-file plan through coordinator-selected solo or isolated-leaf mode
 ---
 
-# Plan Execute
+# Execute an approved plan
 
-Execute a written plan. Choose the execution mode by proportionality: does independent
-per-task review earn its cost for this plan?
+This optional Codex/OpenCode identity remains available. The coordinator, not the
+plan reviewer, chooses `solo` or `sdd` from the accepted plan and actual native
+capabilities. Explicit valid mode approval governs; no repeated consent is needed.
+Solo uses one implementation context; SDD uses coordinator-admitted isolated
+implementers. Both retain aggregate review. Named safety/compatibility boundaries,
+not task count or mode labels, determine earlier review acceptance points.
 
-**Announce at start:** "I'm using the plan-execute skill to implement this plan."
+Read [solo.md]({skillDir}/solo.md) or [sdd.md]({skillDir}/sdd.md) for the selected
+mode. Supporting scripts are optional packaging utilities, not a progress authority,
+mandatory commit workflow or native launch API. No script grants worker admission.
+Commit-range helper output alone omits dirty/untracked inputs; supplement it with
+the complete assigned patch and input hashes before review or acceptance.
 
-## Where this sits
+## Lifecycle authority
 
-`plan-review` forks first, on parallelism. If the plan's tasks split into disjoint
-file-owning boundaries, that fork sends the work to `plan-execute-parallel` and this
-skill never runs. You are here because the tasks share files or must land in order.
+Read effective instructions, approved requirements/plan, current root/base/head,
+owned paths, accepted interfaces, predecessor settlement and retained evidence
+initially and after resume. Existing grants survive stage-name changes; changed
+scope, destructive actions or material choices need owner direction. Only the
+coordinator selects modes, admits workers and updates shared progress. Workers
+are leaves: implement, investigate, fix or review their exact subject, return
+complete evidence and stop, without nesting or successor review/fix waves.
 
-Inside that arm, this skill forks again, on proportionality:
+Select the sole mutable progress authority once in the accepted brief. Qualified
+native mission/workflow state that actually owns runs stays authoritative; other
+records reference it. Without it, use explicit project selection, otherwise the
+existing tracker or one durable plan-associated record. UI todos alone do not
+outrank a tracker. Do not create a competing ledger, checklist or tk status mirror.
+Respect repository tracking/ignore policy. Recovery consumes this authority and
+complete retained results, never replaying settled tasks.
 
-```
-  plan-execute
-  |
-  +-- hard trigger, or 2+ soft signals with 2+ implementation tasks --> sdd.md
-  +-- otherwise                                                      --> solo.md
-```
+## Execute and settle
 
-Both modes end with an independent whole-branch review. That is what makes two modes
-enough: there is no "solo but reviewed" gap to fill, because solo is already reviewed at
-the end.
+Use available native tools and current authentication, role restrictions and
+wait/stop controls. Report actual missing capabilities without a blanket native
+qualification ceremony, model/provider/protocol switch or CLI fallback. CLI mode
+requires explicit owner selection. Ordinary development needs no root-wide
+numerical budgets or start ledger; existing host/resource and campaign limits
+still govern. Keep heavy checks under project resource controls.
 
-## Step 1: Load the plan
+The coordinator provides a small brief: exact allocated root/base, requirements,
+owned/excluded paths, interfaces, predecessors, testing strategy/checks and return
+format. Concurrent writers require separate checked roots and disjoint ownership,
+never the lead checkout. Native tools alone do not prove isolation. A leaf may
+perform only an exact coordinator-approved deterministic allocation, not select
+new roots or launch work. Read-only workers return complete text through native
+delivery, not a mandatory writable report. The coordinator persists shared reports.
 
-Read the plan file. Review it critically and identify questions or concerns about the
-plan itself, before deciding how to run it. If you find concerns, raise them with your
-human partner before starting.
+Read complete worker results, actual commands/exits/logs and full patches after
+confirmed settlement. Status or receipt alone is not acceptance. Unknown liveness,
+missing capture, failed checks or ownership drift blocks affected acceptance and
+retains partial work. Serially integrate accepted patches only under the integration
+grant, then verify the composed inputs; green leaf tests do not prove composition.
 
-## Step 2: Resolve the mode
+## Testing strategy
 
-Apply these rules **in order**. The first one that fires decides.
+Explicit test-first requests and required project checks govern. Critical auth/
+secrets, ownership, concurrency/isolation/settlement, migration/removal and
+reproducible behavioral bugs require public-behavior TDD. Other features/behavior
+changes default to TDD, with a different strategy requiring a concrete reason and
+owner agreement unless already approved. Test one invented-data public behavior:
+observe intended RED, minimum GREEN and relevant negative/legacy regressions.
+Use `critical-tdd` for test-first work where a strategy field exists.
+Behavior-preserving refactors use green coverage and characterize uncertain legacy
+behavior first. Nonbehavioral prose/manifests/mechanical wiring without a changed
+safety invariant use `focused-postcheck`, not invented RED or prose-substring tests.
+An omitted strategy uses these defaults and records the choice in the existing
+brief/handoff. Genuine classification or exception ambiguity needs owner direction.
+Missing required test capability blocks the affected change, not the whole native
+lane. No unconditional full suite per task and no test-induced reviewer launches.
 
-**Rule 1: an explicit user mode request wins outright.** If the invocation names a mode,
-use it and skip the assessment entirely. There is no flag to parse: match on the mode
-words in what the user actually said. "Execute this plan solo", "run it in sdd mode",
-"just do it solo" all count. When Rule 1 fires, the record says the mode was requested,
-not assessed.
+## Review, correction and completion
 
-**Rule 2: any hard trigger selects `sdd`**, regardless of how many tasks the plan has. A
-one-task schema migration goes to `sdd`.
+Keep the accepted spec/plan reviews and one independent aggregate implementation
+review. Matching exact inputs, scope and coverage satisfy feature/branch/pre-merge
+triggers once. Earlier boundary review requires a named changed safety/compatibility
+invariant or irreversible boundary with its own acceptance point before dependent
+consumption. Task count, framework use or weak verification alone creates no gate.
+No automatic per-task reviewers or repeated-until-approved loops.
 
-Hard triggers:
+Read all findings, preserve source IDs and consequence-based severities, deduplicate
+without dropping evidence, and admit at most one bounded batched correction per
+gate by default. Fixers cannot launch reviewers. Unresolved Critical/Major or more
+than two distinct Medium block. Up to two Medium residuals need explicit owner
+acceptance; Low gets recorded disposition. Missing authority, requirements or tests
+independently blocks. Never lower severity to fit the threshold.
 
-- security or trust boundary (auth, secrets, crypto, sandboxing, untrusted input,
-  permission expansion)
-- irreversible or hard-to-recover state change (schema migration, destructive data
-  operation, deployment cutover, public API removal)
-- concurrency or distributed correctness (locking, retries, idempotency, ordering,
-  transactions, caches)
-- compatibility contract (public API, wire format, persisted format, CLI compatibility)
-- weak verification: important behaviour the plan cannot cover with deterministic
-  automated tests
-- high blast radius: shared framework, installer, profile resolver, or code with several
-  independent consumers
+The coordinator resolves a fixed defect only against its cited acceptance criterion,
+exact corrected bytes and sufficient positive/negative/regression evidence. Record
+parent-verified correction, not independent re-review. Changed public interface,
+safety invariant or acceptance scope, or insufficient oracle, returns to the owner
+for a decision or additional independent-review grant. Critical/Major residuals
+cannot be waived. No automatic second review wave.
 
-**Rule 3: two or more soft signals select `sdd`**, but only if the plan has at least two
-implementation tasks. An implementation task changes source; docs-only and scaffolding
-tasks do not count toward the floor. With fewer than two, SDD's startup cost cannot
-amortize: select `solo`.
+Reuse verification only when exact relevant dirty/untracked/ignored inputs,
+command/options, dependency/tool/environment identity and acceptance scope match,
+with readable logs and actual exits. HEAD or message equality alone is insufficient.
+Final aggregate checks stay fresh for composed delivered inputs; matching integration
+checks satisfy finishing without another identical suite.
 
-Soft signals:
-
-- introduces a new architectural pattern rather than following an existing one
-- correctness depends on an invariant spanning three or more modules
-- changes both producer and consumer sides of a contract
-- acceptance criteria use qualitative terms ("appropriate", "robust") with no exact
-  oracle
-- relies on negative requirements ("must never", "no behaviour change") that tests
-  commonly miss
-- implementation requires choosing among several plausible designs
-
-**Rule 4: otherwise `solo`.**
-
-The floor in Rule 3 binds soft-signal routing only. It never overrides Rule 2.
-
-Raw task count is not a criterion beyond that floor. Twenty mechanical tasks with no
-trigger is a `solo` plan.
-
-### Reading the plan, not the words in it
-
-A trigger fires on what the plan **does**, not on vocabulary that appears in it. A docs
-task that mentions "schema migration" while implementing nothing is not a hard trigger.
-Qualitative wording that another section of the same plan pins to an exact oracle is not
-a soft signal: read the whole plan before scoring it.
-
-### Guarding against your own bias
-
-Under cost pressure you will drift toward `solo`. Primed by "sdd is higher quality" you
-will drift toward `sdd`. The citation requirement is the check. A mode chosen with no
-nameable, quotable trigger is a preference, not a decision, so name the plan section or
-choose the other mode.
-
-## Step 3: Emit the decision record
-
-State the choice, then continue. Do not stop for an answer: an unattended run would
-stall at the prompt.
-
-```
-Mode: sdd
-Hard triggers: Task 3 alters the persisted lockfile format (compatibility contract)
-Soft signals: none needed
-Proceeding. Say "run this solo" to override.
-```
-
-Cite the plan sections that drove the decision, by task number or heading. Every citation
-must point at a section that exists and must actually support the trigger it is named
-for. A record whose citation does not hold up is a gate failure, not a valid record: go
-back to Step 2 and score the plan again.
-
-When Rule 1 fired, say so:
-
-```
-Mode: solo (requested)
-Gate skipped: you asked for solo.
-Note: this plan has a hard trigger (Task 2 expands file permissions). Proceeding solo.
-Proceeding.
-```
-
-The record names one mode for the whole plan. There is no per-task mode switching.
-
-## Step 4: Load the sidecar and run it
-
-- `sdd` → read [sdd.md](sdd.md) and follow it.
-- `solo` → read [solo.md](solo.md) and follow it.
-
-Read one. The mode you did not choose does not enter your context.
-
-## Integration
-
-- **plan-writing** — creates the plan this skill executes.
-- **plan-review** — the gate before this one; it forks on parallelism and hands the
-  non-parallel arm here.
-- **requesting-code-review** — ships the `code-reviewer.md` prompt both modes use for
-  the final whole-branch review. The `requires:` edge installs it alongside this skill.
-- **finishing-a-development-branch** — takes over once the whole-branch review is clean.
+Return changed files/hashes, tests added, actual checks/exits/logs, every finding's
+disposition, limitations and next authorized action. Local handoff completes the
+stage when publication is ungranted. Commit, integration, publication and cleanup
+remain separate grants. No automatic push/rebase, retry-until-success, stash deletion
+or worktree removal; uncertain settlement/capture retains allocations.

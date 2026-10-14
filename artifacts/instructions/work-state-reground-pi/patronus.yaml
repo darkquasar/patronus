@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: work-state-reground-pi
 description: "Advisory initial/resume recovery from durable state"
-version: 2.0.0
+version: 2.1.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md"]
 targets: [pi]

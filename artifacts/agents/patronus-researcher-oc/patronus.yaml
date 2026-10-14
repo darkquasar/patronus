@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-researcher-oc
 description: "OpenCode only. Investigate local source and return attributed findings"
-version: 1.0.0
+version: 1.1.1
 entry: agent.md
 files: []
 targets: [opencode]

@@ -13,7 +13,7 @@ are inherited. Only entry and manifest-declared sidecars are distributed.
 
 - `dispatching-parallel-agents-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `grilling-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
-- `spec-brainstorming-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
+- `spec-writing-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

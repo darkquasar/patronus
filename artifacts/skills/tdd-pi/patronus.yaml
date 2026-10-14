@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: tdd-pi
-description: "Test-first public-behavior slices for critical work and explicit test-first requests"
-version: 2.2.0
+description: "Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
+version: 2.3.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
 targets: [pi]

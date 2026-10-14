@@ -4,10 +4,11 @@ type: skill
 role: capability
 name: skills-dispatch-oc
 description: "OpenCode only: Exact installed skill reads and OpenCode workflow routes."
-version: 1.3.0
+version: 1.4.1
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [opencode]
+requires: [tdd-oc]
 defaults:
   scope: project
 attribution:

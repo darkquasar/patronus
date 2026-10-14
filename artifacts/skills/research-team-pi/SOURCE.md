@@ -22,6 +22,6 @@ Classification: `*-pi` skill references are selected Pi closure reads, not tool 
 
 ## Active selected Pi reads
 
-`plan-execute-parallel-pi`, `plan-writing-pi`, `spec-brainstorming-pi`, `web-research-pi`
+`plan-execute-parallel-pi`, `plan-writing-pi`, `spec-writing-pi`, `web-research-pi`
 
 These are source-reviewed invocation classifications, not a second executable catalog membership oracle. Historical source filenames above are not active invocation aliases.

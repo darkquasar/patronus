@@ -17,20 +17,22 @@ launch another reviewer or mutate shared status; they return complete findings.
 
 Within the one approved batched correction grant, address blockers first.
 Several focused edit/test iterations may fit this grant; do not admit one fixer
-per finding or launch successor reviewers. Follow the testing strategy recorded in the existing correction brief. Select
-`critical-tdd` for new or changed auth/secrets, migration/removal, ownership,
-concurrency/settlement/isolation behavior and reproducible behavior bugs. Read the
-installed tdd-oc SKILL.md when selected; use short public-behavior slices with an
-invented-data test, observed intended failure, minimal implementation, green and
-relevant negative/legacy regressions under the project lock. Routine
-prose/manifests/mechanical wiring without a changed safety invariant use
-`focused-postcheck`: inspect exact diff and positive/negative cases, then run
-approved focused checks. Explicit test-first requests and project-required checks
-govern. Preserve existing safety tests; do not invent red cycles per task/file or
-prose-substring tests. Missing or ambiguous strategy, including a legacy brief
-without one, stops for a lead decision before correction. A focused-postcheck
-correction is not defective merely because it lacks invented red evidence. Preserve
-legacy behavior and independent source discoverability. Do not batch unrelated
+per finding or launch successor reviewers.
+Use the installed tdd-oc defaults and record strategy/rationale in the existing
+brief/handoff. Explicit test-first requests and required project checks govern.
+Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
+removal and reproducible behavioral bugs require public-behavior TDD. Other
+features/behavior changes default to TDD; a different strategy needs a concrete
+reason and owner agreement unless already approved. Use `critical-tdd` for
+short test-first slices: invented-data intended RED, minimum GREEN and relevant
+negative/legacy regressions. Pure behavior-preserving refactors work from green
+coverage and characterize uncertain legacy behavior first. Nonbehavioral prose/
+manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`, not manufactured reds or prose-substring tests. Omission
+alone applies these defaults and records selection, without another approval or
+ledger; genuine classification, conflict or exception ambiguity needs owner
+direction. Keep existing safety tests. Tests do not admit successor reviewers.
+Preserve legacy behavior and independent source discoverability. Do not batch unrelated
 refactors into a review correction.
 
 Retain each source finding ID and original severity under the lead's deduplicated

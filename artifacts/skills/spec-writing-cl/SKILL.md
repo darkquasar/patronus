@@ -1,9 +1,9 @@
 ---
-name: spec-brainstorming-cl
+name: spec-writing-cl
 description: Use when exploring unresolved requirements or design before authoring a stream spec, seeded by existing research and valid prior decisions
 ---
 
-# Spec Brainstorming: Ideas Into Specs
+# Spec Writing: Ideas Into Specs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
@@ -27,15 +27,15 @@ Use this inline author checklist as intent, not tasks/todos or another progress 
 2. **Ask clarifying questions**, one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches**, with trade-offs and your recommendation
 4. **Present design**, scale sections to complexity and resolve only unapproved material choices
-5. **Write spec**, into a research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit, `docs/specs/` is gitignored by default.
+5. **Write spec**, into an authorized research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` only within the grant; see "Spec folder & meta.yaml" below). Respect actual tracking/ignore policy; do not auto-commit or add ignore rules.
 6. **Spec placeholder scan**, cheap inline check for placeholders and internal contradictions only; the real review is `spec-review-cl` in a fresh subagent (see below)
 7. **Spec acceptance**, consume existing approval or ask about unresolved written requirements
-8. **Hand off**, the next hop is `spec-review-cl` (a fresh subagent reads what the spec *says*), then `plan-writing-cl`. A spec receives one independent review; an explicit owner-declined review is retained in the brief.
+8. **Hand off**, the next hop is `spec-review-cl` (a fresh subagent reads what the spec *says*), then `plan-writing-cl`, under coordinator admission. An existing spec receives one independent review. If the owner declined the spec itself, retain that exception and accepted requirements rather than inventing a spec or claiming spec review.
 
 ## Process Flow
 
 ```dot
-digraph spec_brainstorming {
+digraph spec_writing {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -137,8 +137,8 @@ either way.
 
 - Write the validated design (spec) to `docs/specs/NN-slug/<stream>-spec.md`, where `NN-slug` is a research-effort folder (sequential number + short slug, e.g. `01-user-auth`) and `<stream>` names this stream. Scan `docs/specs/` for the highest existing `NN` and increment.
   - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Do NOT commit the spec. `docs/specs/` is gitignored, design docs stay local unless the user explicitly asks to share them. (ADRs are the exception: those live in `docs/adr/`, committed.)
+- Follow effective project writing guidance inline; authoring does not admit an editorial worker.
+- Respect actual repository tracking/ignore policy. A spec write grants no commit, ignore-rule change or publication; perform those only under separate authorization.
 
 **Spec folder & meta.yaml:**
 
@@ -159,7 +159,7 @@ docs/specs/NN-slug/                    ← ONE research effort
 `NN-slug` is a sequential number + short slug (e.g. `03-payment-retry`). Scan `docs/specs/` for the
 highest existing `NN` and increment.
 
-Brainstorming designs **one stream**. On first write into a new folder, create `meta.yaml` and
+Spec writing designs **one stream**. On first write into a new folder, create `meta.yaml` and
 append your stream, naming the spec file you just wrote:
 
 ```yaml

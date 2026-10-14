@@ -18,8 +18,12 @@ Report material ambiguity, missing authority or failed prerequisites and preserv
 partial evidence. Do not silently switch provider/model/mode.
 
 For critical bugs/boundaries retain public RED/GREEN and negative/legacy
-regressions through tdd-cl. Characterize uncertain legacy before refactoring.
-Prose/manifests use focused postchecks; other behavior needs an explicit strategy.
+regressions through tdd-cl. Other features/behavior default to TDD; if strategy
+is absent apply and record that default rather than manufacture a stop. Exceptions
+need a concrete reason and owner agreement unless already approved. Pure
+refactors stay green; characterize uncertain legacy first. Nonbehavioral prose/
+manifests use focused postchecks. Real classification/exception ambiguity needs
+an owner decision.
 Run focused and assigned checks, not automatic repeated full suites.
 Self-check inline. A correction allows focused edit/test iterations within this
 assignment, not reviewer admission or repeat-until-approved.

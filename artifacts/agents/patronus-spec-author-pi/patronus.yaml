@@ -4,13 +4,13 @@ type: agent
 role: orchestration
 name: patronus-spec-author-pi
 description: "Consume evidence and author only the assigned specification documents"
-version: 3.0.0
+version: 3.1.1
 entry: agent.md
 files: []
 targets: [pi]
 defaults:
   scope: project
 requires:
-  - spec-brainstorming-pi
+  - spec-writing-pi
   - verification-before-completion-pi
   - pi-subagents

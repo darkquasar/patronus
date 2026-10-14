@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: agents-spine-pi
 description: "Pi context discovery, authority and upstream-only delegation"
-version: 2.0.0
+version: 2.1.0
 entry: INSTRUCTIONS.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]

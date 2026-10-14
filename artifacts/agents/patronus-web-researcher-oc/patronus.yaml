@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-web-researcher-oc
 description: "OpenCode only. Read-only web research returning source-backed findings without subject writes"
-version: 1.0.0
+version: 1.1.1
 entry: agent.md
 files: []
 targets: [opencode]

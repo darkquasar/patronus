@@ -1,39 +1,41 @@
 ---
-name: spec-brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design, then authors the spec. Reads an existing research.md when present and scales its dialogue to it."
+name: spec-writing
+description: Use when exploring unresolved requirements or design before authoring a stream spec, seeded by existing research and valid prior decisions
 ---
 
-# Spec Brainstorming: Ideas Into Specs
+# Spec Writing: Ideas Into Specs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
-Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+Start from current project context and settled decisions. Ask only unresolved
+questions, one at a time. Present changed design choices for approval; consume
+valid prior approval rather than repeating it.
 
-<HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
-</HARD-GATE>
+Consume already valid design approval and settled research before asking questions.
+Do not restart design merely because execution or correction was requested.
+Author only the approved spec subject; implementation requires its own grant.
 
-## Anti-Pattern: "This Is Too Simple To Need A Design"
-
-Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+For small requests, state actual consequences and assumptions plainly. A short
+design can suffice. An explicitly owner-declined spec remains the ADR-0003
+exception, retained in the existing brief, not a missing document to invent.
 
 ## Checklist
 
-You MUST create a task for each of these items and complete them in order:
+Use this inline author checklist as intent, not tasks/todos or another progress mirror:
 
-1. **Explore project context** — check files, docs, recent commits. **If a `<slug>-research.md` exists for this effort** (a folder under `docs/specs/` that names it in `meta.yaml`), READ it first and let it seed the design — do not re-investigate what research already settled. When research already answers the design questions, collapse the one-at-a-time dialogue to "confirm the implied design, then write the spec" (see The Process below).
-2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-3. **Propose 2-3 approaches** — with trade-offs and your recommendation
-4. **Present design** — in sections scaled to their complexity, get user approval after each section
-5. **Write spec** — into a research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` if new; see "Spec folder & meta.yaml" below). Do NOT auto-commit — `docs/specs/` is gitignored by default.
-6. **Spec placeholder scan** — cheap inline check for placeholders and internal contradictions only; the real review is `spec-review` in a fresh subagent (see below)
-7. **User reviews written spec** — ask user to review the spec file before proceeding
-8. **Hand off** — the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `plan-writing`. Each hop is a suggestion the user may decline.
+1. **Explore project context**, check files, docs, recent commits. **If a `<slug>-research.md` exists for this effort** (a folder under `docs/specs/` that names it in `meta.yaml`), READ it first and let it seed the design, do not re-investigate what research already settled. When research already answers the design questions, collapse the one-at-a-time dialogue to "confirm the implied design, then write the spec" (see The Process below).
+2. **Ask clarifying questions**, one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches**, with trade-offs and your recommendation
+4. **Present design**, scale sections to complexity and resolve only unapproved material choices
+5. **Write spec**, into an authorized research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` only within the grant; see "Spec folder & meta.yaml" below). Respect actual tracking/ignore policy; do not auto-commit or add ignore rules.
+6. **Spec placeholder scan**, cheap inline check for placeholders and internal contradictions only; the real review is `spec-review` in a fresh subagent (see below)
+7. **Spec acceptance**, consume existing approval or ask about unresolved written requirements
+8. **Hand off**, the next hop is `spec-review` (a fresh subagent reads what the spec *says*), then `plan-writing`, under coordinator admission. An existing spec receives one independent review. If the owner declined the spec itself, retain that exception and accepted requirements rather than inventing a spec or claiming spec review.
 
 ## Process Flow
 
 ```dot
-digraph spec_brainstorming {
+digraph spec_writing {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -57,7 +59,7 @@ digraph spec_brainstorming {
 }
 ```
 
-**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `plan-writing`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill — the flow is spec → spec-review → plan-writing → plan-review → build, and each hop is a suggestion the user may decline.
+**The terminal state is the written spec.** After it, the next hop is `spec-review` (a fresh subagent reads what the spec *says*, not what you *meant*), then `plan-writing`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill, the flow is spec → spec-review → plan-writing → plan-review → build, and successors require coordinator admission within the existing grant.
 
 ## The Process
 
@@ -65,18 +67,18 @@ digraph spec_brainstorming {
 
 - Check out the current project state first (files, docs, recent commits)
 - **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `research-team`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
-  - **Research answers the design questions** → skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: … — does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
+  - **Research answers the design questions** → consume valid approval already present; otherwise skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: …, does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
   - **Research leaves design questions open** → ask only those, one at a time, in the normal flow below.
-  There is no separate "research-seeded" skill — same author, dialogue scaled to input richness.
+  There is no separate "research-seeded" skill, same author, dialogue scaled to input richness.
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
-- If the domain is genuinely *unknown* rather than merely large — several independent unknowns that each need investigating before the design is even tractable — offer the heavy path instead of guessing:
+- If the domain is genuinely *unknown* rather than merely large, several independent unknowns that each need investigating before the design is even tractable, offer the heavy path instead of guessing:
 
-  > "This looks broad enough to research in parallel. Want me to run `research-team` — spawn
-  > parallel researchers to investigate each unknown and synthesize research.md, spec.md, and
-  > plan.md — instead of designing solo?"
+  > "This looks broad enough to research in parallel. Want me to run `research-team`, spawn
+  > read-only researchers to investigate independent unknowns and return complete evidence
+  > for a research synthesis, instead of designing solo?"
 
-  If yes, hand off to the **research-team** skill and return with its spec. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while research-team investigates work you *don't*. A project can need one, both, or neither.
+  If yes, hand off to the **research-team** skill and return with its research evidence. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while research-team investigates work you *don't*. A project can need one, both, or neither.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
@@ -92,7 +94,7 @@ digraph spec_brainstorming {
 
 - Once you believe you understand what you're building, present the design
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
-- Ask after each section whether it looks right so far
+- Ask about unresolved material choices, not already approved sections
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
 
@@ -124,7 +126,7 @@ afterthought. A boundary you cannot draw is usually a boundary you have not yet 
 
 Once the user approves the design and before you write the doc, offer to interrogate it:
 
-> "Want me to grill this design first — interrogate the assumptions and the hard questions —
+> "Want me to grill this design first, interrogate the assumptions and the hard questions,
 > before we commit it to a spec?"
 
 If yes, run the `grilling` skill, then come back here with what it surfaced. The design is at its
@@ -135,13 +137,13 @@ either way.
 
 - Write the validated design (spec) to `docs/specs/NN-slug/<stream>-spec.md`, where `NN-slug` is a research-effort folder (sequential number + short slug, e.g. `01-user-auth`) and `<stream>` names this stream. Scan `docs/specs/` for the highest existing `NN` and increment.
   - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Do NOT commit the spec. `docs/specs/` is gitignored — design docs stay local unless the user explicitly asks to share them. (ADRs are the exception: those live in `docs/adr/`, committed.)
+- Follow effective project writing guidance inline; authoring does not admit an editorial worker.
+- Respect actual repository tracking/ignore policy. A spec write grants no commit, ignore-rule change or publication; perform those only under separate authorization.
 
 **Spec folder & meta.yaml:**
 
 A folder under `docs/specs/` is **one research effort**, and it holds **many streams**. A stream is
-**one spec and one plan** — the unit of independently specifiable, reviewable, shippable work. The
+**one spec and one plan**, the unit of independently specifiable, reviewable, shippable work. The
 folder shares one research doc across all its streams (ADR-0003):
 
 ```
@@ -157,7 +159,7 @@ docs/specs/NN-slug/                    ← ONE research effort
 `NN-slug` is a sequential number + short slug (e.g. `03-payment-retry`). Scan `docs/specs/` for the
 highest existing `NN` and increment.
 
-Brainstorming designs **one stream**. On first write into a new folder, create `meta.yaml` and
+Spec writing designs **one stream**. On first write into a new folder, create `meta.yaml` and
 append your stream, naming the spec file you just wrote:
 
 ```yaml
@@ -173,33 +175,31 @@ streams:
     intent: "One line: what this stream is."
     spec: <stream>-spec.md      # the file you just wrote
     plan: null                  # plan-writing fills this in
-    epic: null                  # plan-writing or plan-execute-parallel fills this in
-                                # with the tk epic id, e.g. pat-a1b2
-    tasks: []                   # the same seeder fills this in: one entry per plan task,
-                                # {number, id, name}
+    epic: null                  # optional reference only when tk is selected
+    tasks: []                   # optional references, not a required progress mirror
 ```
 
 If `meta.yaml` already exists (e.g. `research-team` created it), append your stream to `streams:` and
 bump `updated:`. Each skill fills the fields it produces: `plan-writing` fills `plan:`, and
-whichever skill seeds the tk graph — `plan-writing` or `plan-execute-parallel` — fills `epic:` and
-`tasks:` for the tree it created.
+an explicitly authorized tracker owner fills optional `epic:`/`tasks:` references
+only when tk is selected. No automatic seeding or duplicate mutable status.
 
 **One stream = one spec + one plan.** If the work forks into pieces that are independently
-specifiable, reviewable, and shippable, that is **more than one stream** — add a stream, not a second
+specifiable, reviewable, and shippable, that is **more than one stream**, add a stream, not a second
 plan to an existing one. They share the folder's one research doc; they share nothing else.
 
 **Name the file; do not assert a flag.** Write `spec: <stream>-spec.md`, never `spec: true`. Naming
 the file and claiming it exists are the same act.
 
-**Every stream gets a spec by default.** `spec-review` and `plan-review` are different lenses — *"is
-this the right thing to build"* vs *"is this buildable as written"* — so keep both. If the user
+**Every stream gets a spec by default.** `spec-review` and `plan-review` are different lenses, *"is
+this the right thing to build"* vs *"is this buildable as written"*, so keep both. If the user
 explicitly declines a spec, record the decision instead of leaving an absence:
 
 ```yaml
   - slug: quick-fix
     intent: "One line."
     spec: null
-    spec_declined: "User opted to plan directly (2026-07-12) — scope judged too small for a spec."
+    spec_declined: "User opted to plan directly (2026-07-12), scope judged too small for a spec."
     plan: quick-fix-plan.md
     epic: null
     tasks: []
@@ -210,15 +210,15 @@ explicitly declines a spec, record the decision instead of leaving an absence:
 1. Every filename `meta.yaml` names **resolves to a file on disk.**
 2. Every `*-spec.md` / `*-plan.md` in the folder **is named in `meta.yaml`.**
 
-Both are greppable — that is why the schema names files rather than asserting flags.
+Both are greppable, that is why the schema names files rather than asserting flags.
 
 Confirm `docs/specs/` is gitignored before writing into it: `git check-ignore -q docs/specs/ && echo ignored`.
-If it is not, add `/docs/specs/` to `.gitignore` and tell the user you did. Leave `docs/adr/`
-tracked. Do not *assert* it is ignored — check.
+If it is not ignored, report the actual policy and ask before altering .gitignore.
+No automatic tracking-policy change or commit. Do not assert it is ignored, check.
 
 **Spec placeholder scan (cheap, inline):**
 
-After writing the spec, scan it for the mechanical failures only — the ones that need no fresh
+After writing the spec, scan it for the mechanical failures only, the ones that need no fresh
 perspective to catch:
 
 1. **Placeholders:** any "TBD", "TODO", or an empty section? Fill them.
@@ -226,25 +226,27 @@ perspective to catch:
 
 Fix them and move on.
 
-**This is NOT the spec review.** The real review is `spec-review`, and it runs in a **fresh
-subagent** — because the author cannot have fresh eyes on their own work. You know what you *meant*;
-a reviewer with a clean context window reads only what you *wrote*. Offer it (see Next, below); do
-not substitute this scan for it. When `spec-review` runs, it dispatches with
-`spec-document-reviewer-prompt.md` — that companion is the review's prompt, not a second review path.
+This inline check is not independent spec review. The coordinator admits one
+spec-review subject, using its maintained spec-reviewer.md rubric. The retained
+spec-document-reviewer-prompt.md is a compatibility pointer to that same rubric,
+not a second reviewer. No automatic second model or repeat-until-approved loop.
+Read complete findings and use the existing one-batch correction/disposition route.
+Material scope/interface/invariant changes or insufficient proof return to the owner.
 
-**User Review Gate:**
-After the placeholder scan, ask the user to review the written spec before proceeding:
+Consume existing valid spec/design approval. Ask about real unresolved content,
+not merely a stage label. Retain explicit review/spec declines in the existing
+brief. Missing requirements or authority independently block. Hand off the accepted
+spec and exact evidence references to plan-writing only within coordinator
+admission, without self-launching successors.
 
-> "Spec written to `<path>` (kept local — `docs/specs/` is gitignored). Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
-
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
-
-**Next:**
-
-> "Spec written to `docs/specs/NN-slug/<stream>-spec.md`. Want me to run **`spec-review`** over it
->  first — a fresh subagent, clean context, reading only what the spec *says*? Then `plan-writing`."
-
-The user may skip straight to `plan-writing`. Do not gate on the review — each hop is a suggestion.
+The coordinator selects one mutable progress authority once at plan acceptance.
+Run-owning native state wins; otherwise explicit project selection, existing
+tracker or one durable plan-associated record. UI todos alone do not outrank it.
+Metadata indexes documents and logs retain observations. No checklist-to-todo or
+tk mirrors. Read instructions, brief, latest handoff and actual source/results on
+resume; do not replay settled research. Ordinary development requires no root
+numerical allocation form; applicable host/resource limits remain.
+Commit, publication and cleanup require separate grants.
 
 ## Key Principles
 

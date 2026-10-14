@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: work-state-reground-cx
 description: "Codex only: Advisory recovery from source and checked handoffs, no hook."
-version: 1.0.0
+version: 1.1.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]

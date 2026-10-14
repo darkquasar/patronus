@@ -37,7 +37,7 @@ are inherited. Only entry and manifest-declared sidecars are distributed.
 ## Active reads
 
 - `plan-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
-- `spec-brainstorming-oc/SKILL.md` and `spec-brainstorming-oc/scripts/README.md`: exact OpenCode companion reads, verify installed/readable before use.
+- `spec-writing-oc/SKILL.md` and `spec-writing-oc/scripts/README.md`: exact OpenCode companion reads, verify installed/readable before use.
 
 Mandatory runtime dependencies are named in requires. Offered next-stage and
 profile companion reads above are exact routes, not aliases or stage grants.

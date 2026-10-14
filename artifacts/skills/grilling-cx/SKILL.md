@@ -25,10 +25,10 @@ available Codex interaction surface and stop if required input cannot be obtaine
 
 Inspect the existing `docs/specs/NN-slug/` folder and `meta.yaml` without treating
 file presence as approval. If a spec exists, ask whether to fold the clarified
-choices into it through `{skillsDir}/spec-brainstorming-cx/SKILL.md`. With research
+choices into it through `{skillsDir}/spec-writing-cx/SKILL.md`. With research
 but no spec, offer that same skill; do not loop back to research. With neither,
 offer `{skillsDir}/research-team-cx/SKILL.md` for domain unknowns or
-`{skillsDir}/spec-brainstorming-cx/SKILL.md` for design settling.
+`{skillsDir}/spec-writing-cx/SKILL.md` for design settling.
 
 Check offered companion files are installed and readable. These are suggestions,
 not gates. There is no forward planning or execution hop from this interview.

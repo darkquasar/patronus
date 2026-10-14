@@ -1,103 +1,49 @@
 ---
 name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+description: Use when the coordinator requests an independent aggregate implementation or named-boundary review
 ---
 
-# Requesting Code Review
+# Bounded independent review
 
-Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+Only the coordinator admits one reviewer for the exact subject. Aggregate review
+is required before implementation acceptance. One matching review covers feature,
+branch and pre-merge triggers when exact inputs, scope and coverage match. Earlier
+reviews need a named changed safety/compatibility invariant or irreversible boundary
+with its own acceptance point; task count, a complex bug or a shared framework
+alone does not add a gate. No automatic per-task review or second-model discovery.
 
-**Core principle:** Review early, review often.
+Provide [code-reviewer.md]({skillDir}/code-reviewer.md) with exact approved
+requirements/plan, absolute root/base/head plus full dirty/untracked patch hashes,
+relevant source/interfaces, retained verification commands/options/exits/logs and
+acceptance scope. Never assume HEAD~1 captures the subject. No report-file write
+is required of a read-only reviewer: consume complete native returned findings.
 
-## When to Request Review
+Consume accepted spec/plan reviews without repeating their subjects. Boundary
+review occurs before dependent consumption and never replaces aggregate review.
+Weak verification alone creates no gate, and no repeated-until-approved loop follows.
 
-**Mandatory:**
-- After each task in subagent-driven development
-- After completing major feature
-- Before merge to main
+Read all findings, preserve source IDs and consequence-based severities, deduplicate
+without dropping evidence, and admit at most one bounded batched correction per
+gate by default. Fixers cannot launch reviewers. Unresolved Critical/Major or more
+than two distinct Medium block. Up to two Medium residuals need explicit owner
+acceptance; Low gets recorded disposition. Missing authority, requirements or tests
+independently blocks. Never lower severity to fit the threshold.
 
-**Optional but valuable:**
-- When stuck (fresh perspective)
-- Before refactoring (baseline check)
-- After fixing complex bug
+The coordinator resolves a fixed defect only against its cited acceptance criterion,
+exact corrected bytes and sufficient positive/negative/regression evidence. Record
+parent-verified correction, not independent re-review. Changed public interface,
+safety invariant or acceptance scope, or insufficient oracle, returns to the owner
+for a decision or additional independent-review grant. Critical/Major residuals
+cannot be waived. No automatic second review wave.
 
-## How to Request
+Reuse verification only when exact relevant dirty/untracked/ignored inputs,
+command/options, dependency/tool/environment identity and acceptance scope match,
+with readable logs and actual exits. HEAD or message equality alone is insufficient.
+Final aggregate checks stay fresh for composed delivered inputs; matching integration
+checks satisfy finishing without another identical suite.
 
-**1. Get git SHAs:**
-```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
-HEAD_SHA=$(git rev-parse HEAD)
-```
-
-**2. Dispatch code reviewer subagent:**
-
-Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md](code-reviewer.md)
-
-**Placeholders:**
-- `{DESCRIPTION}` - Brief summary of what you built
-- `{PLAN_OR_REQUIREMENTS}` - What it should do
-- `{BASE_SHA}` - Starting commit
-- `{HEAD_SHA}` - Ending commit
-
-**3. Act on feedback:**
-- Fix Critical issues immediately
-- Fix Important issues before proceeding
-- Note Minor issues for later
-- Push back if reviewer is wrong (with reasoning)
-
-## Example
-
-```
-[Just completed Task 2: Add verification function]
-
-You: Let me request code review before proceeding.
-
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
-HEAD_SHA=$(git rev-parse HEAD)
-
-[Dispatch code reviewer subagent]
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
-  PLAN_OR_REQUIREMENTS: Task 2 from docs/specs/01-deployment/plan.md
-  BASE_SHA: a7981ec
-  HEAD_SHA: 3df7661
-
-[Subagent returns]:
-  Strengths: Clean architecture, real tests
-  Issues:
-    Important: Missing progress indicators
-    Minor: Magic number (100) for reporting interval
-  Assessment: Ready to proceed
-
-You: [Fix progress indicators]
-[Continue to Task 3]
-```
-
-## Integration with Workflows
-
-**Subagent-Driven Development:**
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
-
-**Executing Plans:**
-- Review after each task or at natural checkpoints
-- Get feedback, apply, continue
-
-**Ad-Hoc Development:**
-- Review before merge
-- Review when stuck
-
-## Red Flags
-
-**Never:**
-- Skip review because "it's simple"
-- Ignore Critical issues
-- Proceed with unfixed Important issues
-- Argue with valid technical feedback
-
-**If reviewer wrong:**
-- Push back with technical reasoning
-- Show code/tests that prove it works
-- Request clarification
-
-See template at: [code-reviewer.md](code-reviewer.md)
+Return changed files/hashes, tests added, actual checks/exits/logs, every finding's
+disposition, limitations and next authorized action. Local handoff completes the
+stage when publication is ungranted. Commit, integration, publication and cleanup
+remain separate grants. No automatic push/rebase, retry-until-success, stash deletion
+or worktree removal; uncertain settlement/capture retains allocations.

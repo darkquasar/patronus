@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: research-team-oc
 description: "OpenCode only: Bounded read-only research and lead-written synthesis."
-version: 1.0.0
+version: 1.1.1
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [opencode]

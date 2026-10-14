@@ -18,6 +18,6 @@ Classification: `*-pi` skill references are selected Pi closure reads, not tool 
 
 ## Active selected Pi reads
 
-`diagnosing-bugs-pi`, `grilling-pi`, `spec-brainstorming-pi`, `tdd-pi`
+`diagnosing-bugs-pi`, `grilling-pi`, `spec-writing-pi`, `tdd-pi`
 
 These are source-reviewed invocation classifications, not a second executable catalog membership oracle. Historical source filenames above are not active invocation aliases.

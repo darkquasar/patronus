@@ -40,9 +40,12 @@ redispatch. Unknown liveness/capture retains allocations and blocks dependents.
 
 Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
 removal and reproducible bugs retain intended public-interface RED, minimal
-GREEN and negative/legacy regressions through tdd-cl. Characterize uncertain
-legacy before refactoring. Routine prose/manifests use focused postchecks;
-other behavior needs an explicit strategy. No manufactured prose-substring reds.
+GREEN and negative/legacy regressions through tdd-cl. Other features/behavior
+default to TDD; when strategy is absent apply and record that default, not a
+manufactured stop. Exceptions need a concrete reason and owner agreement unless
+already approved. Pure refactors stay green; characterize uncertain legacy first.
+Routine nonbehavioral prose/manifests use focused postchecks, not invented reds.
+Real classification or exception ambiguity returns to the owner.
 Separate expensive check admission from writer concurrency; account for nested
 parallelism, isolate mutable outputs and reuse compatible caches.
 

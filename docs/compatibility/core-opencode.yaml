@@ -93,11 +93,11 @@ entries:
     outcome: Partial
     reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/tdd-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
     evidence: runtime-pending
-  - core_item: spec-brainstorming-cl
+  - core_item: spec-writing-cl
     disposition: port-oc
-    opencode_items: [spec-brainstorming-oc]
+    opencode_items: [spec-writing-oc]
     outcome: Partial
-    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/spec-brainstorming-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
+    reason: "Authored-body method: reuse-cx-body-with-rename. Per-file source hashes, edits and active handoffs recorded in artifacts/skills/spec-writing-oc/SOURCE.md. Explicit OpenCode names and installed reads; no host API substitution. Native loading, routing and effects remain pending."
     evidence: runtime-pending
   - core_item: using-git-worktrees-cl
     disposition: port-oc

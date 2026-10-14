@@ -20,11 +20,19 @@ observe the intended invented-data failure, implement minimally, then run green
 and relevant negative/legacy regressions. Explicit test-first requests and
 project-required checks govern.
 
+Other features and behavior changes default to the same TDD loop. A different
+strategy needs a concrete reason and owner agreement unless task/project policy
+already approves it. Pure behavior-preserving refactors stay green on existing
+coverage and characterize uncertain legacy behavior before restructuring.
+Use the existing `critical-tdd` label for test-first work, including this default
+behavioral tier; strategy labels introduce no new skill or directory.
+
 Routine prose/manifests/mechanical wiring without a changed safety invariant use
 `focused-postcheck`: exact diff inspection, positive/negative cases and approved
 focused checks after editing. Preserve existing safety tests. Do not invent red
-cycles or prose-substring tests. Missing or ambiguous strategy, including a legacy
-brief without one, stops for a coordinator decision before implementation.
+cycles or prose-substring tests. An absent strategy uses tdd-pi defaults: record
+the selection in the existing brief/handoff, without another approval ritual.
+Genuine classification conflicts or proposed exceptions need an owner decision.
 
 Neither strategy waives required fresh independent whole-change implementation
 review. Mode selection grants no additional checks or mutation authority.

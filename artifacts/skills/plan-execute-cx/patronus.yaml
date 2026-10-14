@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-cx
 description: "Codex only: Approved serial execution with independent review."
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]

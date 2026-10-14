@@ -113,6 +113,14 @@ FOR multi-item feedback:
   4. Verify no regressions
 ```
 
+For behavioral corrections read tdd-cl: critical bugs/boundaries retain observed
+public RED, minimal GREEN and relevant regressions. Other features/behavior
+default to TDD; absent strategy applies and records that default, not a
+manufactured stop. Exceptions need a concrete reason and owner agreement unless
+already approved. Pure refactors stay green with characterization for uncertain
+legacy behavior. Nonbehavioral prose/manifests use focused postchecks. Real
+classification/exception ambiguity returns to the owner.
+
 ## When To Push Back
 
 Push back when:

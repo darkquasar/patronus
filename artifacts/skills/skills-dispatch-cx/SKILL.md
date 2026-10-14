@@ -21,7 +21,7 @@ name replacement is not skill activation or a substitute for a Codex body.
 ## Exact routes
 
 - Unknown domain: `{skillsDir}/research-team-cx/SKILL.md`.
-- Settle or author a spec: `{skillsDir}/spec-brainstorming-cx/SKILL.md`.
+- Settle or author a spec: `{skillsDir}/spec-writing-cx/SKILL.md`.
 - Stress-test choices when requested: `{skillsDir}/grilling-cx/SKILL.md`.
 - Review a spec: `{skillsDir}/spec-review-cx/SKILL.md`.
 - Author an approved plan: `{skillsDir}/plan-writing-cx/SKILL.md`.
@@ -42,8 +42,12 @@ Select other installed guidance by the task, language, testing strategy and
 review mode, with host compatibility checks. Read tdd-cx for `critical-tdd` or an
 explicit test-first request; routine `focused-postcheck` work does not require it
 by default. Project-required guidance and every selected skill still require
-actual reads. Missing or ambiguous strategy stops before implementation for a
-lead decision, including a legacy brief with no strategy. Completion verification
+actual reads. Other features/behavior default to TDD unless an approved concrete
+exception applies; read tdd-cx for that behavior too. Behavior-preserving
+refactors use green coverage and characterize uncertainty. Omission applies and
+records these defaults in the existing brief, without another approval stop.
+Genuine classification/conflict/exception ambiguity needs owner direction.
+Completion verification
 is common to reviews; declared spec mode selects spec-review-cx, while
 implementation mode selects requesting-code-review-cx and its implementation
 rubric. Missing or ambiguous mode stops for a lead decision. Keep the capabilities

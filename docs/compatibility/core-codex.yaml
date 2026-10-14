@@ -97,9 +97,9 @@ entries:
     outcome: Partial
     reason: "Codex test-first guidance and all three sidecars use explicit codebase-design-cx and review routes, bounded module-level safety cycles and no foreign Agent calls. Native routing remains unqualified."
     evidence: runtime-pending
-  - core_item: spec-brainstorming-cl
+  - core_item: spec-writing-cl
     disposition: port-cx
-    codex_items: [spec-brainstorming-cx]
+    codex_items: [spec-writing-cx]
     outcome: Partial
     reason: "Codex-specific spec authoring and bundled ADR-0003 validator. TestCodexSpecFolderMetaInvariants and native research-to-spec route required."
     evidence: runtime-pending

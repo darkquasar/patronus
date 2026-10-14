@@ -126,3 +126,20 @@ silently substitute CLI workers or serial execution. If the user explicitly
 chooses subprocess automation, read the installed
 `{skillsDir}/isolated-writer-supervisor/SKILL.md` and its mode gate under that
 separate grant. It is optional and must not be loaded for ordinary native work.
+
+## Testing defaults
+
+Use the installed tdd-cx defaults and record strategy/rationale in the existing
+brief/handoff. Explicit test-first requests and required project checks govern.
+Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
+removal and reproducible behavioral bugs require public-behavior TDD. Other
+features/behavior changes default to TDD; a different strategy needs a concrete
+reason and owner agreement unless already approved. Use `critical-tdd` for
+short test-first slices: invented-data intended RED, minimum GREEN and relevant
+negative/legacy regressions. Pure behavior-preserving refactors work from green
+coverage and characterize uncertain legacy behavior first. Nonbehavioral prose/
+manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`, not manufactured reds or prose-substring tests. Omission
+alone applies these defaults and records selection, without another approval or
+ledger; genuine classification, conflict or exception ambiguity needs owner
+direction. Keep existing safety tests. Tests do not admit successor reviewers.

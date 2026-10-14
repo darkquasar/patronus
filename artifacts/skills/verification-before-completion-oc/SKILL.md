@@ -29,13 +29,22 @@ Before claiming any status:
 5. Only then state the bounded claim with root/base/head, changed files and hashes,
    tests added, actual commands/results, residual risks and open decisions.
 
-Follow the task brief's selected `critical-tdd` or `focused-postcheck` strategy,
-explicit test-first requests and project-required checks. For critical TDD, retain
-the intended failing public-behavior test on invented data, minimum change, green
-focused run and relevant regressions. Routine prose, manifests or mechanical
-wiring without a changed safety invariant use focused postchecks, with no invented
-red cycle. Missing or ambiguous strategy stops for a lead decision before
-implementation. A test description is not a test run.
+Use the installed tdd-oc defaults and record strategy/rationale in the existing
+brief/handoff. Explicit test-first requests and required project checks govern.
+Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
+removal and reproducible behavioral bugs require public-behavior TDD. Other
+features/behavior changes default to TDD; a different strategy needs a concrete
+reason and owner agreement unless already approved. Use `critical-tdd` for
+short test-first slices: invented-data intended RED, minimum GREEN and relevant
+negative/legacy regressions. Pure behavior-preserving refactors work from green
+coverage and characterize uncertain legacy behavior first. Nonbehavioral prose/
+manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`, not manufactured reds or prose-substring tests. Omission
+alone applies these defaults and records selection, without another approval or
+ledger; genuine classification, conflict or exception ambiguity needs owner
+direction. Keep existing safety tests. Tests do not admit successor reviewers.
+A test description is not a test run.
+
 A narrow check proves only its checked scope. Check actual capability,
 authentication, ownership and isolation where those are acceptance criteria.
 

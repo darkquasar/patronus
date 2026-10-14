@@ -1,9 +1,9 @@
 ---
-name: spec-brainstorming-pi
+name: spec-writing-pi
 description: "Author a scoped spec from approved design and evidence"
 ---
 
-# Spec brainstorming
+# Spec writing
 
 Explore intent, constraints and success criteria before implementation. Read existing synthesis and every supplied findings artifact first; do not rerun settled research. Confirm the implied design when evidence is complete; otherwise ask the unresolved questions one at a time. Separate unknown-domain research (research-team-pi under its own grant) from decomposition of known independent streams. Optional grilling-pi may stress-test the design within authority.
 

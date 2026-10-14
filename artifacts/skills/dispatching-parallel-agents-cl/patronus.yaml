@@ -4,9 +4,10 @@ type: skill
 role: orchestration
 name: dispatching-parallel-agents-cl
 description: "Coordinator-admitted concurrent read-only investigation of independent problem domains, with complete leaf evidence and settlement before any separately authorized implementation."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 targets: [claude]
+requires: [tdd-cl]
 defaults:
   scope: project
 attribution:

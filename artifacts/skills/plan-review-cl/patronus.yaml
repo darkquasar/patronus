@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: plan-review-cl
 description: "One independent plan review before implementation, retaining requirement coverage, build-order and engineering/design/DevEx/strategy lenses with consequence-based findings and blocking acceptance thresholds."
-version: 3.1.0
+version: 3.2.0
 entry: SKILL.md
 files: [plan-reviewer.md]
 targets: [claude]

@@ -4,10 +4,11 @@ type: skill
 role: eval
 name: verification-before-completion-cx
 description: "Codex only: Authorized fresh checks before completion claims."
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [codex]
+requires: [tdd-cx]
 defaults:
   scope: project
 attribution:

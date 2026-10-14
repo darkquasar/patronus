@@ -3,7 +3,7 @@
 The Team Lead synthesizes one deliverable — the consolidated `<slug>-research.md` — from the raw
 complete researcher responses retained by the lead as `*-findings.md` files, and writes the
 folder's `meta.yaml` streams skeleton. Read-only researchers return text, not files.
-The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-brainstorming-cl` and
+The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-writing-cl` and
 `plan-writing-cl`; research-team-cl does not write them.
 
 ---
@@ -77,10 +77,8 @@ research: <slug>-research.md     # ONE per folder; naming it is what marks resea
 streams:
   - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
     intent: "One line: what this stream is."
-    spec: null                  # spec-brainstorming-cl fills this in
+    spec: null                  # spec-writing-cl fills this in
     plan: null                  # plan-writing-cl fills this in
-    epic: null                  # plan-writing-cl or plan-execute-parallel-cl fills this in
-                                # with the tk epic id, e.g. pat-a1b2
-    tasks: []                   # the same seeder fills this in: one entry per plan task,
-                                # {number, id, name}
+    epic: null                  # optional reference only when tk is selected
+    tasks: []                   # optional references, never mirrored mutable status
 ```

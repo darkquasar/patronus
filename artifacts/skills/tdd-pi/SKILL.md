@@ -1,139 +1,169 @@
 ---
 name: tdd-pi
-description: "Test-first public-behavior slices for critical-tdd tasks or explicit test-first requests; routine prose/manifests use focused postchecks."
+description: "Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
 ---
-
-## Scope and recovery
-
-Act only within the task's current grant. Research, authorship, review, planning, execution, integration, publication and cleanup are separate actions. Existing explicit approval remains valid within its recorded root, outputs and revalidation conditions; do not ask again merely because the stage changed. Changed scope or destructive actions need revalidation. Before work and after compaction, reread the mandatory brief, native mission state, latest decisions and project instructions, then inspect current artifacts. A leaf never delegates, mutates native mission state or writes lessons. Only the coordinator does so when authorized. Use contact_supervisor need_decision/interview_request for a material unresolved choice and wait for the actual reply; steering delivery is not consent. Do not switch model, provider, protocol or isolation on failure.
-
 
 # Test-Driven Development
 
-## Select the testing strategy
+Test one public behavior at a time: observe the intended failure, implement the
+minimum change, then refactor while green. A test that only passes after coding
+does not demonstrate that it would have caught the missing behavior.
 
-Record `critical-tdd` or `focused-postcheck` in the existing task brief before
-implementation. Select `critical-tdd` for new or changed auth/secrets,
-migration/removal, ownership, concurrency/settlement/isolation behavior and
-reproducible behavior bugs. Explicit test-first requests and project-required
-checks govern. Read this skill when critical TDD is selected.
+## Tiered testing discipline
 
-Routine prose, manifests and mechanical wiring without a changed safety invariant
-use `focused-postcheck`: inspect the exact diff, check positive/negative cases and
-run the approved focused checks after editing. Preserve existing safety tests and
-required fresh independent whole-change implementation review. Do not manufacture
-a red cycle per file/task or add prose-substring tests.
+Explicit test-first requests and required project checks govern. Classify by the
+changed contract, not the file extension or perceived size of the edit.
 
-Missing or ambiguous strategy, including a legacy brief without one, stops
-implementation for a coordinator decision. Unknown behavioral work does not
-qualify for focused postchecks. The workflow below applies to `critical-tdd`.
+1. **Critical behavior: mandatory TDD.** New or changed auth/secrets, ownership,
+   concurrency/isolation/settlement, migration/removal and reproducible behavioral
+   bugs require an observed intended RED, minimal GREEN and relevant negative-path
+   and legacy regressions. Missing test capability blocks the affected change;
+   report the exact limitation rather than substituting unverified implementation.
+2. **Other behavioral development: default TDD.** New features and behavior
+   changes use the same red-green-refactor loop, with coverage proportionate to
+   their public contract. A different strategy needs a concrete reason and owner
+   agreement, unless already approved by the task or project policy. For a purely
+   behavior-preserving refactor, use existing coverage, characterize uncertain
+   legacy behavior and work from green; do not invent a failing assertion for
+   behavior that is not changing.
+3. **Nonbehavioral work: focused postchecks.** Routine prose, manifests and
+   mechanical wiring without a changed safety invariant use exact-diff inspection,
+   relevant positive/negative cases and approved focused checks after editing.
+   Do not manufacture red cycles or prose-substring tests. Generated outputs are
+   checked through their generator and resulting contract; changed generator or
+   build/test behavior belongs in the appropriate behavioral tier above.
 
-Other behavioral features need an explicit strategy, not an ordinary-work exemption.
-Characterize uncertain legacy behavior before needed refactoring. Tests do not
-admit reviewers or successor workers. The coordinator owns aggregate review and
-any named early boundary review. Valid interface, behavior and plan approval
-carries through slices; ask again only for changed scope or an unresolved choice.
+Exploration within the existing task grant can use small, invented-data probes.
+Passing a prototype or manual probe is not TDD evidence for the final change.
+Bring retained exploratory code under the appropriate testing tier before delivery;
+do not automatically delete existing work to recreate a test-first history.
 
-## Philosophy
+In workflows with a strategy field, use `critical-tdd` for test-first work
+(including the default tier) and `focused-postcheck` for eligible postchecks.
+These are strategy labels, not separate skills or required directories. Use the
+existing brief or handoff if present; no new ledger or approval is needed merely
+to select the default. Ask only about a real uncertainty, conflicting requirement
+or proposed exception.
 
-**Core principle**: Tests should verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't.
+## Tests that survive refactoring
 
-**Good tests** are integration-style: they exercise real code paths through public APIs. They describe _what_ the system does, not _how_ it does it. A good test reads like a specification - "user can checkout with valid cart" tells you exactly what capability exists. These tests survive refactors because they don't care about internal structure.
+Verify caller-visible outcomes through public interfaces. Prefer real code paths;
+mock external boundaries when needed, not owned collaborators or private methods.
+A useful test name describes a capability, such as "user can retrieve a created
+account". Internal call-order assertions usually describe an implementation.
 
-**Bad tests** are coupled to implementation. They mock internal collaborators, test private methods, or verify through external means (like querying a database directly instead of using the interface). The warning sign: your test breaks when you refactor, but behavior hasn't changed. If you rename an internal function and tests fail, those tests were testing implementation, not behavior.
+A passing test written afterward can still provide regression coverage, but it
+may only confirm assumptions shared with the implementation. Observing the right
+RED establishes that this test detects the missing behavior. Manual checks are
+useful exploration, not a repeatable regression oracle.
 
-See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
+Read [tests.md](./tests.md) for good/bad examples and
+[mocking.md](./mocking.md) when choosing a boundary double.
 
-## Anti-Pattern: Horizontal Slices
+## Prepare the slice
 
-**DO NOT write all tests first, then all implementation.** This is "horizontal slicing" - treating RED as "write all tests" and GREEN as "write all code."
+Read relevant source, callers, tests, local ADRs and `CONTEXT.md` where present.
+Identify the accepted public interface and prioritize required behaviors, including
+relevant failure paths. Reuse valid interface and test-plan approval; do not
+reconfirm settled decisions every cycle or require a separate plan for a small fix.
 
-This produces **crap tests**:
+When an interface is difficult to test, consult
+`../codebase-design-pi/SKILL.md` if installed,
+or use the project's interface/testability guidance within scope.
+A structural redesign is not automatic TDD work.
 
-- Tests written in bulk test _imagined_ behavior, not _actual_ behavior
-- You end up testing the _shape_ of things (data structures, function signatures) rather than user-facing behavior
-- Tests become insensitive to real changes - they pass when behavior breaks, fail when behavior is fine
-- You outrun your headlights, committing to test structure before understanding the implementation
+## Red-green-refactor, vertically
 
-**Correct approach**: Vertical slices via tracer bullets. One test → one implementation → repeat. Each test responds to what you learned from the previous cycle. Because you just wrote the code, you know exactly what behavior matters and how to verify it.
+1. **RED:** write one deterministic, invented-data test for one required public
+   behavior. Run it before changing that behavior. Verify the failure comes from
+   the missing behavior, not an import, syntax, fixture or tool error.
+2. **GREEN:** implement only what this behavior needs. Rerun the focused test and
+   relevant negative-path and legacy regressions. Resolve failures before adding
+   more behavior; do not weaken a valid assertion to accommodate the code.
+3. **REFACTOR:** once the relevant tests are green, make only useful, in-scope,
+   behavior-preserving improvements. Preserve the accepted interface and rerun
+   tests after each small step. No refactor is required just to complete the cycle.
+4. **REPEAT:** choose the next behavior using what the previous slice taught you.
+   Retain actual commands, exits and readable red/green output in the existing
+   evidence location.
 
-```
-WRONG (horizontal):
-  RED:   test1, test2, test3, test4, test5
-  GREEN: impl1, impl2, impl3, impl4, impl5
+The first slice is a tracer bullet: it proves that the public path and test runner
+work together. Do not write all tests first and all implementation afterward.
+That commits to imagined interfaces before the earlier slices can inform them.
 
-RIGHT (vertical):
-  RED→GREEN: test1→impl1
-  RED→GREEN: test2→impl2
-  RED→GREEN: test3→impl3
-  ...
-```
-
-## Workflow
-
-### 1. Planning
-
-When exploring the codebase, read `CONTEXT.md` (if it exists) so that test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
-
-Before writing any code (an existing explicit approval satisfies the corresponding step; do not reopen settled choices):
-
-- [ ] Confirm with user what interface changes are needed
-- [ ] Confirm with user which behaviors to test (prioritize)
-- [ ] Identify opportunities for deep modules (small interface, deep implementation) — read the `codebase-design-pi` SKILL.md for the vocabulary and the testability checks
-- [ ] List the behaviors to test (not implementation steps)
-- [ ] Get user approval on the plan
-
-When unresolved, ask: "What should the public interface look like? Which behaviors are most important to test?"
-
-**You can't test everything.** Use approved behavior priorities; clarify only unresolved choices. Focus testing effort on critical paths and complex logic, not every possible edge case.
-
-### 2. Tracer Bullet
-
-Write ONE invented-data test through a public interface for ONE required behavior.
-Run it and confirm the intended behavioral failure, not a setup/tool error:
-
-```
-RED:   Write test for first behavior → test fails
-GREEN: Write minimal code to pass → test passes
-```
-
-This tracer bullet proves the path end-to-end. Retain the command, actual exit
-and readable red/green logs; run relevant negative-path and legacy regressions.
-
-### 3. Incremental Loop
-
-For each remaining behavior:
-
-```
-RED:   Write next test → fails
-GREEN: Minimal code to pass → passes
+```text
+test one behavior => observe RED => minimal GREEN => optional REFACTOR
+       ^                                                    |
+       +---------------- next behavior ---------------------+
 ```
 
-Rules:
+Read [refactoring.md](./refactoring.md) for candidates when a
+necessary cleanup emerges. Characterize uncertain legacy behavior before changing
+its structure; a characterization test may start green and is not a bug's RED.
 
-- One test at a time
-- Only enough code to pass current test
-- Don't anticipate future tests
-- Keep tests focused on observable behavior
+## Worked bugfix example
 
-### 4. Refactor
+Invented Node example using the built-in runner, no dependency installation.
+Buggy `quantity.mjs` accepts zero:
 
-After all tests pass, look for [refactor candidates](refactoring.md):
-
-- [ ] Extract duplication
-- [ ] Deepen modules (move complexity behind simple interfaces)
-- [ ] Apply SOLID principles where natural
-- [ ] Consider what new code reveals about existing code
-- [ ] Run tests after each refactor step
-
-**Never refactor while RED.** Get to GREEN first.
-
-## Checklist Per Cycle
-
+```javascript
+export function isValidQuantity(value) {
+  return Number.isInteger(value);
+}
 ```
-[ ] Test describes behavior, not implementation
-[ ] Test uses public interface only
-[ ] Test would survive internal refactor
-[ ] Code is minimal for this test
-[ ] No speculative features added
+
+Keep existing positive/fractional coverage and add the zero regression in
+`quantity.test.mjs`:
+
+```javascript
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { isValidQuantity } from './quantity.mjs';
+
+test('accepts a positive integer quantity', () => {
+  assert.equal(isValidQuantity(2), true);
+});
+test('rejects a fractional quantity', () => {
+  assert.equal(isValidQuantity(1.5), false);
+});
+test('rejects a zero quantity', () => {
+  assert.equal(isValidQuantity(0), false);
+});
 ```
+
+Run `node --test quantity.test.mjs`. RED must be the zero test's assertion:
+actual `true`, expected `false`; the existing two tests still pass.
+Then make the minimal GREEN change:
+
+```javascript
+export function isValidQuantity(value) {
+  return Number.isInteger(value) && value > 0;
+}
+```
+
+Rerun the same command: all three tests must pass. No structural refactor is needed
+here. If later cleanup is justified, keep these tests unchanged and green.
+
+## When the cycle gets stuck
+
+| Observation | Next action |
+|---|---|
+| New test passes immediately | Check whether the behavior already exists or the test misses it. Strengthen the oracle only when the requirement warrants it; never force an artificial failure. |
+| Test errors before its assertion | Repair imports, fixtures or runner setup, then rerun to establish the intended RED. |
+| Setup requires many internal mocks | Move the test to a useful public seam; simplify setup or inject an external dependency within scope. |
+| GREEN breaks an existing test | Determine whether the old contract remains required. Fix the regression, or obtain approval for a real contract change. |
+| Implementation was written first | Preserve the work, add meaningful coverage and report the missing test-first evidence. For critical work, resolve the evidence gap with the owner; do not claim a retroactive RED or automatically delete code. |
+
+## Completion evidence
+
+Confirm the intended behavioral RED where required, focused GREEN, relevant
+negative/legacy coverage and green behavior-preserving refactors. Inspect the exact
+diff for speculative features and assertions coupled to internals. Run required
+aggregate checks on the composed final inputs; focused slice success is not a
+whole-change pass.
+
+Return actual commands, exits, readable logs and any limitations through the
+existing handoff. Test cycles do not launch reviewers, fixers or successor workers;
+review remains at the already authorized boundaries. Stay within owned paths and
+authorized commands. Testing grants no installation, live-service probing, commit,
+publication or cleanup authority.

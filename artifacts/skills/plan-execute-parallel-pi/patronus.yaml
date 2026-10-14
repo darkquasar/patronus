@@ -4,10 +4,10 @@ type: skill
 role: capability
 name: plan-execute-parallel-pi
 description: "Execute independent file-owning lanes with serial consumption barriers"
-version: 2.3.0
+version: 2.4.1
 entry: SKILL.md
 files: ["PROVENANCE-GUIDE.md", "SOURCE.md", "TEAMMATE-TEMPLATE.md"]
 targets: [pi]
 defaults:
   scope: project
-requires: ["pi-subagents"]
+requires: ["pi-subagents", "tdd-pi"]

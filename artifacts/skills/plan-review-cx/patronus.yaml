@@ -4,9 +4,10 @@ type: skill
 role: eval
 name: plan-review-cx
 description: "Codex-only fresh read-only plan/spec coverage and interface review"
-version: 1.3.0
+version: 1.4.1
 entry: SKILL.md
 files: [NOTICE, LICENSE, SOURCE.md, plan-reviewer.md]
 targets: [codex]
+requires: [tdd-cx]
 defaults:
   scope: project

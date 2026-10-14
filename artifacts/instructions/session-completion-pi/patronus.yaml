@@ -4,7 +4,7 @@ type: instruction
 role: instruction
 name: session-completion-pi
 description: "Stage-bound verified handoff, no unconditional push or cleanup"
-version: 2.0.0
+version: 2.1.0
 entry: INSTRUCTIONS.md
 files: ["SOURCE.md"]
 targets: [pi]

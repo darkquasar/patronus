@@ -4,10 +4,11 @@ type: skill
 role: eval
 name: verification-before-completion-oc
 description: "OpenCode only: Authorized fresh checks before completion claims."
-version: 1.1.0
+version: 1.2.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [opencode]
+requires: [tdd-oc]
 defaults:
   scope: project
 attribution:

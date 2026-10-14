@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: tdd-oc
-description: "OpenCode only: Test-first public-behavior slices for critical-tdd tasks or explicit test-first requests; routine prose/manifests use focused postchecks."
-version: 1.1.0
+description: "OpenCode only: Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
+version: 1.2.0
 entry: SKILL.md
 files: ["LICENSE", "NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
 targets: [opencode]

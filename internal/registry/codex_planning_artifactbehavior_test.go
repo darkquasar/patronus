@@ -3,7 +3,7 @@
 package registry
 
 // Artifact-behaviour fixture retained intact from codex_planning_test.go. It
-// executes the shipped spec-brainstorming-cx validator program, so it is
+// executes the shipped spec-writing-cx validator program, so it is
 // excluded from the default application gate and is NOT RUN there. Results
 // are historical evidence, not current artifact-behaviour acceptance.
 
@@ -31,7 +31,7 @@ func codexPlanningValidator(t *testing.T, meta string, files []string) (string, 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "run", "-mod=readonly", ".", folder)
-	cmd.Dir = "../../artifacts/skills/spec-brainstorming-cx/scripts"
+	cmd.Dir = "../../artifacts/skills/spec-writing-cx/scripts"
 	cmd.Env = append(os.Environ(), "GOPROXY=off", "GOTOOLCHAIN=local")
 	out, err := cmd.CombinedOutput()
 	return string(out), err

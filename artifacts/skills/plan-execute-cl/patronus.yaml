@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-cl
 description: "Execute an accepted plan serially, choosing solo context or fresh implementer leaves from concrete risk and context needs. Coordinator-only admission, one independent aggregate review and at most one batched correction; named changed boundaries may receive distinct earlier review."
-version: 3.1.0
+version: 3.2.0
 entry: SKILL.md
 files: [solo.md, sdd.md, implementer-prompt.md, task-reviewer-prompt.md, scripts, fixtures]
 targets: [claude]

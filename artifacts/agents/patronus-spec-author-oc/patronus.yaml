@@ -4,12 +4,12 @@ type: agent
 role: orchestration
 name: patronus-spec-author-oc
 description: "OpenCode only. Consume evidence and author only the assigned specification documents"
-version: 1.0.0
+version: 1.1.2
 entry: agent.md
 files: []
 targets: [opencode]
 defaults:
   scope: project
 requires:
-  - spec-brainstorming-oc
+  - spec-writing-oc
   - verification-before-completion-oc

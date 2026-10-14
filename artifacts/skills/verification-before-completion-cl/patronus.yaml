@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: verification-before-completion-cl
 description: "Input-bound evidence before completion claims, matching retained checks may be reused while final composed aggregate verification stays fresh."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 targets: [claude]
 requires: [tdd-cl]

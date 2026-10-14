@@ -1,0 +1,19 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: spec-writing
+description: "Author one approved stream spec from design and research, check inline and hand off to independent blocking spec review."
+version: 6.1.0
+entry: SKILL.md
+files: [spec-document-reviewer-prompt.md]
+targets: [codex, opencode]
+requires: [spec-review]
+defaults:
+  scope: project
+attribution:
+  upstream: github.com/obra/superpowers
+  license: MIT
+  copyright: "Copyright (c) 2025 Jesse Vincent"
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
+  note: "Adapted from the pinned upstream brainstorming skill. Active authoring and handoff consume valid decisions, coordinator-only admission, one progress authority and the shared blocking review contract. Original MIT attribution is retained; the compatibility sidecar points to the one maintained spec-review rubric."

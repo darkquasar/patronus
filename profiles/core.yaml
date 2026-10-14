@@ -2,8 +2,8 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 2.0.0
-summary: "The opinionated default environment — agent house rules + design discipline, plan/execute + diagnosis skills, design vocabulary, ASCII diagrams ON, test-first as a TAUGHT discipline (the tdd-cl skill), secret/diff guardrails, and ccusage observability. Layer on top: `tdd-enforced` (hard test-first enforcement), `safe-git` (block destructive git), `hardened` (sandbox), `quiet` (no diagrams)."
+version: 2.1.1
+summary: "Claude core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution, aggregate review and scoped completion. Secret/diff guards and ccusage observability are included. Enforcement, sandbox and diagram overrides remain optional overlays."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
 # exists in-repo today and installs.
@@ -17,19 +17,19 @@ layers:
     - skills-dispatch-cl                   # the keystone: skill-check-before-acting discipline, across the WHOLE installed set
     - skills-dispatch-activate-cl          # SessionStart hook — auto-injects the dispatch keystone from turn one (its activation; requires skills-dispatch-cl)
     - skills-heartbeat@claude              # UserPromptSubmit hook — re-asserts the skill rule + lists installed skills EACH turn (fights mid-context decay); Claude-only
-    - work-state-reground@claude           # SessionStart hook — on resume/compaction, reconcile with Ticket + docs/lessons (externalized state); Claude-only, conditional on what's present
+    - work-state-reground@claude           # Resume from selected progress authority and retained lessons; presence alone does not select tk
     - language-detect                      # SessionStart hook — inject a pointer to the idioms the repo's language actually follows (points, never inlines)
     - plan-writing-cl                      # plan a multi-step task before touching code
-    - plan-execute-cl                      # execute a plan; gates on proportionality, then runs solo or sdd (requires: [requesting-code-review-cl])
+    - plan-execute-cl                      # coordinator chooses solo/SDD; no automatic per-task reviewers
     - grilling-cl                          # interrogate a plan before building
     - diagnosing-bugs-cl                   # disciplined diagnosis loop for hard bugs
     - tdd-cl                               # test-first tracer-bullet discipline (the chosen TDD skill)
-    - spec-brainstorming-cl                # explore intent + requirements + design, then author the spec, BEFORE any creative work
+    - spec-writing-cl                      # author an approved stream spec from design and existing research
     - using-git-worktrees-cl               # start feature work in an isolated workspace
-    - finishing-a-development-branch-cl    # decide how to integrate finished work (merge/PR/cleanup)
+    - finishing-a-development-branch-cl    # consume exact checked evidence; integration/publication/cleanup need their own grants
     - writing-skills-cl                    # author/edit/verify skills (the meta-skill)
     - research-team-cl@claude              # spec-driven parallel research (Claude tools; codex flavour is a separate artifact)
-    - plan-execute-parallel-cl@claude      # the parallel arm of plan-review-cl's fork (Claude tools; codex flavour is a separate artifact)
+    - plan-execute-parallel-cl@claude      # coordinator-admitted native leaves in disjoint isolated worktrees
   context:
     - codebase-design-cl                   # deep-module design vocabulary
     - domain-modeling-cl                   # ubiquitous-language + ADR discipline
@@ -51,10 +51,10 @@ layers:
     # The hard PreToolUse gate (tdd-guard recipe + tdd-guard-hook) is opt-in via the
     # `tdd-enforced` profile — it blocks every edit lacking a failing test, which is
     # too aggressive for the default (it can't tell impl code from a YAML/docs edit).
-    - spec-review-cl                       # advisory gate — closes the spec phase (4-lens rubric) before plan-writing-cl
-    - plan-review-cl                       # advisory gate — closes the planning phase (coverage vs the spec) before implementation
+    - spec-review-cl                       # one independent subject when a spec exists, with blocking disposition
+    - plan-review-cl                       # one independent subject for every written plan unless owner-declined
     - verification-before-completion-cl    # evidence-before-claims discipline
-    - requesting-code-review-cl            # dispatch a focused reviewer when finishing work (ships code-reviewer.md)
+    - requesting-code-review-cl            # one aggregate implementation review; earlier gates need a named distinct invariant
     - receiving-code-review-cl             # act on review feedback with technical rigor, not performative agreement
   guardrails:
     - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
@@ -67,8 +67,8 @@ layers:
     - ccusage                              # install the ccusage CLI (npm, install-only) — on-demand token-usage/cost reports
     - ccusage-statusline@claude            # Claude-only statusline setting (token usage in the status bar); @claude → no-op on codex/opencode
   orchestration:
-    - ticket                               # work-graph discipline (AGENTS.md APPEND) — `requires: [tk]`, so the tk binary recipe is pulled into the install/lock closure automatically
-    - session-completion                   # end-of-session discipline: file follow-ups, run the gates, commit, PUSH — tracker-agnostic, no requires edge
+    - ticket                               # tk remains available; seed/update only when selected authority and tracking policy permit
+    - session-completion                   # scoped local handoff; no automatic commit/push/rebase/cleanup or duplicate same-input checks
     - dispatching-parallel-agents-cl       # fan out independent problem domains to concurrent subagents
 todo:
   - "L6 sandbox: native, flavoured per agent (P7.4)."

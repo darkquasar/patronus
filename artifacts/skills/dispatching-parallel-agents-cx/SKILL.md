@@ -52,3 +52,12 @@ confirmed settlement before serial integration. Native workers are not proof of
 write isolation. Read `{skillsDir}/plan-execute-parallel-cx/SKILL.md` for native
 writers and pipelined read-only scouts with checked worktree ownership. Never run
 concurrent writers in the lead checkout, even on disjoint files.
+
+## Testing classification in briefs
+
+When proposing an implementation brief, apply this testing classification:
+critical behavior requires TDD; other features/behavior default to TDD;
+behavior-preserving refactors use green coverage/characterization; nonbehavioral
+work uses focused postchecks. Omission records the default in the existing brief,
+not another approval stop. Genuine classification/conflict/exception ambiguity
+needs owner direction. Read-only scouts gain no edits, builds or command authority.

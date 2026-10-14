@@ -45,20 +45,21 @@ provider, protocol or model changes when capabilities fail.
 
 ## Execute and verify
 
-For each ready task, read current source/tests and the testing strategy recorded
-in the existing brief. Select `critical-tdd` for new or changed auth/secrets,
-migration/removal, ownership, concurrency/settlement/isolation behavior and
-reproducible behavior bugs. Read the installed tdd-oc SKILL.md for that strategy;
-use short public-interface slices with an invented-data test, observed intended
-behavioral failure, minimal implementation, green and relevant negative/legacy
-regressions. Explicit test-first requests and project-required checks govern.
-
-Routine prose/manifests/mechanical wiring without a changed safety invariant use
-`focused-postcheck`: inspect the exact diff, check positive/negative cases and run
-approved focused checks after editing. Keep existing safety tests; do not fabricate
-red cycles per task/file or add prose-substring tests. Missing or ambiguous strategy,
-including a legacy brief without one, stops for a lead decision before implementation.
-Unknown behavioral work does not qualify for focused postchecks.
+For each ready task, read current source/tests and the accepted brief.
+Use the installed tdd-oc defaults and record strategy/rationale in the existing
+brief/handoff. Explicit test-first requests and required project checks govern.
+Critical auth/secrets, ownership, concurrency/isolation/settlement, migration/
+removal and reproducible behavioral bugs require public-behavior TDD. Other
+features/behavior changes default to TDD; a different strategy needs a concrete
+reason and owner agreement unless already approved. Use `critical-tdd` for
+short test-first slices: invented-data intended RED, minimum GREEN and relevant
+negative/legacy regressions. Pure behavior-preserving refactors work from green
+coverage and characterize uncertain legacy behavior first. Nonbehavioral prose/
+manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`, not manufactured reds or prose-substring tests. Omission
+alone applies these defaults and records selection, without another approval or
+ledger; genuine classification, conflict or exception ambiguity needs owner
+direction. Keep existing safety tests. Tests do not admit successor reviewers.
 
 Follow project commands and resource locks; unavailable or unapproved required
 checks are blocked, not passed. Preserve prior interfaces and legacy behavior.

@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: grilling-oc
 description: "OpenCode only: Bounded design interview with upstream offers only."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [opencode]

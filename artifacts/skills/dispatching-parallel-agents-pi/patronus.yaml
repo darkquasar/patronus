@@ -4,13 +4,13 @@ type: skill
 role: orchestration
 name: dispatching-parallel-agents-pi
 description: "Delegate independent investigations with bounded native fanout"
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: ["NOTICE", "SOURCE.md"]
 targets: [pi]
 defaults:
   scope: project
-requires: ["pi-subagents"]
+requires: ["pi-subagents", "tdd-pi"]
 attribution:
   upstream: github.com/obra/superpowers
   license: MIT

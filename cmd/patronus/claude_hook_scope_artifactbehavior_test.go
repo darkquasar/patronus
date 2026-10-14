@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/darkquasar/patronus/internal/manifest"
 )
 
 // Run the distributed payload at its installed hook path, not in its source
@@ -115,14 +117,40 @@ func TestClaudeHookScopeDispatchMissing(t *testing.T) {
 	}
 }
 
+// Copy the real dispatch dependency closure, so lifecycle companion additions
+// cannot leave an otherwise valid hook installation fixture incomplete.
+func claudeScopeFixtureCatalog(t *testing.T) string {
+	t.Helper()
+	root, source := fixtureCatalog(t), applicationSourceRoot(t)
+	pending := []string{"skills-dispatch-cl"}
+	seen := make(map[string]bool)
+	for len(pending) > 0 {
+		name := pending[0]
+		pending = pending[1:]
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		rel := filepath.Join("artifacts", "skills", name)
+		artifact, err := manifest.LoadArtifact(filepath.Join(source, rel, "patronus.yaml"))
+		if err != nil {
+			t.Fatalf("load dispatch companion %s: %v", name, err)
+		}
+		copyDir(t, filepath.Join(source, rel), filepath.Join(root, rel))
+		pending = append(pending, artifact.Requires...)
+	}
+	for _, name := range []string{"skills-dispatch-activate-cl", "skills-heartbeat"} {
+		rel := filepath.Join("artifacts", "hooks", name)
+		copyDir(t, filepath.Join(source, rel), filepath.Join(root, rel))
+	}
+	return root
+}
+
 func TestClaudeHookScopeNoFlagInstall(t *testing.T) {
 	// Keep the real artifact payloads opt-in. The ordinary planner and real
 	// adapter resolve no-flag defaults into invented HOME/project paths.
-	root, home := fixtureCatalog(t), t.TempDir()
+	root, home := claudeScopeFixtureCatalog(t), t.TempDir()
 	project := root
-	for _, rel := range []string{"artifacts/skills/skills-dispatch-cl", "artifacts/hooks/skills-dispatch-activate-cl", "artifacts/hooks/skills-heartbeat"} {
-		copyDir(t, filepath.Join(applicationSourceRoot(t), rel), filepath.Join(root, rel))
-	}
 	t.Setenv("HOME", home)
 	t.Chdir(root)
 	_, stderr, err := runInstall(t, "skills-dispatch-activate-cl", "skills-heartbeat", "--target", "claude", "--local-registry", "--deploy", "--yes")
@@ -147,10 +175,7 @@ func TestClaudeHookScopeNoFlagInstall(t *testing.T) {
 func TestClaudeHookScopeExplicitInstall(t *testing.T) {
 	for _, scope := range []string{"local", "global"} {
 		t.Run(scope, func(t *testing.T) {
-			root, home := fixtureCatalog(t), t.TempDir()
-			for _, rel := range []string{"artifacts/skills/skills-dispatch-cl", "artifacts/hooks/skills-dispatch-activate-cl", "artifacts/hooks/skills-heartbeat"} {
-				copyDir(t, filepath.Join(applicationSourceRoot(t), rel), filepath.Join(root, rel))
-			}
+			root, home := claudeScopeFixtureCatalog(t), t.TempDir()
 			t.Setenv("HOME", home)
 			t.Chdir(root)
 			_, stderr, err := runInstall(t, "skills-dispatch-activate-cl", "skills-heartbeat", "--target", "claude", "--local-registry", "--"+scope, "--deploy", "--yes")

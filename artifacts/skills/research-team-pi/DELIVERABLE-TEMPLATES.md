@@ -4,7 +4,7 @@ The coordinator synthesizes one deliverable — the consolidated `<slug>-researc
 researcher findings persisted as `*-findings.md` by the qualified runtime or authorized
 coordinator, and writes the folder's `meta.yaml` streams skeleton. When a child cannot write,
 it returns complete content for runtime persistence; do not assume a worker-created file.
-The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-brainstorming-pi` and
+The `<stream>-spec.md` and `<stream>-plan.md` are authored downstream by `spec-writing-pi` and
 `plan-writing-pi`; research-team-pi does not write them.
 
 ---
@@ -78,7 +78,7 @@ research: <slug>-research.md     # ONE per folder; naming it is what marks resea
 streams:
   - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
     intent: "One line: what this stream is."
-    spec: null                  # spec-brainstorming-pi fills this in
+    spec: null                  # spec-writing-pi fills this in
     plan: null                  # plan-writing-pi fills this in
     mission: null               # coordinator records the upstream mission reference
     receipts: []                # immutable output/run references, not a second task ledger

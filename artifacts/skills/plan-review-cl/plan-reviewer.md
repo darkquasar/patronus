@@ -17,7 +17,9 @@ This is not an implementation pre-flight. It runs **once**, to close planning.
 
 **Plan document:** {PLAN_PATH}
 
-**Source spec:** {SPEC_PATH}
+**Source spec or accepted requirements:** {SPEC_PATH}. If the owner declined the
+spec, bind the accepted requirements and retained decline instead; do not invent
+a spec or claim spec coverage.
 
 ---
 
@@ -29,16 +31,16 @@ authorized focused check for a concrete unanswered risk, not duplicate suites.
 
 ## How to review
 
-Read the plan in full, and read the spec it claims to implement. Much of what follows is a
-comparison between the two, you cannot review a plan without knowing what it was supposed to
-deliver.
+Read the plan in full and its source spec, or accepted requirements with the
+retained owner-declined-spec exception. Compare against that exact intent;
+missing requirements block rather than becoming guessed scope.
 
 **Skip any lens that does not apply**, and say which you skipped and why. A skipped lens is not a
 clean one.
 
 ### Plan basics (always)
 
-- **Coverage**, does every spec requirement map to at least one task? List the requirements you
+- **Coverage**, does every accepted requirement map to at least one task? List the requirements you
   could not find a task for. This is the most common real defect in a plan.
 - **Bite-sized**, is each step one action with a way to check it? Flag steps that hide three
   decisions behind one verb.
@@ -71,7 +73,7 @@ enough to get feedback on, or does it land in the final task?
 
 ### Strategy lens
 
-Is the plan delivering the **spec's intent**, or quietly cutting scope to fit what is easy to
+Is the plan delivering the **accepted intent**, or quietly cutting scope to fit what is easy to
 build? Is anything important deferred without being named as deferred? A plan that silently drops
 a requirement is worse than one that says "not doing this", the second is a decision, the first
 is a surprise.

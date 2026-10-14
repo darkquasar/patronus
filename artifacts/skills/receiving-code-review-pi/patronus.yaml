@@ -4,10 +4,11 @@ type: skill
 role: eval
 name: receiving-code-review-pi
 description: "Verify review findings against source and correct an authorized batch with evidence"
-version: 1.1.0
+version: 1.2.0
 entry: SKILL.md
 files: [NOTICE]
 targets: [pi]
+requires: [tdd-pi]
 defaults:
   scope: project
 attribution:

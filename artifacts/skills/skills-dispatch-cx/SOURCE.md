@@ -24,7 +24,7 @@ parallel route remains unchanged; this naming edit is not runtime qualification.
 - `plan-writing-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `requesting-code-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `research-team-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
-- `spec-brainstorming-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
+- `spec-writing-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `spec-review-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 - `verification-before-completion-cx/SKILL.md`: exact Codex companion read, verify installed/readable before use.
 

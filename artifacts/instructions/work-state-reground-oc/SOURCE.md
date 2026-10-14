@@ -24,6 +24,12 @@ Bodies are behaviorally authored for OpenCode, not renamed host calls. Source
 host names are provenance only. No legacy scripts/templates or runtime APIs
 are inherited. Only entry and manifest-declared sidecars are distributed.
 
+Lifecycle-cohesion revision: one selected progress authority, coordinator-admitted
+leaves and native-first capability checks; existing grants survive stage labels.
+Completion consumes input-bound evidence with fresh composed aggregate checks,
+one review and bounded correction, local-only delivery when publication is ungranted.
+Historical hashes above identify adaptation inputs, not this revised payload.
+
 ## Active reads
 
 - No sibling reads.

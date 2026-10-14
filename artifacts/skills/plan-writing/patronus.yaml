@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: plan-writing
-description: "Write comprehensive, bite-sized implementation plans before touching code — exact file paths, complete code per step, TDD-shaped tasks, self-review against the spec. Use when you have a spec for a multi-step task."
-version: 4.0.0
+description: "Optional Codex/OpenCode requirement-covered planning route with one independent review, coordinator-only lifecycle control and bounded correction."
+version: 4.1.1
 entry: SKILL.md
 files: []
 targets: [codex, opencode]
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "ADAPTED from the upstream `writing-plans` skill (vendored here as `plan-writing`). References to un-vendored sibling skills (subagent-driven-development, using-git-worktrees) are softened to optional notes. Patronus re-couplings (per ADR-0001): (1) an OPTIONAL ticket mirror offered after the plan is saved — the `- [ ]` checkboxes stay the canonical capture, the tickets + dependency edges are additive and survive a compaction the checkboxes may not (epics and --parent exist, but they GROUP only: tk ready/blocked read deps, never parent, so tk dep is what encodes the build order); (2) a pointer to the `plan-review` skill as the independent counterpart to the skill's own Self-Review. The planning discipline is otherwise faithful."
+  note: "Behavioral adaptation of pinned upstream planning sources. Existing optional identity and targets retained; inline author checks, tiered testing, one independent plan review and one selected progress authority replace former duplicate reviews and ticket mirrors."

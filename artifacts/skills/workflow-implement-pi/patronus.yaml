@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: workflow-implement-pi
 description: "Phase-separated implement operations with parent-owned admission"
-version: 1.4.0
+version: 1.5.1
 entry: SKILL.md
 files: ["workflow.js", "request.schema.json", "fixtures/workflow.test.mjs", "fixtures/request.json"]
 targets: [pi]

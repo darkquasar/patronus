@@ -15,32 +15,62 @@ absent, inspect source/CI and report the gap. Absence grants no installation,
 network, editing or Git authority. System/developer instructions remain higher
 priority than project prose and skills.
 
-The lead binds root/base/head, stage/action, owned files, budgets, output paths,
-predecessors and open decisions in the approved brief and retained handoff.
+The lead binds root/base/head, stage/action, owned files, output paths,
+predecessors, acceptance and open decisions in the approved brief and retained
+handoff, plus existing host/resource or explicitly granted campaign limits where
+applicable. Ordinary work needs no numerical root-budget form or start ledger.
 Research, authoring, review, planning, execution, integration, publication and
 cleanup are separate grants. Existing approval remains valid within scope;
 changed targets, destructive actions or material design choices need revalidation.
+Changed stage names alone do not require repeated grants.
 There is no Codex mission API assumed by these instructions.
 
-Only the lead admits delegation and transitions. Read-only workers return complete
-findings; the lead writes shared outputs. Inspect native worker/tool availability,
-authentication, read-only role and wait/stop controls before launch. Missing or
-auth-blocked primitives stop the lane. Never change model/provider/protocol or
-invoke a CLI model to bypass a blocked lane. Workers never nest delegation.
+Select the sole mutable progress authority once in the accepted brief. Qualified
+native mission/workflow state that actually owns delegated runs stays authoritative;
+project records reference it without mirroring status. Without such native state,
+use explicit project/owner selection, otherwise the existing tracker, or one
+durable plan-associated record if none exists. Native UI todos alone do not outrank
+a project tracker. Do not create a selection ledger or competing status mirror.
 
-Parallel reads need independent questions and recorded concurrency/count/deadline
-budgets. Writes require approved isolated owners, disjoint path claims and
+Only the coordinator admits workers, execution modes and transitions. Researchers,
+implementers, fixers and reviewers are leaves: return complete evidence and stop,
+without successors, added gates, nesting or shared progress mutations. Read-only
+workers return complete text through available native delivery; the coordinator
+persists shared outputs. Inspect current native capabilities, authentication,
+role restrictions and wait/stop controls for the assigned operation. Report actual
+missing or auth-blocked primitives; do not require a blanket qualification ceremony
+before usable native tools. Never switch model/provider/protocol or invoke a CLI
+model to bypass a blocked lane.
+
+Parallel reads need independent questions and capability-matched read-only roles.
+Writes require approved isolated owners, disjoint path claims and
 settlement before serial integration. Native workers prove no write isolation;
 concurrent writers in the lead checkout are forbidden. Parallel implementation
 uses native workers with checked allocated roots and current-session controls,
 not a mandatory CLI supervisor. A leaf may prepare only an exact worktree
 allocation already authorized by the coordinator, never select successors.
 CLI workers require explicit user mode selection; optional worktree-only setup
-launches no agents. A serial alternative needs explicit lead authorization.
+launches no agents. Existing mode approval remains valid within scope; a materially
+different alternative needs coordinator authorization, never failed-engine fallback.
+Settle workers and capture complete results before serial integration. Admit heavy
+builds/tests separately from writer concurrency, account for nested parallelism
+and isolate mutable outputs. Leaf tests do not prove the integrated composition.
 
 Read complete worker outputs and checked patches, bind their hashes and report
-actual tests before acceptance. Use one fresh independent review and at most one
-bounded correction/disposition; owner acceptance resolves residual decisions.
+actual tests before acceptance. Keep one independent review per required spec,
+plan and aggregate implementation subject; an explicit owner-declined spec/plan
+review stays in the brief. Task count alone creates neither a skip nor an extra
+gate. Earlier reviews need a named safety/compatibility invariant or irreversible
+boundary with its own acceptance point. No automatic task-level review chains.
+One matching aggregate review covers feature/branch/pre-merge triggers for the
+same exact inputs and coverage. Use at most one bounded batched correction per
+gate; unresolved Critical/Major or more than two distinct Medium block, and up
+to two Medium residuals require explicit owner acceptance. Missing requirements,
+authority or tests independently block. Correction is parent-verified against the
+cited defect, exact corrected bytes and positive/negative/regression evidence,
+not retrospectively independently reviewed. Changed interface, safety invariant
+or acceptance scope, or an insufficient oracle, needs an owner decision or an
+additional independent-review grant. No automatic successor review/fix waves.
 Static placement is runtime-unverified. Trust, auth and native loading are
 separate gates; Patronus does not write Codex trust internals. No automatic push,
 worktree removal, stash deletion or cleanup follows from a completed stage.

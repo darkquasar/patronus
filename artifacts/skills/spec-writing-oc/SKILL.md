@@ -1,9 +1,9 @@
 ---
-name: spec-brainstorming-oc
+name: spec-writing-oc
 description: "OpenCode only: explore approved design and evidence, then author an ADR-0003 stream spec before planning."
 ---
 
-# Spec brainstorming for OpenCode
+# Spec writing for OpenCode
 
 Read the task brief, project instructions, recorded decisions, current source and supplied research before designing. After context loss, reread those inputs and the latest saved outputs, checking their hashes before retrying. Prior research is an input, not permission to rerun it.
 

@@ -34,10 +34,13 @@ Use one selected progress authority, not another checklist/todo or attestation i
 Follow explicit test-first requests and required project checks. Critical
 auth/secrets, ownership, concurrency/isolation/settlement, migration/removal and
 reproducible bugs need intended public-interface RED, minimal GREEN and negative/
-legacy regressions. Characterize uncertain legacy before refactoring through tdd-cl.
-Routine prose/manifests/mechanical wiring without changed safety invariants use
-focused postchecks. Other behavior needs an explicit strategy. No invented red
-cycle, prose-substring ritual or automatic reviewer merely because tests exist.
+legacy regressions through tdd-cl. Other features/behavior default to TDD; if
+strategy is absent apply and record that default, not a manufactured stop.
+Exceptions need a concrete reason and owner agreement unless already approved.
+Pure refactors stay green; characterize uncertain legacy first. Nonbehavioral
+prose/manifests/mechanical wiring use focused postchecks. Real classification/
+exception ambiguity needs an owner decision. No invented red cycle, prose-
+substring ritual or automatic reviewer merely because tests exist.
 
 For a fixed defect, verify cited defect, exact corrected bytes and sufficient
 positive/negative/regression oracle against existing acceptance. Label corrected

@@ -26,8 +26,8 @@ Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`s
 
 - **Spec explicitly declined by the owner** → retain the decision and plan against
   the accepted requirements. Do not invent a spec or require renewed consent.
-- **No spec named, or the named file is absent (without explicit decline)** → **STOP.** Suggest `spec-brainstorming-cl` for this
-  stream: "This stream has no spec. Author it with `spec-brainstorming-cl` first, it reads the
+- **No spec named, or the named file is absent (without explicit decline)** → **STOP.** Suggest `spec-writing-cl` for this
+  stream: "This stream has no spec. Author it with `spec-writing-cl` first, it reads the
   research (if any) and specifies what to build; I'll plan from that." Do NOT synthesize a spec, do
   NOT infer one from `research.md`, and do NOT proceed to planning.
 - **A `<stream>-plan.md` already exists for this stream** (an older `research-team-cl` or a prior run
@@ -35,13 +35,13 @@ Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`s
   revise in place, or supersede? And note the two spec cases:
   - **plan exists + its spec exists** → ask revise-vs-supersede as above.
   - **plan exists but NO spec** → with explicit spec-decline, use accepted requirements;
-    otherwise redirect to `spec-brainstorming-cl`. Do not reverse-engineer a spec.
+    otherwise redirect to `spec-writing-cl`. Do not reverse-engineer a spec.
 - **Spec present (no plan yet)** → plan normally (the rest of this skill).
 
-Spec ownership stays with `spec-brainstorming-cl`. plan-writing-cl sets `streams[].plan:` only, never
+Spec ownership stays with `spec-writing-cl`. plan-writing-cl sets `streams[].plan:` only, never
 `streams[].spec:`.
 
-**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement, one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`), never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-brainstorming-cl` skill's "Spec folder & meta.yaml" for the shape). `docs/specs/` is gitignored, do not commit the plan. (User preferences for plan location override this default.)
+**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement, one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`), never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-writing-cl` skill's "Spec folder & meta.yaml" for the shape). Respect actual repository tracking/ignore policy; authoring grants no commit, ignore-rule change or publication. (User preferences for plan location override this default.)
 - (User preferences for plan location override this default)
 
 ## Scope Check
@@ -104,9 +104,12 @@ include this section.]
 ```
 
 For critical behavioral bugs/boundaries use public RED/GREEN and relevant negative/
-legacy regressions through tdd-cl; characterize uncertain legacy before refactoring.
-Routine prose/manifests use focused postchecks; other behavior needs an explicit
-strategy. Adapt the following behavioral example, do not force a red cycle on prose.
+legacy regressions through tdd-cl. Other features/behavior default to TDD; when a
+strategy is absent apply and record that default, not a manufactured stop.
+Exceptions need a concrete reason and owner agreement unless already approved.
+Pure refactors stay green; characterize uncertain legacy first. Nonbehavioral
+prose/manifests use focused postchecks. Real classification/exception ambiguity
+needs an owner decision. Adapt the example; do not force a red cycle on prose.
 
 ## Task Structure
 

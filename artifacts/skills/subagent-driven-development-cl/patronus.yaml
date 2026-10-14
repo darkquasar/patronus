@@ -4,7 +4,7 @@ type: skill
 role: orchestration
 name: subagent-driven-development-cl
 description: "Optional fresh serial implementer leaves for an accepted plan, with coordinator-only admission, named boundary review where justified, one aggregate review and at most one batched correction."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: [implementer-prompt.md, task-reviewer-prompt.md, scripts]
 targets: [claude]

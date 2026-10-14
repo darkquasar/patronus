@@ -1,84 +1,60 @@
 ---
 name: spec-review
-description: Use at the END of the spec phase, before plan-writing — dispatches a reviewer applying spec basics plus engineering / design / devex / strategy lenses, surfacing Critical/Important/Minor findings. Advisory; you decide whether to proceed.
+description: Review a written spec before planning, using independent source-backed findings and consequence-based blocking acceptance rules.
 ---
 
 # Spec Review
 
-Close the spec phase by reviewing what was written, before anyone plans from it. A defect caught in
-the spec costs a paragraph; the same defect caught after implementation costs a rewrite.
+The coordinator admits one independent review of the exact written spec before
+planning. This optional unsuffixed route targets Codex and OpenCode; use the
+current host's native read-only delivery, not a foreign harness or CLI fallback.
+An explicitly owner-declined spec remains the recorded ADR-0003 exception.
+Task count and apparent simplicity alone do not skip review of an existing spec.
+An inline author check is useful but cannot replace required independence.
 
-This gate is **advisory**. It surfaces findings — it does not block, and it does not edit the spec.
-You decide what to act on.
+## Bind the subject and reviewer
 
-**Core principle:** review the spec before it becomes a plan, not after it becomes code.
+Read the accepted brief, current instructions, source and latest decisions.
+Supply the exact spec path/hash, research and requirements, source root/revision,
+relevant dirty/untracked/ignored inputs and verification evidence. Resolve an
+ambiguous subject before launch. Fill [spec-reviewer.md](spec-reviewer.md) with
+`{DESCRIPTION}`, `{SPEC_PATH}` and `{CONTEXT}`, not the author's reasoning transcript.
 
-## When to Use
+Only the coordinator admits the fresh-context read-only reviewer. Verify actual
+native tools, permissions/authentication and complete delivery/wait controls:
+an exposed Codex worker or an available OpenCode Task role. Missing prerequisites
+block the lane; no assumed general-purpose API or model/provider/host fallback.
+Leaves return complete findings and stop, without edits, fixes, delegation,
+successor admission or shared progress mutation. The coordinator persists the
+complete report and its input/output identities in the existing disposition.
+No second reviewer or repeated consent is automatic.
 
-**Use it when:**
-- A spec or design doc has been written — by `spec-brainstorming` (optionally seeded by
-  `research-team`) or by hand — and the next step is `plan-writing`.
-- You are about to plan from someone else's spec and want an independent read first.
+## Disposition and acceptance
 
-**Skip it when:**
-- The change is small enough that the "spec" is a sentence in the conversation. There is nothing to
-  review.
+Read the complete findings and verify cited source claims. Preserve every source
+ID, original severity, evidence, consequence, correction and resolution oracle.
+Emit Critical/Major/Medium/Low by consequence; do not mechanically map historical
+Important/Minor labels or downgrade findings to meet a threshold. Skipped lenses
+remain unknown, not clean.
 
-## How to Review
+Unresolved Critical/Major or more than two distinct Medium block acceptance.
+One or two Medium residuals require explicit owner acceptance; Low receives a
+recorded disposition. Critical/Major residuals cannot be waived into acceptance.
+Missing requirements, tests or authority independently block.
 
-**1. Identify the spec.**
+The coordinator admits at most one bounded batched correction/disposition. Verify
+the exact corrected bytes with sufficient relevant positive/negative/regression
+evidence against the existing acceptance criterion. Label these parent-verified,
+not independently re-reviewed. Changed public interfaces, safety invariants or
+acceptance scope, or an insufficient oracle, need an owner decision/additional
+grant. No automatic repeat-until-approved or reviewer/fixer successors.
 
-Find the spec or design doc under review — usually the most recent one written this session. If
-more than one candidate exists, ask which.
+## Review lenses and handoff
 
-**2. Dispatch the reviewer.**
+The rubric covers testable, complete, unambiguous, scoped and idiom-aware spec
+basics, plus engineering, user-facing design, developer-facing DevEx and strategy.
+Review the written requirements and actual code anchors, not intended meaning.
 
-Dispatch a `general-purpose` subagent, filling the template at [spec-reviewer.md](spec-reviewer.md).
-
-**Placeholders:**
-- `{DESCRIPTION}` — one line on what the spec proposes
-- `{SPEC_PATH}` — path to the spec document
-- `{CONTEXT}` — anything the reviewer needs that the spec omits (constraints, prior decisions)
-
-Dispatch a subagent rather than reviewing inline: a fresh reviewer reads what the spec *says*,
-while you would read what you *meant*. That gap is the whole point of the gate. For a quick pass
-on a short spec you may apply the rubric inline, but you will find less.
-
-**3. Present the findings.**
-
-Group them Critical / Important / Minor, with section references. Name the lenses the reviewer
-skipped — a skipped lens is not a clean one.
-
-**4. Decide, and say what you decided.**
-
-Offer the choice plainly: fix the findings, accept them and proceed to planning, or revise the
-spec. Do not block, and do not silently proceed past a Critical finding — if the user accepts one,
-record that they did.
-
-## The Rubric
-
-The reviewer applies **spec basics** (testable, complete, unambiguous, scoped, idiom-aware) plus
-four lenses — **engineering**, **design** (user-facing only), **DevEx** (developer-facing only),
-and **strategy** — skipping any lens that does not apply to this spec.
-
-Full rubric: [spec-reviewer.md](spec-reviewer.md)
-
-## Red Flags
-
-**Never:**
-- Skip the gate because the spec "seems fine" — that judgment is exactly what the gate is testing.
-- Proceed past a Critical finding without the user explicitly accepting it.
-- Let the reviewer edit the spec. It advises; the author decides.
-
-**A spec that fails this gate quietly** is one where every requirement is agreeable and none is
-falsifiable. If the reviewer cannot find anything to disagree with, check that the spec actually
-committed to something.
-
-## Where This Sits
-
-`research-team` → `spec-brainstorming` → **spec-review** → `plan-writing` → `plan-review` → build.
-
-Its sibling gate, `plan-review`, closes the planning phase the same way.
-
-**Next:** once the findings are addressed (or consciously declined), the next hop is
-**`plan-writing`**.
+After accepted disposition, return the exact subject and evidence to plan-writing
+only under an existing planning grant. Review completion does not authorize
+planning, implementation, integration, commit, publication or cleanup.

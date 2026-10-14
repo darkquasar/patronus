@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-execute-parallel-cl
 description: "Explicit native parallel execution of an accepted plan with coordinator-admitted leaf teammates, disjoint isolated ownership, settlement, serial integration and one independent aggregate review."
-version: 4.1.0
+version: 4.2.0
 entry: SKILL.md
 files: [TEAMMATE-TEMPLATE.md, PROVENANCE-GUIDE.md]
 targets: [claude]

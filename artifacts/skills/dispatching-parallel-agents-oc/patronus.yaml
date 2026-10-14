@@ -4,7 +4,7 @@ type: skill
 role: orchestration
 name: dispatching-parallel-agents-oc
 description: "OpenCode only: Bounded read-only native subagent dispatch through the Task tool."
-version: 1.2.0
+version: 1.3.0
 entry: SKILL.md
 files: ["SOURCE.md", "NOTICE", "LICENSE"]
 targets: [opencode]

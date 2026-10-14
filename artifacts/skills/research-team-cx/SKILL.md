@@ -24,12 +24,13 @@ read-only worker; a launch receipt or completion notification is insufficient.
    outputs for approval if they are not already authorized.
 2. Read `{skillsDir}/dispatching-parallel-agents-cx/SKILL.md`. Use only the
    Codex native worker primitive actually exposed in the current session, with
-   an observed read-only role. Bind maximum concurrency (start with at most two,
-   never more than four), total worker count, deadline and retry budget before launch.
+   an observed read-only role. Respect applicable existing host/resource or explicitly
+   authorized campaign limits; ordinary research needs no numerical root-budget
+   form or cumulative start ledger. Admit only useful independent leaf questions.
    If the primitive or authentication is unavailable, report blocked and stop the lane.
    Do not invoke a CLI model, replace the engine or silently investigate inline.
 3. Give each worker a self-contained question, root/revision, allowed reads,
-   no-write/no-nesting rule, source paths, budget and findings format. Ask for
+   no-write/no-nesting rule, source paths, applicable limits and findings format. Ask for
    observations separately from inferences, file:line citations or sanitized
    source URLs, limitations and unresolved questions. Web work requires its own
    approved tools and access; local evidence grants no network requests.
@@ -52,7 +53,7 @@ read-only worker; a launch receipt or completion notification is insufficient.
 +-------------------+   complete final responses +-------------------+
 ```
 
-Offer `{skillsDir}/spec-brainstorming-cx/SKILL.md` to author a spec from the
+Offer `{skillsDir}/spec-writing-cx/SKILL.md` to author a spec from the
 validated synthesis, or `{skillsDir}/grilling-cx/SKILL.md` to stress-test unresolved
 design choices. Offers require stage authorization; never auto-advance.
 
