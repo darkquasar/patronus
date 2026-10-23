@@ -3,7 +3,24 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
-## Unreleased
+## v2.7.0
+
+The binary adds OpenCode deployment and lifecycle support, including native agent
+and command paths, instruction pointers, conservative configuration writes and
+cross-target ownership checks. Shared lifecycle handling also improves Codex and
+Pi admission, managed-resource reconciliation and skill visibility. Native host
+activation, authentication and guard behavior remain runtime-pending.
+
+The catalogue changes below publish independently through the registry. This
+binary release supplies the deployment behavior needed to use the updated
+OpenCode catalogue.
+
+### Delivery
+
+- Catalogue publication verifies an owner-approved PR merged into `main` and
+  uses production credentials only in upload steps. Binary releases require an
+  owner-created tag on `main` history and ship six platform binaries with SHA256
+  checksums.
 
 ### Catalogue: decision clarity in every core profile
 
