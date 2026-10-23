@@ -38,21 +38,28 @@ python3 - "$root/.github/workflows/publish-catalog.yml" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 assert 'id: guard' in text
-# The build job guards the registry its own catalog gate produced and checked.
-assert 'bash scripts/check-catalog-publication.sh "$RUNNER_TEMP/catalog-gate/registry" >> "$GITHUB_OUTPUT"' in text
-uploads = [step for step in text.split('      - ') if 'aws s3api put-object' in step]
+# Production environment variables are available only in the publish job.
+uploads = [step for step in text.split('      - ')
+           if 'aws s3api put-object' in step or 'bash scripts/publish-packages.sh registry' in step]
 assert uploads, 'no upload steps inspected'
 build, publish = text.split('  publish:\n', 1)
-assert "publish: ${{ steps.guard.outputs.publish }}" in build
-assert "needs: build" in publish
-assert "if: needs.build.outputs.publish == 'true'" in publish
+assert "needs: [authorize, build]" in publish
 assert 'environment: production' in publish
 assert 'aws s3api put-object' not in build
 assert 'secrets.' not in build
+assert 'DIRECTORY_PACKAGES_ENABLED' not in build
+assert 'github.ref == \'refs/heads/main\'' in publish
+assert 'github.repository == \'darkquasar/patronus\'' in publish
+assert 'tags:' not in text
+assert 'bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"' in publish
+for step in uploads:
+    assert "if: steps.guard.outputs.publish == 'true'" in step
+    assert 'secrets.R2_ACCESS_KEY_ID' in step and 'secrets.R2_SECRET_ACCESS_KEY' in step
+assert publish.count('secrets.R2_ACCESS_KEY_ID') == len(uploads)
 assert publish.index('bash scripts/check-catalog-publication.sh registry') < publish.index('bash scripts/publish-packages.sh registry')
 assert publish.index('bash scripts/publish-packages.sh registry') < publish.index('aws s3api put-object')
 index = publish.split('      - name: Publish discovery index', 1)[1]
-assert "if: steps.eligibility.outputs.index == 'true'" in index
+assert "steps.eligibility.outputs.index == 'true'" in index
 assert index.index('git fetch --no-tags origin main') < index.index('aws s3api put-object')
 PY
 printf 'catalog publication guard tests passed\n'

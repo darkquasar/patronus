@@ -20,12 +20,8 @@ on:
 # safe today ONLY because there is nothing in this workflow to steal: `contents: read`
 # and no `secrets.*` anywhere in it.
 #
-# DECISION (2026-07-12, docs/specs/01-lifecycle-and-test-surface/test-surface-spec.md):
-# this stops being safe the instant anyone adds a secret to this workflow. If a secret
-# is ever needed, EITHER move the secret-requiring step into a separate, manually
-# approved workflow, OR switch that job to pull_request_target guarded by
-#   if: github.event.pull_request.head.repo.full_name == github.repository
-# Do not add a secret to this job.
+# Keep credentialed publication in the main-only publish-catalog workflow. Never
+# switch this code-executing workflow to pull_request_target or give it secrets.
 #
 # The companion rule lives in the tests: no test may fetch remote bytes (cmd/patronus's
 # TestMain installs a deny-all fetcher that panics with the URL). A test that pulled
@@ -35,6 +31,13 @@ permissions:
   contents: read
 
 jobs:
+  publication-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test publication authorization (offline)
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_publication_authorization.py'
+
   test:
     runs-on: ubuntu-latest
     steps:

@@ -193,19 +193,24 @@ esac
     print('PASS main advances between eligibility checks; immutable packages retained, index not uploaded')
     store, result = workflow_run('inactive-schema', active='false')
     assert result.returncode == 0 and not (store/'calls').exists()
-    assert "if: needs.build.outputs.publish == 'true'" in workflow
+    assert "needs: [authorize, build]" in workflow
     assert 'cancel-in-progress: false' in workflow
     build_job = workflow.split('  build:',1)[1].split('  publish:',1)[0]
     assert 'secrets.' not in build_job and 'environment: production' not in build_job
-    # The build job gates ITS OWN registry: catalog gate, then activation guard,
-    # then upload, all on the same gate-produced registry directory. Bound the
-    # job at the top-level `publish:` key, not the `outputs.publish` line.
+    # The build uploads its checked registry without needing production settings.
+    # Activation is evaluated after download in the production environment.
     build_job = workflow.split('\n  build:\n',1)[1].split('\n  publish:\n',1)[0]
     assert 'secrets.' not in build_job and 'environment: production' not in build_job
     gate = build_job.find('bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate"')
-    guard = build_job.find('bash scripts/check-catalog-publication.sh "$RUNNER_TEMP/catalog-gate/registry"')
     upload = build_job.find('path: ${{ runner.temp }}/catalog-gate/registry/')
-    assert -1 < gate < guard < upload, (gate, guard, upload)
+    assert -1 < gate < upload, (gate, upload)
+    assert 'DIRECTORY_PACKAGES_ENABLED' not in build_job
+    publish_job = workflow.split('\n  publish:\n',1)[1]
+    assert 'environment: production' in publish_job
+    download = publish_job.find('uses: actions/download-artifact@')
+    guard = publish_job.find('bash scripts/check-catalog-publication.sh registry')
+    publish = publish_job.find('bash scripts/publish-packages.sh registry')
+    assert -1 < download < guard < publish, (download, guard, publish)
     assert build_job.count('patronus build') == 0, 'build job must upload only the catalog-gate registry'
     print(str(count)+' publication contract cases and 7 workflow ordering/eligibility cases passed')
 PY
