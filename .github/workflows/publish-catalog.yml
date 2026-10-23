@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ["v*"]
     paths:
       - "artifacts/**"
       - "recipes/**"
@@ -27,16 +26,30 @@ on:
 permissions:
   contents: read
 
-# One group across main, tags and manual runs. Never interrupt an active publication.
+# Serialize automatic and manual main runs. Never interrupt an active publication.
 concurrency:
   group: publish-catalog-production
   cancel-in-progress: false
 
 jobs:
-  build:
+  authorize:
+    if: >-
+      github.repository == 'darkquasar/patronus' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    outputs:
-      publish: ${{ steps.guard.outputs.publish }}
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify owner-approved merged PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check-publication-authorization.py catalog
+
+  build:
+    needs: authorize
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
@@ -66,11 +79,6 @@ jobs:
       # publication-contract tested BEFORE the activation guard and any upload.
       - name: Catalog contract gate
         run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
-      - name: Check catalog publication activation
-        id: guard
-        env:
-          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
-        run: bash scripts/check-catalog-publication.sh "$RUNNER_TEMP/catalog-gate/registry" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: registry
@@ -78,24 +86,36 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: build
-    if: needs.build.outputs.publish == 'true'
+    needs: [authorize, build]
+    if: >-
+      github.repository == 'darkquasar/patronus' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      pull-requests: read
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: auto
       AWS_PAGER: ""
-      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       BUCKET: patronus-registry
     steps:
       - uses: actions/checkout@v5
+      - name: Recheck owner approval before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check-publication-authorization.py catalog
       - uses: actions/download-artifact@v4
         with:
           name: registry
           path: registry/
+      - name: Check production catalog activation
+        id: guard
+        env:
+          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
+        run: bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
       - name: Install pinned AWS CLI
+        if: steps.guard.outputs.publish == 'true'
         run: |
           curl --fail --silent --show-error --location \
             https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.31.0.zip -o /tmp/awscli.zip
@@ -103,6 +123,7 @@ jobs:
           sudo /tmp/patronus-awscli/aws/install --update
           aws --version | grep -E '^aws-cli/2\.31\.0 '
       - name: Check current main after acquiring publication job
+        if: steps.guard.outputs.publish == 'true'
         id: eligibility
         run: |
           set -euo pipefail
@@ -113,18 +134,20 @@ jobs:
             echo 'index=false' >> "$GITHUB_OUTPUT"
             echo '::notice::Stale ref: immutable objects may publish, but the discovery index is skipped.'
           fi
-      - name: Recheck catalog activation before any upload
-        id: guard
-        env:
-          DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
-        run: |
-          result=$(bash scripts/check-catalog-publication.sh registry)
-          echo "$result" >> "$GITHUB_OUTPUT"
-          [ "$result" = 'publish=true' ]
       - name: Publish directory packages and sidecars
+        if: steps.guard.outputs.publish == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: bash scripts/publish-packages.sh registry
 
       - name: Publish item tarballs (immutable; check-before-put)
+        if: steps.guard.outputs.publish == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
           set -euo pipefail
           cd registry
@@ -157,7 +180,11 @@ jobs:
           done
 
       - name: Publish discovery index (mutable; no-cache)
-        if: steps.eligibility.outputs.index == 'true'
+        if: steps.guard.outputs.publish == 'true' && steps.eligibility.outputs.index == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
           set -euo pipefail
           # Check again after all immutable uploads, immediately before mutable writes.

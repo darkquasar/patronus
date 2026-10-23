@@ -25,6 +25,8 @@ func harnessOutputFixture(t *testing.T) (home, root string, norm func(string) st
 	codexWrite(t, filepath.Join(root, "artifacts/instructions/fixture-ctx/INSTRUCTIONS.md"), []byte("Invented contribution\n"))
 	home = t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("OPENCODE_CONFIG_DIR", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
 	t.Setenv("PI_OFFLINE", "true")

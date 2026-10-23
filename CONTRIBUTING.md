@@ -119,8 +119,10 @@ delivers, so a reader upgrading the binary knows what they are actually getting.
    [Test gates](#test-gates) plus `golangci-lint run`, and complete the
    [release review checklist](#release-review-checklist).
 3. Commit as `chore(release): cut vX.Y.Z`, stating why the bump is the size it is.
-4. Push `main`, then push an annotated tag (`git tag -a vX.Y.Z`) whose message is
-   prose about what changed, matching the tone of the existing tags.
+4. Merge the release PR into `main`, then, as `darkquasar`, push an annotated tag
+   (`git tag -a vX.Y.Z`) at that merged commit. Its message is prose about what
+   changed, matching the tone of the existing tags. Other authors' PRs require
+   the owner's approval; the owner merges their own PRs.
 5. Confirm `release.yml` went green and the six binaries plus `checksums.txt` are
    attached to the release.
 

@@ -1,7 +1,7 @@
 # build-registry — VALIDATES that the registry still builds whenever catalog
 # content changes (a PR/CI check), uploading the result as a workflow artifact for
 # inspection. It publishes nothing — actual publishing to R2 is publish-catalog.yml
-# (on a push to main / a tag, gated by the protected `production` environment).
+# (after an owner-approved PR reaches main, gated by the `production` environment).
 # Keeping validation separate means it runs safely on fork PRs (no secrets) and
 # gives fast "did my new skill/recipe/profile produce a valid index.json?" feedback
 # without touching the live registry.
