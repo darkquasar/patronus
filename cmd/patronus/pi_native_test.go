@@ -32,7 +32,7 @@ func (r *fixturePiRunner) Run(_ context.Context, in nativepi.Invocation) (string
 		r.t.Errorf("agent override missing: %v", in.Env)
 	}
 	if len(in.Argv) == 2 && in.Argv[1] == "--version" {
-		return nativepi.RuntimeVersion, nil
+		return nativepi.RuntimeVersions[0], nil
 	}
 	if len(in.Argv) < 4 || in.Argv[0] != "pi" {
 		r.t.Fatalf("invalid argv %v", in.Argv)
@@ -518,7 +518,7 @@ func (r *failingSecondProbeRunner) Run(_ context.Context, in nativepi.Invocation
 		if r.probes == 2 {
 			return "", fmt.Errorf("invented second probe failure")
 		}
-		return nativepi.RuntimeVersion, nil
+		return nativepi.RuntimeVersions[0], nil
 	}
 	r.operations++
 	name := strings.TrimPrefix(in.Argv[2], "npm:")

@@ -1,4 +1,4 @@
-// Pi 0.87.1 / pi-subagents 0.72.1. Execute this installed statement body unchanged.
+// Pi 0.87.1 or 1.1.0 / pi-subagents 0.72.1. Execute this installed statement body unchanged.
 const extraFields = ["baseRef", "integrationCwd", "validationCommands", "execution"];
 const taskFields = ["engine", "files"];
 const actions = ["implement", "integrate", "validate", "managed-cleanup"];
@@ -42,7 +42,7 @@ requireThat(args.authorization.parentVerified === true && text(args.authorizatio
 if (!optIn) requireThat(actions.every(a => args.authorization.actions.includes(a)), 'missing actual stage/action grant');
 requireThat(list(args.authorization.files,0,64) && args.authorization.files.every(relative), 'invalid authorized files');
 keys(args.preflight, ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion','snapshotUse','liveChecks'], optIn ? ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion','snapshotUse','liveChecks'] : ['pathsVerified','rolesVerified','evidence','piVersion','subagentsVersion']);
-requireThat(args.preflight.pathsVerified === true && args.preflight.rolesVerified === true && text(args.preflight.evidence) && args.preflight.piVersion === '0.87.1' && args.preflight.subagentsVersion === '0.72.1', 'parent path/role/version preflight required');
+requireThat(args.preflight.pathsVerified === true && args.preflight.rolesVerified === true && text(args.preflight.evidence) && ['0.87.1', '1.1.0'].includes(args.preflight.piVersion) && args.preflight.subagentsVersion === '0.72.1', 'parent path/role/version preflight required');
 if (optIn) {
   const hex = (v,n=64) => typeof v === 'string' && new RegExp('^[0-9a-f]{'+n+'}$').test(v);
   keys(args.preflight.snapshotUse,['schemaVersion','snapshotId','path','sha256','environmentIdentitySha256','observedAt']);
@@ -74,7 +74,7 @@ for (const [engine, r] of Object.entries(args.runners)) {
   if (r.status === 'unverified') requireThat(r.authEvidence === 'UNVERIFIED', 'unverified authentication must not claim proof');
 }
 function eligible(engine) { const r = args.runners[engine]; return r && (r.status === 'available' || (r.status === 'unverified' && r.allowUnverified)); }
-requireThat(args.runners.native.version === '0.87.1', 'native discovery version must match qualified Pi');
+requireThat(['0.87.1', '1.1.0'].includes(args.runners.native.version), 'native discovery version must match qualified Pi');
 requireThat(eligible('native'), 'native runner unavailable or unverified without grant');
 const requested = [];
 const selected = [];

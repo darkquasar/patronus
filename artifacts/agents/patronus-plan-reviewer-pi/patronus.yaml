@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-plan-reviewer-pi
 description: "Independently review plan coverage ownership sequencing and verification"
-version: 2.1.0
+version: 2.2.0
 entry: agent.md
 files: []
 targets: [pi]

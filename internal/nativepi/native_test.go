@@ -1,10 +1,26 @@
 package nativepi
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+type versionRunner string
+
+func (v versionRunner) Run(context.Context, Invocation) (string, error) { return string(v) + "\n", nil }
+
+func TestProbeAcceptsOnlySupportedPiRuntimes(t *testing.T) {
+	root, project := t.TempDir(), t.TempDir()
+	op := Operation{Kind: "install", Source: "npm:invented-probe@1.2.3", Identity: Identity{Name: "invented-probe", Scope: "global", Root: root, AgentRoot: root, Project: project}}
+	for version, ok := range map[string]bool{"0.87.1": true, "1.1.0": true, "1.0.0": false, "0.99.2": false} {
+		err := Probe(context.Background(), versionRunner(version), op)
+		if (err == nil) != ok {
+			t.Errorf("pi %s: error=%v, want accepted=%v", version, err, ok)
+		}
+	}
+}
 
 func TestParseSourceExactOnly(t *testing.T) {
 	for _, s := range []string{"npm:invented@1.2.3", "npm:@team/invented@0.0.1-beta.2+build"} {
