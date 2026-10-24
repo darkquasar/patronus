@@ -4,9 +4,9 @@ type: skill
 role: eval
 name: spec-review-oc
 description: "OpenCode only: fresh read-only spec review against research and current source"
-version: 1.1.1
+version: 1.2.0
 entry: SKILL.md
-files: [NOTICE, LICENSE, SOURCE.md, spec-reviewer.md]
+files: [NOTICE, LICENSE, spec-reviewer.md]
 targets: [opencode]
 defaults:
   scope: project

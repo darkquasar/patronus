@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: tdd-cx
 description: "Codex only: Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
-version: 1.3.0
+version: 1.3.1
 entry: SKILL.md
-files: ["LICENSE", "NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
+files: ["LICENSE", "NOTICE", "mocking.md", "refactoring.md", "tests.md"]
 targets: [codex]
 defaults:
   scope: project
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained."
+  note: "Codex behavioral adaptation. Upstream license terms retained."

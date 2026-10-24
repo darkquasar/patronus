@@ -5,12 +5,27 @@ description: Review a written spec before planning, using independent source-bac
 
 # Spec Review
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 The coordinator admits one independent review of the exact written spec before
 planning. This optional unsuffixed route targets Codex and OpenCode; use the
 current host's native read-only delivery, not a foreign harness or CLI fallback.
-An explicitly owner-declined spec remains the recorded ADR-0003 exception.
+An explicitly owner-declined spec remains the recorded owner-declined-spec exception.
 Task count and apparent simplicity alone do not skip review of an existing spec.
 An inline author check is useful but cannot replace required independence.
+
+## Semantic review boundary
+
+Check necessity and sufficiency of outcomes, true constraints, failure guarantees
+and structural goals for planning; flag unsupported private design and missing
+behavior, DDD consultation/applicability or consequential owner decisions. Preserve
+justified public technical detail and selective modeling. Review verification
+burden/gates against owner provenance without inventing new thresholds. The rubric
+contains the full contract; subjective comparison ratings or unavailable runs
+alone create no blocker. Existing objective checks and disposition rules remain.
+
 
 ## Bind the subject and reviewer
 

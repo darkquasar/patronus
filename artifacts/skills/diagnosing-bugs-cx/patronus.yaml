@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: diagnosing-bugs-cx
 description: "Codex only: Diagnosis loop for hard bugs and performance regressions. Use when the user says \"diagnose\"/\"debug this\", or reports something broken/throwing/failing/slow."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
-files: ["LICENSE", "NOTICE", "SOURCE.md", "scripts/hitl-loop.template.sh"]
+files: ["LICENSE", "NOTICE", "scripts/hitl-loop.template.sh"]
 targets: [codex]
 defaults:
   scope: project
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "Codex behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."
+  note: "Codex behavioral adaptation. Upstream license terms retained. Static guidance, runtime-unverified."

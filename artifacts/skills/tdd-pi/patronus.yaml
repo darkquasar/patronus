@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: tdd-pi
 description: "Use when implementing features, behavior changes or bugfixes, refactoring tested code, or selecting proportionate checks for nonbehavioral edits."
-version: 2.3.0
+version: 2.3.1
 entry: SKILL.md
-files: ["NOTICE", "SOURCE.md", "mocking.md", "refactoring.md", "tests.md"]
+files: ["NOTICE", "mocking.md", "refactoring.md", "tests.md"]
 targets: [pi]
 defaults:
   scope: project
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained."

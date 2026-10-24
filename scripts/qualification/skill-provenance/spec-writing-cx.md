@@ -35,6 +35,10 @@ provenance evidence, not dependency pins or claims about installed runtime behav
 
 ## Active route semantics
 
+Mandatory before drafting: `{skillsDir}/ddd-distilled/SKILL.md`, the declared
+own-host context dependency. Grilling and upstream/next-stage offers remain
+optional or separately granted; none grants a stage or silent installation.
+
 Read `SKILL.md` at the exact installed `{skillsDir}` sibling path when a stage is
 separately granted. Read sidecars through `{skillDir}` or `{skillsDir}`; these are the
 installer's real path substitutions, not a mechanism that executes Markdown text.

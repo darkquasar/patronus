@@ -1,5 +1,8 @@
+This OpenCode artifact adapts its Codex sibling; the retained source notice
+below describes that input, not the current host.
+
 Retained upstream notice describes the legacy input, not the adapted Codex bundle.
-See SOURCE.md for the actual distributed-file disposition.
+Upstream attribution and license terms are retained here.
 
 This artifact vendors the "codebase-design" skill from mattpocock/skills.
 

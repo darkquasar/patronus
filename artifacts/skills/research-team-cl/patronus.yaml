@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: research-team-cl
 description: "Team research — investigate an unknown domain with parallel researcher agents, produce validated findings, and synthesize research.md. Hands off to spec-writing-cl to author the spec."
-version: 5.2.0
+version: 5.2.1
 entry: SKILL.md
 files: [RESEARCHER-TEMPLATE.md, DELIVERABLE-TEMPLATES.md, LESSONS-FORMAT.md]
 targets: [claude]

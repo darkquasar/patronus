@@ -1,17 +1,32 @@
 ---
 name: spec-review-oc
-description: "OpenCode only: independently review the exact ADR-0003 stream spec against research and source evidence before planning, read-only."
+description: "OpenCode only: independently review the exact stream spec against research and source evidence before planning, read-only."
 ---
 
 # Spec review for OpenCode
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 Use after `{skillsDir}/spec-writing-oc/SKILL.md`, before `{skillsDir}/plan-writing-oc/SKILL.md`. Read `{skillDir}/spec-reviewer.md`. Review checks whether this is the right thing to build; plan review checks whether the implementation promise is buildable.
+
+## Semantic review boundary
+
+Check necessity and sufficiency of outcomes, true constraints, failure guarantees
+and structural goals for planning; flag unsupported private design and missing
+behavior, DDD consultation/applicability or consequential owner decisions. Preserve
+justified public technical detail and selective modeling. Review verification
+burden/gates against owner provenance without inventing new thresholds. The rubric
+contains the full contract; subjective comparison ratings or unavailable runs
+alone create no blocker. Existing objective checks and disposition rules remain.
+
 
 ## Scope and inputs
 
 Require a review grant, exact task brief, project instructions, decisions, source root/revision, spec and research paths/hashes, constraints and test evidence. After context loss, reread inputs and the latest saved report before retrying. Existing approval covers only its recorded root, files, actions and budgets. Ask the lead or owner about material ambiguity and wait for an explicit answer. Review grants no authorship, execution, Git, integration, publication or cleanup authority.
 
-Preserve ADR-0003: `docs/specs/NN-slug/`, one research effort, one `meta.yaml`, one folder-level research synthesis and one spec/plan pair per stream. Read parsed metadata and the selected stream's actual spec. Check every named file exists and every `*-spec.md` / `*-plan.md` in the folder is named. The checker is documented at `{skillsDir}/spec-writing-oc/scripts/README.md`; run it only under authorized host checks and resource limits. A missing spec or explicitly declined spec blocks spec coverage claims. Do not fabricate it or fill a completeness flag.
+Preserve the agreed effort layout: `docs/specs/NN-slug/`, one research effort, one `meta.yaml`, one folder-level research synthesis and one spec/plan pair per stream. Read parsed metadata and the selected stream's actual spec. Check every named file exists and every `*-spec.md` / `*-plan.md` in the folder is named. Use available project tooling for metadata/file checks; no bundled validator or particular language is required. Report actual checks and any unverified claims. A missing spec or explicitly declined spec blocks spec coverage claims. Do not fabricate it or fill a completeness flag.
 
 ## Independent reader
 

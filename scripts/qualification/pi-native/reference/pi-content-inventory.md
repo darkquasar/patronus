@@ -1,3 +1,8 @@
+> Historical capture: this inventory records an earlier Pi revision, including
+> the former skill SOURCE.md resources. Current manifests define delivery; the
+> removed skill provenance records are archived in
+> `scripts/qualification/skill-provenance/index.json`.
+
 # Pi content inventory and migration review
 
 ## Current inventory boundary

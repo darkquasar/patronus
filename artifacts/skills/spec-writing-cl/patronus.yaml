@@ -3,12 +3,12 @@ family: artifact
 type: skill
 role: capability
 name: spec-writing-cl
-description: "Explore unresolved requirements/design from source and existing research, consume valid decisions and author one stream spec for independent review."
-version: 6.2.1
+description: "Author behavior-first requirements and linked acceptance from evidence, with a clear research/spec/plan/meta.yaml layout."
+version: 6.3.0
 entry: SKILL.md
 files: [spec-document-reviewer-prompt.md]
 targets: [claude]
-requires: [spec-review-cl]
+requires: [spec-review-cl, ddd-distilled-cl]
 defaults:
   scope: project
 attribution:

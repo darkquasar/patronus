@@ -4,7 +4,7 @@ type: skill
 role: context
 name: ddd-distilled-cl
 description: "Distilled Domain-Driven Design decision/trigger rules (after Vernon's DDD Distilled) — subdomains, bounded contexts, ubiquitous language, aggregates, domain events. A skill: loads on relevance (designing a module, modeling a domain) via description dispatch. LLM-derived, not the book."
-version: 2.0.0
+version: 2.0.1
 entry: SKILL.md
 targets: [claude]
 defaults:

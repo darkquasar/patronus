@@ -4,9 +4,9 @@ type: skill
 role: context
 name: codebase-design-pi
 description: "Pi-scoped codebase design discipline"
-version: 2.0.0
+version: 2.0.1
 entry: SKILL.md
-files: ["DEEPENING.md", "DESIGN-IT-TWICE.md", "NOTICE", "SOURCE.md"]
+files: ["DEEPENING.md", "DESIGN-IT-TWICE.md", "NOTICE"]
 targets: [pi]
 defaults:
   scope: project
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained."

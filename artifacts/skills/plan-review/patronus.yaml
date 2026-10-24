@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: plan-review
 description: "Optional Codex/OpenCode requirement-covered planning route with one independent review, coordinator-only lifecycle control and bounded correction."
-version: 3.2.0
+version: 3.3.0
 entry: SKILL.md
 files: [plan-reviewer.md]
 targets: [codex, opencode]

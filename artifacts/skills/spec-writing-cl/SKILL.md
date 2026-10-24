@@ -1,258 +1,230 @@
 ---
 name: spec-writing-cl
-description: Use when exploring unresolved requirements or design before authoring a stream spec, seeded by existing research and valid prior decisions
+description: "Author behavior-first requirements and linked acceptance from evidence, with a clear research/spec/plan folder layout."
 ---
 
-# Spec Writing: Ideas Into Specs
+# Spec writing
 
-Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+Read project instructions, the brief, recorded decisions, actual source and all
+supplied research/findings before drafting. Reuse settled evidence; research is
+an input, not permission to repeat it. Separate unknown-domain research from
+splitting known work into independent streams. After context loss, reread the
+brief, current decisions, selected progress authority and latest saved outputs;
+check actual bytes before retrying. Do not restart completed work from a title.
 
-Start from current project context and settled decisions. Ask only unresolved
-questions, one at a time. Present changed design choices for approval; consume
-valid prior approval rather than repeating it.
+Research, spec authorship, review, planning, implementation, integration,
+publication and cleanup have separate grants. Existing approval remains valid
+within its recorded scope. Changed targets, destructive actions or consequential
+unresolved choices require the lead/owner's decision and an actual answer. Skill
+completion grants no next stage, commit or publication. Steering is not consent.
 
-Consume already valid design approval and settled research before asking questions.
-Do not restart design merely because execution or correction was requested.
-Author only the approved spec subject; implementation requires its own grant.
+Only the authorized lead/coordinator writes shared outputs and `meta.yaml`.
+Read-only workers return complete draft text/findings and evidence; a filename or
+completion notification alone is not delivery. Delegated authors act only within
+their assigned write grant, never changing shared workflow state or admitting
+successors. A delegated leaf returns unresolved interpretations and consequences;
+the coordinator owns recommendations and owner-facing questions/waits. Honor the
+native role's return/stop conditions. Do not delegate from a leaf or silently
+change model, provider, protocol or isolation when capability is missing.
 
-For small requests, state actual consequences and assumptions plainly. A short
-design can suffice. An explicitly owner-declined spec remains the ADR-0003
-exception, retained in the existing brief, not a missing document to invent.
+## Native integration
 
-## Checklist
+Use Claude's actual exposed Agent and wait/stop surfaces for coordinator-admitted
+workers, with the required read-only scope, authentication and complete delivery.
+Missing capability blocks that lane without a foreign-host or CLI-model fallback.
 
-Use this inline author checklist as intent, not tasks/todos or another progress mirror:
+## Optional own-host offers
 
-1. **Explore project context**, check files, docs, recent commits. **If a `<slug>-research.md` exists for this effort** (a folder under `docs/specs/` that names it in `meta.yaml`), READ it first and let it seed the design, do not re-investigate what research already settled. When research already answers the design questions, collapse the one-at-a-time dialogue to "confirm the implied design, then write the spec" (see The Process below).
-2. **Ask clarifying questions**, one at a time, understand purpose/constraints/success criteria
-3. **Propose 2-3 approaches**, with trade-offs and your recommendation
-4. **Present design**, scale sections to complexity and resolve only unapproved material choices
-5. **Write spec**, into an authorized research-effort folder as `docs/specs/NN-slug/<stream>-spec.md` (create the folder and its `meta.yaml` only within the grant; see "Spec folder & meta.yaml" below). Respect actual tracking/ignore policy; do not auto-commit or add ignore rules.
-6. **Spec placeholder scan**, cheap inline check for placeholders and internal contradictions only; the real review is `spec-review-cl` in a fresh subagent (see below)
-7. **Spec acceptance**, consume existing approval or ask about unresolved written requirements
-8. **Hand off**, the next hop is `spec-review-cl` (a fresh subagent reads what the spec *says*), then `plan-writing-cl`, under coordinator admission. An existing spec receives one independent review. If the owner declined the spec itself, retain that exception and accepted requirements rather than inventing a spec or claiming spec review.
+The coordinator may offer `{skillsDir}/research-team-cl/SKILL.md` for
+unknown-domain research under its own grant. On owner request or explicit
+acceptance, offer `{skillsDir}/grilling-cl/SKILL.md` for a bounded stress-test.
+Verify the selected own-host companion is installed/readable. Missing optional
+companions are reported, never silently installed or substituted. Offers grant
+no stage and do not automatically start research or an additional interview.
 
-## Process Flow
+## DDD consultation before drafting
 
-```dot
-digraph spec_writing {
-    "Explore project context" [shape=box];
-    "Ask clarifying questions" [shape=box];
-    "Propose 2-3 approaches" [shape=box];
-    "Present design sections" [shape=box];
-    "User approves design?" [shape=diamond];
-    "Write design doc" [shape=box];
-    "Spec placeholder scan\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
-    "Spec written\n(next: spec-review-cl)" [shape=doublecircle];
+Read `{skillsDir}/ddd-distilled-cl/SKILL.md` before drafting. Consultation is mandatory;
+apply particular guidance only where domain complexity and risk justify it.
+Briefly record applicability or why no additional modeling is warranted. Show
+resulting vocabulary, boundary and invariant clarifications in the spec so planning
+can preserve them. The same word in different contexts need not mean the same
+concept; a generic internal model is not an external contract. If the required
+guidance is unavailable, disclose the gap and affected claims; never claim an
+unread consultation, silently install it or substitute another host's workflow.
 
-    "Explore project context" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
-    "Propose 2-3 approaches" -> "Present design sections";
-    "Present design sections" -> "User approves design?";
-    "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
-    "Write design doc" -> "Spec placeholder scan\n(fix inline)";
-    "Spec placeholder scan\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Spec written\n(next: spec-review-cl)" [label="approved"];
-}
+## Behavior-first document contract
+
+Specify outcomes at the declared system/API/library/subsystem boundary, scope and
+non-goals. Preserve required public signatures, formats, compatibility, security,
+reliability, performance and deployment constraints, with their owner/source or
+consumer and why they bind. Advisory research and current code structure alone
+do not fix a solution. An explicitly approved legacy design remains a constraint;
+missing behavior cannot be reconstructed from its implementation proposal.
+
+Leave replaceable internal architecture, algorithms, private signatures, file
+layout, test implementation and task/build order to planning. Inspect source for
+facts, constraints and feasibility; do not convert its present structure into an
+automatic compatibility restriction. Compare real outcome choices only when
+needed; require no count of alternatives or design approval for delegated details.
+
+Use clear, consistent headings with intent/scope, requirements and acceptance
+criteria readily identifiable. Each requirement has a stable stream-local ID,
+a clear statement and linked acceptance criteria/examples. Preserve IDs through
+reordering and nonsemantic edits; identify changed obligations explicitly.
+Preserve actor/scope, trigger, condition, bound, exception, obligation, prohibition
+and permission. Distinguish illustrative examples from normative rules: finite
+examples neither narrow a universal guarantee nor create unrequested universals.
+An engineering refactor can require a verifiable structural outcome plus behavior
+preservation; do not invent product changes or mandate tactical DDD patterns.
+
+Supporting content covers domain terms when needed, constraints/compatibility,
+assumptions, risks, evidence, unresolved owner decisions and delegated planning
+choices. Combine or omit supporting sections only with a reason when genuinely
+inapplicable; keep the requirement identity/statement/acceptance core strict.
+No exact heading syntax, empty boilerplate or additional primary document is
+required. State failure, rollback/preservation and evidence limits at the required
+boundary without choosing private recovery mechanisms. Contradictory sources,
+missing required inputs and consequential unknowns stay visible with affected
+requirements and consequences; do not claim unsupported acceptance.
+
+## Decisions and focused questioning
+
+Resolve questions answered by source or valid prior decisions yourself. Own routine
+technical choices within scope. Distinguish facts, assumptions, owner-fixed
+constraints and agent choices; label low-impact, reversible observable defaults
+as agent-selected. Escalate unresolved consequential goals, scope, external
+contracts, security, preservation, irreversible commitments or material costs
+with evidence and a recommendation. Explain consequences and show a concrete
+distinguishing example when interpretations compete; wait for the owner's answer.
+Necessary clarification needs no separate interview grant.
+
+An additional stress-test interview runs only on owner request or explicit
+acceptance, within a declared finite question/time bound, one consequential
+question at a time, with recommendation, consequences and an actual wait.
+Stop when decisions are settled or the bound is reached. Manufacture no minimum
+question count, extend no bound automatically and never rerun a valid approval.
+Completion grants no next stage.
+
+Before adopting new or materially expanded blocking verification criteria or
+substantial test/evaluation machinery, surface a consequential owner choice.
+Explain the protected goal and value, evidence, scope and useful granularity,
+time/cost and maintenance burden, exact blocked stage/condition and a simpler
+alternative (including informational comparison). Recommend an option, show a
+concrete distinguishing example, ask one question and wait. Keep an undecided
+proposal unresolved; continue unrelated authorized development. Reuse settled
+policy and existing required checks without repeated permission. Ordinary relevant
+test selection remains agent-owned.
+
+## Folder layout and metadata
+
+Use the owner's selected destination and the target project's established layout.
+When neither specifies another structure, use `docs/specs/NN-<effort>/`, with the next
+available sequential number and a short effort name. Inspect existing folders
+before allocating a new one. Reuse an existing effort instead of creating a
+second folder for related work.
+
+One folder is one research effort. It holds one shared research synthesis when
+research exists, one `meta.yaml`, and one spec/plan pair for each independently
+specifiable stream. Separate unrelated investigations into separate folders.
+A second independent plan needs its own stream/spec, not a second plan for the
+same spec. The layout is:
+
+```text
+docs/specs/NN-<effort>/
+|-- meta.yaml
+|-- <effort>-research.md        shared synthesis, when research exists
+|-- <stream>-spec.md            this stream's requirements
+|-- <stream>-plan.md            authored later under a planning grant
+|-- <other-stream>-spec.md      another independent stream, if needed
+`-- <other-stream>-plan.md
 ```
 
-**The terminal state is the written spec.** After it, the next hop is `spec-review-cl` (a fresh subagent reads what the spec *says*, not what you *meant*), then `plan-writing-cl`. Do NOT invoke frontend-design, mcp-builder, or any other implementation skill, the flow is spec → spec-review-cl → plan-writing-cl → plan-review-cl → build, and successors require coordinator admission within the existing grant.
+The stream name connects its spec, plan and any optional work references. Before
+writing, resolve the actual paths from existing metadata and project instructions;
+do not infer document content or approval from names. User-selected destinations
+override the example path without changing the spec/plan responsibility boundary.
 
-## The Process
-
-**Understanding the idea:**
-
-- Check out the current project state first (files, docs, recent commits)
-- **Seed from research when it exists.** If this effort has a `<slug>-research.md` (a `docs/specs/NN-slug/` folder whose `meta.yaml` names it, typically written by `research-team-cl`), read it before asking anything. Research has already investigated the unknowns; your job here is to author the spec, not to re-run the investigation. Scale the dialogue to how much the research answers:
-  - **Research answers the design questions** → consume valid approval already present; otherwise skip the long one-at-a-time interview. Confirm the implied design in one pass ("Here's the design the research points to: …, does that match your intent?"), then go straight to writing the spec. Do not ask questions the research already settled.
-  - **Research leaves design questions open** → ask only those, one at a time, in the normal flow below.
-  There is no separate "research-seeded" skill, same author, dialogue scaled to input richness.
-- Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
-- If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
-- If the domain is genuinely *unknown* rather than merely large, several independent unknowns that each need investigating before the design is even tractable, offer the heavy path instead of guessing:
-
-  > "This looks broad enough to research in parallel. Want me to run `research-team-cl`, spawn
-  > read-only researchers to investigate independent unknowns and return complete evidence
-  > for a research synthesis, instead of designing solo?"
-
-  If yes, hand off to the **research-team-cl** skill and return with its research evidence. Otherwise continue the normal design flow. Note this is a different problem from decomposition: decomposition splits work you *understand*, while research-team-cl investigates work you *don't*. A project can need one, both, or neither.
-- For appropriately-scoped projects, ask questions one at a time to refine the idea
-- Prefer multiple choice questions when possible, but open-ended is fine too
-- Only one question per message - if a topic needs more exploration, break it into multiple questions
-- Focus on understanding: purpose, constraints, success criteria
-
-**Exploring approaches:**
-
-- Propose 2-3 different approaches with trade-offs
-- Present options conversationally with your recommendation and reasoning
-- Lead with your recommended option and explain why
-
-**Presenting the design:**
-
-- Once you believe you understand what you're building, present the design
-- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
-- Ask about unresolved material choices, not already approved sections
-- Cover: architecture, components, data flow, error handling, testing
-- Be ready to go back and clarify if something doesn't make sense
-
-**Draw it, don't just describe it:**
-
-When an approach or a design section involves structure, control flow, data flow, or a state
-machine, **lead with a compact ASCII diagram** and then the prose. Use the diagram-explain
-charset: `+---+` boxes, `=>` sync, `~>` async, `>` `<` `^` `v` arrows, ≤100 columns wide.
-
-The picture is a required complement to the words for any non-trivial structural concept, not an
-afterthought. A boundary you cannot draw is usually a boundary you have not yet decided.
-
-**Design for isolation and clarity:**
-
-- Break the system into smaller units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently
-- For each unit, you should be able to answer: what does it do, how do you use it, and what does it depend on?
-- Can someone understand what a unit does without reading its internals? Can you change the internals without breaking consumers? If not, the boundaries need work.
-- Smaller, well-bounded units are also easier for you to work with - you reason better about code you can hold in context at once, and your edits are more reliable when files are focused. When a file grows large, that's often a signal that it's doing too much.
-
-**Working in existing codebases:**
-
-- Explore the current structure before proposing changes. Follow existing patterns.
-- Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design - the way a good developer improves code they're working in.
-- Don't propose unrelated refactoring. Stay focused on what serves the current goal.
-
-## After the Design
-
-**Stress-test it first (optional):**
-
-Once the user approves the design and before you write the doc, offer to interrogate it:
-
-> "Want me to grill this design first, interrogate the assumptions and the hard questions,
-> before we commit it to a spec?"
-
-If yes, run the `grilling-cl` skill, then come back here with what it surfaced. The design is at its
-cheapest to change in the moment right before it becomes a document. The user may decline; proceed
-either way.
-
-**Documentation:**
-
-- Write the validated design (spec) to `docs/specs/NN-slug/<stream>-spec.md`, where `NN-slug` is a research-effort folder (sequential number + short slug, e.g. `01-user-auth`) and `<stream>` names this stream. Scan `docs/specs/` for the highest existing `NN` and increment.
-  - (User preferences for spec location override this default)
-- Follow effective project writing guidance inline; authoring does not admit an editorial worker.
-- Respect actual repository tracking/ignore policy. A spec write grants no commit, ignore-rule change or publication; perform those only under separate authorization.
-
-**Spec folder & meta.yaml:**
-
-A folder under `docs/specs/` is **one research effort**, and it holds **many streams**. A stream is
-**one spec and one plan**, the unit of independently specifiable, reviewable, shippable work. The
-folder shares one research doc across all its streams (ADR-0003):
-
-```
-docs/specs/NN-slug/                    ← ONE research effort
-├── meta.yaml
-├── <slug>-research.md                 ← ONE per folder; it is what makes the folder a folder
-├── <stream>-spec.md   ┐
-├── <stream>-plan.md   ┘               ← ONE stream: exactly one spec, exactly one plan
-├── <stream2>-spec.md  ┐
-└── <stream2>-plan.md  ┘               ← another stream
-```
-
-`NN-slug` is a sequential number + short slug (e.g. `03-payment-retry`). Scan `docs/specs/` for the
-highest existing `NN` and increment.
-
-Spec writing designs **one stream**. On first write into a new folder, create `meta.yaml` and
-append your stream, naming the spec file you just wrote:
+The authorized lead/coordinator owns shared metadata. Create it for a new effort
+only within the authorship grant; preserve unrelated streams and project fields.
+For example, after the research and first spec files have actually been written:
 
 ```yaml
-slug: NN-slug
-intent: "One line: what this investigation is."
-created: <today, YYYY-MM-DD>     # from context; do not invent
-updated: <today, YYYY-MM-DD>
-
-research: <slug>-research.md     # ONE per folder; present only once research has been written
-
+slug: NN-<effort>
+intent: "One line describing the research effort"
+created: <actual YYYY-MM-DD>
+updated: <actual YYYY-MM-DD>
+research: <effort>-research.md
 streams:
-  - slug: <stream>              # THE name: <stream>-spec.md, <stream>-plan.md, --tags <stream>
-    intent: "One line: what this stream is."
-    spec: <stream>-spec.md      # the file you just wrote
-    plan: null                  # plan-writing-cl fills this in
-    epic: null                  # optional reference only when tk is selected
-    tasks: []                   # optional references, not a required progress mirror
-```
-
-If `meta.yaml` already exists (e.g. `research-team-cl` created it), append your stream to `streams:` and
-bump `updated:`. Each skill fills the fields it produces: `plan-writing-cl` fills `plan:`, and
-an explicitly authorized tracker owner fills optional `epic:`/`tasks:` references
-only when tk is selected. No automatic seeding or duplicate mutable status.
-
-**One stream = one spec + one plan.** If the work forks into pieces that are independently
-specifiable, reviewable, and shippable, that is **more than one stream**, add a stream, not a second
-plan to an existing one. They share the folder's one research doc; they share nothing else.
-
-**Name the file; do not assert a flag.** Write `spec: <stream>-spec.md`, never `spec: true`. Naming
-the file and claiming it exists are the same act.
-
-**Every stream gets a spec by default.** `spec-review-cl` and `plan-review-cl` are different lenses, *"is
-this the right thing to build"* vs *"is this buildable as written"*, so keep both. If the user
-explicitly declines a spec, record the decision instead of leaving an absence:
-
-```yaml
-  - slug: quick-fix
-    intent: "One line."
-    spec: null
-    spec_declined: "User opted to plan directly (2026-07-12), scope judged too small for a spec."
-    plan: quick-fix-plan.md
+  - slug: <stream>
+    intent: "One independently specifiable change"
+    spec: <stream>-spec.md
+    plan: null
     epic: null
-    tasks: []
+  - slug: <other-stream>
+    intent: "Another change, if needed"
+    spec: null
+    plan: null
+    epic: null
 ```
 
-**The manifest must be checkable, not believable. Two invariants:**
+Starting without research is allowed: keep `research: null` or omit it until the
+synthesis exists. Here `<effort>` is the unnumbered effort name; `NN-<effort>`
+is the numbered folder and metadata slug. Name only files that exist; unfinished
+research/spec/plan fields stay null or absent. If an authorized new stream is not listed, append its
+entry with its slug/intent and null unfinished document fields, preserving
+all existing streams. After saving the authorized spec, update that stream's
+`spec:` and the effort's `updated:`. Planning owns `plan:`. Preserve
+existing work references; `epic:` is optional and gets a real tracker ID only when
+that tracker is selected and seeding is separately authorized. Metadata indexes
+artifacts, not task status, semantic approval or stage authority.
 
-1. Every filename `meta.yaml` names **resolves to a file on disk.**
-2. Every `*-spec.md` / `*-plan.md` in the folder **is named in `meta.yaml`.**
+A spec is the default. If the owner explicitly declines it, retain the decision
+in the brief and record `spec: null` with `spec_declined:` (decision and date).
+Do not fabricate a spec or claim spec review for a declined document.
 
-Both are greppable, that is why the schema names files rather than asserting flags.
+Check both directions: every research/spec/plan filename named by metadata exists,
+and every stream spec/plan in the effort is named. Inspect parsed YAML values;
+comments are not references. Use available project tools and record what was
+actually checked. No particular language, compiler, dependency cache or bundled
+validator is required. Respect the target project's tracking/ignore policy; do
+not assume these documents are gitignored, change `.gitignore`, force-add files,
+commit or publish under an authorship grant.
 
-Confirm `docs/specs/` is gitignored before writing into it: `git check-ignore -q docs/specs/ && echo ignored`.
-If it is not ignored, report the actual policy and ask before altering .gitignore.
-No automatic tracking-policy change or commit. Do not assert it is ignored, check.
+## Author and check
 
-**Spec placeholder scan (cheap, inline):**
+Write the authorized `<stream>-spec.md`, using the strict requirement/acceptance
+core and proportionate supporting content above. Check placeholders,
+contradictions, missing requirements and uncertain claims inline; do not launch
+an author self-check worker. Distinguish checks performed from unverified claims.
+A compact ASCII boundary/behavior diagram can clarify a non-trivial contract;
+it does not require private architecture. Use labeled `+---+` boxes, annotated
+`=>` sync or `~>` event edges, spaces only and at most 100 columns.
 
-After writing the spec, scan it for the mechanical failures only, the ones that need no fresh
-perspective to catch:
+## Review and handoff
 
-1. **Placeholders:** any "TBD", "TODO", or an empty section? Fill them.
-2. **Internal contradictions:** does one section say the opposite of another?
+When a spec exists, require one independent spec review unless the owner
+explicitly declines that review subject in the existing brief. An owner-declined
+spec is a separate plan-only exception. Under the review grant, the coordinator
+uses `{skillsDir}/spec-review-cl/SKILL.md` with exact spec, brief, evidence/source
+paths and hashes. Include `{skillDir}/spec-document-reviewer-prompt.md` as a
+supplement to that same subject, not another review cycle. Preserve skipped
+lenses, complete consequence-based findings and the review skill's existing
+one-batch correction/disposition rules. Corrected bytes are parent-verified,
+not independently re-reviewed. Material scope/interface/invariant changes or
+insufficient proof return to the owner; no automatic second model or review wave.
 
-Fix them and move on.
+Read returned findings completely and check consequential source claims. Inline
+author checks cannot replace required independence. After accepted disposition,
+`{skillsDir}/plan-writing-cl/SKILL.md` is the planning destination and must consume
+the actual written spec. An existing planning grant remains valid; completion
+alone does not start planning or coding. Return saved paths/hashes, actual checks,
+assumptions/defaults, decisions, limits and the next authorized action.
 
-This inline check is not independent spec review. The coordinator admits one
-spec-review-cl subject, using its maintained spec-reviewer.md rubric. The retained
-spec-document-reviewer-prompt.md is a compatibility pointer to that same rubric,
-not a second reviewer. No automatic second model or repeat-until-approved loop.
-Read complete findings and use the existing one-batch correction/disposition route.
-Material scope/interface/invariant changes or insufficient proof return to the owner.
-
-Consume existing valid spec/design approval. Ask about real unresolved content,
-not merely a stage label. Retain explicit review/spec declines in the existing
-brief. Missing requirements or authority independently block. Hand off the accepted
-spec and exact evidence references to plan-writing-cl only within coordinator
-admission, without self-launching successors.
-
-The coordinator selects one mutable progress authority once at plan acceptance.
-Run-owning native state wins; otherwise explicit project selection, existing
-tracker or one durable plan-associated record. UI todos alone do not outrank it.
-Metadata indexes documents and logs retain observations. No checklist-to-todo or
-tk mirrors. Read instructions, brief, latest handoff and actual source/results on
-resume; do not replay settled research. Ordinary development requires no root
-numerical allocation form; applicable host/resource limits remain.
-Commit, publication and cleanup require separate grants.
-
-## Key Principles
-
-- **One question at a time** - Don't overwhelm with multiple questions
-- **Multiple choice preferred** - Easier to answer than open-ended when possible
-- **YAGNI ruthlessly** - Remove unnecessary features from all designs
-- **Explore alternatives** - Always propose 2-3 approaches before settling
-- **Incremental validation** - Present design, get approval before moving on
-- **Be flexible** - Go back and clarify when something doesn't make sense
+At plan acceptance the coordinator records one mutable progress authority in the
+existing brief/plan: native state actually owning runs first; otherwise explicit
+project selection, the existing tracker or one durable plan-associated record.
+UI todos alone do not outrank it. Metadata indexes artifacts and evidence records
+observations; neither is a competing task ledger. No checklist-to-todo/tk mirror,
+automatic seeding or mandatory root numerical form. Commit, publication and
+cleanup retain their separate grants.

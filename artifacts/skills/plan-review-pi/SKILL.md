@@ -5,7 +5,22 @@ description: "Review exact plan coverage, ordering and interfaces before executi
 
 # Review exact plan coverage, ordering and interfaces before execution
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 One independent written-plan reviewer is required, including for one task, unless the owner explicitly declines that subject and the existing brief records it. The coordinator supplies the plan AND the spec it implements, or the recorded explicit spec-decline exception. Read [plan-reviewer.md](plan-reviewer.md). Review is evidence, never execution or publication authority.
+
+## Semantic review boundary
+
+Check actual spec-to-plan fidelity, inherited constraints versus planner choices,
+requirement/task/check links, vocabulary/boundary/invariant preservation and
+reasoned start/join deliverables. Runtime order alone is not build order; inspect
+accepted inputs, ownership, isolation and settlement before accepting parallelism.
+Review unsupported verification burdens/gates against recorded owner policy;
+subjective comparison ratings alone do not block. Report feasibility without
+choosing execution mode; retain the existing independent-review disposition.
+
 
 ## Scope and recovery
 

@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: writing-skills-oc
 description: "OpenCode only: Use when creating, editing or auditing skill instructions and their local references before an authorized deployment."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
-files: ["LICENSE", "NOTICE", "SOURCE.md", "authoring-best-practices.md", "examples/AGENTS_MD_TESTING.md", "graphviz-conventions.dot", "persuasion-principles.md", "testing-skills.md"]
+files: ["LICENSE", "NOTICE", "authoring-best-practices.md", "examples/AGENTS_MD_TESTING.md", "graphviz-conventions.dot", "persuasion-principles.md", "testing-skills.md"]
 targets: [opencode]
 defaults:
   scope: project
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "OpenCode behavioral adaptation. Legacy inputs and hashes in SOURCE.md; license terms retained. Static guidance, runtime-unverified."
+  note: "OpenCode behavioral adaptation. Upstream license terms retained. Static guidance, runtime-unverified."

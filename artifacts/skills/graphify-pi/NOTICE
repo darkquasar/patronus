@@ -10,4 +10,4 @@ text is retained in LICENSE-MIT.
 Patronus Pi adaptation (2026-10-02): SKILL.md and all eight references rewritten
 for query-only children and explicitly authorized coordinator operations.
 .graphify_version retained unchanged as source provenance, not runtime evidence.
-Source inventory: SOURCE.md. No Graphify runtime is redistributed here.
+No Graphify runtime is redistributed here.

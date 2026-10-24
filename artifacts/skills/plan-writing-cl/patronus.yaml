@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: plan-writing-cl
 description: "Author requirement-covered behavior-sized implementation plans, with inline checks, explicit verification strategy and one independent plan-review handoff."
-version: 4.3.0
+version: 4.4.0
 entry: SKILL.md
 files: []
 targets: [claude]

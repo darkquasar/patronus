@@ -55,7 +55,7 @@ Use the index to select exact files, not every wildcard category.
 The longer [Microsoft guidance](references/microsoft-pragmatic-rust-guidelines.txt)
 is optional when a specific question needs it. Keep project choices such as
 unsafe policy, edition, MSRV, feature sets and license allowlists in the project,
-not in this global skill. Read SOURCE.md and NOTICE for provenance; upstream
+not in this global skill. Read NOTICE for attribution; upstream
 Rust-version statements are historical provenance, not current toolchain advice.
 The curated upstream rules label optional related rules from omitted categories
 as not bundled. Use the shipped index for available guidance. If a task needs an

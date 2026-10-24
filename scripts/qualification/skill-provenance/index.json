@@ -1,0 +1,355 @@
+{
+  "purpose": "Repository-only historical adaptation/provenance records; never installed or used as runtime authority.",
+  "records": [
+    {
+      "former_path": "artifacts/skills/code-intel-operations-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/code-intel-operations-pi.md",
+      "sha256": "7bfdc06751b1ae4698e99d819b422bf8caaa7300ead76ece49ad9e46d29e9112"
+    },
+    {
+      "former_path": "artifacts/skills/codebase-design-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/codebase-design-cx.md",
+      "sha256": "f85b54da557a4680fe44d414c698705d800f47af7c9dd430c08f0657f2f8264a"
+    },
+    {
+      "former_path": "artifacts/skills/codebase-design-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/codebase-design-oc.md",
+      "sha256": "49d266377b703fede903fa0b001efdd671ac6d50380e00c853a983d5089ccf33"
+    },
+    {
+      "former_path": "artifacts/skills/codebase-design-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/codebase-design-pi.md",
+      "sha256": "d4000b4c5bbd5a4fb070b653d5505e11d902e3cf74af7de461a473cb2eef4303"
+    },
+    {
+      "former_path": "artifacts/skills/decision-clarity-cl/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/decision-clarity-cl.md",
+      "sha256": "a4ff02554bd14271f29e23708c5a717673d4aae76e644ad514fa0c612fab27cb"
+    },
+    {
+      "former_path": "artifacts/skills/decision-clarity-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/decision-clarity-cx.md",
+      "sha256": "0bbcccdf223767eabc693bec59d1c00cf091493a8a369f5c80d01def92f594bc"
+    },
+    {
+      "former_path": "artifacts/skills/decision-clarity-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/decision-clarity-oc.md",
+      "sha256": "0ae656b872896b595c8c452b591cf2f7112065b2a513ee043d3080fe4357762f"
+    },
+    {
+      "former_path": "artifacts/skills/decision-clarity-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/decision-clarity-pi.md",
+      "sha256": "982e3150456112cbe5e61f7178b191ea2f48b47b23a8776fbb9298f8559b73a6"
+    },
+    {
+      "former_path": "artifacts/skills/decision-clarity-reference/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/decision-clarity-reference.md",
+      "sha256": "fbb90992ff2985370ee26b8a456193d43f26791e310b96be641bd0f66b95048b"
+    },
+    {
+      "former_path": "artifacts/skills/diagnosing-bugs-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/diagnosing-bugs-cx.md",
+      "sha256": "93065724349b4a4e19482bdc1cb9bfa517e686f5eba03bc2d1ba4788c1702596"
+    },
+    {
+      "former_path": "artifacts/skills/diagnosing-bugs-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/diagnosing-bugs-oc.md",
+      "sha256": "24df9b7ba4d3a2827523f1a90a3952e742779b4f50f3946b83d04527b53d24ce"
+    },
+    {
+      "former_path": "artifacts/skills/diagnosing-bugs-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/diagnosing-bugs-pi.md",
+      "sha256": "d030b082887018461562e2692925053a7aece6cccd098ec5f2b8e5a084733478"
+    },
+    {
+      "former_path": "artifacts/skills/dispatching-parallel-agents-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/dispatching-parallel-agents-pi.md",
+      "sha256": "b210c8a57638c1846430b9923fbad50ca8d6dd7a292005c54551cc3ee4d2afcb"
+    },
+    {
+      "former_path": "artifacts/skills/dispatching-parallel-subagents/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/dispatching-parallel-subagents.md",
+      "sha256": "c00cb8535b21d8160888cec0ca0a4dbce7a6d79cb591f2f4f994dbe14dac7f91"
+    },
+    {
+      "former_path": "artifacts/skills/domain-modeling-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/domain-modeling-pi.md",
+      "sha256": "ae9256b5839a496d17173fb715f9fa7f8c645918934cda84163834687f11599f"
+    },
+    {
+      "former_path": "artifacts/skills/finishing-a-development-branch-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/finishing-a-development-branch-cx.md",
+      "sha256": "2be772abf42707aa88a314dce36b1fdc887b5ab61a18c48145993a7d8f11e6bd"
+    },
+    {
+      "former_path": "artifacts/skills/finishing-a-development-branch-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/finishing-a-development-branch-oc.md",
+      "sha256": "4360ccf0ec30ff100be2ab737d9f2f098f42e1c0f2340cda5c25ae68ea8fa722"
+    },
+    {
+      "former_path": "artifacts/skills/finishing-a-development-branch-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/finishing-a-development-branch-pi.md",
+      "sha256": "7d7282641133883bb6c08e8baf8c4a4f2fb823d510a67fa5328be741113bcdde"
+    },
+    {
+      "former_path": "artifacts/skills/graphify-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/graphify-pi.md",
+      "sha256": "ed61c94438fca51e0d753b7de53bf8f13677f39559bfbdc749df375cb1f09110"
+    },
+    {
+      "former_path": "artifacts/skills/grilling-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/grilling-cx.md",
+      "sha256": "d0b6a66d2a4ca89edcafb3cfe524615d0e253cdd90f8e0d846416346ca5fb44b"
+    },
+    {
+      "former_path": "artifacts/skills/grilling-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/grilling-oc.md",
+      "sha256": "adb95a2f2888148f799efaa789e985ff7b93b5b5df9b74cdc1c05952fb7f4b57"
+    },
+    {
+      "former_path": "artifacts/skills/isolated-writer-supervisor/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/isolated-writer-supervisor.md",
+      "sha256": "499469b70894a8acef73cf13b33822fcb077268f3298d8da32be407a35eed6c6"
+    },
+    {
+      "former_path": "artifacts/skills/pattern-cloudflare-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/pattern-cloudflare-cx.md",
+      "sha256": "5b449a4ecfc510a2b2fa55d6212aa570445444babbf3f7e7ccc10c5504f821bb"
+    },
+    {
+      "former_path": "artifacts/skills/pattern-cloudflare-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/pattern-cloudflare-oc.md",
+      "sha256": "8789463fd25b81a2c3290f712b657df9e9b5fc1635ec789afc1592b5b78ec517"
+    },
+    {
+      "former_path": "artifacts/skills/pattern-mcp-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/pattern-mcp-cx.md",
+      "sha256": "688217e73fc29d93e52cbd0ba4248bdc4709479a25875f00e19eaad2b501da8b"
+    },
+    {
+      "former_path": "artifacts/skills/pattern-mcp-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/pattern-mcp-oc.md",
+      "sha256": "d1383e791c4dbb751b93331bac87a4515e35b7e6cf18e9f7698b531b158f1d56"
+    },
+    {
+      "former_path": "artifacts/skills/pattern-mcp-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/pattern-mcp-pi.md",
+      "sha256": "6834bc6023ff11a1302346771071d40f6f54d677c79eb91812a36f2f9af4ff1b"
+    },
+    {
+      "former_path": "artifacts/skills/plan-execute-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-execute-cx.md",
+      "sha256": "cb1985dc2bde89080e8bb136a62d9326e765502a540a4308a30909a4c1d2b76e"
+    },
+    {
+      "former_path": "artifacts/skills/plan-execute-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-execute-oc.md",
+      "sha256": "2b7917a55035001254b7a8d2d8650c70d72a6c8da5129d081316ff92ad4804fb"
+    },
+    {
+      "former_path": "artifacts/skills/plan-execute-parallel-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-execute-parallel-pi.md",
+      "sha256": "c897ab18defecf5eb95b16a6707edbedc39589601214bfa023dcd6c26ac83f53"
+    },
+    {
+      "former_path": "artifacts/skills/plan-execute-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-execute-pi.md",
+      "sha256": "4da78242416c39bb238bb2294b87de15d6c56ec5c1c067ef9495a71f0ead162d"
+    },
+    {
+      "former_path": "artifacts/skills/plan-review-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-review-cx.md",
+      "sha256": "accb5c8c8ab006a2288f8d01689f92ed1eb1cadc932531a54b42ebb0e5f04a61"
+    },
+    {
+      "former_path": "artifacts/skills/plan-review-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-review-oc.md",
+      "sha256": "561dd75bffd732c0387856ae668aca114889df36857b7796ba06a68b69c5456c"
+    },
+    {
+      "former_path": "artifacts/skills/plan-review-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-review-pi.md",
+      "sha256": "567ab6940bf25724f98ce7690fc01d4e20013697e4d323e7bb36ab3e58eb807e"
+    },
+    {
+      "former_path": "artifacts/skills/plan-writing-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-writing-cx.md",
+      "sha256": "d9bf008fc857b8f592e25548092d331cec2e8037f4bd705ab976df19f324c50c"
+    },
+    {
+      "former_path": "artifacts/skills/plan-writing-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-writing-oc.md",
+      "sha256": "e7ea936dd4c1810f4f8ac067e53621ddb57884eba16abf5ee9dfc61a1520848f"
+    },
+    {
+      "former_path": "artifacts/skills/plan-writing-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/plan-writing-pi.md",
+      "sha256": "6e2d997d3fbcddb315b73b6723d931fad128e7980fd3e0ea882468f953576fa1"
+    },
+    {
+      "former_path": "artifacts/skills/receiving-code-review-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/receiving-code-review-cx.md",
+      "sha256": "e7256ac75a590d47e3a227ea40b3ec04ee90329d535199f691612e03bbcc6ebd"
+    },
+    {
+      "former_path": "artifacts/skills/receiving-code-review-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/receiving-code-review-oc.md",
+      "sha256": "bb4cc0fe260e832c1933e062ae342729d5f65ace38592150e02cfd4d28b42d86"
+    },
+    {
+      "former_path": "artifacts/skills/requesting-code-review-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/requesting-code-review-cx.md",
+      "sha256": "4f874f60466c25d3663e78ed710ac0c72945cee7826413a23b566fee2b637a52"
+    },
+    {
+      "former_path": "artifacts/skills/requesting-code-review-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/requesting-code-review-oc.md",
+      "sha256": "47a19886d24cf5cdd467959a34a2792253b66a35dafe8adaba02c5468471152c"
+    },
+    {
+      "former_path": "artifacts/skills/requesting-code-review-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/requesting-code-review-pi.md",
+      "sha256": "265430f61e88860ae69399d5ddc7ba2a9744bb92c76d57d737cd7e3a9688831b"
+    },
+    {
+      "former_path": "artifacts/skills/research-team-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/research-team-cx.md",
+      "sha256": "4531f0d91dcd652471f76223d8701fa55dfe9022c9d7c0e0307a68915e6d8b35"
+    },
+    {
+      "former_path": "artifacts/skills/research-team-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/research-team-oc.md",
+      "sha256": "8fd5da3b27da019dfc7621c5fb9e63951c21eade1699524e3562320eb04b8a06"
+    },
+    {
+      "former_path": "artifacts/skills/research-team-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/research-team-pi.md",
+      "sha256": "644982967e21146af259ef850c4368ef81063b09805c2b02b285f0b412e8f688"
+    },
+    {
+      "former_path": "artifacts/skills/rust-style-cl/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/rust-style-cl.md",
+      "sha256": "6f5a10c004a10df14a6ccb825a8946f9a8ff78fcce6009e7b67b9b043ef86185"
+    },
+    {
+      "former_path": "artifacts/skills/rust-style-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/rust-style-cx.md",
+      "sha256": "795288a5642e9079ae7e19b70f61fbe1cb6eb393f71d45508f840da1097a634f"
+    },
+    {
+      "former_path": "artifacts/skills/rust-style-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/rust-style-oc.md",
+      "sha256": "16f4d179461008f870d9703379e45883e37f756095b5ed451a1e067c60e176ea"
+    },
+    {
+      "former_path": "artifacts/skills/rust-style-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/rust-style-pi.md",
+      "sha256": "06c9ff5dfec646ea136c0e7e408db469dd9093e341b7a999f7ce936001549a60"
+    },
+    {
+      "former_path": "artifacts/skills/rust-style-reference/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/rust-style-reference.md",
+      "sha256": "b741431d7584141924ae572368bb305316909085eb9e030c07e978502ed247f3"
+    },
+    {
+      "former_path": "artifacts/skills/skills-dispatch-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/skills-dispatch-cx.md",
+      "sha256": "5a0e0bcc4502ad60315745a0b6a58783079801ab9caa8d9a30e1824f7d112af1"
+    },
+    {
+      "former_path": "artifacts/skills/skills-dispatch-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/skills-dispatch-oc.md",
+      "sha256": "56649397077546898e5006145488be0f1796df407a2d8a30af2a4b3c98e508c6"
+    },
+    {
+      "former_path": "artifacts/skills/skills-dispatch-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/skills-dispatch-pi.md",
+      "sha256": "5fd511abdcb4c2fa234ce3377ba8e16b5787fb6a50acfbf23dbbc804a3f4efa1"
+    },
+    {
+      "former_path": "artifacts/skills/spec-review-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-review-cx.md",
+      "sha256": "adc2cf33135f90928b3c827db67f01ac61fca6eb431f75ffb8dc859c525a6daf"
+    },
+    {
+      "former_path": "artifacts/skills/spec-review-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-review-oc.md",
+      "sha256": "cf831ca5120125213fbc4b5d42750c8a254c5f1701ac774b2dc12f5b8d5e370c"
+    },
+    {
+      "former_path": "artifacts/skills/spec-review-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-review-pi.md",
+      "sha256": "bbe414961a63938e740acc718dbecd32a9708240d3c40ec70d4fd565c4bc5b52"
+    },
+    {
+      "former_path": "artifacts/skills/spec-writing-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-writing-cx.md",
+      "sha256": "ad987de4e25f3941e30ff14324cb0ea59c7ed4da2883fc655f4508054f524167"
+    },
+    {
+      "former_path": "artifacts/skills/spec-writing-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-writing-oc.md",
+      "sha256": "5b81b7349126c609adfa0de1c4a5e329a3ec0f6ff2d4cf7b1a80d349a19cd403"
+    },
+    {
+      "former_path": "artifacts/skills/spec-writing-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/spec-writing-pi.md",
+      "sha256": "1881e380b1a4edc5bc03bfbe7e679d7b3f8311d1ada15a9fe3053eedf7dfd76d"
+    },
+    {
+      "former_path": "artifacts/skills/tdd-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/tdd-cx.md",
+      "sha256": "6d29fd2514b8394bc0f3c663571c95fbf3ab63f0cae08dd6df52c209511a805d"
+    },
+    {
+      "former_path": "artifacts/skills/tdd-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/tdd-oc.md",
+      "sha256": "e1fcf7ebb0de809c3fdd87104bc97f351b9f379576340efdcffaf8ac34ff5c5d"
+    },
+    {
+      "former_path": "artifacts/skills/tdd-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/tdd-pi.md",
+      "sha256": "4d8687460f6cd457902415b2bff40399f497933da1a89096db500f3ab7c3184e"
+    },
+    {
+      "former_path": "artifacts/skills/ticket-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/ticket-pi.md",
+      "sha256": "1eb374504f1282919d91a8878ed534ba2f4e9b328e80a6ea26bb38b9993716eb"
+    },
+    {
+      "former_path": "artifacts/skills/using-git-worktrees/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/using-git-worktrees.md",
+      "sha256": "79d59a1ac2282227c71b85e704bdcb739a7fa90cffd1625482fbe01d2fe415d7"
+    },
+    {
+      "former_path": "artifacts/skills/using-git-worktrees-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/using-git-worktrees-pi.md",
+      "sha256": "4b938c202fb5d952f786235c82a82dbb43f585e77921703a894a950a3576a4c0"
+    },
+    {
+      "former_path": "artifacts/skills/verification-before-completion-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/verification-before-completion-cx.md",
+      "sha256": "da558af7bd43d04967b10fd6df1c61a8950963f5cd5e8d322d6fa866b67a2732"
+    },
+    {
+      "former_path": "artifacts/skills/verification-before-completion-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/verification-before-completion-oc.md",
+      "sha256": "d4e8976b6766134170a7aa11ff2d0991c61d89aca97ddd0801728e35c2805b37"
+    },
+    {
+      "former_path": "artifacts/skills/web-research-pi/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/web-research-pi.md",
+      "sha256": "941e2e97d8d26d54816d46cb8bff40b6c9f81cc5314a883e3614e6f4aa094043"
+    },
+    {
+      "former_path": "artifacts/skills/writing-skills-cx/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/writing-skills-cx.md",
+      "sha256": "1bdd6b367e4b1a375b1e47c2bb17321d22abc20f5e67faaedeae0a1e5c9ed7f9"
+    },
+    {
+      "former_path": "artifacts/skills/writing-skills-oc/SOURCE.md",
+      "archive_path": "scripts/qualification/skill-provenance/writing-skills-oc.md",
+      "sha256": "82e47ea507e2a69f625036af727e4418915bc4cbc812111eedb5a5ea0f9d4a7e"
+    }
+  ]
+}

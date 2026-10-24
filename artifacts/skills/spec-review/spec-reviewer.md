@@ -18,6 +18,46 @@ owns disposition under the blocking acceptance contract below.
 
 ---
 
+## Necessity, sufficiency and decision provenance
+
+Review whether boundary outcomes, genuine technical contracts/constraints, failure
+guarantees and structural goals are necessary and sufficient to plan from, using
+the brief, decisions, referenced evidence and current source. Flag unsupported
+internal prescription as well as missing required behavior. Required public
+signatures/formats and owner-approved legacy design choices can be exact; private
+components, algorithms, signatures, file/test layouts and build order need not
+appear in a sufficient spec. Current code and advisory research alone do not fix
+a solution. Challenge infeasibility with evidence without rewriting requirements.
+
+Check stable stream-local requirement IDs, clear statements and linked acceptance
+criteria/examples, preserving obligation, prohibition, permission, actor/scope,
+trigger, condition, bound and exception. Reordering or harmless wording retains
+IDs; semantic changes are identified. Examples neither narrow universal rules nor
+invent unrequested universals. A structural refactor can require an observable
+engineering outcome plus behavior preservation without new product behavior.
+Core intent/scope, requirements and acceptance remain identifiable and strict;
+supporting sections may be combined/omitted with a reason when inapplicable.
+
+Check evidence of the author's pre-draft own-host DDD consultation and brief
+applicability assessment. Missing consultation/applicability is a finding, not an
+invitation to demand every pattern. Resulting vocabulary, boundary and invariant
+clarifications must be visible; simple work may justify no additional modeling.
+A generic internal model is not an external contract. Flag contradictory or
+ambiguous requirements, invented constraints, missing failure/preservation policy
+and consequential unresolved choices. Do not claim readiness while a required
+owner decision or binding input remains missing; identify affected claims.
+
+Check substantial verification machinery and new/materially expanded hard gates
+against source/owner provenance: protected goal/value, evidence, scope/useful
+granularity, time/cost/maintenance burden, exact blocked stage/condition and a
+simpler alternative. Unresolved proposals remain proposals. Reuse settled policy
+and existing required project checks; routine relevant tests stay agent-owned.
+Identify unsupported burdens rather than adding evaluators, run matrices,
+private-design demands, mandatory alternative counts or subjective thresholds
+through a review lens. Subjective worse/better/same comparisons alone are not
+blocking defects; cite an actual binding requirement, objective check or authority
+issue. Disclose unavailable comparisons without inventing outputs or grades.
+
 ## How to review
 
 Read the spec in full first. Then apply the lenses below.
@@ -43,14 +83,14 @@ reads as "clean", and a skipped lens is not a clean one.
 
 ### Engineering lens
 
-Is the architecture sound for what it must do? Is the data flow clear? Are failure modes and error
-handling considered, or assumed away? Is there a test strategy, or only an intention to test? Are
-performance and scale implications named where they actually matter — and left unnamed where they
-don't?
+Are boundary outcomes, genuine contracts/constraints, failure/preservation and
+structural goals sufficient and feasible to plan from? Are real performance/scale
+bounds supported? Flag missing guarantees and unsupported internal prescription;
+do not demand private architecture, data flow or test layout to fill this lens.
 
 ### Design lens — *only if user-facing*
 
-Rate each dimension 0–10 and state specifically what would make it a 10. Flag inconsistency,
+Assess required user-visible outcomes proportionately. Flag inconsistency,
 unclear hierarchy, and missing states (empty, error, loading, partial). A spec that describes only
 the happy path has not specified a UI.
 

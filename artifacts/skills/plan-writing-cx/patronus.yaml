@@ -3,10 +3,10 @@ family: artifact
 type: skill
 role: capability
 name: plan-writing-cx
-description: "Codex-only requirement-covered ADR-0003 implementation planning"
-version: 1.5.0
+description: "Codex-only requirement-covered implementation planning"
+version: 1.6.0
 entry: SKILL.md
-files: [NOTICE, LICENSE, SOURCE.md]
+files: [NOTICE, LICENSE]
 targets: [codex]
 requires: [tdd-cx]
 defaults:
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Codex behavioral adaptation of Patronus planning sources; MIT upstream notice retained. Authored changes follow repository licensing. See SOURCE.md."
+  note: "Codex behavioral adaptation of Patronus planning sources; MIT upstream notice retained. Authored changes follow repository licensing."

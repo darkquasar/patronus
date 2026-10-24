@@ -4,9 +4,9 @@ type: skill
 role: eval
 name: spec-review-pi
 description: "Review the exact spec against evidence before planning"
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
-files: ["SOURCE.md", "spec-reviewer.md"]
+files: ["spec-reviewer.md"]
 targets: [pi]
 defaults:
   scope: project

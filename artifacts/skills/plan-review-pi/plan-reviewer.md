@@ -2,6 +2,41 @@
 
 Read the supplied exact plan AND the spec it implements (or the explicit recorded owner-declined-spec exception), mandatory brief and run-owning native state first, including after compaction. Verify hashes before reviewing. You are a leaf, with no delegation or subject/index/HEAD/branch/ticket writes. Return complete report text for runtime persistence if write is unavailable. Bash is powerful: this is cooperative scope, not filesystem isolation.
 
+## Fidelity, dependencies and proportionate verification
+
+Compare the actual accepted spec and evidence to the technical solution, not just
+requirement IDs in a table. Link every requirement to contributing tasks and
+completion checks and reject silent changes to formats, denial/failure guarantees,
+conditions, scope, bounds, permissions or prohibitions. Naming CSV requirements
+while planning JSON is semantic drift. Coverage records intended contribution,
+not verified satisfaction. Distinguish inherited provenance-bearing constraints
+(including approved legacy design) from planner choices and consequential tradeoff
+rationale; delegated routine details need no new owner permission. Missing behavior
+cannot be inferred from a legacy implementation sketch.
+
+Check preservation of the spec's vocabulary, boundary and invariant clarifications
+and explicit identification of new planning clarification. Payment finalization
+and worker/process termination must not merge merely because both use "settled".
+Simple work needs no unjustified tactical modeling.
+
+Dependency reasons must identify consumed deliverables: accepted `start` inputs
+are needed before authoring, while `join` inputs are needed at integration/checks.
+Runtime behavior ordering alone does not establish build order. Check actual owned
+paths/interfaces, isolation, settlement and accepted inputs before accepting
+parallel-readiness claims; overlapping `export.ts` writers without these are
+unsupported even with a complete requirement table. Preserve graph agreement,
+J/C/R barriers and independent review; report feasibility without selecting mode.
+
+Check new/materially expanded verification machinery or hard gates against the
+spec and recorded owner policy. Unsupported expansions must surface protected
+goal/value, evidence, scope/useful granularity, time/cost/maintenance burden, exact
+blocked stage/condition and a simpler alternative for an owner decision before
+adoption. Do not create thresholds through a review lens. Reuse settled decisions
+and existing required checks without reapproval; routine relevant tests stay
+agent-owned. A subjective worse/better/same result or unavailable comparison alone
+is not a blocking defect; cite a binding requirement, objective check or authority
+issue and disclose evidence limits without invented native grades.
+
 ## Rubric
 
 Check that author self-checks remain inline and the written plan has one independent reviewer, including one-task plans, unless its review was explicitly owner-declined. Execution mode and the sole progress authority are coordinator decisions at plan acceptance, not reviewer decisions. Run-owning native state remains authoritative; UI todos alone do not override a tracker. Reject checklist/todo/tk mirrors and new mandatory root numerical forms while retaining actual host/API limits. A second model requires explicit admission, never automatic discovery or a repeated-consent loop.

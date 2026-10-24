@@ -4,9 +4,9 @@ type: skill
 role: context
 name: rust-style-cl
 description: "Claude only: Use when writing, reviewing or refactoring Rust code or Cargo manifests, or coordinating Rust builds, tests and parallel worktrees."
-version: 2.0.0
+version: 2.0.1
 entry: SKILL.md
-files: [SOURCE.md]
+files: []
 targets: [claude]
 defaults:
   scope: global

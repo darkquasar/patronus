@@ -5,20 +5,42 @@ description: Optional, bounded interview about a plan or design. Use when the us
 
 ## Interview scope
 
-Interview only when requested or accepted, within the task's question/time budget.
-If no budget is given, agree a bound before starting. Stop when the user declines,
-the bound is reached, or the authorized questions are resolved; report remaining
-unknowns instead of extending the interview or blocking already authorized work.
-A delegated worker routes unresolved decisions to its coordinator and waits for
-an answer; it does not launch agents or change stages.
+Owner-facing recommendations, questions, waits and optional upstream offers in
+this guidance belong to the coordinator. A Pi leaf returns evidence, unresolved
+interpretations and consequences through its existing supervisor/return route
+and stops without prescribing a remedy or next stage.
 
-Walk down each branch of the design tree within that scope, resolving dependencies
-between decisions one-by-one. For each question, provide your recommended answer.
+Resolve questions answered by source or valid prior decisions yourself. Own routine
+technical choices within scope. Distinguish facts, assumptions, owner-fixed
+constraints and agent choices; label low-impact, reversible observable defaults
+as agent-selected. Escalate unresolved consequential goals, scope, external
+contracts, security, preservation, irreversible commitments or material costs
+with evidence and a recommendation. Explain consequences and show a concrete
+distinguishing example when interpretations compete; wait for the owner's answer.
+Necessary clarification needs no separate interview grant.
 
-Ask the questions one at a time, waiting for feedback on each question before continuing. Asking multiple questions at once is bewildering.
+An additional stress-test interview runs only on owner request or explicit
+acceptance, within a declared finite question/time bound, one consequential
+question at a time, with recommendation, consequences and an actual wait.
+Stop when decisions are settled or the bound is reached. Manufacture no minimum
+question count, extend no bound automatically and never rerun a valid approval.
+Completion grants no next stage.
 
-If a question can be answered by exploring the codebase within your read scope,
-explore the codebase instead.
+Before adopting new or materially expanded blocking verification criteria or
+substantial test/evaluation machinery, surface a consequential owner choice.
+Explain the protected goal and value, evidence, scope and useful granularity,
+time/cost and maintenance burden, exact blocked stage/condition and a simpler
+alternative (including informational comparison). Recommend an option, show a
+concrete distinguishing example, ask one question and wait. Keep an undecided
+proposal unresolved; continue unrelated authorized development. Reuse settled
+policy and existing required checks without repeated permission. Ordinary relevant
+test selection remains agent-owned.
+
+Pi leaf routing: a leaf returns evidence, unresolved interpretations and their
+consequences through the existing supervisor/return route and stops. It does not
+prescribe a remedy, recommend owner action or select a successor stage. The
+coordinator owns the recommendation, owner-facing question and actual wait.
+No leaf-policy exception, nested delegation or shared-state write is granted.
 
 When what you're interrogating is structural — a control flow, a data flow, a component boundary, a state machine — draw it as a compact ASCII diagram before or alongside the question (diagram-explain-pi charset: `+---+` boxes, `=>` sync, `~>` async, `>` `<` `^` `v` arrows, ≤100 wide), unless the user's format forbids it. Ambiguity that survives prose rarely survives a picture: the gap you're probing becomes a box nobody can label, or an arrow nobody can point.
 
@@ -29,7 +51,7 @@ When what you're interrogating is structural — a control flow, a data flow, a 
 The point of the interview is to make the idea sharp enough to *act on*.
 grilling-pi is a generic stress-tester — anything with a design tree (a raw idea,
 research, or a spec) flows in — and its spirit hands the sharpened idea back
-**upstream** (to research or design-settling) or lets the user proceed.
+**upstream** (to research or requirements clarification) or lets the user proceed.
 **grilling-pi has NO forward hop into planning or execution.** It produces clarity,
 not an artifact or a stage grant. Do not suggest `plan-writing-pi`,
 `plan-review-pi`, `plan-execute-pi`, or `plan-execute-parallel-pi` as an automatic
@@ -67,7 +89,7 @@ exist. Entry-awareness only tunes *which upstream offer to surface*; it never ro
   > "The idea looks sharp now. Two possible directions for your approval:
   > - **The domain has real unknowns** (several things you'd have to go investigate before the
   >   design is even tractable) → the `research-team-pi` skill.
-  > - **You know the domain; it's the design that needs settling** → the `spec-writing-pi` skill.
+  > - **You know the domain; the outcomes or requirements need clarification** → the `spec-writing-pi` skill.
   >
   > Or neither; I can return the findings without changing stage."
 

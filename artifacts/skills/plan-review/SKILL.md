@@ -5,12 +5,27 @@ description: Use when independently reviewing an exact written implementation pl
 
 # Review an implementation plan
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 This optional Codex/OpenCode identity remains available. Review closes planning,
 not execution preflight per task. Every written plan, including a single task,
 needs one independent plan review unless the owner explicitly declines that
 subject and retains the exception in the existing brief. Author self-check is
 inline, not this independent review. A required spec review remains a distinct
 subject and is not repeated here.
+
+## Semantic review boundary
+
+Check actual spec-to-plan fidelity, inherited constraints versus planner choices,
+requirement/task/check links, vocabulary/boundary/invariant preservation and
+reasoned start/join deliverables. Runtime order alone is not build order; inspect
+accepted inputs, ownership, isolation and settlement before accepting parallelism.
+Review unsupported verification burdens/gates against recorded owner policy;
+subjective comparison ratings alone do not block. Report feasibility without
+choosing execution mode; retain the existing independent-review disposition.
+
 
 ## Bind the subject and reviewer
 

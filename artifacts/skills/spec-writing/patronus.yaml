@@ -3,12 +3,12 @@ family: artifact
 type: skill
 role: capability
 name: spec-writing
-description: "Author one approved stream spec from design and research, check inline and hand off to independent blocking spec review."
-version: 6.1.0
+description: "Author behavior-first requirements and linked acceptance from evidence, with a clear research/spec/plan/meta.yaml layout."
+version: 6.2.0
 entry: SKILL.md
 files: [spec-document-reviewer-prompt.md]
 targets: [codex, opencode]
-requires: [spec-review]
+requires: [spec-review, ddd-distilled]
 defaults:
   scope: project
 attribution:

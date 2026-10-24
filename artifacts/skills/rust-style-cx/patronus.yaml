@@ -4,9 +4,9 @@ type: skill
 role: context
 name: rust-style-cx
 description: "Codex only: Use when writing, reviewing or refactoring Rust code or Cargo manifests, or coordinating Rust builds, tests and parallel worktrees."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
-files: [SOURCE.md]
+files: []
 targets: [codex]
 defaults:
   scope: global

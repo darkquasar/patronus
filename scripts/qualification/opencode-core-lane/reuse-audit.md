@@ -1,3 +1,7 @@
+> Skill SOURCE.md files referenced below are historical captured paths. Current
+> repository-only copies are indexed in ../skill-provenance/index.json. They are
+> not distributed or authoritative installed reads; captured hashes remain intact.
+
 # OpenCode core static reuse and authored-body audit
 
 Source identity: `cf83372db7ca3d796785cbfab51f44f37d1273b7`.

@@ -39,7 +39,11 @@ If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The ma
 
 Create files lazily — only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
 
-**ADRs are committed.** `docs/adr/` is git-tracked — an ADR's value is being a shared, durable record of *why* a decision was made, for the next reader. This is the deliberate counterpart to `docs/specs/` (specs, plans, tasks), which is gitignored and stays local. Decisions are shared; in-progress design docs are not. Do not add `docs/adr/` to `.gitignore`.
+Follow the target project's actual documentation and tracking policy. Decisions
+are useful durable records, but do not assume `docs/adr/` is tracked or
+`docs/specs/` is ignored. An authoring request grants no `.gitignore` change,
+force-add, commit or publication. Respect an existing ADR location; use the
+example layout only when the project has no established convention.
 
 ## During the session
 
