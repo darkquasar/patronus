@@ -37,9 +37,9 @@ The index selects Linux/arm64 manifest
 for the VM. Read-only registry and immutable layer inspection verified
 `@earendil-works/pi-coding-agent` **0.87.1**. Registry build provenance links
 the image to the upstream commit above; its signature was not independently
-verified. The base image does not include **pi-subagents 0.71.0**. This kit installs
+verified. The base image does not include **pi-subagents 0.72.1**. This kit installs
 that exact release during sandbox creation with
-`pi install npm:pi-subagents@0.71.0`, after configuring npm's proxy. Pi records
+`pi install npm:pi-subagents@0.72.1`, after configuring npm's proxy. Pi records
 and loads the extension through its native package manager; no host Pi or
 pi-subagents installation is required. Creation requires npm registry access.
 The top-level extension version is pinned; npm resolves its transitive

@@ -18,8 +18,8 @@ Both Patronus recipes are **2.0.0**. Recipe versions and direct upstream npm
 versions are independent. The recipes use `deliver.via: package-manager` with
 one `manager: pi` candidate and an exact npm ref. There is no alternate manager,
 static archive, vendored replacement payload or handwritten packages-array wiring.
-Pi itself and Node are externally provisioned. The separate sandbox retains its
-**pi-subagents 0.71.0** pin and separate qualification; it is not this core target.
+Pi itself and Node are externally provisioned. The separate sandbox installs the
+same **pi-subagents 0.72.1** during sbx setup; it is not this core target.
 Generic directory delivery and sandbox packaging are unchanged.
 
 Pi/npm own installed plugin files and dependency resolution, including native

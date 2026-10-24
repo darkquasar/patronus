@@ -77,6 +77,6 @@ setup:
     - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
       user: "1000"
       description: Point npm at the sandbox proxy in ~/.npmrc so pi's runtime npm use (`pi install npm:...`, `pi update`, startup package fetches) works in exec contexts that do not inherit the proxy environment variables
-    - command: 'pi install npm:pi-subagents@0.71.0'
+    - command: 'pi install npm:pi-subagents@0.72.1'
       user: "1000"
       description: Install and register pinned pi-subagents inside the sandbox using Pi's package manager
