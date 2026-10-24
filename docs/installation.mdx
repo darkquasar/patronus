@@ -14,7 +14,14 @@ curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/in
 patronus --help
 ```
 
-On Windows, use the PowerShell installer:
+To pin a release, pass `--version` (or set `PATRONUS_VERSION`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0
+```
+
+On Windows, use the PowerShell installer. Set `PATRONUS_VERSION` first to pin a
+release.
 
 ```powershell
 irm https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.ps1 | iex

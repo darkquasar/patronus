@@ -1,13 +1,23 @@
 # Patronus installer for Windows (PowerShell).
 #   iwr -useb https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.ps1 | iex
+#   $env:PATRONUS_VERSION = "v2.7.0"; iwr -useb https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.ps1 | iex
 #
-# Downloads the latest release binary for this architecture, verifies its sha256
-# against the published checksums.txt, and installs it under
-# %LOCALAPPDATA%\Programs\patronus, adding that dir to the user PATH.
+# Downloads a release binary for this architecture (the latest unless
+# PATRONUS_VERSION names one), verifies its sha256 against that release's
+# checksums.txt, and installs it under %LOCALAPPDATA%\Programs\patronus, adding
+# that dir to the user PATH.
 $ErrorActionPreference = "Stop"
 
 $repo = "darkquasar/patronus"
-$base = "https://github.com/$repo/releases/latest/download"
+$version = if ($env:PATRONUS_VERSION) { $env:PATRONUS_VERSION } else { "latest" }
+if ($version -eq "latest") {
+  $base = "https://github.com/$repo/releases/latest/download"
+} elseif ($version -match '^v?\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+  if ($version -notlike "v*") { $version = "v$version" }
+  $base = "https://github.com/$repo/releases/download/$version"
+} else {
+  throw "invalid PATRONUS_VERSION: $version (want vX.Y.Z or latest)"
+}
 
 # --- detect arch ---
 $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
@@ -19,7 +29,7 @@ $bin = "patronus-windows-$arch.exe"
 
 $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ([guid]::NewGuid()))
 try {
-  Write-Host "Downloading $bin..."
+  Write-Host "Downloading $bin ($version)..."
   Invoke-WebRequest -UseBasicParsing -Uri "$base/$bin" -OutFile "$tmp\patronus.exe"
   Invoke-WebRequest -UseBasicParsing -Uri "$base/checksums.txt" -OutFile "$tmp\checksums.txt"
 

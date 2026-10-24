@@ -1,14 +1,37 @@
 #!/bin/sh
 # Patronus installer for Unix (Linux/macOS).
 #   curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0
 #
-# Downloads the latest release binary for this OS/arch, verifies its sha256
-# against the published checksums.txt, and installs it to ~/.local/bin (or
-# /usr/local/bin when writable). No prerequisites beyond curl + sha256.
+# Downloads a release binary for this OS/arch (the latest unless --version or
+# PATRONUS_VERSION names one), verifies its sha256 against that release's
+# checksums.txt, and installs it to ~/.local/bin (or /usr/local/bin when
+# writable). No prerequisites beyond curl + sha256.
 set -eu
 
 REPO="darkquasar/patronus"
-BASE="https://github.com/${REPO}/releases/latest/download"
+
+# --- pick the release ---
+version="${PATRONUS_VERSION:-latest}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --version) [ $# -ge 2 ] || { echo "--version needs a value" >&2; exit 2; }; version=$2; shift 2 ;;
+    --version=*) version=${1#--version=}; shift ;;
+    *) echo "unknown argument: $1 (usage: install.sh [--version vX.Y.Z])" >&2; exit 2 ;;
+  esac
+done
+case "$version" in
+  latest) ;;
+  *[!0-9A-Za-z.-]*) echo "invalid version: $version (want vX.Y.Z or latest)" >&2; exit 2 ;;
+  v[0-9]*.[0-9]*.[0-9]*) ;;
+  [0-9]*.[0-9]*.[0-9]*) version="v${version}" ;;
+  *) echo "invalid version: $version (want vX.Y.Z or latest)" >&2; exit 2 ;;
+esac
+if [ "$version" = latest ]; then
+  BASE="https://github.com/${REPO}/releases/latest/download"
+else
+  BASE="https://github.com/${REPO}/releases/download/${version}"
+fi
 
 # --- detect platform ---
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -29,8 +52,9 @@ bin="patronus-${os}-${arch}"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-echo "Downloading ${bin}..."
-curl -fsSL "${BASE}/${bin}" -o "${tmp}/patronus"
+echo "Downloading ${bin} (${version})..."
+curl -fsSL "${BASE}/${bin}" -o "${tmp}/patronus" ||
+  { echo "download failed: ${BASE}/${bin}" >&2; exit 1; }
 curl -fsSL "${BASE}/checksums.txt" -o "${tmp}/checksums.txt"
 
 # --- verify sha256 ---
