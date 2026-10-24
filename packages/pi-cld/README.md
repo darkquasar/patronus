@@ -21,8 +21,9 @@ sbx run --name <name>
 
 Two setup steps install it: one runs `install.sh --version v2.7.0`, which
 verifies the binary against the release checksums, the other runs
-`patronus install --profile core-profile-pi --target pi --global --deploy`.
-Patronus v2.7.0 supports pi 0.87.1, the version in the pinned pi image. To repair
+`patronus install --profile core-profile-pi --target pi --global --deploy --track-existing`.
+`--track-existing` lets Patronus adopt the pi-subagents package the pi base
+installs. Patronus v2.7.0 supports pi 0.87.1, the version in the pinned pi image. To repair
 or update the harness, re-run the install line with `~/.local/bin` and
 `~/.patronus/bin` on `PATH`.
 

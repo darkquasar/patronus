@@ -37,7 +37,7 @@ setup:
     - command: "command -v opencode >/dev/null 2>&1 || npm install -g opencode-ai@1.19.0"
       user: "1000"
       description: Install the opencode CLI 1.19.0
-    - command: "curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0"
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
       user: "1000"
       description: Install patronus v2.7.0
     - user: "1000"

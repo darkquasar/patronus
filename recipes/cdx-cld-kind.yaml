@@ -15,5 +15,5 @@ deliver:
     - os: darwin
       arch: arm64
       url: https://registry.patronus.quasarops.com/packages/cdx-cld-kind/1.0.0/cdx-cld-kind-1.0.0-darwin-arm64.tar.gz
-      sha256: a67a43e9dcd27ca2d7880232f3a104fee72c878c58a2debd069012e319e93edf
+      sha256: fe591f58f7e53d002faea7192166e2b7f7d6f0de7257fa09b1ffb9685beaf131
       archive: tar.gz

@@ -15,5 +15,5 @@ deliver:
     - os: darwin
       arch: arm64
       url: https://registry.patronus.quasarops.com/packages/pi-cld/1.0.0/pi-cld-1.0.0-darwin-arm64.tar.gz
-      sha256: 44345f99ae37b5bac8f35d5beb6dc8d4d08684998e3694babec5ea7cf3951cbc
+      sha256: 0b90e1635cfcd2ffa4366fae7edafffd2d2c7bbbc8de02382c8a980998c94b65
       archive: tar.gz

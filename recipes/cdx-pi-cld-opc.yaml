@@ -15,5 +15,5 @@ deliver:
     - os: darwin
       arch: arm64
       url: https://registry.patronus.quasarops.com/packages/cdx-pi-cld-opc/1.0.0/cdx-pi-cld-opc-1.0.0-darwin-arm64.tar.gz
-      sha256: 6ad68ae82ea833da9f30dfbfa7ea7109027c91b2d7282d442ac0fbe779c2807f
+      sha256: cacf2b69cdc7a484e11584e8fa3dbafca4f1126ebc4c87457a3964e512aef683
       archive: tar.gz

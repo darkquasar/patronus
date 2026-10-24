@@ -34,13 +34,14 @@ setup:
         EOF
         chmod +x "$HOME/.local/bin/claude"
       description: Wrap `claude` so it ignores pi's Anthropic sentinel
-    - command: "curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0"
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
       user: "1000"
       description: Install patronus v2.7.0
+    # The pi base installs pi-subagents itself; --track-existing lets Patronus adopt it.
     - user: "1000"
       command: |
         export PATH="$HOME/.local/bin:$HOME/.patronus/bin:$PATH"
-        patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs
+        patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs --track-existing
       description: Deploy the Patronus harness for pi
 
 agentInstructions:
@@ -49,4 +50,4 @@ agentInstructions:
       - `pi`: the base agent. Anthropic is brokered by the sandbox proxy.
       - `claude`: Claude Code. Complete `/login` on first use.
     To repair or update the harness, put ~/.local/bin and ~/.patronus/bin on PATH and run:
-      patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs
+      patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs --track-existing

@@ -23,7 +23,7 @@ setup:
     - command: "command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code"
       user: "1000"
       description: Install the Claude Code CLI
-    - command: "curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0"
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
       user: "1000"
       description: Install patronus v2.7.0
     # Claude's core profile carries tk; Codex gets it as a separate item.
