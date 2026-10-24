@@ -1,0 +1,19 @@
+apiVersion: patronus/v3
+kind: Recipe
+name: cdx-pi-cld-opc
+version: 1.0.0
+family: recipe
+role: sandbox
+description: sbx mixin for Codex with Claude Code, pi, opencode and the Patronus Codex harness; launch separately with sbx
+deliver:
+  via: fetch
+  unpack: directory
+  package:
+    name: cdx-pi-cld-opc
+    version: 1.0.0
+  assets:
+    - os: darwin
+      arch: arm64
+      url: https://registry.patronus.quasarops.com/packages/cdx-pi-cld-opc/1.0.0/cdx-pi-cld-opc-1.0.0-darwin-arm64.tar.gz
+      sha256: 6ad68ae82ea833da9f30dfbfa7ea7109027c91b2d7282d442ac0fbe779c2807f
+      archive: tar.gz

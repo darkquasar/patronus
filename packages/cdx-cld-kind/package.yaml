@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../schemas/package-v1.schema.json
+schemaVersion: 1
+name: cdx-cld-kind
+version: 1.0.0
+platforms:
+  - os: darwin
+    arch: arm64
+payload:
+  - path: spec.yaml
+    executable: false
+  - path: README.md
+    executable: false
+  - path: files/home/.local/share/cdx-cld-kind/bin/kind-install.sh
+    executable: true
+  - path: files/home/.local/share/cdx-cld-kind/bin/kind-prep.sh
+    executable: true
+  - path: files/home/.local/share/cdx-cld-kind/bin/kind-ensure.sh
+    executable: true
