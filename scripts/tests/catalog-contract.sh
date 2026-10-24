@@ -79,6 +79,7 @@ step "public placeholder, gate-intent and version checks"
 step "publication and package-delivery contract suites (offline fakes)"
 bash scripts/tests/check-catalog-publication-test.sh
 bash scripts/tests/publish-packages-test.sh
+bash scripts/tests/install-version-test.sh
 
 # Run the data-driven OpenCode content rules and the invented evidence formats; artifact and
 # native qualification are not run in this structural release gate.

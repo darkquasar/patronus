@@ -20,13 +20,11 @@ while [ $# -gt 0 ]; do
     *) echo "unknown argument: $1 (usage: install.sh [--version vX.Y.Z])" >&2; exit 2 ;;
   esac
 done
-case "$version" in
-  latest) ;;
-  *[!0-9A-Za-z.-]*) echo "invalid version: $version (want vX.Y.Z or latest)" >&2; exit 2 ;;
-  v[0-9]*.[0-9]*.[0-9]*) ;;
-  [0-9]*.[0-9]*.[0-9]*) version="v${version}" ;;
-  *) echo "invalid version: $version (want vX.Y.Z or latest)" >&2; exit 2 ;;
-esac
+if [ "$version" != latest ]; then
+  printf '%s\n' "$version" | grep -Eqx 'v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?' ||
+    { echo "invalid version: $version (want vX.Y.Z[-suffix] or latest)" >&2; exit 2; }
+  case "$version" in v*) ;; *) version="v${version}" ;; esac
+fi
 if [ "$version" = latest ]; then
   BASE="https://github.com/${REPO}/releases/latest/download"
 else

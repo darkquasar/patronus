@@ -12,11 +12,11 @@ $repo = "darkquasar/patronus"
 $version = if ($env:PATRONUS_VERSION) { $env:PATRONUS_VERSION } else { "latest" }
 if ($version -eq "latest") {
   $base = "https://github.com/$repo/releases/latest/download"
-} elseif ($version -match '^v?\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+} elseif ($version -match '^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') {
   if ($version -notlike "v*") { $version = "v$version" }
   $base = "https://github.com/$repo/releases/download/$version"
 } else {
-  throw "invalid PATRONUS_VERSION: $version (want vX.Y.Z or latest)"
+  throw "invalid PATRONUS_VERSION: $version (want vX.Y.Z[-suffix] or latest)"
 }
 
 # --- detect arch ---
