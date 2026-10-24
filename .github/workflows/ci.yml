@@ -61,15 +61,21 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
+      # Packages and artifacts publish only from the default branch, so a feature
+      # branch push compares against its fork point, the same base as its PR run.
       - name: Select version base
         id: base
         env:
           PR_BASE: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [ -n "${PR_BASE:-}" ]; then
             echo "rev=origin/$PR_BASE" >> "$GITHUB_OUTPUT"
+          elif [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "rev=$(git merge-base HEAD "origin/$DEFAULT_BRANCH")" >> "$GITHUB_OUTPUT"
           elif [ -n "${BEFORE:-}" ] && git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
             echo "rev=$BEFORE" >> "$GITHUB_OUTPUT"
           else

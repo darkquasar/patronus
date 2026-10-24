@@ -1,0 +1,53 @@
+schemaVersion: "2"
+kind: mixin
+name: pi-cld
+version: "1.0.0"
+displayName: pi + Claude (Patronus harness)
+description: Adds the Claude Code CLI to a pi sandbox and installs the Patronus harness for pi with a pinned patronus CLI.
+
+# No requires.agent: pi base kits ship under different agent names, and sbx
+# matches requires.agent exactly.
+
+# Allow-all so the harness deploy can reach GitHub and package registries.
+# Credentials stay host-side; narrow to a host list to restore the egress boundary.
+permissions:
+  network:
+    allow:
+      - "**"
+
+setup:
+  install:
+    - command: "command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code"
+      user: "1000"
+      description: Install the Claude Code CLI
+    # pi exports ANTHROPIC_API_KEY=proxy-managed. The wrapper unsets it for
+    # `claude` only, so Claude falls back to its own OAuth login.
+    - user: "1000"
+      command: |
+        set -e
+        mkdir -p "$HOME/.local/bin"
+        real="$(command -v claude || echo /usr/local/share/npm-global/bin/claude)"
+        cat > "$HOME/.local/bin/claude" <<EOF
+        #!/usr/bin/env bash
+        unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
+        exec "$real" "\$@"
+        EOF
+        chmod +x "$HOME/.local/bin/claude"
+      description: Wrap `claude` so it ignores pi's Anthropic sentinel
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
+      user: "1000"
+      description: Install patronus v2.7.0
+    # The pi base installs pi-subagents itself; --track-existing lets Patronus adopt it.
+    - user: "1000"
+      command: |
+        export PATH="$HOME/.local/bin:$HOME/.patronus/bin:$PATH"
+        patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs --track-existing
+      description: Deploy the Patronus harness for pi
+
+agentInstructions:
+  content: |
+    This sandbox has two agents and the Patronus harness:
+      - `pi`: the base agent. Anthropic is brokered by the sandbox proxy.
+      - `claude`: Claude Code. Complete `/login` on first use.
+    To repair or update the harness, put ~/.local/bin and ~/.patronus/bin on PATH and run:
+      patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs --track-existing

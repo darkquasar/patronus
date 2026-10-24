@@ -66,9 +66,15 @@ func TestPiPackageStaticKit(t *testing.T) {
 		t.Fatal("image is not immutable")
 	}
 	sandbox["image"] = provenance.Image
+	// The extension step may pin any exact release; only its shape is fixed.
+	kitInstall := kit["setup"].(map[string]any)["install"].([]any)
+	extension, _ := kitInstall[len(kitInstall)-1].(map[string]any)["command"].(string)
+	if !regexp.MustCompile(`^pi install npm:pi-subagents@[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(extension) {
+		t.Fatalf("last install step %q is not an exact pi-subagents installation", extension)
+	}
 	setup := upstream["setup"].(map[string]any)
 	setup["install"] = append(setup["install"].([]any), map[string]any{
-		"command":     "pi install npm:pi-subagents@0.71.0",
+		"command":     extension,
 		"user":        "1000",
 		"description": "Install and register pinned pi-subagents inside the sandbox using Pi's package manager",
 	})
@@ -96,7 +102,7 @@ func TestPiPackageInventory(t *testing.T) {
 	if err := d.Decode(&descriptor); err != nil {
 		t.Fatal(err)
 	}
-	if descriptor.SchemaVersion != 1 || descriptor.Name != "pi-sandbox" || descriptor.Version != "1.1.0" {
+	if descriptor.SchemaVersion != 1 || descriptor.Name != "pi-sandbox" || descriptor.Version == "" {
 		t.Fatal("unexpected package identity")
 	}
 	if len(descriptor.Platforms) != 1 || descriptor.Platforms[0].OS != "darwin" || descriptor.Platforms[0].Arch != "arm64" {

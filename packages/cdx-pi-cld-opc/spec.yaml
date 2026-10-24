@@ -1,0 +1,76 @@
+schemaVersion: "2"
+kind: mixin
+name: cdx-pi-cld-opc
+version: "1.0.0"
+displayName: Codex + Claude + pi + opencode (Patronus harness)
+description: Layers Claude Code, pi and opencode onto the codex base. Codex, pi and opencode reach OpenAI through the sandbox proxy with no key in the VM; Claude uses its own login. Installs the Patronus harness for all four agents with a pinned patronus CLI.
+
+# Only an agent kit may declare an oauth credential, and the codex base already
+# binds the host `openai` secret. The proxy swaps the placeholder bearer
+# (oai-oat01-proxy-managed) for the real token at egress. Anthropic is not
+# brokered, so claude logs in itself.
+requires:
+  agent: codex
+
+# Allow-all so installers and the harness deploy can reach GitHub and package
+# registries. Narrow to a host list to restore the egress boundary.
+permissions:
+  network:
+    allow:
+      - "**"
+
+# pi and opencode get brokered OpenAI from shipped configs under files/home/:
+# both point at https://chatgpt.com/backend-api/codex with the placeholder bearer
+# and allow only gpt-6.1-sol (default) and gpt-6-astra. api.openai.com rejects the
+# subscription token (no API-platform scopes).
+setup:
+  install:
+    - command: "codex --version 2>/dev/null | grep -q '0.162.1' || npm install -g @openai/codex@0.162.1"
+      user: "1000"
+      description: Pin the Codex CLI to 0.162.1
+    - command: "command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code@2.1.296"
+      user: "1000"
+      description: Install the Claude Code CLI 2.1.296
+    - command: "command -v pi >/dev/null 2>&1 || npm install -g @earendil-works/pi-coding-agent@1.1.0"
+      user: "1000"
+      description: Install the pi coding agent 1.1.0
+    - command: "command -v opencode >/dev/null 2>&1 || npm install -g opencode-ai@1.19.0"
+      user: "1000"
+      description: Install the opencode CLI 1.19.0
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
+      user: "1000"
+      description: Install patronus v2.7.0
+    - user: "1000"
+      command: |
+        set -e
+        export PATH="$HOME/.local/bin:$HOME/.patronus/bin:$PATH"
+        patronus install --profile core-profile-cx --target codex --global --deploy --yes --allow-package-installs
+        patronus install --profile core --target claude --global --deploy --yes --allow-package-installs
+        patronus install --profile core-profile-oc --target opencode --global --deploy --yes --allow-package-installs
+        patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs
+      description: Deploy the Patronus harness for Codex, Claude, opencode and pi
+    # Interactive bash shells start in pi; non-interactive execs are unaffected.
+    - user: "1000"
+      command: |
+        grep -qF '.pi-autolaunch.sh' "$HOME/.bashrc" 2>/dev/null || \
+          printf '\n[ -f "$HOME/.pi-autolaunch.sh" ] && . "$HOME/.pi-autolaunch.sh"\n' >> "$HOME/.bashrc"
+      description: Start interactive shells in pi
+
+agentInstructions:
+  content: |
+    Attach with `sbx exec -it <name> bash` to start in pi on brokered OpenAI
+    (gpt-6.1-sol). Exit pi (Ctrl+D or /exit) for a shell. See ~/workspace/QUICKSTART.md.
+
+    Agents:
+      - `codex`: the base agent. OpenAI is brokered by the sandbox proxy.
+      - `pi`: bare `pi` uses brokered OpenAI through a shell function. Pass
+        `--provider anthropic` to switch (then /login), or run `command pi` to bypass it.
+      - `opencode`: brokered OpenAI, default gpt-6.1-sol. Use
+        `-m openai/gpt-6-astra` for astra. Anthropic needs its own auth.
+      - `claude`: Claude Code. Run `claude` and complete /login on first use.
+
+    Brokered models are gpt-6.1-sol and gpt-6-astra only.
+    The Patronus harness is installed for every agent: core-profile-cx (codex),
+    core (claude), core-profile-oc (opencode) and core-profile-pi (pi). To repair
+    one, put ~/.local/bin on PATH and re-run its line, for example:
+      patronus install --profile core-profile-pi --target pi --global --deploy --yes --allow-package-installs

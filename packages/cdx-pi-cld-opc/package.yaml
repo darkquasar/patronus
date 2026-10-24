@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../schemas/package-v1.schema.json
+schemaVersion: 1
+name: cdx-pi-cld-opc
+version: 1.0.0
+platforms:
+  - os: darwin
+    arch: arm64
+payload:
+  - path: spec.yaml
+    executable: false
+  - path: README.md
+    executable: false
+  - path: files/home/.pi-autolaunch.sh
+    executable: false
+  - path: files/home/workspace/QUICKSTART.md
+    executable: false
+  - path: files/home/.config/opencode/opencode.json
+    executable: false
+  - path: files/home/.pi/agent/models.json
+    executable: false

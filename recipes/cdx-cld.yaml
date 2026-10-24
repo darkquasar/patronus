@@ -1,0 +1,19 @@
+apiVersion: patronus/v3
+kind: Recipe
+name: cdx-cld
+version: 1.0.0
+family: recipe
+role: sandbox
+description: sbx mixin for Codex that adds Claude Code and the Patronus harness for both agents; launch separately with sbx
+deliver:
+  via: fetch
+  unpack: directory
+  package:
+    name: cdx-cld
+    version: 1.0.0
+  assets:
+    - os: darwin
+      arch: arm64
+      url: https://registry.patronus.quasarops.com/packages/cdx-cld/1.0.0/cdx-cld-1.0.0-darwin-arm64.tar.gz
+      sha256: 443feb479bdf5a0cc0a05149e6778c787ef7f7e36adab2d5204ce720d624de9e
+      archive: tar.gz

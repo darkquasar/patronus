@@ -1,0 +1,57 @@
+schemaVersion: "2"
+kind: mixin
+name: cdx-cld-kind
+version: "1.0.0"
+displayName: Codex + Claude + kind
+description: A Codex sandbox with the Claude Code CLI, a kind cluster started on boot, and the Patronus harness with tk for both agents, installed with a pinned patronus CLI.
+
+# Create with headroom; memory is a create-time flag, not a kit field:
+#   sbx create codex --kit <dir> --name <name> --cpus 4 --memory 9g
+requires:
+  agent: codex
+
+# Allow-all so the harness deploy and kind can reach GitHub and package registries.
+# Credentials stay host-side; narrow to a host list to restore the egress boundary.
+permissions:
+  network:
+    allow:
+      - "**"
+
+setup:
+  install:
+    # The codex base sets no Anthropic sentinel, so Claude needs no wrapper.
+    - command: "command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code"
+      user: "1000"
+      description: Install the Claude Code CLI
+    - command: "curl -fsSL -o /tmp/patronus-install.sh https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh && sh /tmp/patronus-install.sh --version v2.7.0"
+      user: "1000"
+      description: Install patronus v2.7.0
+    # Claude's core profile carries tk; Codex gets it as a separate item.
+    - user: "1000"
+      command: |
+        set -e
+        export PATH="$HOME/.local/bin:$HOME/.patronus/bin:$PATH"
+        patronus install --profile core-profile-cx --target codex --global --deploy --yes --allow-package-installs
+        patronus install ticket --target codex --global --deploy --yes --allow-package-installs
+        patronus install --profile core --target claude --global --deploy --yes --allow-package-installs
+      description: Deploy the Patronus harness for Codex and Claude
+    - command: bash "$HOME/.local/share/cdx-cld-kind/bin/kind-install.sh"
+      user: "1000"
+      description: Install kind and kubectl
+  startup:
+    - command: ["sh", "/home/agent/.local/share/cdx-cld-kind/bin/kind-prep.sh"]
+      user: "0"
+      description: "kind kernel prep: inotify limits and /dev/kmsg"
+    - command: ["sh", "-lc", "nohup bash /home/agent/.local/share/cdx-cld-kind/bin/kind-ensure.sh >/dev/null 2>&1 &"]
+      user: "1000"
+      description: Create or heal the kind cluster in the background
+
+agentInstructions:
+  content: |
+    This sandbox has two agents, each with the Patronus harness, and a kind cluster:
+      - `codex`: the base agent, brokered by the sandbox proxy.
+      - `claude`: Claude Code. Complete `/login` on first use.
+      - `kind`: a single-node cluster named "kind", created in the background on
+        boot (log: ~/.kind-boot.log). Use `kubectl`. The node cannot pull new
+        external images; use images preloaded in kindest/node.
+    Durable work is tracked with tk (~/.patronus/bin/tk).

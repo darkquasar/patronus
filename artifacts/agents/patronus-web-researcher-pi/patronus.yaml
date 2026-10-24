@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-web-researcher-pi
 description: "Read-only qualified web research with runtime-persisted findings"
-version: 2.1.0
+version: 2.2.0
 entry: agent.md
 files: []
 targets: [pi]

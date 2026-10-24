@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-workflow-security-reviewer-pi
 description: "Review authority lifecycle trust and failure boundaries without subject writes"
-version: 2.1.0
+version: 2.2.0
 entry: agent.md
 files: []
 targets: [pi]

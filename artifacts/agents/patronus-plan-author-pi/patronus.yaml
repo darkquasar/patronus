@@ -4,7 +4,7 @@ type: agent
 role: orchestration
 name: patronus-plan-author-pi
 description: "Write authorized requirement-covered implementation plans"
-version: 3.1.0
+version: 3.2.0
 entry: agent.md
 files: []
 targets: [pi]

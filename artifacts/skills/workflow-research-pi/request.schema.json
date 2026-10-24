@@ -96,7 +96,7 @@
           "maxLength": 8192
         },
         "piVersion": {
-          "const": "0.87.1"
+          "enum": ["0.87.1", "1.1.0"]
         },
         "subagentsVersion": {
           "const": "0.72.1"

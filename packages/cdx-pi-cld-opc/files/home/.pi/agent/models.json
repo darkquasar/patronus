@@ -1,0 +1,33 @@
+{
+  "providers": {
+    "openai-codex": {
+      "name": "OpenAI Codex (sandbox proxy)",
+      "baseUrl": "https://chatgpt.com/backend-api/codex",
+      "api": "openai-responses",
+      "apiKey": "oai-oat01-proxy-managed",
+      "headers": {
+        "OpenAI-Beta": "responses=experimental"
+      },
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "name": "GPT-6.1 Sol (sandbox proxy)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "gpt-6-astra",
+          "name": "GPT-6 Astra (sandbox proxy)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        }
+      ]
+    }
+  }
+}

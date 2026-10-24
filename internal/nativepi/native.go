@@ -1,4 +1,4 @@
-// Package nativepi observes the accepted Pi 0.87.1 managed npm layout. It
+// Package nativepi observes the accepted Pi managed npm layout. It
 // reads only scoped settings and the selected package.json, never npm files'
 // integrity or the legacy global fallback. Pi/npm alone mutate package files.
 package nativepi
@@ -13,11 +13,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
 const EditWarning = "This operation may discard manual edits inside the installed plugin. Patronus does not check those files for modifications. Pi/npm may also change dependencies; installation may use network and run dependency scripts."
-const RuntimeVersion = "0.87.1"
+
+// RuntimeVersions lists the Pi CLI versions Probe accepts.
+var RuntimeVersions = []string{"0.87.1", "1.1.0"}
 
 var sourcePattern = regexp.MustCompile(`^npm:((?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*)@((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$`)
 
@@ -256,8 +259,8 @@ func Probe(ctx context.Context, r Runner, op Operation) error {
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(out) != RuntimeVersion {
-		return fmt.Errorf("unsupported Pi runtime %q; observer requires %s", strings.TrimSpace(out), RuntimeVersion)
+	if got := strings.TrimSpace(out); !slices.Contains(RuntimeVersions, got) {
+		return fmt.Errorf("unsupported Pi runtime %q; observer requires one of %s", got, strings.Join(RuntimeVersions, ", "))
 	}
 	return nil
 }
