@@ -20,6 +20,9 @@ Classification: `*-pi` skill references are selected Pi closure reads, not tool 
 
 ## Active selected Pi reads
 
-`grilling-pi`, `research-team-pi`, `spec-review-pi`
+Mandatory before drafting: `{skillsDir}/ddd-distilled-pi/SKILL.md` (declared dependency).
+
+`grilling-pi` (optional on request), `research-team-pi` (separate research grant),
+`spec-review-pi` (the existing independent review subject).
 
 These are source-reviewed invocation classifications, not a second executable catalog membership oracle. Historical source filenames above are not active invocation aliases.

@@ -4,9 +4,9 @@ type: skill
 role: context
 name: decision-clarity-cl
 description: "Claude only: Use when the coordinator must ask a human for an unresolved choice, a material missing fact or a required permission, including during execution, correction or integration; not for routine updates, test results or leaf handoffs."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
-files: [SOURCE.md]
+files: []
 targets: [claude]
 defaults:
   scope: project

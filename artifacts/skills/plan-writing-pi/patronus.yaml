@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: plan-writing-pi
 description: "Write authorized, requirement-covered implementation plans"
-version: 2.4.0
+version: 2.5.0
 entry: SKILL.md
-files: ["NOTICE", "SOURCE.md"]
+files: ["NOTICE"]
 targets: [pi]
 requires: [tdd-pi]
 defaults:
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained. See SOURCE.md for the source inventory and invocation classification."
+  note: "Pi behavioral adaptation of the Patronus source sibling; upstream attribution retained."

@@ -5,11 +5,33 @@ description: "OpenCode only: bounded one-question-at-a-time interview to stress-
 
 # Stress-test a design in OpenCode
 
-Use only when requested. Read the brief, current design and project instructions.
-Answer source-resolvable questions by bounded source reads before interviewing.
-Set a question/time budget with the lead/owner; do not extend it automatically.
-Ask one question at a time, state the recommended answer and evidence, and wait
-for the actual reply. Steering is not consent to a changed architecture or scope.
+Read the brief, current subject and project instructions before asking.
+
+Resolve questions answered by source or valid prior decisions yourself. Own routine
+technical choices within scope. Distinguish facts, assumptions, owner-fixed
+constraints and agent choices; label low-impact, reversible observable defaults
+as agent-selected. Escalate unresolved consequential goals, scope, external
+contracts, security, preservation, irreversible commitments or material costs
+with evidence and a recommendation. Explain consequences and show a concrete
+distinguishing example when interpretations compete; wait for the owner's answer.
+Necessary clarification needs no separate interview grant.
+
+An additional stress-test interview runs only on owner request or explicit
+acceptance, within a declared finite question/time bound, one consequential
+question at a time, with recommendation, consequences and an actual wait.
+Stop when decisions are settled or the bound is reached. Manufacture no minimum
+question count, extend no bound automatically and never rerun a valid approval.
+Completion grants no next stage.
+
+Before adopting new or materially expanded blocking verification criteria or
+substantial test/evaluation machinery, surface a consequential owner choice.
+Explain the protected goal and value, evidence, scope and useful granularity,
+time/cost and maintenance burden, exact blocked stage/condition and a simpler
+alternative (including informational comparison). Recommend an option, show a
+concrete distinguishing example, ask one question and wait. Keep an undecided
+proposal unresolved; continue unrelated authorized development. Reuse settled
+policy and existing required checks without repeated permission. Ordinary relevant
+test selection remains agent-owned.
 
 Walk dependent decisions in order. For a structural ambiguity, include a compact
 ASCII diagram with labeled boxes, directional edges, `=>` for sync and `~>` for

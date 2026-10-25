@@ -5,7 +5,22 @@ description: "Review the exact spec against evidence before planning"
 
 # Review the exact spec against evidence before planning
 
-Use one independent reviewer for the exact written spec unless the owner explicitly declines that subject under the ADR-0003 exception. The coordinator supplies the spec and source evidence. Read [spec-reviewer.md](spec-reviewer.md). Review is evidence, never execution or publication authority.
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
+Use one independent reviewer for the exact written spec unless the owner explicitly declines that subject under the recorded owner-declined-spec exception. The coordinator supplies the spec and source evidence. Read [spec-reviewer.md](spec-reviewer.md). Review is evidence, never execution or publication authority.
+
+## Semantic review boundary
+
+Check necessity and sufficiency of outcomes, true constraints, failure guarantees
+and structural goals for planning; flag unsupported private design and missing
+behavior, DDD consultation/applicability or consequential owner decisions. Preserve
+justified public technical detail and selective modeling. Review verification
+burden/gates against owner provenance without inventing new thresholds. The rubric
+contains the full contract; subjective comparison ratings or unavailable runs
+alone create no blocker. Existing objective checks and disposition rules remain.
+
 
 ## Scope and recovery
 

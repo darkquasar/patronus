@@ -1,7 +1,7 @@
-This is the Codex-specific "spec-brainstorming-cx" behavioral adaptation for Patronus.
+This is the Codex-specific "spec-writing-cx" behavioral adaptation for Patronus.
 It draws on Patronus's legacy and Pi source siblings at revision 46247c13c3de38008c59995c5b1b697f78d3f9e5.
 The authored bodies and supporting reviewer text are adapted, not unchanged upstream files.
-The validator (where present) is authored Patronus code. Authored changes follow the
+Authored changes follow the
 repository license bundled in LICENSE; the upstream MIT notice is retained below.
 
 Upstream: https://github.com/obra/superpowers

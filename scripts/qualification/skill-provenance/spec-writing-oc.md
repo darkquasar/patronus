@@ -52,6 +52,10 @@ are inherited. Only entry and manifest-declared sidecars are distributed.
 
 ## Active reads
 
+Mandatory before drafting: `{skillsDir}/ddd-distilled/SKILL.md`, the declared
+own-host context dependency. Grilling and upstream/next-stage offers remain
+optional or separately granted; none grants a stage or silent installation.
+
 - `grilling-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `plan-writing-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.
 - `research-team-oc/SKILL.md`: exact OpenCode companion read, verify installed/readable before use.

@@ -4,14 +4,10 @@ Vendored files (upstream paths):
   - skills/brainstorming/SKILL.md
   - skills/brainstorming/spec-document-reviewer-prompt.md
 
-SKILL.md is ADAPTED, not verbatim. Patronus re-coupled it into its own lifecycle
-(see docs/adr/0001-profiles-recouple-plugins-stay-as-is.md) with three additions:
-an explicit ASCII-diagram step at design-presentation points, a `grilling` hand-off
-offered after design approval (before the spec is written), and a `research-team`
-hand-off at the scope-assessment step for genuinely unknown domains. The body
-otherwise follows upstream.
-
-spec-document-reviewer-prompt.md is copied verbatim.
+SKILL.md and spec-document-reviewer-prompt.md are adapted from the pinned
+upstream sources for behavior-first specification, inline author checks and
+independent review. Native integration and companion names follow the selected
+host; the folder layout and specification contract are shared.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072

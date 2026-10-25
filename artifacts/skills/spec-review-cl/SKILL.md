@@ -5,9 +5,13 @@ description: Use at the end of the spec phase for an independent read of require
 
 # Spec Review
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 The coordinator admits one independent review of a written spec before planning.
 A spec exists as a distinct subject; an explicitly owner-declined spec remains
-the ADR-0003 exception, retained in the brief. An inline author check is not an
+the recorded owner-declined-spec exception, retained in the brief. An inline author check is not an
 independent review. No automatic second-model discovery or review wave.
 
 Identify the exact spec and relevant source/context anchors, then fill
@@ -32,3 +36,13 @@ the scoped handoff to plan-writing-cl; do not self-admit planning or implementat
 
 The rubric retains spec basics plus engineering, user-facing design,
 developer-facing DevEx and strategy lenses. See [spec-reviewer.md](spec-reviewer.md).
+
+## Semantic review boundary
+
+Check necessity and sufficiency of outcomes, true constraints, failure guarantees
+and structural goals for planning; flag unsupported private design and missing
+behavior, DDD consultation/applicability or consequential owner decisions. Preserve
+justified public technical detail and selective modeling. Review verification
+burden/gates against owner provenance without inventing new thresholds. The rubric
+contains the full contract; subjective comparison ratings or unavailable runs
+alone create no blocker. Existing objective checks and disposition rules remain.

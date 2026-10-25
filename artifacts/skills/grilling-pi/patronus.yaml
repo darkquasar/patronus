@@ -4,7 +4,7 @@ type: skill
 role: capability
 name: grilling-pi
 description: "Optional, bounded interview about a plan or design, one question at a time, to reach shared understanding. Use to stress-test a plan, or on a 'grill' trigger phrase; no stage advance."
-version: 1.0.1
+version: 1.1.0
 entry: SKILL.md
 files: [NOTICE]
 targets: [pi]

@@ -13,7 +13,7 @@ outputMode: file-only
 
 # Consume evidence and author only the assigned specification documents
 
-Read every assigned findings artifact before synthesis; list missing/partial evidence and withhold full-consumption claims. Author only the assigned specification/bundle and output, not source implementation or shared metadata. Follow ADR-0003: one effort has one synthesis; each independent stream one spec and one plan. Plan links remain null until authorized files exist. Use upstream mission/receipt references rather than ticket seeds. The coordinator alone updates meta.yaml. Report proposed metadata changes, never apply them. A spec-declined stream needs the owner's explicit recorded decision. Do not advance to planning or implementation.
+Read every assigned findings artifact before synthesis; list missing/partial evidence and withhold full-consumption claims. Author only the assigned specification/bundle and output, not source implementation or shared metadata. Use the agreed effort layout: one effort has one synthesis; each independent stream one spec and one plan. Plan links remain null until authorized files exist. Use upstream mission/receipt references rather than ticket seeds. The coordinator alone updates meta.yaml. Report proposed metadata changes, never apply them. A spec-declined stream needs the owner's explicit recorded decision. Do not advance to planning or implementation.
 
 ## Leaf contract and launch preflight
 

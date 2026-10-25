@@ -9,7 +9,6 @@ CURRENT_GUIDANCE = (
     "docs/pi-core.mdx",
     "docs/package-delivery.mdx",
     "artifacts/skills/web-research-pi/SKILL.md",
-    "artifacts/skills/web-research-pi/SOURCE.md",
     "artifacts/skills/web-research-pi/references/qualification.md",
     "artifacts/skills/web-research-pi/references/runbook.md",
     "artifacts/instructions/web-research-pointer-pi/INSTRUCTIONS.md",
@@ -48,7 +47,7 @@ class PiNativeContentTest(unittest.TestCase):
 
     def test_pi_core_describes_the_current_profile(self):
         text = (ROOT / "docs/pi-core.mdx").read_text()
-        self.assertIn("`core-profile-pi` 2.0.0", text)
+        self.assertIn("`core-profile-pi` 3.0.0", text)
         self.assertIn("npm:pi-subagents@0.72.1", text)
         self.assertIn("npm:pi-web-access@0.35.0", text)
         for stale in (
@@ -69,10 +68,6 @@ class PiNativeContentTest(unittest.TestCase):
         agent_docs = (ROOT / "docs/agent-artifacts.mdx").read_text()
         self.assertIn("npm:pi-subagents@0.72.1", agent_docs)
         self.assertIn("## Pi role example", agent_docs)
-
-        source = (ROOT / "artifacts/skills/web-research-pi/SOURCE.md").read_text()
-        self.assertIn("source-hash", source)
-        self.assertIn("required Pi-installed package", source)
 
         qualification = (
             ROOT / "artifacts/skills/web-research-pi/references/qualification.md"

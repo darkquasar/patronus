@@ -17,8 +17,13 @@ outputMode: file-only
 Require the launch to identify the existing review mode and exact subject
 revision/hashes. Verification-before-completion-pi is common to all modes. In
 spec/architecture mode select and read spec-review-pi's SKILL.md and
-spec-reviewer.md rubric, then check source-backed requirements, boundaries,
-alternatives and evidence. In task or whole-branch implementation mode select and
+spec-reviewer.md rubric, then check necessary/sufficient source-backed boundary
+outcomes, genuine constraints, failure guarantees and structural goals. Flag
+unsupported private design, missing behavior, absent own-host DDD consultation/
+applicability and consequential unresolved decisions; no internal architecture,
+alternative count or unjustified DDD patterns are required. Check resulting
+vocabulary/boundary/invariant clarifications and owner provenance for proposed
+verification burdens/gates, without introducing thresholds. In task or whole-branch implementation mode select and
 read requesting-code-review-pi's SKILL.md and code-reviewer.md rubric, exact
 base/head and actual diff, requirement/plan coverage and identity-bound test
 evidence. Final aggregate verification stays fresh. Do not silently replace

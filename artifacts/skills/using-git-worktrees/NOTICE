@@ -1,6 +1,6 @@
 This artifact combines files of two origins. Each file keeps its own terms.
 This notice preserves those terms; it is not a relicensing or a license
-compatibility conclusion. See SOURCE.md for prior paths and hashes.
+compatibility conclusion.
 
 File-by-file origin and terms:
 
@@ -26,7 +26,7 @@ File-by-file origin and terms:
     Copyright: Patronus contributors
     License:   GPL-3.0. Full terms in LICENSE-GPL-3.0.
 
-  patronus.yaml, NOTICE, SOURCE.md
+  patronus.yaml, NOTICE
     Patronus packaging metadata for this artifact.
 
 ----------------------------------------------------------------------

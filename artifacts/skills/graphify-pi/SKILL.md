@@ -41,5 +41,4 @@ explicit rather than retaining upstream automatic-build instructions:
 
 The hidden `.graphify_version` is preserved byte-for-byte from the source skill
 (`0.9.31`, no newline). It records adaptation provenance, **not** the version of
-any connected server. [SOURCE.md](SOURCE.md) inventories all original files and
-[NOTICE](NOTICE) preserves attribution. There is no bundled Graphify runtime.
+any connected server. [NOTICE](NOTICE) preserves attribution. There is no bundled Graphify runtime.

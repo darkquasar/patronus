@@ -13,7 +13,13 @@ conventions, the project wins.
 
 ---
 
-# OBEY Domain-Driven Design Distilled by Vaughn Vernon
+# Domain-Driven Design: distilled guidance
+
+Consult this guidance to assess language, boundaries and invariants. Apply
+particular practices only where domain complexity and risk justify them;
+consultation does not require adopting every listed pattern. Project
+conventions and actual domain needs govern selection. This is an LLM-derived
+distillation inspired by Vaughn Vernon's work, not the book or its authority.
 
 ## When to use
 

@@ -5,7 +5,7 @@ description: "/research-team-cl — team research. Use when the user wants to in
 
 # /research-team-cl — Team Research
 
-You are executing a **spec-driven team research** phase. Your job is to deeply investigate an unknown domain and produce validated findings — one consolidated **`<slug>-research.md`** — plus the `meta.yaml` skeleton that the downstream stages fill in. A folder is **one research effort with many streams**; a stream is **one spec and one plan** (ADR-0003). This skill owns the **research** stage only: it investigates the unknown, it does not author the specs or the plans.
+You are executing a **spec-driven team research** phase. Your job is to deeply investigate an unknown domain and produce validated findings — one consolidated **`<slug>-research.md`** — plus the `meta.yaml` skeleton that the downstream stages fill in. A folder is **one research effort with many streams**; a stream is **one spec and one plan**. This skill owns the **research** stage only: it investigates the unknown, it does not author the specs or the plans.
 
 The single deliverable is:
 
@@ -148,7 +148,7 @@ When all researchers' tasks are complete (you're notified as each background age
 
 1. **Read ALL complete researcher results and the `*-findings.md` files retained by the lead.**
 2. **Synthesize the one `<slug>-research.md`** — raw findings, evidence, constraints, and trade-offs, consolidated across every researcher. You write this yourself — this is the Team Lead's core job. Use the template in [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md). Do NOT author any `<stream>-spec.md` or `<stream>-plan.md` — the research investigates the unknown; specifying and planning are downstream stages.
-3. **Write the folder's `meta.yaml` skeleton.** A folder is one research effort with many streams; a stream is one spec + one plan (ADR-0003). Write the one `research:` file and one entry per independent work stream the research identified, leaving `spec:` and `plan:` **null** — the downstream skills fill them:
+3. **Write the folder's `meta.yaml` skeleton.** A folder is one research effort with many streams; a stream is one spec + one plan. Write the one `research:` file and one entry per independent work stream the research identified, leaving `spec:` and `plan:` **null** — the downstream skills fill them:
 
    ```yaml
    slug: NN-slug

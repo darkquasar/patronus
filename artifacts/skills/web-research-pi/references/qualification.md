@@ -2,7 +2,7 @@
 
 ## Source-backed configuration review (C, not runtime qualification)
 
-Selected source: pi-web-access 0.35.0, ref 72c6e67787d67d8a7d01bf0abf30c072a6112de6. The 2026-09-30 source-hash record's eight file lengths/digests were rechecked for CP-04; seven TypeScript files matched the source snapshot used for review. Repository package.json uses ./index.ts; the published package uses ./dist. Source review does not establish generated-code equivalence or new operational observations. See ../SOURCE.md for exact hashes.
+Selected source: pi-web-access 0.35.0, ref 72c6e67787d67d8a7d01bf0abf30c072a6112de6. The 2026-09-30 source-hash record's eight file lengths/digests were rechecked for CP-04; seven TypeScript files matched the source snapshot used for review. Repository package.json uses ./index.ts; the published package uses ./dist. Source review does not establish generated-code equivalence or new operational observations. Use the actually installed package and retained run evidence for current provenance claims.
 
 | Template intent | Pinned source basis | Boundary to verify in deployment |
 |---|---|---|

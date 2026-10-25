@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: grilling-cl
-description: "Interview the user relentlessly about a plan or design, one question at a time, to reach shared understanding before building. Use to stress-test a plan, or on any 'grill' trigger phrase."
-version: 2.0.2
+description: "Bounded, one-question-at-a-time interview about consequential plan or design choices, on request or explicit acceptance, without stage advance."
+version: 2.1.0
 entry: SKILL.md
 files: []
 targets: [claude]
@@ -15,4 +15,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2026 Matt Pocock"
   commit: 6eeb81b5fcfeeb5bd531dd47ab2f9f2bbea27461
-  note: "ADAPTED from the upstream `grilling` skill (skills/productivity/grilling). Patronus re-coupling (per ADR-0001): draw the structure under interrogation as an ASCII diagram (diagram-explain charset) before or alongside the question — ambiguity that survives prose rarely survives a picture. The upstream interview discipline is otherwise unchanged."
+  note: "ADAPTED from the upstream `grilling` skill (skills/productivity/grilling). Patronus re-coupling: draw the structure under interrogation as an ASCII diagram (diagram-explain charset) before or alongside the question — ambiguity that survives prose rarely survives a picture. Patronus also bounds on-request stress tests, resolves source-answerable questions, and reserves owner questions for consequential choices including proposed verification gates."

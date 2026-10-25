@@ -76,4 +76,4 @@ needs explicit coordinator budget and lifecycle authority.
 
 [Historical server catalog](patterns/mcp-server-catalog.md) preserves dated source
 context only. It is not current availability, deployment or credential evidence.
-[Source inventory](SOURCE.md) records the adaptation and license.
+[NOTICE](NOTICE) preserves attribution and license terms.

@@ -26,7 +26,7 @@ Ignored/untracked/external inputs must be reread: use an uncached typed gate `{c
 
 ## Consume and synthesize
 
-Coordinator reads EVERY findings artifact and confirms complete evidence/decomposition at the required barrier before one sole author synthesizes. Missing/partial input prevents full-consumption claims. Use [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md): one effort/synthesis, one spec+plan per independent stream (ADR-0003). Plan fields remain null until authorized files exist; link actual native mission/receipt references rather than seed a second task graph. Respect actual project tracking; never add foreign ignore rules. Only coordinator writes shared metadata and [lessons](LESSONS-FORMAT.md) when authorized.
+Coordinator reads EVERY findings artifact and confirms complete evidence/decomposition at the required barrier before one sole author synthesizes. Missing/partial input prevents full-consumption claims. Use [DELIVERABLE-TEMPLATES.md](DELIVERABLE-TEMPLATES.md): one effort/synthesis, one spec+plan per independent stream. Plan fields remain null until authorized files exist; link actual native mission/receipt references rather than seed a second task graph. Respect actual project tracking; never add foreign ignore rules. Only coordinator writes shared metadata and [lessons](LESSONS-FORMAT.md) when authorized.
 
 ## Installed execution
 

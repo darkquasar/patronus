@@ -4,9 +4,9 @@ type: skill
 role: capability
 name: using-git-worktrees
 description: "Use when feature work needs an isolated Git workspace, or an approved plan assigns writer roots, prepared baselines or worktree ownership."
-version: 3.0.0
+version: 3.0.1
 entry: SKILL.md
-files: ["LICENSE", "LICENSE-GPL-3.0", "NOTICE", "SOURCE.md", "scripts/prepare-worktrees.py", "references/worktree-allocation.md", "fixtures/test_prepare_worktrees.py"]
+files: ["LICENSE", "LICENSE-GPL-3.0", "NOTICE", "scripts/prepare-worktrees.py", "references/worktree-allocation.md", "fixtures/test_prepare_worktrees.py"]
 targets: [claude, codex, opencode]
 defaults:
   scope: project
@@ -16,4 +16,4 @@ attribution:
   license: MIT
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: 896224c4b1879920ab573417e68fd51d2ccc9072
-  note: "SKILL.md is a shared behavioral adaptation of the upstream skill (MIT terms in LICENSE). File-scoped: scripts/prepare-worktrees.py, references/worktree-allocation.md and fixtures/test_prepare_worktrees.py are Patronus-authored (Patronus contributors, GPL-3.0, terms in LICENSE-GPL-3.0). See NOTICE and SOURCE.md. Static guidance, runtime-unverified."
+  note: "SKILL.md is a shared behavioral adaptation of the upstream skill (MIT terms in LICENSE). File-scoped: scripts/prepare-worktrees.py, references/worktree-allocation.md and fixtures/test_prepare_worktrees.py are Patronus-authored (Patronus contributors, GPL-3.0, terms in LICENSE-GPL-3.0). See NOTICE. Static guidance, runtime-unverified."

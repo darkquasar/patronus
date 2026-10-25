@@ -4,7 +4,7 @@ type: skill
 role: eval
 name: spec-review
 description: "Independent written-spec review before planning, with spec basics and applicable engineering/design/DevEx/strategy lenses, consequence-based Critical/Major/Medium/Low findings and blocking acceptance."
-version: 2.1.0
+version: 2.2.0
 entry: SKILL.md
 files: [spec-reviewer.md]
 targets: [codex, opencode]

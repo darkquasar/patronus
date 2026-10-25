@@ -5,6 +5,10 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 # Plan Writing
 
+Use the owner's selected destination and established project layout throughout.
+Any `docs/specs/NN-slug/` path below is a default example, not a location
+requirement; preserve the selected effort's metadata and stream relationships.
+
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. Explicit test strategy. Commits only with separate authority.
@@ -41,12 +45,63 @@ Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`s
 Spec ownership stays with `spec-writing-cl`. plan-writing-cl sets `streams[].plan:` only, never
 `streams[].spec:`.
 
-**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement, one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`), never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-writing-cl` skill's "Spec folder & meta.yaml" for the shape). Respect actual repository tracking/ignore policy; authoring grants no commit, ignore-rule change or publication. (User preferences for plan location override this default.)
+**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement, one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`), never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-writing-cl` skill's "Folder layout and metadata" for the shape). Respect actual repository tracking/ignore policy; authoring grants no commit, ignore-rule change or publication. (User preferences for plan location override this default.)
 - (User preferences for plan location override this default)
 
 ## Scope Check
 
-If the spec covers multiple independent subsystems, suggest breaking this into separate plans, one per subsystem. Each plan should produce working, testable software on its own.
+If independently specifiable subsystems need separate plans, surface a stream/spec
+split under revision authority first. One stream retains one spec and one plan;
+do not silently produce multiple plans for the same spec.
+
+## Solution ownership and semantic traceability
+
+Consume the actual accepted spec and current source. Choose the technical
+solution within inherited constraints; distinguish provenance-bearing owner or
+consumer restrictions from planner choices and explain consequential tradeoffs
+near their rationale. An approved legacy internal design remains consumable as a
+constraint; do not infer missing behavior from its implementation proposal or
+require a cosmetic migration. Do not treat delegated routine choices as missing
+requirements or invent a mandatory count of alternatives. A changed required
+outcome needs an explicit spec revision. Required public formats/signatures stay
+exact even when private mechanisms are open.
+
+Link every requirement to contributing tasks and completion checks; inspect the
+meaning, not just ID presence. Preserve obligation, permission, prohibition,
+actor/scope, triggers, conditions, bounds and exceptions, retaining stable IDs
+through harmless edits. Coverage expresses intended contribution, not verified
+satisfaction. Each task has an independently checkable outcome, owned surfaces
+and relevant consumed/produced interfaces or deliverables.
+
+Explain each dependency using consumed deliverables: `start` inputs must be
+accepted before authoring; `join` inputs are needed only at integration or
+verification. Runtime behavior order alone is not build order. Parallel readiness
+needs accepted inputs, disjoint ownership and checked isolation/settlement, not
+merely separate task names. Graph views project these same relationships without
+becoming a second mutable status authority; preserve serial J/C/R barriers.
+
+Preserve and show the spec's resulting vocabulary, boundary and invariant
+clarifications, and identify new clarification introduced by planning. Do not
+merge concepts merely because they share a word in different contexts: finalized
+payment settlement and terminated worker/process settlement remain distinct.
+For a small prose correction, preserve why no tactical modeling is warranted.
+
+Resolve routine choices from source and record compatible low-impact reversible
+observable defaults as agent choices. Reuse valid decisions; consequential
+unresolved goals, scope, external contracts, security, preservation, irreversible
+commitments or material cost need evidence, recommendation, consequences, a
+concrete distinguishing example and an actual owner answer. Expose unavailable
+required inputs and affected claims rather than inventing approval.
+
+Surface new or materially expanded verification machinery or hard gates not
+settled in the spec as consequential owner choices: protected purpose/value,
+evidence, scope/useful granularity, time/cost/maintenance burden, exact blocked
+stage/condition and simpler alternative (including informational comparison).
+Recommend, show a concrete example, ask one question and wait before adoption;
+keep the proposal unresolved while continuing unrelated authorized work. Never
+silently turn a proposed evaluator, run matrix or subjective threshold into a
+requirement. Reuse approved policy and required project checks without repeated
+permission; ordinary relevant test choices remain agent-owned.
 
 ## File Structure
 
@@ -133,7 +188,9 @@ Slicing: horizontal (default)
 
 **Goal:** [One sentence describing what this builds]
 
-**Architecture:** [2-3 sentences about approach]
+**Source spec:** [Actual accepted file/hash, or explicit owner-declined exception]
+
+**Architecture:** [Concrete chosen approach and consequential rationale]
 
 **Tech Stack:** [Key technologies/libraries]
 
@@ -169,6 +226,8 @@ needs an owner decision. Adapt the example; do not force a red cycle on prose.
 - Create: `exact/path/to/file.py`
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
+
+**Requirement/check links:** [Intended contribution and independently checkable outcome]
 
 **Interfaces:**
 - Consumes: [what this task uses from earlier tasks, exact signatures; label

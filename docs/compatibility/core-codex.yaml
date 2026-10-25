@@ -71,7 +71,7 @@ entries:
     disposition: port-cx
     codex_items: [plan-writing-cx]
     outcome: Partial
-    reason: "Codex planning port preserves ADR-0003 folder invariants. TestCodexSpecFolderMetaInvariants and explicit cross-skill native routing are required."
+    reason: "Codex planning guidance preserves the self-contained effort layout and explicit native routing; metadata checks use target-project tooling without a bundled validator."
     evidence: runtime-pending
   - core_item: plan-execute-cl
     disposition: port-cx
@@ -101,7 +101,7 @@ entries:
     disposition: port-cx
     codex_items: [spec-writing-cx]
     outcome: Partial
-    reason: "Codex-specific spec authoring and bundled ADR-0003 validator. TestCodexSpecFolderMetaInvariants and native research-to-spec route required."
+    reason: "Codex-specific spec authoring with the shared research/spec/plan layout and native research-to-spec route. No bundled validator or Go prerequisite."
     evidence: runtime-pending
   - core_item: using-git-worktrees@claude
     disposition: reuse-unsuffixed
@@ -149,7 +149,7 @@ entries:
     disposition: reuse-unsuffixed
     codex_items: [ddd-distilled]
     outcome: Equivalent
-    reason: "Current native endpoint remains unsuffixed ddd-distilled (version 2.0.0, Codex/OpenCode targets); Claude uses ddd-distilled-cl. Host-neutral modeling rules, no sidecars or lane handoffs. Prior 1.0.0 unchanged-byte audit is historical; LLM-derived provenance caveat remains."
+    reason: "Current native endpoint remains unsuffixed ddd-distilled (version recorded in its manifest, Codex/OpenCode targets); Claude uses ddd-distilled-cl. Host-neutral modeling rules, no sidecars or lane handoffs. Prior 1.0.0 unchanged-byte audit is historical; LLM-derived provenance caveat remains."
     evidence: static-confirmed
   - core_item: refactoring-distilled-cl
     disposition: reuse-unsuffixed

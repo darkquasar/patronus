@@ -5,7 +5,7 @@ Per-file origin and terms:
   SKILL.md
     Adapted for Patronus from the upstream "dispatching-parallel-agents" skill
     (upstream path skills/dispatching-parallel-agents/SKILL.md), through the
-    retired Patronus bundles listed in SOURCE.md. The body is rewritten, not a
+    earlier Patronus adaptations. The body is rewritten, not a
     verbatim copy.
     Upstream: https://github.com/obra/superpowers
     Commit:   896224c4b1879920ab573417e68fd51d2ccc9072
@@ -19,9 +19,9 @@ Per-file origin and terms:
     License:  GPL-3.0, the Patronus repository license. Full terms in
     LICENSE-GPL-3.0, which applies to this file only.
 
-  patronus.yaml, NOTICE, SOURCE.md
+  patronus.yaml, NOTICE
     Patronus packaging and provenance records.
 
 LICENSE is the upstream MIT license text. LICENSE-GPL-3.0 is the Patronus
-repository license text. Historical names and paths in SOURCE.md are
+repository license text. Historical names and paths in attribution are
 provenance, not invocations.

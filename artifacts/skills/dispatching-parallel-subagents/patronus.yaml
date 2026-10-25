@@ -4,9 +4,9 @@ type: skill
 role: orchestration
 name: dispatching-parallel-subagents
 description: "Coordinator-used primitive for admitted leaf subagent launch, wait/stop, collection and settlement, for read-only leaves or separately authorized isolated writers, on Claude, Codex and OpenCode."
-version: 1.0.0
+version: 1.0.1
 entry: SKILL.md
-files: ["writer-brief.md", "NOTICE", "LICENSE", "LICENSE-GPL-3.0", "SOURCE.md"]
+files: ["writer-brief.md", "NOTICE", "LICENSE", "LICENSE-GPL-3.0"]
 targets: [claude, codex, opencode]
 defaults:
   scope: project
@@ -15,4 +15,4 @@ attribution:
   license: "MIT"
   copyright: "Copyright (c) 2025 Jesse Vincent"
   commit: "896224c4b1879920ab573417e68fd51d2ccc9072"
-  note: "SKILL.md is adapted from the upstream `dispatching-parallel-agents` skill (MIT, see LICENSE). writer-brief.md is Patronus-authored and file-scoped GPL-3.0 (see LICENSE-GPL-3.0). See NOTICE and SOURCE.md."
+  note: "SKILL.md is adapted from the upstream `dispatching-parallel-agents` skill (MIT, see LICENSE). writer-brief.md is Patronus-authored and file-scoped GPL-3.0 (see LICENSE-GPL-3.0). See NOTICE."
