@@ -79,7 +79,7 @@ Any other `{…}` is left untouched, so JSON examples, Python f-strings, and she
 expansions in a skill body are safe. The cost of that leniency is that a typo
 (`{skilDir}`) would ship as a literal and fail only when a user runs the skill,
 so `patronus check-placeholders` fails the build on a `{ski…dir}`-shaped string
-that is not exactly one of the two placeholders. It runs in CI on every push.
+that is not exactly one of the two placeholders. It runs in CI on every pull request and every push to `main`.
 
 ## Releasing the binary
 
