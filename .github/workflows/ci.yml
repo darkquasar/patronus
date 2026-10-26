@@ -1,4 +1,4 @@
-# CI — runs on every push and pull request. Two independent gates:
+# CI — runs on every pull request and every push to main. Two independent gates:
 #   test             application contract: gofmt/vet/race tests on a scratch copy
 #                    WITHOUT artifacts/ and profiles/ (synthetic catalogs only)
 #   catalog-contract real catalog: public build, catalog-check tool, public-CLI
@@ -10,9 +10,12 @@
 name: ci
 
 on:
-  # Every push and every pull request, with no paths filter: a Go-only change still
-  # runs the catalog gate and a content-only change still runs the application gate.
+  # Every pull request and every push to main, with no paths filter: a Go-only change
+  # still runs the catalog gate and a content-only change still runs the application
+  # gate. Feature branches get CI through their pull request (open a draft PR to get
+  # it early); tags are built and checked by release.yml.
   push:
+    branches: [main]
   pull_request:
 
 # The test job runs on EVERY pull_request, INCLUDING from forks, and `go test`
@@ -61,21 +64,17 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-      # Packages and artifacts publish only from the default branch, so a feature
-      # branch push compares against its fork point, the same base as its PR run.
+      # A pull request compares against its base branch; a push to main compares
+      # against the previous push.
       - name: Select version base
         id: base
         env:
           PR_BASE: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
-          REF: ${{ github.ref }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [ -n "${PR_BASE:-}" ]; then
             echo "rev=origin/$PR_BASE" >> "$GITHUB_OUTPUT"
-          elif [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
-            echo "rev=$(git merge-base HEAD "origin/$DEFAULT_BRANCH")" >> "$GITHUB_OUTPUT"
           elif [ -n "${BEFORE:-}" ] && git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
             echo "rev=$BEFORE" >> "$GITHUB_OUTPUT"
           else
