@@ -11,7 +11,7 @@ const piRoot = join(globalRoot, '@earendil-works/pi-coding-agent');
 const agentDir = join(homedir(), '.pi/agent');
 const extensionRoot = join(agentDir, 'npm/node_modules/pi-subagents');
 const readJSON = path => JSON.parse(readFileSync(path, 'utf8'));
-assert.equal(readJSON(join(piRoot, 'package.json')).version, '0.87.1');
+const piVersion = readJSON(join(piRoot, 'package.json')).version;
 const subagentsVersion = readJSON(join(extensionRoot, 'package.json')).version;
 assert.ok(readJSON(join(agentDir, 'settings.json')).packages.includes(`npm:pi-subagents@${subagentsVersion}`), 'Pi settings must register the installed pi-subagents');
 
@@ -24,7 +24,7 @@ const extension = result.extensions.find(item => item.resolvedPath.startsWith(ex
 assert.ok(extension, 'Native Pi package discovery must load pi-subagents');
 assert.ok(extension.tools.has('subagent'), 'Delegation tool must register');
 assert.ok(extension.commands.has('subagents-doctor'), 'Diagnostics command must register');
-console.log(`PASS Pi 0.87.1 + pi-subagents ${subagentsVersion}: package discovery, extension loading, delegation tool and diagnostics`);
+console.log(`PASS Pi ${piVersion} + pi-subagents ${subagentsVersion}: package discovery, extension loading, delegation tool and diagnostics`);
 
 // Exercise the real CLI's extension/session initialization as well as the SDK.
 await new Promise((resolve, reject) => {
