@@ -1,0 +1,17 @@
+apiVersion: patronus/v2
+family: artifact
+type: setting
+role: guardrail
+name: no-attribution
+description: "Stops Claude Code adding AI attribution: no Co-Authored-By trailer on commits, no 'Generated with Claude Code' line in pull request descriptions, and no claude.ai session link in either. Claude-only (attribution is a Claude Code settings key); on Codex/OpenCode it is a no-op."
+version: 1.0.0
+entry: ""
+targets: [claude]
+defaults:
+  scope: global
+setting:
+  path: attribution
+  value:
+    commit: ""
+    pr: ""
+    sessionUrl: false
