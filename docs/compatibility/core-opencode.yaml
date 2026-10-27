@@ -225,6 +225,12 @@ entries:
     outcome: Partial
     reason: "Authored-body method: port-oc. Per-file source hashes, edits and active handoffs recorded in artifacts/hooks/gitleaks-guard-oc/SOURCE.md. Byte-identical Codex sibling script; adapter runner maps bash to Bash. Staged scanner prerequisite is separate from native registration/blocking. Best effort and --pure disableable."
     evidence: runtime-pending
+  - core_item: no-attribution@claude
+    disposition: omit
+    opencode_items: []
+    outcome: N/A
+    reason: "Claude Code settings `attribution` key; no OpenCode counterpart is claimed."
+    evidence: static-confirmed
   - core_item: ccusage
     disposition: omit
     opencode_items: []

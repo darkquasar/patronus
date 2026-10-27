@@ -2,8 +2,8 @@ apiVersion: patronus/v2
 family: profile
 role: lifecycle                            # L11 — profiles are lifecycle by nature
 name: core
-version: 2.3.0
-summary: "Claude core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution, aggregate review and scoped completion. Secret/diff guards and ccusage observability are included. Enforcement, sandbox and diagram overrides remain optional overlays."
+version: 2.4.0
+summary: "Claude core: design, planning, diagnosis and tiered TDD, one progress authority, native leaf execution, aggregate review and scoped completion. Secret/diff guards, no AI attribution in commits and PRs, and ccusage observability are included. Enforcement, sandbox and diagram overrides remain optional overlays."
 # core teaches good defaults; it does not mechanically enforce them (that's what the
 # opt-in overlays are for). It is NOT marked status:stub — every item listed below
 # exists in-repo today and installs.
@@ -60,6 +60,7 @@ layers:
     - block-secrets                        # PreToolUse Write|Edit — blocks writing obvious secrets (best-effort; not read-leak)
     - gitleaks                             # install the gitleaks CLI (github-release, pinned) — the scanner the commit guard pipes through
     - gitleaks-guard                       # PreToolUse Bash @commit — scans the staged diff, blocks a commit carrying a secret
+    - no-attribution@claude                # settings `attribution` — no AI attribution trailer/line/link in commits and PRs; Claude-only
     # git-guardrails (blocks destructive git: push/reset --hard/clean -f/...) is NOT
     # in core — it intercepts ordinary git (incl. push), which is too opinionated for
     # the default. Opt in via the `safe-git` profile.

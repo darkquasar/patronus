@@ -229,6 +229,12 @@ entries:
     outcome: Partial
     reason: "Codex-only commit guard script and registration are selected; retained invented Bash event and staged-diff/scanner error cases are HISTORICAL scratch-repository results, NOT RUN in current gates. Scanner CLI presence is not native protection; actual matcher/trust/nonce behavior remains pending."
     evidence: runtime-pending
+  - core_item: no-attribution@claude
+    disposition: omit
+    codex_items: []
+    outcome: N/A
+    reason: "Claude Code settings `attribution` key; no Codex counterpart is claimed."
+    evidence: static-confirmed
   - core_item: ccusage
     disposition: omit
     codex_items: []
