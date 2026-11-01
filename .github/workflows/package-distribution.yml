@@ -1,0 +1,59 @@
+# Executes only approved main code. Source artifacts are parsed as data.
+name: package-distribution
+
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Existing successful release run with its original receipt (no rebuild)
+        required: true
+        type: string
+      attempt:
+        description: Exact original release attempt
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dispatch:
+    if: >-
+      github.repository == 'darkquasar/patronus' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: package-dispatcher
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Re-fetch and verify receiver, source run and receipt
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/distribution/dispatch.py verify
+      - name: Mint tap-only dispatch token after admission
+        id: dispatch-token
+        if: steps.verify.outputs.authorized == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.PACKAGE_DISPATCH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PACKAGE_DISPATCH_APP_PRIVATE_KEY }}
+          owner: darkquasar
+          repositories: homebrew-tap
+          permission-actions: write
+      - name: Dispatch protected controller using verified references
+        if: steps.verify.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+        run: python3 -B scripts/distribution/dispatch.py send
