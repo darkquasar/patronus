@@ -174,8 +174,8 @@ runs shipped guard or supervisor programs, fake harnesses, native CLIs or SDKs.
 
 | Gate | CI job | Owns failures in | Local command |
 |---|---|---|---|
-| Application contract | `ci / test` | Go formatting, vet and `go test -race ./...` of the root module, run on a scratch copy **without** `artifacts/` and `profiles/` | `bash scripts/tests/application-contract.sh --out "$(mktemp -d)" --without-catalog` |
-| Catalog contract | `ci / catalog-contract`, and the `publish-catalog` build job on its own registry | public `build`; the standalone `tools/catalog-check` module (gofmt/vet/test) and its structure, profile-case and ledger checks; public-CLI `lock` for every admitted profile/target case; `check-placeholders`, `check-gate-intent`, `check-versions`; publication and package-delivery contract suites; Pi static evidence and content checks | `bash scripts/tests/catalog-contract.sh --out "$(mktemp -d)" --base origin/main` |
+| Application contract | `ci / test` | Go formatting, vet and `go test -race ./...` of the root module, run on a scratch copy **without** `artifacts/` and `profiles/` | `bash tools/tests/application-contract.sh --out "$(mktemp -d)" --without-catalog` |
+| Catalog contract | `ci / catalog-contract`, and the `publish-catalog` build job on its own registry | public `build`; the standalone `tools/catalog-check` module (gofmt/vet/test) and its structure, profile-case and ledger checks; public-CLI `lock` for every admitted profile/target case; `check-placeholders`, `check-gate-intent`, `check-versions`; publication and package-delivery contract suites; Pi static evidence and content checks | `bash tools/tests/catalog-contract.sh --out "$(mktemp -d)" --base origin/main` |
 | Lint | `ci / lint` | `golangci-lint` against `.golangci.yml` | `golangci-lint run` |
 
 `--out` must be an empty directory outside the checkout. The scripts do not take
@@ -204,11 +204,11 @@ acceptance, and a passing gate does not mark any native row passed.
 
 | Check | Gate | Reason |
 |---|---|---|
-| `scripts/tests/test_pi_evidence.py` | catalog | Static contract of `scripts/check-pi-evidence.py` over the retained evidence contract and templates; no native calls. |
-| `scripts/tests/test_pi_qualification_examples.py` | none | Retained qualification-example assertions; outside the current structural development gates. |
-| `scripts/tests/test_pi_native_content.py` | none | Retained prose inventories; content semantics belong to release review, not substring gates. |
-| `scripts/qualification/pi-native-rpc.py`, `pi-native-resources.mjs` | none | Native qualification procedures; run only under a separate native grant. |
-| `scripts/qualification/removal-performance/` | none | Opt-in measurement procedure, not a development gate. |
+| `tools/tests/test_pi_evidence.py` | catalog | Static contract of `tools/check-pi-evidence.py` over the retained evidence contract and templates; no native calls. |
+| `tools/tests/test_pi_qualification_examples.py` | none | Retained qualification-example assertions; outside the current structural development gates. |
+| `tools/tests/test_pi_native_content.py` | none | Retained prose inventories; content semantics belong to release review, not substring gates. |
+| `tools/qualification/pi-native-rpc.py`, `pi-native-resources.mjs` | none | Native qualification procedures; run only under a separate native grant. |
+| `tools/qualification/removal-performance/` | none | Opt-in measurement procedure, not a development gate. |
 
 ### Release review checklist
 
@@ -239,7 +239,7 @@ catalog tool.
 
 Tracked `docs/` contains user-facing MDX pages and Mintlify's `docs.json`. Add new
 pages to its navigation. Keep test fixtures, evidence templates, validation
-procedures and results under `scripts/qualification/` or the owning package's
+procedures and results under `tools/qualification/` or the owning package's
 `tests/` directory. Contributor decisions stay tracked under `docs/adr/` and are excluded from
 Mintlify processing by `docs/.mintignore`.
 `docs/specs/` remains gitignored local planning state and is excluded from

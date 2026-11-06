@@ -39,16 +39,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Test publication authorization (offline)
-        run: python3 -B -m unittest discover -s scripts/tests -p 'test_publication_authorization.py'
+        run: python3 -B -m unittest discover -s tools/tests -p 'test_publication_authorization.py'
       - name: Test executable package producer (offline)
-        run: python3 -B -m unittest discover -s scripts/tests -p 'test_distribution_producer.py'
+        run: python3 -B -m unittest discover -s tools/tests -p 'test_distribution_producer.py'
       - name: Test installer URL and checksum compatibility (offline)
         run: |
-          bash scripts/tests/install-version-test.sh
-          bash scripts/tests/install-checksum-test.sh
+          bash tools/tests/install-version-test.sh
+          bash tools/tests/install-checksum-test.sh
       - name: Test PowerShell installer rejection (offline)
         shell: pwsh
-        run: ./scripts/tests/install-checksum-test.ps1
+        run: ./tools/tests/install-checksum-test.ps1
 
 
   test:
@@ -60,7 +60,7 @@ jobs:
           go-version: "1.25"
       # The scratch copy proves application tests need no production catalog.
       - name: application contract gate
-        run: bash scripts/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
+        run: bash tools/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
 
   # Stable status name: catalog-contract. Requiring it in branch protection is a
   # separate maintainer settings action. Fork PRs run it secret-free (contents:read).
@@ -91,7 +91,7 @@ jobs:
             echo "rev=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
           fi
       - name: catalog contract gate
-        run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
+        run: bash tools/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
 
   # Enforces CONTRIBUTING.md's version-bump rule on every pull_request: an artifact
   # whose CONTENT changed must also bump its patronus.yaml version:. Runs only on PRs

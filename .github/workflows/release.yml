@@ -30,7 +30,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Verify owner-created tag belongs to main history
-        run: python3 scripts/check-publication-authorization.py release
+        run: python3 tools/check-publication-authorization.py release
 
   build-binaries:
     needs: authorize
@@ -78,7 +78,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Recheck release authorization
-        run: python3 scripts/check-publication-authorization.py release
+        run: python3 tools/check-publication-authorization.py release
       - name: Collect binaries
         uses: actions/download-artifact@v7
         with:
@@ -91,7 +91,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 -B scripts/distribution/receipt.py capture --dist dist --out "$RUNNER_TEMP/distribution/receipt.json"
+        run: python3 -B tools/distribution/receipt.py capture --dist dist --out "$RUNNER_TEMP/distribution/receipt.json"
       - name: Upload package-distribution receipt
         id: distribution-upload
         if: steps.distribution-receipt.outcome == 'success' && steps.distribution-receipt.outputs.eligible == 'true'
@@ -108,7 +108,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           CAPTURE_OUTCOME: ${{ steps.distribution-receipt.outcome }}
           UPLOAD_OUTCOME: ${{ steps.distribution-upload.outcome }}
-        run: python3 -B scripts/distribution/receipt.py summary --tag "$RELEASE_TAG" --capture "$CAPTURE_OUTCOME" --upload "$UPLOAD_OUTCOME"
+        run: python3 -B tools/distribution/receipt.py summary --tag "$RELEASE_TAG" --capture "$CAPTURE_OUTCOME" --upload "$UPLOAD_OUTCOME"
       - name: Publish Release (binaries + checksums only)
         uses: softprops/action-gh-release@v3
         with:

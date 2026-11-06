@@ -40,7 +40,7 @@ jobs:
         id: verify
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 -B scripts/distribution/dispatch.py verify
+        run: python3 -B tools/distribution/dispatch.py verify
       - name: Mint tap-only dispatch token after admission
         id: dispatch-token
         if: steps.verify.outputs.authorized == 'true'
@@ -56,4 +56,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
-        run: python3 -B scripts/distribution/dispatch.py send
+        run: python3 -B tools/distribution/dispatch.py send

@@ -10,21 +10,21 @@ published SHA-256 checksum, and installs into `/usr/local/bin` when writable,
 otherwise `~/.local/bin`.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.sh | sh
 patronus --help
 ```
 
 To pin a release, pass `--version` (or set `PATRONUS_VERSION`):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.sh | sh -s -- --version v2.7.0
+curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.sh | sh -s -- --version v2.7.0
 ```
 
 On Windows, use the PowerShell installer. Set `PATRONUS_VERSION` first to pin a
 release.
 
 ```powershell
-irm https://raw.githubusercontent.com/darkquasar/patronus/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.ps1 | iex
 patronus --help
 ```
 
