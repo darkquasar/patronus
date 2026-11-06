@@ -93,18 +93,26 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Could not grant test-user access to staging evidence.' }
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument (
         '-NoProfile -File "{0}\user.ps1" -Work "{0}" -Phase All' -f $Out)
-    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15)
+    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) `
+        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    & wevtutil.exe sl Microsoft-Windows-TaskScheduler/Operational /e:true
+    if ($LASTEXITCODE -ne 0) { throw 'Could not enable task startup diagnostics.' }
     Register-ScheduledTask -TaskName 'patronus-t3' -Action $action -Settings $settings `
         -User "$env:COMPUTERNAME\$name" -Password $password -RunLevel Limited | Out-Null
     $taskRegistered = $true
+    Export-ScheduledTask -TaskName 'patronus-t3' | Set-Content "$Out/task-definition.txt"
     $password = $null
     $taskStarted = Get-Date
     Start-ScheduledTask 'patronus-t3'
     $deadline = (Get-Date).AddMinutes(16)
+    $startupDeadline = (Get-Date).AddSeconds(30)
     do {
         Start-Sleep -Seconds 2
         $task = Get-ScheduledTask 'patronus-t3'
         $info = Get-ScheduledTaskInfo 'patronus-t3'
+        if ($info.LastRunTime -lt $taskStarted.AddSeconds(-2) -and (Get-Date) -gt $startupDeadline) {
+            throw "Test-user task never started (state $($task.State), result $($info.LastTaskResult))."
+        }
     } while (($task.State -eq 'Running' -or $info.LastRunTime -lt $taskStarted.AddSeconds(-2)) -and (Get-Date) -lt $deadline)
     if ($task.State -eq 'Running') {
         Stop-ScheduledTask 'patronus-t3'
@@ -122,6 +130,13 @@ try {
     if ($taskRegistered) {
         if ((Get-ScheduledTask 'patronus-t3').State -eq 'Running') { Stop-ScheduledTask 'patronus-t3' }
         Get-ScheduledTaskInfo 'patronus-t3' | Format-List | Out-String | Set-Content "$Out/task.txt"
+        Get-ScheduledTask 'patronus-t3' | Select-Object TaskName,State,Principal,Settings |
+            ConvertTo-Json -Depth 6 | Set-Content "$Out/task-state.json"
+        Get-WinEvent -FilterHashtable @{
+            LogName = 'Microsoft-Windows-TaskScheduler/Operational'; StartTime = $taskStarted.AddSeconds(-5)
+        } -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'patronus-t3' } |
+            Select-Object TimeCreated,Id,LevelDisplayName,Message |
+            ConvertTo-Json -Depth 4 | Set-Content "$Out/task-events.json"
     }
     $phaseTimes['finished_at_seconds'] = $timer.Elapsed.TotalSeconds
     $phaseTimes | ConvertTo-Json | Set-Content "$Out/phase-times.json"
