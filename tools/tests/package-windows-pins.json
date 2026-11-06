@@ -1,5 +1,6 @@
 {
   "tap_commit": "212e2f8eb066561b4bd8a2b825c494145b43f53b",
+  "python_version": "3.12.10",
   "scoop_commit": "e6aa3b366bdee8ed138c1e0f7b85192ebdd35d0f",
   "bootstrap_commit": "1e2f334083d609986d8c8bc9e31ae8e87c39fab4",
   "winget_commit": "000f6b55151cb0f1afd2933bb54c62a4724b9ca8",
