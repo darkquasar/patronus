@@ -144,6 +144,8 @@ try {
     # their own policy override; this harness never invokes them.
     $null = Invoke-Native -Step 'scoop-config' -File 'powershell.exe' -Arguments @(
         '-NoProfile','-File',$scoop,'config','aria2-enabled','false')
+    $null = Invoke-Native -Step 'user-git-bytes' -File 'git.exe' -Arguments @('config','--global','core.autocrlf','false')
+    New-Item -ItemType Directory "$env:SCOOP/buckets" -Force | Out-Null
     $bucket = "$env:USERPROFILE\t3-synthetic-bucket"
     New-Item -ItemType Directory $bucket | Out-Null
     Copy-Item "$Work/fixtures/local-transport/scoop/*" $bucket -Recurse
@@ -153,10 +155,17 @@ try {
         @{ step='bucket-commit'; arguments=@('-C',$bucket,'-c','user.name=T3 Fixture',
             '-c','user.email=fixture@example.invalid','commit','-m','Synthetic two-app staging bucket') }
     )) { $null = Invoke-Native -Step $entry.step -File 'git.exe' -Arguments $entry.arguments }
+    $bucketUri = ([uri]$bucket).AbsoluteUri
     $null = Invoke-Native -Step 'scoop-bucket-register' -File 'powershell.exe' -Arguments @(
-        '-NoProfile','-File',$scoop,'bucket','add','darkquasar',$bucket)
+        '-NoProfile','-File',$scoop,'bucket','add','darkquasar',$bucketUri)
     $apps = @('patronus','lumen')
     foreach ($app in $apps) {
+        $localManifest = "$Work/fixtures/local-transport/scoop/bucket/$app.json"
+        $registeredManifest = "$env:SCOOP/buckets/darkquasar/bucket/$app.json"
+        if (!(Test-Path $registeredManifest) -or
+            (Get-FileHash $registeredManifest).Hash -ne (Get-FileHash $localManifest).Hash) {
+            throw "Registered bucket manifest differs from staged bytes: $app"
+        }
         $info = Invoke-Native -Step "scoop-info-$app" -File 'powershell.exe' -Arguments @(
             '-NoProfile','-File',$scoop,'info',"darkquasar/$app")
         if ($info.Text -notmatch $app -or $info.Text -notmatch 'darkquasar') { throw "Scoop discovery failed: $app" }
