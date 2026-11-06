@@ -23,6 +23,8 @@ jobs:
       run:
         shell: pwsh -NoLogo -NoProfile -File {0}
     steps:
+      - name: Preserve hash-pinned Git blob bytes on Windows
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
