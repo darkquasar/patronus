@@ -72,6 +72,14 @@ try {
     New-Item $policy -Force | Out-Null
     New-ItemProperty $policy -Name EnableLocalManifestFiles -Value 1 -PropertyType DWord -Force | Out-Null
     Get-ItemProperty $policy -Name EnableLocalManifestFiles | Format-List | Out-String | Write-Output
+    # Hosted images enable Developer Mode; ordinary-user acceptance requires it off.
+    $developerPolicy = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock'
+    New-Item $developerPolicy -Force | Out-Null
+    New-ItemProperty $developerPolicy -Name AllowDevelopmentWithoutDevLicense `
+        -Value 0 -PropertyType DWord -Force | Out-Null
+    Get-ItemProperty $developerPolicy -Name AllowDevelopmentWithoutDevLicense |
+        Select-Object AllowDevelopmentWithoutDevLicense | ConvertTo-Json |
+        Set-Content "$Out/developer-mode.json"
     $phaseTimes['registered_at_seconds'] = $timer.Elapsed.TotalSeconds
     $server = Start-Process (Get-Command python).Source -ArgumentList @(
         '-m', 'http.server', '18765', '--bind', '127.0.0.1', '--directory', "$Out/fixtures/assets"

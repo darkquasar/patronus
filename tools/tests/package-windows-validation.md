@@ -33,6 +33,8 @@ actual token is non-admin, lacks symlink privilege, and Developer Mode is off.
 The disposable account receives the batch-logon right required to start its task;
 existing assignees are preserved and an explicit denial is never removed. This is
 CI host setup, not a package consumer prerequisite.
+The hosted image's Developer Mode is explicitly disabled before starting that
+account; the user phase verifies it remains off.
 WinGet and Scoop installs then run under that identity. No policy-bypass flags are
 used; Windows PowerShell's normal `RemoteSigned` policy is set explicitly and asserted
 for the acceptance identity. The pinned Scoop source is
