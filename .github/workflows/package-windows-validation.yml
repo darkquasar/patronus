@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: darkquasar/homebrew-tap
-          ref: 212e2f8eb066561b4bd8a2b825c494145b43f53b
+          ref: 88d5b6023652ba30ed0b03cb82350a331a4cfdad
           path: .t3-tap
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

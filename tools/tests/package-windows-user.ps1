@@ -215,9 +215,12 @@ try {
             [Environment]::GetEnvironmentVariable('Path','User') -ne $beforePath) {
             throw "WinGet x86 denial failed: $app"
         }
-        $null = Invoke-Native -Step "winget-install-$app" -File $winget -Arguments @(
-            'install','--manifest',$manifest,'--scope','user','--architecture','x64',
+        $installArguments = @('install','--manifest',$manifest,'--architecture','x64',
             '--accept-package-agreements','--accept-source-agreements','--disable-interactivity')
+        # Check the documented default for Patronus and explicit per-user selection
+        # for the second app. Fresh-phase paths and hashes must prove user scope.
+        if ($app -eq 'lumen') { $installArguments += @('--scope','user') }
+        $null = Invoke-Native -Step "winget-install-$app" -File $winget -Arguments $installArguments
     }
     $null = Invoke-Native -Step 'fresh-winget' -File 'powershell.exe' -Arguments @(
         '-NoProfile','-File',"$Work/user.ps1",'-Work',$Work,'-Phase','Fresh','-Manager','winget')

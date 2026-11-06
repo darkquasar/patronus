@@ -77,7 +77,7 @@ activation. Completion of the review correction and native Windows evidence rema
 required before T3 acceptance:
 
 1. Make the exact accepted tap commit
-   `212e2f8eb066561b4bd8a2b825c494145b43f53b` available in
+   `88d5b6023652ba30ed0b03cb82350a331a4cfdad` available in
    `darkquasar/homebrew-tap` on `distribution-control`. That repository is currently
    initially empty; the authorized initial push established `distribution-control` as its default branch.
    This exposes T3 tooling, not published formulae or packages.
@@ -101,6 +101,11 @@ are parent-verified and are not automatically independently re-reviewed. The new
 identified native WinGet schema-header issue received the owner's separate tap
 correction approval. The renderer now emits each official schema header;
 canonical-byte validation rejects missing or modified headers.
+The owner also approved omitting unsupported `Scope` metadata for portable WinGet
+installers after native validation rejected it. The exact-field validator rejects
+any added Scope value. Native checks retain strict validation, test Patronus with
+the default install command and Lumen with explicit `--scope user`, and require
+both commands to resolve to their exact frozen binaries under per-user directories.
 
 Testing strategy: `focused-postcheck`, because this change adds native test
 procedures and workflow wiring without changing package or installer behavior.
