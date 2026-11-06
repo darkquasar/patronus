@@ -1,0 +1,53 @@
+# T3 staging only. PR events work before this file exists on main.
+name: package-windows-validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/package-windows-validation.yml
+      - tools/tests/package-windows-*
+      - tools/tests/install-checksum-test.ps1
+      - tools/install.ps1
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    # Bounded to this implementation PR; no recurring architecture matrix.
+    if: github.head_ref == 'feat/package-distribution' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh -NoLogo -NoProfile -File {0}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: darkquasar/homebrew-tap
+          ref: 212e2f8eb066561b4bd8a2b825c494145b43f53b
+          path: .t3-tap
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12.11'
+      - name: Prepare and check Windows packages
+        run: ./tools/tests/package-windows-check.ps1 -TapRoot "$PWD/.t3-tap" -Out "$env:RUNNER_TEMP/package-windows"
+      - name: Retain native logs, candidates and identities
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: package-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/package-windows/*.json
+            ${{ runner.temp }}/package-windows/*.log
+            ${{ runner.temp }}/package-windows/*.txt
+            ${{ runner.temp }}/package-windows/fixtures
+            ${{ runner.temp }}/package-windows/source
+            ${{ runner.temp }}/package-windows/winget-logs
+          if-no-files-found: error
+          retention-days: 14
