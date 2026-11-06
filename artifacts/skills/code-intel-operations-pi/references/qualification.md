@@ -9,10 +9,10 @@ qualification. No live install, service lifecycle or graph build follows here.
 
 ## QUAL-1 — Select exact inputs and authority
 
-At the source checkout, Q's operator uses `scripts/qualification/pi-native/evidence/README.md`,
+At the source checkout, Q's operator uses `tools/qualification/pi-native/evidence/README.md`,
 `record-format.md`, `cases.json` and `templates/qualification.json` (QP-01),
-`scripts/qualification/pi-native/reference/pi-delivery.md` (DP-07), and QP-02's `candidate-dispositions.md` and candidate
-dossiers under `scripts/qualification/pi-native/evidence/candidates/`. These source paths are handoff
+`tools/qualification/pi-native/reference/pi-delivery.md` (DP-07), and QP-02's `candidate-dispositions.md` and candidate
+dossiers under `tools/qualification/pi-native/evidence/candidates/`. These source paths are handoff
 inputs, not assumed files inside an installed skill. Q owns its later operational
 runbook and evidence; C owns base role Markdown, which this overlay never edits.
 
