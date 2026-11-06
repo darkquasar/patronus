@@ -30,6 +30,9 @@ The runner administrator registers pinned WinGet and enables `LocalManifestFiles
 with the machine policy, so it reaches the separate test user's SID. A newly created account belongs only to Users and runs
 the acceptance script through a limited scheduled task. The script verifies the
 actual token is non-admin, lacks symlink privilege, and Developer Mode is off.
+The disposable account receives the batch-logon right required to start its task;
+existing assignees are preserved and an explicit denial is never removed. This is
+CI host setup, not a package consumer prerequisite.
 WinGet and Scoop installs then run under that identity. No policy-bypass flags are
 used; Windows PowerShell's normal `RemoteSigned` policy is set explicitly and asserted
 for the acceptance identity. The pinned Scoop source is

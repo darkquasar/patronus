@@ -89,6 +89,25 @@ try {
     $user = New-LocalUser -Name $name -Password $secure -Description 'Disposable T3 normal-user acceptance'
     $usersGroup = Get-LocalGroup -SID 'S-1-5-32-545'
     Add-LocalGroupMember -Group $usersGroup -Member $user
+    # Password-based tasks need this normal logon right; no administrator or
+    # symlink privilege is granted. Preserve all existing assignees and denials.
+    & secedit.exe /export /cfg "$Out/logon-before.inf" /areas USER_RIGHTS /log "$Out/logon-export.log"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing batch-logon rights.' }
+    $rights = Get-Content "$Out/logon-before.inf"
+    $sid = $user.SID.Value
+    $deny = @($rights | Where-Object { $_ -match '^SeDenyBatchLogonRight\s*=' }) -join ''
+    foreach ($deniedSid in @($sid,'S-1-5-32-545','S-1-1-0','S-1-5-11')) {
+        if ($deny -match [regex]::Escape($deniedSid)) { throw 'An explicit batch-logon denial applies; refusing to change it.' }
+    }
+    $assignment = @($rights | Where-Object { $_ -match '^SeBatchLogonRight\s*=' })
+    $existing = if ($assignment.Count) { ($assignment[0] -split '=',2)[1].Trim() } else { '' }
+    $assignees = @($existing -split ',' | Where-Object { $_ }) + "*$sid"
+    @('[Unicode]','Unicode=yes','[Version]','signature="$CHICAGO$"','Revision=1',
+        '[Privilege Rights]',('SeBatchLogonRight = ' + ($assignees -join ','))) |
+        Set-Content "$Out/logon-grant.inf" -Encoding Unicode
+    & secedit.exe /configure /db "$Out/logon-policy.sdb" /cfg "$Out/logon-grant.inf" `
+        /areas USER_RIGHTS /log "$Out/logon-configure.log"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not assign the test account its batch-logon right.' }
     & icacls.exe $Out /grant '*S-1-5-32-545:(OI)(CI)M' /T /Q
     if ($LASTEXITCODE -ne 0) { throw 'Could not grant test-user access to staging evidence.' }
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument (
@@ -97,12 +116,12 @@ try {
         -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     & wevtutil.exe sl Microsoft-Windows-TaskScheduler/Operational /e:true
     if ($LASTEXITCODE -ne 0) { throw 'Could not enable task startup diagnostics.' }
+    $taskStarted = Get-Date
     Register-ScheduledTask -TaskName 'patronus-t3' -Action $action -Settings $settings `
         -User "$env:COMPUTERNAME\$name" -Password $password -RunLevel Limited | Out-Null
     $taskRegistered = $true
     Export-ScheduledTask -TaskName 'patronus-t3' | Set-Content "$Out/task-definition.txt"
     $password = $null
-    $taskStarted = Get-Date
     Start-ScheduledTask 'patronus-t3'
     $deadline = (Get-Date).AddMinutes(16)
     $startupDeadline = (Get-Date).AddSeconds(30)
@@ -128,10 +147,16 @@ try {
     Get-Content "$Out/user.log"
 } finally {
     if ($taskRegistered) {
-        if ((Get-ScheduledTask 'patronus-t3').State -eq 'Running') { Stop-ScheduledTask 'patronus-t3' }
+        if ((Get-ScheduledTask 'patronus-t3').State -in @('Running','Queued')) { Stop-ScheduledTask 'patronus-t3' }
         Get-ScheduledTaskInfo 'patronus-t3' | Format-List | Out-String | Set-Content "$Out/task.txt"
-        Get-ScheduledTask 'patronus-t3' | Select-Object TaskName,State,Principal,Settings |
-            ConvertTo-Json -Depth 6 | Set-Content "$Out/task-state.json"
+        $finalTask = Get-ScheduledTask 'patronus-t3'
+        [ordered]@{
+            task = $finalTask.TaskName; state = $finalTask.State.ToString()
+            user = $finalTask.Principal.UserId; logonType = $finalTask.Principal.LogonType.ToString()
+            runLevel = $finalTask.Principal.RunLevel.ToString()
+            demandStart = $finalTask.Settings.AllowDemandStart
+            disallowOnBattery = $finalTask.Settings.DisallowStartIfOnBatteries
+        } | ConvertTo-Json | Set-Content "$Out/task-state.json"
         Get-WinEvent -FilterHashtable @{
             LogName = 'Microsoft-Windows-TaskScheduler/Operational'; StartTime = $taskStarted.AddSeconds(-5)
         } -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'patronus-t3' } |

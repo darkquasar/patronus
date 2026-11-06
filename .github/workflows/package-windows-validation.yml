@@ -48,6 +48,7 @@ jobs:
             ${{ runner.temp }}/package-windows/*.json
             ${{ runner.temp }}/package-windows/*.log
             ${{ runner.temp }}/package-windows/*.txt
+            ${{ runner.temp }}/package-windows/*.inf
             ${{ runner.temp }}/package-windows/fixtures
             ${{ runner.temp }}/package-windows/source
             ${{ runner.temp }}/package-windows/winget-logs
