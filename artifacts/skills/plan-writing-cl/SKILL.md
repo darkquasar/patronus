@@ -57,9 +57,10 @@ implement, one plan per spec: the plan takes the same `<stream>` prefix as the
 never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml`
 yet, create one (see the spec-writing-cl skill's "Folder layout and metadata"
 for the shape). Preserve `research:`, other streams, `spec:` and recorded work
-references. Respect actual repository tracking/ignore policy; authoring grants no
-commit, ignore-rule change or publication. User preferences for plan location
-override this default.
+references. Validate both directions: every named research/spec/plan file exists
+and every `*-spec.md` / `*-plan.md` in the folder is named. Respect actual
+repository tracking/ignore policy; authoring grants no commit, ignore-rule change
+or publication. User preferences for plan location override this default.
 
 ## Scope Check
 
@@ -155,6 +156,9 @@ neighboring tasks rely on. Fold setup, configuration, scaffolding and
 documentation into the deliverable that needs them. Split only where interfaces,
 ownership and evidence can be checked independently, not to manufacture reviewer
 gates. A task is the smallest independently verifiable behavior-sized deliverable.
+Head each task `### Task N: <name>`; plan-execute-cl's `task-brief` script selects
+a task's brief by that heading. Execution graph node IDs reference the task number
+(`T1`) or a short label stated in the heading, such as `### Task 1 (H1): query`.
 
 Use the installed tdd-cl defaults and record strategy and rationale in the plan.
 Explicit test-first requests and required project checks govern. Critical

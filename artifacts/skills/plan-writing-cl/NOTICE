@@ -1,12 +1,13 @@
-This artifact ships as "plan-writing" and vendors the "writing-plans" skill from obra/superpowers.
+This artifact ships as "plan-writing-cl" and derives from the "writing-plans" skill of obra/superpowers.
 
 Vendored file (upstream path):
   - skills/writing-plans/SKILL.md
 
-References to un-vendored sibling skills (subagent-driven-development,
-using-git-worktrees, finishing-a-development-branch) were softened to optional
-notes so this artifact stands alone; the default plan-save path was changed
-from `docs/superpowers/plans/` to the research-effort spec folder
+The upstream body was replaced rather than edited in place. References to
+un-vendored upstream sibling skills (subagent-driven-development,
+using-git-worktrees, finishing-a-development-branch) are gone; the Patronus
+companions plan-review-cl, plan-execute-cl, receiving-code-review-cl and tdd-cl
+take their place. The default plan-save path is the research-effort spec folder
 `docs/specs/NN-slug/<stream>-plan.md` (co-located with its spec, tracked via meta.yaml).
 
 The body is a Patronus behavioral adaptation aligned with the Codex, Pi and
