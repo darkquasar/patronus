@@ -8,7 +8,14 @@ using-git-worktrees, finishing-a-development-branch) were softened to optional
 notes so this artifact stands alone; the default plan-save path was changed
 from `docs/superpowers/plans/` to the research-effort spec folder
 `docs/specs/NN-slug/<stream>-plan.md` (co-located with its spec, tracked via meta.yaml).
-The planning discipline is otherwise a faithful copy.
+
+The body is a Patronus behavioral adaptation aligned with the Codex, Pi and
+OpenCode siblings: plans fix owned files, consumed/produced interfaces with
+exact signatures, dependencies, test strategy and commands, and leave test and
+implementation bodies to the implementer under tdd-cl. The upstream task
+template with complete code in every step, its "No Placeholders" code mandate
+and the zero-context-engineer framing were removed; the File Structure and
+Bite-Sized Task Granularity sections (two to five minute steps) are retained.
 
 Upstream: https://github.com/obra/superpowers
 Commit:   896224c4b1879920ab573417e68fd51d2ccc9072

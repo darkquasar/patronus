@@ -9,44 +9,57 @@ Use the owner's selected destination and established project layout throughout.
 Any `docs/specs/NN-slug/` path below is a default example, not a location
 requirement; preserve the selected effort's metadata and stream relationships.
 
-## Overview
+Read the approved spec, task brief, decisions, project instructions and actual
+source seams first. After context loss, reread inputs and the latest saved
+outputs, verify their hashes and reconcile completed work before retrying. Plan
+writing authors plans, not replacement specs or production code: the plan fixes
+what each task owns, produces and consumes, and the implementer writes the code
+under tdd-cl.
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. Explicit test strategy. Commits only with separate authority.
+## Stage grant and spec gate
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+Research, authorship, review, planning, execution, integration, publication and
+cleanup have separate grants. Continue within existing approval's root, files and
+applicable resource limits; ask the owner for material unresolved choices or
+changed targets and wait for the reply. Skill completion is not permission to
+execute, commit or publish.
 
-**Announce at start:** "I'm using the plan-writing-cl skill to create the implementation plan."
+plan-writing-cl is **plan-only**. It does not author specs. Before planning
+anything, confirm a spec exists for this stream: a plan is a promise to build a
+spec, and there is nothing to promise without one, except an explicitly
+owner-declined spec retained in the brief.
 
-## Spec Gate (run this FIRST)
+Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`**
+(`streams[].spec:`) **and resolves on disk.** A folder can have a `meta.yaml`
+and a `research.md` but no spec, and that still redirects.
 
-plan-writing-cl is **plan-only**. It does not author specs. Before planning anything, confirm a spec
-exists for this stream, a plan is a promise to build a spec, and there is nothing to promise
-without one, except an explicitly owner-declined spec retained in the brief.
+- **Spec explicitly declined by the owner**: retain the decision and plan against
+  the accepted requirements. Preserve `spec: null` and `spec_declined:` and
+  disclose that coverage against a spec cannot be checked.
+- **No spec named, or the named file is absent (without explicit decline)**:
+  **STOP.** Suggest spec-writing-cl for this stream. Do not synthesize a spec,
+  infer one from `research.md` or reverse-engineer one from an orphan plan.
+- **A `<stream>-plan.md` already exists for this stream**: do not silently
+  overwrite reviewed or edited work. Report it and obtain revision or
+  supersession authority first. With a spec present, ask revise-vs-supersede;
+  without one, apply the two spec cases above.
+- **Spec present (no plan yet)**: plan normally (the rest of this skill).
 
-Check for a `<stream>-spec.md` that is **named in the folder's `meta.yaml`** (`streams[].spec:`)
-**and resolves on disk.** This is a check for the SPEC specifically, a folder can have a
-`meta.yaml` and a `research.md` but no spec, and that still redirects. Do not read the "create
-`meta.yaml` if absent" step below as license to proceed without a spec.
+Spec ownership stays with spec-writing-cl. plan-writing-cl sets `streams[].plan:`
+only, never `streams[].spec:`.
 
-- **Spec explicitly declined by the owner** → retain the decision and plan against
-  the accepted requirements. Do not invent a spec or require renewed consent.
-- **No spec named, or the named file is absent (without explicit decline)** → **STOP.** Suggest `spec-writing-cl` for this
-  stream: "This stream has no spec. Author it with `spec-writing-cl` first, it reads the
-  research (if any) and specifies what to build; I'll plan from that." Do NOT synthesize a spec, do
-  NOT infer one from `research.md`, and do NOT proceed to planning.
-- **A `<stream>-plan.md` already exists for this stream** (an older `research-team-cl` or a prior run
-  may have written one) → do NOT silently overwrite reviewed or edited work. Report it and ask:
-  revise in place, or supersede? And note the two spec cases:
-  - **plan exists + its spec exists** → ask revise-vs-supersede as above.
-  - **plan exists but NO spec** → with explicit spec-decline, use accepted requirements;
-    otherwise redirect to `spec-writing-cl`. Do not reverse-engineer a spec.
-- **Spec present (no plan yet)** → plan normally (the rest of this skill).
+## Folder layout
 
-Spec ownership stays with `spec-writing-cl`. plan-writing-cl sets `streams[].plan:` only, never
-`streams[].spec:`.
-
-**Save plans to:** `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they implement, one plan per spec (find the `<stream>-spec.md` you're planning from; your plan takes the same `<stream>` prefix). After writing it, fill in **your stream's** `plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`), never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml` yet, create one (see the `spec-writing-cl` skill's "Folder layout and metadata" for the shape). Respect actual repository tracking/ignore policy; authoring grants no commit, ignore-rule change or publication. (User preferences for plan location override this default.)
-- (User preferences for plan location override this default)
+Save plans to `docs/specs/NN-slug/<stream>-plan.md`, alongside the spec they
+implement, one plan per spec: the plan takes the same `<stream>` prefix as the
+`<stream>-spec.md` it is planned from. After writing it, fill in **your stream's**
+`plan:` in the folder's `meta.yaml`, name the file (`plan: <stream>-plan.md`),
+never assert `plan: true`, and bump `updated:`. If the folder has no `meta.yaml`
+yet, create one (see the spec-writing-cl skill's "Folder layout and metadata"
+for the shape). Preserve `research:`, other streams, `spec:` and recorded work
+references. Respect actual repository tracking/ignore policy; authoring grants no
+commit, ignore-rule change or publication. User preferences for plan location
+override this default.
 
 ## Scope Check
 
@@ -105,24 +118,93 @@ permission; ordinary relevant test choices remain agent-owned.
 
 ## File Structure
 
-Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
+Before defining tasks, map out which files will be created or modified and what
+each one is responsible for. This is where decomposition decisions get locked in.
 
-- Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
-- You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
-- Files that change together should live together. Split by responsibility, not by technical layer. This is about file organization: it doesn't forbid horizontal plan slicing (see Plan Slicing) and isn't the TDD "horizontal slices" anti-pattern.
-- In existing codebases, follow established patterns. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
+- Design units with clear boundaries and well-defined interfaces. Each file
+  should have one clear responsibility.
+- Prefer smaller, focused files over large ones that do too much: an
+  implementer reasons best about code it can hold in context at once.
+- Files that change together should live together. Split by responsibility,
+  not by technical layer. This is about file organization: it does not forbid
+  horizontal plan slicing (see Slicing) and is not the TDD "horizontal slices"
+  anti-pattern.
+- In existing codebases, follow established patterns. If the codebase uses
+  large files, do not unilaterally restructure, but if a file you are modifying
+  has grown unwieldy, including a split in the plan is reasonable.
 
-This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
+This structure informs the task decomposition. Each task produces self-contained
+changes that make sense independently.
 
-## Task Right-Sizing
+## Write a buildable plan
 
-A task is the smallest independently verifiable behavior-sized deliverable. When drawing task boundaries: fold setup,
-configuration, scaffolding, and documentation steps into the task whose
-deliverable needs them; split where interfaces, ownership or acceptance can be checked independently,
-not to manufacture reviewer gates. Each task ends with an
-independently testable deliverable.
+Start with the goal, source spec and its hash (or the explicit owner-declined
+exception), chosen architecture with its consequential rationale, tech stack, the
+`Slicing:` value and exact global constraints copied verbatim from the spec:
+version floors, dependency limits, naming and copy rules, platform requirements.
+Every task's requirements implicitly include the global constraints.
 
-## Plan Slicing
+Map every requirement ID to a task and acceptance check. Each task names its
+owned files with exact paths and source anchors, the interfaces it consumes from
+predecessors and produces for successors (exact names, parameter and return
+types), each predecessor labelled `start: Task M` (accepted bytes needed before
+work) or `join: Task M` (needed only at integration or verification), and an
+independently testable deliverable. A task's implementer sees only their own
+task; the consumed/produced block is how they learn the names and types
+neighboring tasks rely on. Fold setup, configuration, scaffolding and
+documentation into the deliverable that needs them. Split only where interfaces,
+ownership and evidence can be checked independently, not to manufacture reviewer
+gates. A task is the smallest independently verifiable behavior-sized deliverable.
+
+Use the installed tdd-cl defaults and record strategy and rationale in the plan.
+Explicit test-first requests and required project checks govern. Critical
+auth/secrets, ownership, concurrency/isolation/settlement, migration/removal and
+reproducible behavioral bugs require public-behavior TDD. Other features and
+behavior changes default to TDD; a different strategy needs a concrete reason
+and owner agreement unless already approved. Use `critical-tdd` for short
+test-first slices: invented-data intended RED, minimum GREEN and relevant
+negative/legacy regressions. Pure behavior-preserving refactors work from green
+coverage and characterize uncertain legacy behavior first. Nonbehavioral
+prose/manifests/mechanical wiring without a changed safety invariant use
+`focused-postcheck`, not manufactured reds or prose-substring tests. Omission
+alone applies these defaults and records the selection, without another approval
+or ledger; genuine classification, conflict or exception ambiguity needs owner
+direction. Keep existing safety tests. Tests do not admit successor reviewers.
+
+Name real signatures, paths, commands and expected results, never vague "handle
+edge cases" steps, "similar to Task N" or references to interfaces no task
+defines. Describe each test by the behavior it checks and the invented data it
+uses; the implementer writes the test and the implementation body under tdd-cl.
+Include code only where it is already known and binding, such as a required
+public signature, format or command. Record consequential unresolved decisions
+as affected-outcome blockers; own delegated routine design instead of inventing
+owner approval. Commits are optional steps only under a separate Git grant.
+
+Include negative paths, migration/rollback, ownership, applicable host/resource
+limits and a durable handoff. Retain the required fresh independent whole-change
+implementation review even for small deliveries; only the owner may explicitly
+waive it. Earlier boundary review requires a named changed safety/compatibility
+invariant or irreversible boundary with its own acceptance point and
+consequence. Using an existing shared framework alone is insufficient. A saved
+local plan is not evidence that another checkout can read it. The coordinator
+binds source/base, output paths, authority and dependencies in the existing
+project work record; there is no mandatory foreign-host mission or ticket API.
+
+## Bite-Sized Task Granularity
+
+Each step inside a task is one action of two to five minutes, named by what the
+implementer does and checks, not by code the plan pre-writes:
+
+- "Write the failing test for <behavior> with <invented data>" is a step
+- "Run it and confirm the intended public-behavior failure" is a step
+- "Implement the minimal code to make it pass" is a step
+- "Run the focused checks and confirm they pass" is a step
+- "Capture commands, exits and changed-byte evidence" is a step; commit only if
+  separately authorized
+
+Each step states the exact command where one exists and the expected outcome.
+
+## Slicing
 
 Record the strategy once in the plan header: `Slicing: horizontal (default)` or
 `Slicing: vertical tracer (user-selected)`. Horizontal (tasks by responsibility
@@ -141,10 +223,10 @@ slicing** (red-green-refactor loops inside each task, owned by tdd-cl and
 unchanged) and **parallel ownership** (exact disjoint paths and accepted inputs).
 Neither slicing strategy makes overlapping writers safe. Tasks stay behavior-sized.
 
-## Execution Graph
+## Execution graph
 
 Every plan has a `## Execution graph` section rendered from the tasks' existing
-`Consumes:` labels. It is not a second task list, runtime admission, status,
+`start`/`join` labels. It is not a second task list, runtime admission, status,
 colors, a YAML ledger or input to any engine. A one-task or purely serial plan
 uses one line, such as `T1 -> J -> C -> R`. Otherwise draw a compact ASCII graph
 (at most 100 columns, spaces only) with node IDs matching task headings: serial
@@ -163,126 +245,6 @@ SERIAL     [J integrate H0..H4] -> [C fresh checks] -> [R one review]
 
 Reuse an accepted graph and revise only changed seams under existing revision
 authority.
-
-## Bite-Sized Task Granularity
-
-**Each step is one action (2-5 minutes):**
-- "Write the failing test" - step
-- "Run it to make sure it fails" - step
-- "Implement the minimal code to make the test pass" - step
-- "Run the tests and make sure they pass" - step
-- "Capture results" - step; commit only if separately authorized
-
-## Plan Document Header
-
-**Every plan MUST start with this header:**
-
-```markdown
-# [Feature Name] Implementation Plan
-
-> **For agentic workers:** The coordinator runs plan-execute-cl (serial or
-> parallel-ready tasks) from ownership/dependencies. Steps are intent, not a
-> second mutable progress system. Read the accepted brief and current source.
-
-Slicing: horizontal (default)
-
-**Goal:** [One sentence describing what this builds]
-
-**Source spec:** [Actual accepted file/hash, or explicit owner-declined exception]
-
-**Architecture:** [Concrete chosen approach and consequential rationale]
-
-**Tech Stack:** [Key technologies/libraries]
-
-## Global Constraints
-
-[The spec's project-wide requirements, version floors, dependency limits,
-naming and copy rules, platform requirements, one line each, with exact
-values copied verbatim from the spec. Every task's requirements implicitly
-include this section.]
-
-## Execution graph
-
-[`T1 -> J -> C -> R` for a one-task or purely serial plan, otherwise the
-compact graph described in Execution Graph.]
-
----
-```
-
-For critical behavioral bugs/boundaries use public RED/GREEN and relevant negative/
-legacy regressions through tdd-cl. Other features/behavior default to TDD; when a
-strategy is absent apply and record that default, not a manufactured stop.
-Exceptions need a concrete reason and owner agreement unless already approved.
-Pure refactors stay green; characterize uncertain legacy first. Nonbehavioral
-prose/manifests use focused postchecks. Real classification/exception ambiguity
-needs an owner decision. Adapt the example; do not force a red cycle on prose.
-
-## Task Structure
-
-````markdown
-### Task N: [Component Name]
-
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
-
-**Requirement/check links:** [Intended contribution and independently checkable outcome]
-
-**Interfaces:**
-- Consumes: [what this task uses from earlier tasks, exact signatures; label
-  each predecessor `start: Task M` (accepted bytes needed before work) or
-  `join: Task M` (needed only at integration or verification)]
-- Produces: [what later tasks rely on, exact function names, parameter
-  and return types. A task's implementer sees only their own task; this
-  block is how they learn the names and types neighboring tasks use.]
-
-- [ ] **Step 1: Write the failing test**
-
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: intended public-behavior failure, not a missing function/setup error
-
-- [ ] **Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-- [ ] **Step 5: Capture actual focused checks and changed-byte evidence**
-
-Record commands/options, actual exits, readable logs and checked inputs.
-Commit only if a separate grant includes it.
-````
-
-## No Placeholders
-
-Every step must contain the actual content an engineer needs. These are **plan failures**, never write them:
-- "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate error handling" / "add validation" / "handle edge cases"
-- "Write tests for the above" (without actual test code)
-- "Similar to Task N" (repeat the code, the engineer may be reading tasks out of order)
-- Steps that describe what to do without showing how (code blocks required for code steps)
-- References to types, functions, or methods not defined in any task
-
-## Remember
-- Exact file paths always
-- Complete code in every step, if a step changes code, show the code
-- Exact commands with expected output
-- DRY, YAGNI, behavior-sized verification and separately authorized commits
 
 ## Inline author check
 
