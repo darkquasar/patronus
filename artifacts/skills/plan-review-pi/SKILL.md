@@ -15,7 +15,8 @@ One independent written-plan reviewer is required, including for one task, unles
 
 Check actual spec-to-plan fidelity, inherited constraints versus planner choices,
 requirement/task/check links, vocabulary/boundary/invariant preservation and
-reasoned start/join deliverables. Runtime order alone is not build order; inspect
+reasoned start/join deliverables, plus the recorded or defaulted `Slicing:` value
+against the task text. Runtime order alone is not build order; inspect
 accepted inputs, ownership, isolation and settlement before accepting parallelism.
 Review unsupported verification burdens/gates against recorded owner policy;
 subjective comparison ratings alone do not block. Report feasibility without
