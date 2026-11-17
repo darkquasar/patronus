@@ -96,7 +96,7 @@ publisher. No Go compiler is required for release binaries.
 
 ## Executable packages: publication pending
 
-Homebrew and Scoop live publication and full lifecycle evidence are **pending**.
+Homebrew and Scoop live publication is **pending**.
 WinGet submission, indexing and default-source installation are **pending**.
 The following commands become usable when their channel is published. Local
 synthetic installs/schema checks do not prove that a live release is available.
@@ -106,11 +106,33 @@ Install the manager separately on a host it supports. Homebrew selects macOS
 or Linux amd64/arm64; Scoop and WinGet select Windows amd64/arm64. Patronus does
 not compile during package installation. The manager's own prerequisites still
 apply, including Linuxbrew bootstrap/toolchain requirements where applicable.
-Static architecture mappings are covered; Windows ARM and Linux amd64 native
-execution and composed lifecycle checks remain pending. Prior synthetic macOS
-ARM64, Linux ARM64 and Windows x64 checks cover only their recorded test scope.
+
+Before a channel publishes a version, the tap's CI installs that version's
+package on GitHub-hosted runners, checks `patronus --version` and uninstalls
+it: Homebrew on macOS arm64 and Intel and on Linux x86_64 and arm64, Scoop and
+WinGet on Windows x64 and Arm64. A channel whose check fails does not publish
+that version and keeps its previous one. These checks have passed on all six
+platforms with synthetic test binaries; checks of a real release are
+**pending** until the first release is published.
 
 ### Homebrew
+
+Homebrew installs Patronus from a prebuilt bottle, hosted on the tap's GitHub
+Releases, when one matches the host:
+
+| Host | Bottle | Command Line Tools |
+|---|---|---|
+| macOS 15 (Sequoia) or later, Apple silicon | `arm64_sequoia` | Not needed |
+| macOS 15 (Sequoia) or later, Intel | `sequoia` | Not needed |
+| Linux x86_64 | `x86_64_linux` | Not applicable |
+| Linux arm64 | `arm64_linux` | Not applicable |
+| macOS older than 15 | None | Current Xcode Command Line Tools required |
+
+macOS 15 is the oldest bottled version on both architectures. On an older macOS
+release Homebrew has no matching bottle and falls back to a source install. That
+install still only copies the release executable, but Homebrew's source path
+requires current Xcode Command Line Tools first. Bottles exist only after the
+first bottled release is published. The commands below are the same either way.
 
 ```sh
 brew tap darkquasar/tap
@@ -182,9 +204,11 @@ winget uninstall --id darkquasar.Patronus --exact
 
 The portable manifests intentionally omit unsupported `Scope` metadata under
 schema 1.10.0. The accepted Windows x64 synthetic check observed default per-user
-installation and a separate explicit per-user example. Actual ARM runtime and
-live-source behavior remain pending; do not add elevation or hooks to work around
-an unverified client behavior.
+installation and a separate explicit per-user example. The tap's hosted checks
+install from local manifests as a normal user on Windows x64 and Arm64; those
+installs do not show that a version is available in Microsoft's default source.
+Live-source behavior remains pending; do not add elevation or hooks to work
+around an unverified client behavior.
 
 ## PATH coexistence and manual removal
 

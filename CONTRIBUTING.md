@@ -139,8 +139,9 @@ coexistence are in [installation](docs/installation.mdx).
 
 **Publication/commissioning pending.** Activation requires owner-approved producer
 code on `main` and the configured distribution controls. Native catalogue branches,
-GitHub Apps, environment restrictions, server-side branch-denial probes, real
-publication and composed lifecycle checks still need commissioning. The accepted
+GitHub Apps, environment restrictions, server-side branch-denial probes, the tap's
+`<app>-*` release tag rulesets and immutable releases, and real publication still
+need commissioning. The accepted
 Windows x64 synthetic run is [42178401448](https://github.com/darkquasar/patronus/actions/runs/42178401448);
 it does not establish live availability or full upgrade/removal preservation.
 WinGet stays pending until the exact version is observed in Microsoft's default
@@ -167,15 +168,29 @@ are isolated by role; the authority prepare job also needs a separate producer
 Actions/Contents-read App. A secret-free Windows source-query job observes the
 registered WinGet ID; its actual runtime/client availability remains pending.
 
+Homebrew ships prebuilt bottles. They wrap the exact release executables and
+are hosted on the tap's GitHub Releases under tag `<app>-<version>` (for example
+`patronus-2.7.1`), never on the Patronus release. Between authority and
+publisher, the tap's unprivileged `native-checks` job (no environment, no keys)
+builds the four bottles when none are published yet, then runs the
+[per-release native package checks](#per-release-native-package-checks).
+The publisher uploads the checked bottles, reads them back from their public
+URLs and only then commits the bottled formula. A failed check stops only its
+own channel.
+
 ```text
 +----------------+ ~> workflow_run   +------------------+ => dispatch   +----------------+
 | Release [CI]   | ~~~~~~~~~~~~~~~~> | Main dispatcher  | ============> | Tap authority  |
 +----------------+                   +------------------+               +----------------+
-                                                                               | => record_ref
-                                                                               v
-                                                                        +----------------+
-                                                                        | Tap publisher  |
-                                                                        +----------------+
+                                                                          |            |
+                                                     => record_ref (each) |            |
+                                                                          v            v
+                                                         +----------------+  +----------------+
+                                                         | Native checks  |  | Tap publisher  |
+                                                         | [tap, no keys] |  +----------------+
+                                                         +----------------+          ^
+                                                                 | ~> artifacts      |
+                                                                 +-------------------+
 ```
 
 Receipt capture/upload is deliberately non-fatal to executable release
@@ -250,10 +265,10 @@ pwsh -NoProfile -File tools/tests/install-checksum-test.ps1
 ```
 
 Missing `pwsh` blocks that local check; a Unix run does not establish native
-Windows User PATH behavior. The separate bounded `package-windows-validation`
-workflow and its [procedure](tools/tests/package-windows-validation.md) retain
-the accepted synthetic Windows evidence. Do not turn this into a recurring
-architecture matrix or infer live indexing from manifest validation.
+Windows User PATH behavior.
+
+Per-release native package checks run in the tap; see
+[Per-release native package checks](#per-release-native-package-checks).
 
 `--out` must be an empty directory outside the checkout. The scripts do not take
 a resource lock; a caller that shares a machine wraps them in its own `flock`.
@@ -276,6 +291,48 @@ The two gates prove packaging and delivery mechanics only. Artifact behaviour
 build tag, and native harness loading, routing, hooks and trust) is deferred and
 **not run** in either gate. Its retained historical results are not current
 acceptance, and a passing gate does not mark any native row passed.
+
+### Per-release native package checks
+
+Per-release native package checks live in the tap, not in this repository.
+Every release dispatch runs the tap's `.github/workflows/native-checks.yml` on
+GitHub-hosted runners before any channel publishes:
+
+| Manager | Runner labels | Steps |
+|---|---|---|
+| Homebrew | `macos-15`, `macos-15-intel`, `ubuntu-24.04`, `ubuntu-24.04-arm` | Validate, pour the bottle, `patronus --version`, `brew test`, uninstall |
+| Scoop and WinGet | `windows-2025`, `windows-11-arm` | Validate, install as an ordinary user, `patronus --version`, uninstall |
+
+Results are the run's `native-checks` workflow artifact (`native-checks.json`),
+and each channel result carries a `native_checks` reference (run and digest).
+A failing platform stops only its channel, which reports
+`failed: native-check-failed` with the failing platforms. A platform without a
+hosted runner would be recorded `statically-mapped` (`no-hosted-runner`), never
+as tested; currently all six run.
+
+Tap pull requests that touch `distribution/**` or `.github/workflows/**` run the
+same matrix in fixture mode, with synthetic binaries served on loopback. Labels
+add more:
+
+| PR label | Adds |
+|---|---|
+| `native-lifecycle` | The one-time upgrade and preservation acceptance (PD-13): bottled Homebrew on macOS arm64, Scoop and WinGet on Windows x64 |
+| `native-negative` | Wrong-architecture and wrong-version candidates, which must fail |
+| `native-second-app` | The same matrix for the second fixture app (Lumen) |
+
+Repeat the lifecycle acceptance only when a package shape changes, for example
+formula to cask or bottled to unbottled. The fixture-mode matrix, lifecycle,
+negatives and second-app checks passed in tap run
+[44079561564](https://github.com/darkquasar/homebrew-tap/actions/runs/44079561564);
+the first real release check is pending. The procedure is in the tap's
+[native check README](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/distribution/tests/native/README.md),
+which becomes available with the runbook candidates.
+
+This repository's bounded `package-windows-validation` workflow and its
+[procedure](tools/tests/package-windows-validation.md) stay as the historical
+T3 synthetic Windows evidence. That workflow runs only for the package
+distribution pull request and is not a per-release check. Do not infer live
+WinGet indexing from manifest validation or a local-manifest install.
 
 ### Pi Python checks
 
