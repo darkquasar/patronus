@@ -1,7 +1,24 @@
 ---
 title: "Install Patronus"
-description: "Install the CLI on macOS, Linux or Windows."
+description: "Install, upgrade and remove the CLI; preserve your environment content."
 ---
+
+An **executable package (Brew/Scoop/WinGet)** installs the Patronus CLI. A
+Patronus **content package** supplies environment files through the separate
+content catalogue. `patronus install`, `patronus update` and `patronus remove`
+manage content, not the executable. Installing or removing the executable does
+not deploy/remove content, edit harness configuration or erase Patronus state.
+
+```text
++-------------------+  => binary/link  +------------------+
+| Executable package| ===============> | Patronus CLI     |
++-------------------+                  +------------------+
+                                               | => explicit content command
+                                               v
+                                      +------------------+
+                                      | Content/harness  |
+                                      +------------------+
+```
 
 ## Release binary
 
@@ -12,6 +29,7 @@ otherwise `~/.local/bin`.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.sh | sh
 patronus --help
+patronus --version
 ```
 
 To pin a release, pass `--version` (or set `PATRONUS_VERSION`):
@@ -20,17 +38,177 @@ To pin a release, pass `--version` (or set `PATRONUS_VERSION`):
 curl -fsSL https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.sh | sh -s -- --version v2.7.0
 ```
 
-On Windows, use the PowerShell installer. Set `PATRONUS_VERSION` first to pin a
-release.
+On Windows, use the PowerShell installer. It installs under
+`%LOCALAPPDATA%\Programs\patronus` and adds that directory to the user PATH.
+Open a fresh shell afterward.
 
 ```powershell
 irm https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.ps1 | iex
 patronus --help
+patronus --version
 ```
 
-You can also download the executable for your platform and `checksums.txt` from
-[GitHub Releases](https://github.com/darkquasar/patronus/releases).
-Add the installation directory to your `PATH` if needed.
+Set `PATRONUS_VERSION` first to pin a release:
+
+```powershell
+$env:PATRONUS_VERSION = 'v2.7.0'
+irm https://raw.githubusercontent.com/darkquasar/patronus/main/tools/install.ps1 | iex
+Remove-Item Env:PATRONUS_VERSION
+```
+
+Re-running the installer replaces that manual installation with its selected
+version. The default remains GitHub's `latest`, which may differ from the
+executable catalogues' stable policy: for example, GitHub latest could select
+`v2.8.0-docs.1` while the catalogue remains at `v2.8.0`. The manual installers
+still accept suffixed tags; automatic executable packages accept only stable
+`vMAJOR.MINOR.PATCH`, excluding drafts/prereleases and suffixes.
+
+If an installer URL is unavailable, use the direct release downloads below.
+
+## Direct downloads and checksums
+
+Download the executable for your platform and `checksums.txt` from the same
+[GitHub Release](https://github.com/darkquasar/patronus/releases). Existing names
+remain `patronus-darwin-amd64`, `patronus-darwin-arm64`,
+`patronus-linux-amd64`, `patronus-linux-arm64`, `patronus-windows-amd64.exe`
+and `patronus-windows-arm64.exe`. There is no 32-bit x86 executable.
+
+Before renaming or running the download, compare its SHA-256 to its exact entry
+in that release's `checksums.txt`. For example, in a directory containing the
+Linux amd64 download and checksum file:
+
+```sh
+sha256sum patronus-linux-amd64
+# On macOS, use: shasum -a 256 patronus-darwin-arm64
+```
+
+On Windows, choose the matching architecture:
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\patronus-windows-amd64.exe
+```
+
+Stop if the entry is missing or the digest differs. Rename the verified file to
+`patronus` (`patronus.exe` on Windows), make it executable on Unix, and put it
+in your chosen installation directory. Add that directory to PATH if needed.
+Checksums detect mismatched bytes; they do not replace trust in the release
+publisher. No Go compiler is required for release binaries.
+
+## Executable packages: publication pending
+
+Homebrew and Scoop live publication and full lifecycle evidence are **pending**.
+WinGet submission, indexing and default-source installation are **pending**.
+The following commands become usable when their channel is published. Local
+synthetic installs/schema checks do not prove that a live release is available.
+Use direct downloads while waiting.
+
+Install the manager separately on a host it supports. Homebrew selects macOS
+or Linux amd64/arm64; Scoop and WinGet select Windows amd64/arm64. Patronus does
+not compile during package installation. The manager's own prerequisites still
+apply, including Linuxbrew bootstrap/toolchain requirements where applicable.
+Static architecture mappings are covered; Windows ARM and Linux amd64 native
+execution and composed lifecycle checks remain pending. Prior synthetic macOS
+ARM64, Linux ARM64 and Windows x64 checks cover only their recorded test scope.
+
+### Homebrew
+
+```sh
+brew tap darkquasar/tap
+```
+
+On versions supporting tap trust, review the formula and grant item-specific
+trust before installation:
+
+```sh
+brew trust --formula darkquasar/tap/patronus
+```
+
+Use the qualified formula name; whole-tap trust is unnecessary. Item trust also
+permits short-name use on supporting versions. See
+[Homebrew tap trust](https://docs.brew.sh/Tap-Trust).
+
+```sh
+brew install darkquasar/tap/patronus
+patronus --version
+brew update
+brew upgrade darkquasar/tap/patronus
+patronus --version
+brew uninstall darkquasar/tap/patronus
+```
+
+### Scoop
+
+Run in a normal user PowerShell shell; do not use a global/admin installation:
+
+```powershell
+scoop bucket add darkquasar https://github.com/darkquasar/scoop-bucket
+scoop install darkquasar/patronus
+```
+
+Open a fresh shell so PATH includes the user shims, then:
+
+```powershell
+patronus --version
+scoop update
+scoop update patronus
+patronus --version
+scoop uninstall patronus
+```
+
+### WinGet: default-source availability pending
+
+Do not register the GitHub fork as a custom source. After Microsoft accepts the
+owner's browser-submitted PR, confirm the exact intended version appears:
+
+```powershell
+winget show --id darkquasar.Patronus --exact --source winget --versions
+```
+
+A prepared branch, an open PR or a merged PR alone does not prove indexing.
+After the version is observed in the default source:
+
+```powershell
+winget install --id darkquasar.Patronus --exact --source winget
+```
+
+Use a fresh normal user shell, then:
+
+```powershell
+patronus --version
+winget upgrade --id darkquasar.Patronus --exact --source winget
+patronus --version
+winget uninstall --id darkquasar.Patronus --exact
+```
+
+The portable manifests intentionally omit unsupported `Scope` metadata under
+schema 1.10.0. The accepted Windows x64 synthetic check observed default per-user
+installation and a separate explicit per-user example. Actual ARM runtime and
+live-source behavior remain pending; do not add elevation or hooks to work around
+an unverified client behavior.
+
+## PATH coexistence and manual removal
+
+Check which executable runs before switching methods and again after removal:
+
+```sh
+command -v patronus
+type -a patronus
+patronus --version
+```
+
+```powershell
+Get-Command patronus -All
+patronus --version
+```
+
+PATH order can select a manual binary ahead of a manager installation, or expose
+a second copy after uninstall. No automatic migration removes those copies.
+Choose the installation you want, check its full path/version, then voluntarily
+remove only a confirmed manual binary and its now-unneeded PATH entry. The Unix
+installer uses `/usr/local/bin/patronus` or `~/.local/bin/patronus`; the Windows
+installer uses `%LOCALAPPDATA%\Programs\patronus\patronus.exe`. Preserve unrelated
+files and PATH entries. Manager uninstall removes its executable/links only;
+Patronus content, `.patronus` state and harness files remain.
 
 ## Build from source
 

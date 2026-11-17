@@ -128,6 +128,66 @@ delivers, so a reader upgrading the binary knows what they are actually getting.
 
 ## Profiles and the catalog
 
+### Executable packages and content packages
+
+An **executable package (Brew/Scoop/WinGet)** distributes the CLI's existing
+release binaries. A Patronus **content package** belongs to the separate content
+catalogue. Content publication never triggers an executable-package update;
+native packages run no Patronus content lifecycle commands and preserve content,
+harness files and user state. Consumer lifecycle, pinning, checksums and PATH
+coexistence are in [installation](docs/installation.mdx).
+
+**Publication/commissioning pending.** Activation requires owner-approved producer
+code on `main` and the configured distribution controls. Native catalogue branches,
+GitHub Apps, environment restrictions, server-side branch-denial probes, real
+publication and composed lifecycle checks still need commissioning. The accepted
+Windows x64 synthetic run is [42178401448](https://github.com/darkquasar/patronus/actions/runs/42178401448);
+it does not establish live availability or full upgrade/removal preservation.
+WinGet stays pending until the exact version is observed in Microsoft's default
+source, even after PR merge. No npm channel or account is required.
+
+The maintainer runbooks live on the tap's protected control branch:
+[setup](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/setup.md),
+[onboarding](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/onboarding.md)
+and [recovery](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/recovery.md).
+These links become available when the runbook candidates are published.
+They cover owner registration approval, exact Apps/environments/rules, protected
+snapshots, historical baselines, second-app staging and selected-channel retry.
+Only the owner `darkquasar` (ID `28435534`) approves registration/authority and
+cuts releases. CI prepares WinGet branches; the owner submits PRs in the browser
+and follows normal GitHub notifications.
+
+An eligible stable `vMAJOR.MINOR.PATCH` release produces a run/attempt-bound
+`distribution-receipt-<run>-<attempt>` artifact, then the default-branch
+`package-distribution` workflow verifies source/receipt before dispatching
+`distribute.yml` explicitly to `distribution-control`. The controller admits
+the registered dispatcher, fixes the release snapshot in `distribution-records`,
+then a separate publisher reads it back and validates native candidates. Keys
+are isolated by role; the authority prepare job also needs a separate producer
+Actions/Contents-read App. A secret-free Windows source-query job observes the
+registered WinGet ID; its actual runtime/client availability remains pending.
+
+```text
++----------------+ ~> workflow_run   +------------------+ => dispatch   +----------------+
+| Release [CI]   | ~~~~~~~~~~~~~~~~> | Main dispatcher  | ============> | Tap authority  |
++----------------+                   +------------------+               +----------------+
+                                                                               | => record_ref
+                                                                               v
+                                                                        +----------------+
+                                                                        | Tap publisher  |
+                                                                        +----------------+
+```
+
+Receipt capture/upload is deliberately non-fatal to executable release
+publication: normal binaries remain downloadable when packaging reports
+`receipt-unavailable`. Do not rebuild or retag to recover a receipt. With an
+intact receipt, the owner can start a fresh producer dispatch for the original
+run/attempt; without it and before a protected snapshot exists, inspect and
+explicitly approve those exact published bytes as a baseline. After freezing,
+recovery uses protected records and current destinations, not invented Actions
+history. Use fresh dispatches after controller/configuration changes; owner
+reruns of bot-origin prepare runs fail the original/triggering-actor checks.
+
 Profiles (`profiles/*.yaml`) select artifacts by name; they do not carry an
 artifact version themselves. When you bump an artifact, you do not need to touch
 the profiles that reference it — they resolve to the latest published version at
@@ -177,6 +237,23 @@ runs shipped guard or supervisor programs, fake harnesses, native CLIs or SDKs.
 | Application contract | `ci / test` | Go formatting, vet and `go test -race ./...` of the root module, run on a scratch copy **without** `artifacts/` and `profiles/` | `bash tools/tests/application-contract.sh --out "$(mktemp -d)" --without-catalog` |
 | Catalog contract | `ci / catalog-contract`, and the `publish-catalog` build job on its own registry | public `build`; the standalone `tools/catalog-check` module (gofmt/vet/test) and its structure, profile-case and ledger checks; public-CLI `lock` for every admitted profile/target case; `check-placeholders`, `check-gate-intent`, `check-versions`; publication and package-delivery contract suites; Pi static evidence and content checks | `bash tools/tests/catalog-contract.sh --out "$(mktemp -d)" --base origin/main` |
 | Lint | `ci / lint` | `golangci-lint` against `.golangci.yml` | `golangci-lint run` |
+| Publication policy | `ci / publication-policy` | Offline publication authorization, executable producer and installer compatibility/rejection | Commands below; PowerShell (`pwsh`) is required for its script |
+
+Run the publication-policy job's local commands from the repository root:
+
+```sh
+python3 -B -m unittest discover -s tools/tests -p 'test_publication_authorization.py'
+python3 -B -m unittest discover -s tools/tests -p 'test_distribution_producer.py'
+bash tools/tests/install-version-test.sh
+bash tools/tests/install-checksum-test.sh
+pwsh -NoProfile -File tools/tests/install-checksum-test.ps1
+```
+
+Missing `pwsh` blocks that local check; a Unix run does not establish native
+Windows User PATH behavior. The separate bounded `package-windows-validation`
+workflow and its [procedure](tools/tests/package-windows-validation.md) retain
+the accepted synthetic Windows evidence. Do not turn this into a recurring
+architecture matrix or infer live indexing from manifest validation.
 
 `--out` must be an empty directory outside the checkout. The scripts do not take
 a resource lock; a caller that shares a machine wraps them in its own `flock`.
