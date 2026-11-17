@@ -228,13 +228,14 @@ go run ./cmd/patronus check-versions
 
 Copy the emitted digest and actual registry object URL into the recipe's
 platform asset. Never use a rolling image tag or a guessed package checksum.
-See [package delivery](docs/package-delivery.md#authoring-a-package) for the
-descriptor, sidecars and version rules. Run the four repository quality gates
+See the [package delivery reference](tools/qualification/pi-native/reference/package-delivery.md#authoring-a-package)
+for the descriptor, sidecars and version rules; the user guide is
+[directory packages](docs/package-delivery.mdx). Run the four repository quality gates
 before committing. Local builds do not upload package objects or launch sbx.
 
 For directory-delivery changes, also run the lifecycle tests, both publication
 shell suites and the three cross-builds in the
-[local release checklist](docs/package-delivery.md#local-release-verification).
+[local release checklist](tools/qualification/pi-native/reference/package-delivery.md#local-release-verification).
 Keep cross-build outputs outside the checkout. Use `CGO_ENABLED=0` for those
 builds; the native race suite requires CGO enabled. Windows compilation checks
 the unsupported-platform fallback and does not establish directory mutation
@@ -307,8 +308,11 @@ Results are the run's `native-checks` workflow artifact (`native-checks.json`),
 and each channel result carries a `native_checks` reference (run and digest).
 A failing platform stops only its channel, which reports
 `failed: native-check-failed` with the failing platforms. A platform without a
-hosted runner would be recorded `statically-mapped` (`no-hosted-runner`), never
-as tested; currently all six run.
+hosted runner is recorded `statically-mapped` (`no-hosted-runner`), never as
+tested, but that record satisfies the publisher's gate only for Windows Arm64
+(`windows-arm64` with reason `no-hosted-runner`). Every other platform must pass,
+so a retired runner label for any other platform blocks its channel until the
+label is replaced. Currently all six platforms run.
 
 Tap pull requests that touch `distribution/**` or `.github/workflows/**` run the
 same matrix in fixture mode, with synthetic binaries served on loopback. Labels

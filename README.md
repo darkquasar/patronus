@@ -277,8 +277,7 @@ flowchart LR
 > `--profile` bundles), `lock`, `build`, `update`, and `remove`/`revert`. Installs are computed against
 > a **local** registry (when run inside a checkout) or the **remote** R2 registry (an installed
 > binary), and are a **dry run by default** — `--deploy` is what writes. Everything that gets written
-> is recorded in `state.json`, which is what makes `remove`/`revert` a clean inverse. See
-> [`DESIGN.md`](DESIGN.md) §8 for the phased history.
+> is recorded in `state.json`, which is what makes `remove`/`revert` a clean inverse.
 
 ---
 
