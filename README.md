@@ -331,10 +331,10 @@ On Homebrew versions with tap trust, review the formula and run
 `brew trust --formula darkquasar/tap/patronus` before installation; this also
 allows short-name use without trusting the whole tap. See
 [Homebrew's trust guidance](https://docs.brew.sh/Tap-Trust).
-Homebrew installs a prebuilt bottle on macOS 15 (Sequoia) or later, on Apple
-silicon and Intel, and on Linux x86_64 and arm64, so installing Patronus there
-needs no compiler or Xcode Command Line Tools. On macOS older than 15, Homebrew falls
-back to a source install, which requires current Command Line Tools. Bottles
+Homebrew installs a prebuilt bottle on Apple silicon with macOS 15 (Sequoia) or
+later, and on Linux x86_64 and arm64, so installing Patronus there needs no
+compiler or Xcode Command Line Tools. On Intel Macs and on macOS older than 15,
+Homebrew falls back to a source install, which requires current Command Line Tools. Bottles
 exist only after the first bottled release is published.
 Scoop uses a normal user shell. Open a fresh shell after Windows PATH changes,
 then check `patronus --version`. Packages select the existing amd64/arm64 release

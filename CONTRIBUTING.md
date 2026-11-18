@@ -172,7 +172,8 @@ Homebrew ships prebuilt bottles. They wrap the exact release executables and
 are hosted on the tap's GitHub Releases under tag `<app>-<version>` (for example
 `patronus-2.7.1`), never on the Patronus release. Between authority and
 publisher, the tap's unprivileged `native-checks` job (no environment, no keys)
-builds the four bottles when none are published yet, then runs the
+builds the three bottles (macOS arm64, Linux x86_64 and arm64; Intel Macs are
+not bottled) when none are published yet, then runs the
 [per-release native package checks](#per-release-native-package-checks).
 The publisher uploads the checked bottles, reads them back from their public
 URLs and only then commits the bottled formula. A failed check stops only its
@@ -301,7 +302,7 @@ GitHub-hosted runners before any channel publishes:
 
 | Manager | Runner labels | Steps |
 |---|---|---|
-| Homebrew | `macos-15`, `macos-15-intel`, `ubuntu-24.04`, `ubuntu-24.04-arm` | Validate, pour the bottle, `patronus --version`, `brew test`, uninstall |
+| Homebrew | `macos-15`, `ubuntu-24.04`, `ubuntu-24.04-arm` | Validate, pour the bottle, `patronus --version`, `brew test`, uninstall |
 | Scoop and WinGet | `windows-2025`, `windows-11-arm` | Validate, install as an ordinary user, `patronus --version`, uninstall |
 
 Results are the run's `native-checks` workflow artifact (`native-checks.json`),
@@ -312,7 +313,7 @@ hosted runner is recorded `statically-mapped` (`no-hosted-runner`), never as
 tested, but that record satisfies the publisher's gate only for Windows Arm64
 (`windows-arm64` with reason `no-hosted-runner`). Every other platform must pass,
 so a retired runner label for any other platform blocks its channel until the
-label is replaced. Currently all six platforms run.
+label is replaced. Currently all five platforms run.
 
 Tap pull requests that touch `distribution/**` or `.github/workflows/**` run the
 same matrix in fixture mode, with synthetic binaries served on loopback. Labels

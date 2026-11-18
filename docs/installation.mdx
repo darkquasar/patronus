@@ -109,10 +109,10 @@ apply, including Linuxbrew bootstrap/toolchain requirements where applicable.
 
 Before a channel publishes a version, the tap's CI installs that version's
 package on GitHub-hosted runners, checks `patronus --version` and uninstalls
-it: Homebrew on macOS arm64 and Intel and on Linux x86_64 and arm64, Scoop and
-WinGet on Windows x64 and Arm64. A channel whose check fails does not publish
-that version and keeps its previous one. These checks have passed on all six
-platforms with synthetic test binaries; checks of a real release are
+it: Homebrew on macOS arm64 and on Linux x86_64 and arm64, Scoop and WinGet on
+Windows x64 and Arm64. Intel Macs are not checked per release. A channel whose
+check fails does not publish that version and keeps its previous one. These
+checks have passed on all five platforms with synthetic test binaries; checks of a real release are
 **pending** until the first release is published.
 
 ### Homebrew
@@ -123,13 +123,13 @@ Releases, when one matches the host:
 | Host | Bottle | Command Line Tools |
 |---|---|---|
 | macOS 15 (Sequoia) or later, Apple silicon | `arm64_sequoia` | Not needed |
-| macOS 15 (Sequoia) or later, Intel | `sequoia` | Not needed |
 | Linux x86_64 | `x86_64_linux` | Not applicable |
 | Linux arm64 | `arm64_linux` | Not applicable |
+| Intel Mac, any macOS version | None | Current Xcode Command Line Tools required |
 | macOS older than 15 | None | Current Xcode Command Line Tools required |
 
-macOS 15 is the oldest bottled version on both architectures. On an older macOS
-release Homebrew has no matching bottle and falls back to a source install. That
+Apple silicon on macOS 15 is the oldest bottled Mac. Intel Macs and older macOS
+releases have no matching bottle, so Homebrew falls back to a source install. That
 install still only copies the release executable, but Homebrew's source path
 requires current Xcode Command Line Tools first. Bottles exist only after the
 first bottled release is published. The commands below are the same either way.
