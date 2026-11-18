@@ -1,7 +1,7 @@
 apiVersion: patronus/v3
 kind: Recipe
 name: cdx-cld-kind
-version: 1.0.0
+version: 1.0.1
 family: recipe
 role: sandbox
 description: sbx mixin for Codex with Claude Code, a kind cluster and the Patronus harness for both agents; launch separately with sbx
@@ -10,10 +10,10 @@ deliver:
   unpack: directory
   package:
     name: cdx-cld-kind
-    version: 1.0.0
+    version: 1.0.1
   assets:
     - os: darwin
       arch: arm64
-      url: https://registry.patronus.quasarops.com/packages/cdx-cld-kind/1.0.0/cdx-cld-kind-1.0.0-darwin-arm64.tar.gz
-      sha256: fe591f58f7e53d002faea7192166e2b7f7d6f0de7257fa09b1ffb9685beaf131
+      url: https://registry.patronus.quasarops.com/packages/cdx-cld-kind/1.0.1/cdx-cld-kind-1.0.1-darwin-arm64.tar.gz
+      sha256: 3e49fd92dd7912ecc9bf057f6f523638b5ab05189a1fc8318f56a9c5df6d2e35
       archive: tar.gz

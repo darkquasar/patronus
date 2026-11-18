@@ -9,7 +9,7 @@ item_suffix: cx
 baseline_profile: core
 baseline_target: claude
 # Test names below are historical pre-decoupling evidence. Current structural
-# checks run in scripts/tests/catalog-contract.sh; artifact behaviour is NOT RUN.
+# checks run in tools/tests/catalog-contract.sh; artifact behaviour is NOT RUN.
 # Advisory replacements do not establish the omitted SessionStart hook semantics.
 companion_items: [work-state-reground-cx, language-detect-cx]
 entries:
@@ -143,7 +143,7 @@ entries:
     disposition: reuse-unsuffixed
     codex_items: [domain-modeling]
     outcome: Equivalent
-    reason: "Current native endpoint remains unsuffixed domain-modeling (version 2.0.0, Codex/OpenCode targets); Claude uses domain-modeling-cl. Host-neutral glossary/ADR guidance and declared local sidecars remain selected, not a Claude workflow alias. The prior 1.0.1 unchanged-byte audit in scripts/qualification/codex-core-lane/reuse-audit.md is historical, not new manifest evidence."
+    reason: "Current native endpoint remains unsuffixed domain-modeling (version 2.0.0, Codex/OpenCode targets); Claude uses domain-modeling-cl. Host-neutral glossary/ADR guidance and declared local sidecars remain selected, not a Claude workflow alias. The prior 1.0.1 unchanged-byte audit in tools/qualification/codex-core-lane/reuse-audit.md is historical, not new manifest evidence."
     evidence: static-confirmed
   - core_item: ddd-distilled-cl
     disposition: reuse-unsuffixed
@@ -161,7 +161,7 @@ entries:
     disposition: reuse-unsuffixed
     codex_items: [context7]
     outcome: Partial
-    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution or credential copying. No sidecar/host handoff. Native MCP initialization/rate-limit/auth behavior pending; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution or credential copying. No sidecar/host handoff. Native MCP initialization/rate-limit/auth behavior pending; tools/qualification/codex-core-lane/reuse-audit.md binds bytes."
     evidence: runtime-pending
   - core_item: pattern-cloudflare-cl
     disposition: port-cx
@@ -179,7 +179,7 @@ entries:
     disposition: reuse-unsuffixed
     codex_items: [github]
     outcome: Partial
-    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution, secrets or foreign workflow handoff. User-owned authentication remains a native prerequisite; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    reason: "Entire recipe audited: wire-only hosted HTTP URL, Codex included, no package execution, secrets or foreign workflow handoff. User-owned authentication remains a native prerequisite; tools/qualification/codex-core-lane/reuse-audit.md binds bytes."
     evidence: runtime-pending
   - core_item: spec-review-cl
     disposition: port-cx
@@ -221,7 +221,7 @@ entries:
     disposition: reuse-unsuffixed
     codex_items: [gitleaks]
     outcome: Partial
-    reason: "Entire recipe audited: six pinned OS/arch fetch assets and SHA256, target-agnostic binary only, no registration or sidecars. Kept in one profile with MCP recipes; no Pi-specific package EXEC admission reason applies. Guard hook and native/platform qualification remain separate; scripts/qualification/codex-core-lane/reuse-audit.md binds bytes."
+    reason: "Entire recipe audited: six pinned OS/arch fetch assets and SHA256, target-agnostic binary only, no registration or sidecars. Kept in one profile with MCP recipes; no Pi-specific package EXEC admission reason applies. Guard hook and native/platform qualification remain separate; tools/qualification/codex-core-lane/reuse-audit.md binds bytes."
     evidence: runtime-pending
   - core_item: gitleaks-guard
     disposition: port-cx

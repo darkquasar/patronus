@@ -16,7 +16,6 @@ on:
       - "internal/**"
       - "go.mod"
       - "go.sum"
-      - "scripts/**"
       # The catalog gate builds this nested tool and reads the compatibility data.
       - "tools/**"
       - "docs/compatibility/**"
@@ -45,7 +44,7 @@ jobs:
       - name: Verify owner-approved merged PR
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/check-publication-authorization.py catalog
+        run: python3 tools/check-publication-authorization.py catalog
 
   build:
     needs: authorize
@@ -63,7 +62,7 @@ jobs:
           version: v2.12.2
       # gofmt, vet and race tests on a scratch copy without artifacts/ or profiles/.
       - name: Application contract gate
-        run: bash scripts/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
+        run: bash tools/tests/application-contract.sh --out "$RUNNER_TEMP/application-gate" --without-catalog
       - name: Select version base
         id: base
         env:
@@ -78,7 +77,7 @@ jobs:
       # This job's OWN registry: built, structurally checked, public-CLI locked and
       # publication-contract tested BEFORE the activation guard and any upload.
       - name: Catalog contract gate
-        run: bash scripts/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
+        run: bash tools/tests/catalog-contract.sh --out "$RUNNER_TEMP/catalog-gate" --base "${{ steps.base.outputs.rev }}"
       - uses: actions/upload-artifact@v4
         with:
           name: registry
@@ -104,7 +103,7 @@ jobs:
       - name: Recheck owner approval before publication
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/check-publication-authorization.py catalog
+        run: python3 tools/check-publication-authorization.py catalog
       - uses: actions/download-artifact@v4
         with:
           name: registry
@@ -113,7 +112,7 @@ jobs:
         id: guard
         env:
           DIRECTORY_PACKAGES_ENABLED: ${{ vars.DIRECTORY_PACKAGES_ENABLED }}
-        run: bash scripts/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
+        run: bash tools/check-catalog-publication.sh registry >> "$GITHUB_OUTPUT"
       - name: Install pinned AWS CLI
         if: steps.guard.outputs.publish == 'true'
         run: |
@@ -140,7 +139,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-        run: bash scripts/publish-packages.sh registry
+        run: bash tools/publish-packages.sh registry
 
       - name: Publish item tarballs (immutable; check-before-put)
         if: steps.guard.outputs.publish == 'true'

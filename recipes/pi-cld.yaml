@@ -1,7 +1,7 @@
 apiVersion: patronus/v3
 kind: Recipe
 name: pi-cld
-version: 1.0.0
+version: 1.0.1
 family: recipe
 role: sandbox
 description: sbx mixin that adds Claude Code and the Patronus pi harness to a pi sandbox; launch separately with sbx
@@ -10,10 +10,10 @@ deliver:
   unpack: directory
   package:
     name: pi-cld
-    version: 1.0.0
+    version: 1.0.1
   assets:
     - os: darwin
       arch: arm64
-      url: https://registry.patronus.quasarops.com/packages/pi-cld/1.0.0/pi-cld-1.0.0-darwin-arm64.tar.gz
-      sha256: 0b90e1635cfcd2ffa4366fae7edafffd2d2c7bbbc8de02382c8a980998c94b65
+      url: https://registry.patronus.quasarops.com/packages/pi-cld/1.0.1/pi-cld-1.0.1-darwin-arm64.tar.gz
+      sha256: 11d0ffae989ee97bf3121da070ff34c0d3a55d0e9d031a6f9847292f8a36b4d4
       archive: tar.gz

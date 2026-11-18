@@ -277,8 +277,7 @@ flowchart LR
 > `--profile` bundles), `lock`, `build`, `update`, and `remove`/`revert`. Installs are computed against
 > a **local** registry (when run inside a checkout) or the **remote** R2 registry (an installed
 > binary), and are a **dry run by default** — `--deploy` is what writes. Everything that gets written
-> is recorded in `state.json`, which is what makes `remove`/`revert` a clean inverse. See
-> [`DESIGN.md`](DESIGN.md) §8 for the phased history.
+> is recorded in `state.json`, which is what makes `remove`/`revert` a clean inverse.
 
 ---
 
@@ -310,6 +309,55 @@ patronus/
 ```
 
 ---
+
+## Install the Patronus executable
+
+Use the [installation guide](docs/installation.mdx) for the existing shell and
+PowerShell installers, direct downloads, version pinning and checksum checks.
+
+**Executable packages (Brew/Scoop/WinGet): publication pending.** The native
+catalogues are being commissioned; these commands describe the intended consumer
+flow, not packages already available. Use direct downloads until the relevant
+channel is observed published. WinGet additionally requires the exact version to
+be observed in Microsoft's default source.
+
+| Executable package | Install after publication | Upgrade | Remove |
+|---|---|---|---|
+| Homebrew | `brew tap darkquasar/tap`, then `brew install darkquasar/tap/patronus` | `brew update`, then `brew upgrade darkquasar/tap/patronus` | `brew uninstall darkquasar/tap/patronus` |
+| Scoop | `scoop bucket add darkquasar https://github.com/darkquasar/scoop-bucket`, then `scoop install darkquasar/patronus` | `scoop update`, then `scoop update patronus` | `scoop uninstall patronus` |
+| WinGet | `winget install --id darkquasar.Patronus --exact --source winget` | `winget upgrade --id darkquasar.Patronus --exact --source winget` | `winget uninstall --id darkquasar.Patronus --exact` |
+
+On Homebrew versions with tap trust, review the formula and run
+`brew trust --formula darkquasar/tap/patronus` before installation; this also
+allows short-name use without trusting the whole tap. See
+[Homebrew's trust guidance](https://docs.brew.sh/Tap-Trust).
+Homebrew installs a prebuilt bottle on Apple silicon with macOS 15 (Sequoia) or
+later, and on Linux x86_64 and arm64, so installing Patronus there needs no
+compiler or Xcode Command Line Tools. On Intel Macs and on macOS older than 15,
+Homebrew falls back to a source install, which requires current Command Line Tools. Bottles
+exist only after the first bottled release is published.
+Scoop uses a normal user shell. Open a fresh shell after Windows PATH changes,
+then check `patronus --version`. Packages select the existing amd64/arm64 release
+executables; 32-bit x86 is unsupported. Native coverage limitations and PATH
+coexistence are explained in the installation guide.
+
+An **executable package (Brew/Scoop/WinGet)** manages the CLI binary and manager
+links. A Patronus **content package** delivers environment content through the
+separate content catalogue. `patronus install`, `patronus update` and
+`patronus remove` below operate on that content; they do not upgrade or uninstall
+the CLI. Removing an executable package preserves content, harness configuration
+and Patronus state. Manual installations are not migrated automatically.
+
+```text
++-------------------+  => binary/link  +------------------+
+| Brew/Scoop/WinGet | ===============> | Patronus CLI     |
++-------------------+                  +------------------+
+                                               | => explicit content command
+                                               v
+                                       +------------------+
+                                       | Content/harness  |
+                                       +------------------+
+```
 
 ## CLI
 

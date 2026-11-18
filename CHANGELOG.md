@@ -3,6 +3,16 @@
 All notable changes to Patronus are recorded here. This file is written for the
 person upgrading: it leads with what will behave differently on their machine.
 
+## Unreleased
+
+- Repository scripts and native test VM definitions now live under `tools/`.
+  Installation URLs are `main/tools/install.sh` and `main/tools/install.ps1`;
+  the former `main/scripts/` URLs are removed without compatibility wrappers.
+- The four sbx mixin packages move to 1.0.1 with the new installer URL and fresh
+  recipe pins. Already-published 1.0.0 packages and locks retain the old URL and
+  will stop installing Patronus after the path removal reaches `main`.
+  Catalogue publication remains separate from binary releases.
+
 ## v2.7.0
 
 The binary adds OpenCode deployment and lifecycle support, including native agent

@@ -128,6 +128,82 @@ delivers, so a reader upgrading the binary knows what they are actually getting.
 
 ## Profiles and the catalog
 
+### Executable packages and content packages
+
+An **executable package (Brew/Scoop/WinGet)** distributes the CLI's existing
+release binaries. A Patronus **content package** belongs to the separate content
+catalogue. Content publication never triggers an executable-package update;
+native packages run no Patronus content lifecycle commands and preserve content,
+harness files and user state. Consumer lifecycle, pinning, checksums and PATH
+coexistence are in [installation](docs/installation.mdx).
+
+**Publication/commissioning pending.** Activation requires owner-approved producer
+code on `main` and the configured distribution controls. Native catalogue branches,
+GitHub Apps, environment restrictions, server-side branch-denial probes, the tap's
+`<app>-*` release tag rulesets and immutable releases, and real publication still
+need commissioning. The accepted
+Windows x64 synthetic run is [42178401448](https://github.com/darkquasar/patronus/actions/runs/42178401448);
+it does not establish live availability or full upgrade/removal preservation.
+WinGet stays pending until the exact version is observed in Microsoft's default
+source, even after PR merge. No npm channel or account is required.
+
+The maintainer runbooks live on the tap's protected control branch:
+[setup](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/setup.md),
+[onboarding](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/onboarding.md)
+and [recovery](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/docs/recovery.md).
+These links become available when the runbook candidates are published.
+They cover owner registration approval, exact Apps/environments/rules, protected
+snapshots, historical baselines, second-app staging and selected-channel retry.
+Only the owner `darkquasar` (ID `28435534`) approves registration/authority and
+cuts releases. CI prepares WinGet branches; the owner submits PRs in the browser
+and follows normal GitHub notifications.
+
+An eligible stable `vMAJOR.MINOR.PATCH` release produces a run/attempt-bound
+`distribution-receipt-<run>-<attempt>` artifact, then the default-branch
+`package-distribution` workflow verifies source/receipt before dispatching
+`distribute.yml` explicitly to `distribution-control`. The controller admits
+the registered dispatcher, fixes the release snapshot in `distribution-records`,
+then a separate publisher reads it back and validates native candidates. Keys
+are isolated by role; the authority prepare job also needs a separate producer
+Actions/Contents-read App. A secret-free Windows source-query job observes the
+registered WinGet ID; its actual runtime/client availability remains pending.
+
+Homebrew ships prebuilt bottles. They wrap the exact release executables and
+are hosted on the tap's GitHub Releases under tag `<app>-<version>` (for example
+`patronus-2.7.1`), never on the Patronus release. Between authority and
+publisher, the tap's unprivileged `native-checks` job (no environment, no keys)
+builds the three bottles (macOS arm64, Linux x86_64 and arm64; Intel Macs are
+not bottled) when none are published yet, then runs the
+[per-release native package checks](#per-release-native-package-checks).
+The publisher uploads the checked bottles, reads them back from their public
+URLs and only then commits the bottled formula. A failed check stops only its
+own channel.
+
+```text
++----------------+ ~> workflow_run   +------------------+ => dispatch   +----------------+
+| Release [CI]   | ~~~~~~~~~~~~~~~~> | Main dispatcher  | ============> | Tap authority  |
++----------------+                   +------------------+               +----------------+
+                                                                          |            |
+                                                     => record_ref (each) |            |
+                                                                          v            v
+                                                         +----------------+  +----------------+
+                                                         | Native checks  |  | Tap publisher  |
+                                                         | [tap, no keys] |  +----------------+
+                                                         +----------------+          ^
+                                                                 | ~> artifacts      |
+                                                                 +-------------------+
+```
+
+Receipt capture/upload is deliberately non-fatal to executable release
+publication: normal binaries remain downloadable when packaging reports
+`receipt-unavailable`. Do not rebuild or retag to recover a receipt. With an
+intact receipt, the owner can start a fresh producer dispatch for the original
+run/attempt; without it and before a protected snapshot exists, inspect and
+explicitly approve those exact published bytes as a baseline. After freezing,
+recovery uses protected records and current destinations, not invented Actions
+history. Use fresh dispatches after controller/configuration changes; owner
+reruns of bot-origin prepare runs fail the original/triggering-actor checks.
+
 Profiles (`profiles/*.yaml`) select artifacts by name; they do not carry an
 artifact version themselves. When you bump an artifact, you do not need to touch
 the profiles that reference it — they resolve to the latest published version at
@@ -153,13 +229,14 @@ go run ./cmd/patronus check-versions
 
 Copy the emitted digest and actual registry object URL into the recipe's
 platform asset. Never use a rolling image tag or a guessed package checksum.
-See [package delivery](docs/package-delivery.md#authoring-a-package) for the
-descriptor, sidecars and version rules. Run the four repository quality gates
+See the [package delivery reference](tools/qualification/pi-native/reference/package-delivery.md#authoring-a-package)
+for the descriptor, sidecars and version rules; the user guide is
+[directory packages](docs/package-delivery.mdx). Run the four repository quality gates
 before committing. Local builds do not upload package objects or launch sbx.
 
 For directory-delivery changes, also run the lifecycle tests, both publication
 shell suites and the three cross-builds in the
-[local release checklist](docs/package-delivery.md#local-release-verification).
+[local release checklist](tools/qualification/pi-native/reference/package-delivery.md#local-release-verification).
 Keep cross-build outputs outside the checkout. Use `CGO_ENABLED=0` for those
 builds; the native race suite requires CGO enabled. Windows compilation checks
 the unsupported-platform fallback and does not establish directory mutation
@@ -174,9 +251,26 @@ runs shipped guard or supervisor programs, fake harnesses, native CLIs or SDKs.
 
 | Gate | CI job | Owns failures in | Local command |
 |---|---|---|---|
-| Application contract | `ci / test` | Go formatting, vet and `go test -race ./...` of the root module, run on a scratch copy **without** `artifacts/` and `profiles/` | `bash scripts/tests/application-contract.sh --out "$(mktemp -d)" --without-catalog` |
-| Catalog contract | `ci / catalog-contract`, and the `publish-catalog` build job on its own registry | public `build`; the standalone `tools/catalog-check` module (gofmt/vet/test) and its structure, profile-case and ledger checks; public-CLI `lock` for every admitted profile/target case; `check-placeholders`, `check-gate-intent`, `check-versions`; publication and package-delivery contract suites; Pi static evidence and content checks | `bash scripts/tests/catalog-contract.sh --out "$(mktemp -d)" --base origin/main` |
+| Application contract | `ci / test` | Go formatting, vet and `go test -race ./...` of the root module, run on a scratch copy **without** `artifacts/` and `profiles/` | `bash tools/tests/application-contract.sh --out "$(mktemp -d)" --without-catalog` |
+| Catalog contract | `ci / catalog-contract`, and the `publish-catalog` build job on its own registry | public `build`; the standalone `tools/catalog-check` module (gofmt/vet/test) and its structure, profile-case and ledger checks; public-CLI `lock` for every admitted profile/target case; `check-placeholders`, `check-gate-intent`, `check-versions`; publication and package-delivery contract suites; Pi static evidence and content checks | `bash tools/tests/catalog-contract.sh --out "$(mktemp -d)" --base origin/main` |
 | Lint | `ci / lint` | `golangci-lint` against `.golangci.yml` | `golangci-lint run` |
+| Publication policy | `ci / publication-policy` | Offline publication authorization, executable producer and installer compatibility/rejection | Commands below; PowerShell (`pwsh`) is required for its script |
+
+Run the publication-policy job's local commands from the repository root:
+
+```sh
+python3 -B -m unittest discover -s tools/tests -p 'test_publication_authorization.py'
+python3 -B -m unittest discover -s tools/tests -p 'test_distribution_producer.py'
+bash tools/tests/install-version-test.sh
+bash tools/tests/install-checksum-test.sh
+pwsh -NoProfile -File tools/tests/install-checksum-test.ps1
+```
+
+Missing `pwsh` blocks that local check; a Unix run does not establish native
+Windows User PATH behavior.
+
+Per-release native package checks run in the tap; see
+[Per-release native package checks](#per-release-native-package-checks).
 
 `--out` must be an empty directory outside the checkout. The scripts do not take
 a resource lock; a caller that shares a machine wraps them in its own `flock`.
@@ -200,15 +294,60 @@ build tag, and native harness loading, routing, hooks and trust) is deferred and
 **not run** in either gate. Its retained historical results are not current
 acceptance, and a passing gate does not mark any native row passed.
 
+### Per-release native package checks
+
+Per-release native package checks live in the tap, not in this repository.
+Every release dispatch runs the tap's `.github/workflows/native-checks.yml` on
+GitHub-hosted runners before any channel publishes:
+
+| Manager | Runner labels | Steps |
+|---|---|---|
+| Homebrew | `macos-15`, `ubuntu-24.04`, `ubuntu-24.04-arm` | Validate, pour the bottle, `patronus --version`, `brew test`, uninstall |
+| Scoop and WinGet | `windows-2025`, `windows-11-arm` | Validate, install as an ordinary user, `patronus --version`, uninstall |
+
+Results are the run's `native-checks` workflow artifact (`native-checks.json`),
+and each channel result carries a `native_checks` reference (run and digest).
+A failing platform stops only its channel, which reports
+`failed: native-check-failed` with the failing platforms. A platform without a
+hosted runner is recorded `statically-mapped` (`no-hosted-runner`), never as
+tested, but that record satisfies the publisher's gate only for Windows Arm64
+(`windows-arm64` with reason `no-hosted-runner`). Every other platform must pass,
+so a retired runner label for any other platform blocks its channel until the
+label is replaced. Currently all five platforms run.
+
+Tap pull requests that touch `distribution/**` or `.github/workflows/**` run the
+same matrix in fixture mode, with synthetic binaries served on loopback. Labels
+add more:
+
+| PR label | Adds |
+|---|---|
+| `native-lifecycle` | The one-time upgrade and preservation acceptance (PD-13): bottled Homebrew on macOS arm64, Scoop and WinGet on Windows x64 |
+| `native-negative` | Wrong-architecture and wrong-version candidates, which must fail |
+| `native-second-app` | The same matrix for the second fixture app (Lumen) |
+
+Repeat the lifecycle acceptance only when a package shape changes, for example
+formula to cask or bottled to unbottled. The fixture-mode matrix, lifecycle,
+negatives and second-app checks passed in tap run
+[44079561564](https://github.com/darkquasar/homebrew-tap/actions/runs/44079561564);
+the first real release check is pending. The procedure is in the tap's
+[native check README](https://github.com/darkquasar/homebrew-tap/blob/distribution-control/distribution/tests/native/README.md),
+which becomes available with the runbook candidates.
+
+This repository's bounded `package-windows-validation` workflow and its
+[procedure](tools/tests/package-windows-validation.md) stay as the historical
+T3 synthetic Windows evidence. That workflow runs only for the package
+distribution pull request and is not a per-release check. Do not infer live
+WinGet indexing from manifest validation or a local-manifest install.
+
 ### Pi Python checks
 
 | Check | Gate | Reason |
 |---|---|---|
-| `scripts/tests/test_pi_evidence.py` | catalog | Static contract of `scripts/check-pi-evidence.py` over the retained evidence contract and templates; no native calls. |
-| `scripts/tests/test_pi_qualification_examples.py` | none | Retained qualification-example assertions; outside the current structural development gates. |
-| `scripts/tests/test_pi_native_content.py` | none | Retained prose inventories; content semantics belong to release review, not substring gates. |
-| `scripts/qualification/pi-native-rpc.py`, `pi-native-resources.mjs` | none | Native qualification procedures; run only under a separate native grant. |
-| `scripts/qualification/removal-performance/` | none | Opt-in measurement procedure, not a development gate. |
+| `tools/tests/test_pi_evidence.py` | catalog | Static contract of `tools/check-pi-evidence.py` over the retained evidence contract and templates; no native calls. |
+| `tools/tests/test_pi_qualification_examples.py` | none | Retained qualification-example assertions; outside the current structural development gates. |
+| `tools/tests/test_pi_native_content.py` | none | Retained prose inventories; content semantics belong to release review, not substring gates. |
+| `tools/qualification/pi-native-rpc.py`, `pi-native-resources.mjs` | none | Native qualification procedures; run only under a separate native grant. |
+| `tools/qualification/removal-performance/` | none | Opt-in measurement procedure, not a development gate. |
 
 ### Release review checklist
 
@@ -239,7 +378,7 @@ catalog tool.
 
 Tracked `docs/` contains user-facing MDX pages and Mintlify's `docs.json`. Add new
 pages to its navigation. Keep test fixtures, evidence templates, validation
-procedures and results under `scripts/qualification/` or the owning package's
+procedures and results under `tools/qualification/` or the owning package's
 `tests/` directory. Contributor decisions stay tracked under `docs/adr/` and are excluded from
 Mintlify processing by `docs/.mintignore`.
 `docs/specs/` remains gitignored local planning state and is excluded from
