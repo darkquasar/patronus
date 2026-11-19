@@ -255,13 +255,8 @@ func TestAdmitClaudeNeutralReferenceSelectedVersionMismatch(t *testing.T) {
 }
 
 func TestAdmitManagedSharedCallableCoexistence(t *testing.T) {
-	for _, name := range []string{"writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees"} {
-		pairs := [][2]string{{"claude", "opencode"}, {"codex", "opencode"}}
-		if name == "writing-editorial" {
-			// Retain the pre-existing editorial codex+pi coverage.
-			pairs = append(pairs, [2]string{"codex", "pi"})
-		}
-		for _, pair := range pairs {
+	for _, name := range []string{"writing-editorial", "explain-simply", "dispatching-parallel-subagents", "using-git-worktrees"} {
+		for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
 			t.Run(name+"/"+strings.Join(pair[:], "+"), func(t *testing.T) {
 				d, in, _ := neutralAdmission(t, pair, name)
 				if err := Admit(d, in); err != nil {
@@ -310,7 +305,7 @@ func TestAdmitClaudeNeutralReferencePartialCoOwner(t *testing.T) {
 
 func TestAdmitClaudeNeutralReferenceUnsafeCopies(t *testing.T) {
 	for _, pair := range [][2]string{{"claude", "opencode"}, {"codex", "opencode"}, {"codex", "pi"}} {
-		for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees"} {
+		for _, name := range []string{"decision-clarity-reference", "rust-style-reference", "writing-editorial", "explain-simply", "dispatching-parallel-subagents", "using-git-worktrees"} {
 			for _, fault := range []string{"unmanaged", "one unmanaged", "edited entry", "edited sidecar", "different managed payload", "partial ownership", "missing sidecar", "extra file", "version mismatch", "empty version", "artifact mismatch", "foreign tool", "missing skill type"} {
 				t.Run(strings.Join(pair[:], "+")+"/"+name+"/"+fault, func(t *testing.T) {
 					d, in, f := neutralAdmission(t, pair, name)

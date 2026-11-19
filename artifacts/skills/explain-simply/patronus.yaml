@@ -1,0 +1,11 @@
+apiVersion: patronus/v2
+family: artifact
+type: skill
+role: capability
+name: explain-simply
+description: Explain a topic, result, or decision to a human in plain language. Use when explaining what their answer will change or guiding them through several decisions one question at a time.
+version: 1.5.0
+entry: SKILL.md
+targets: [claude, codex, opencode, pi]
+defaults:
+  scope: project
