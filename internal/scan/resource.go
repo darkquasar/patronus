@@ -291,10 +291,8 @@ func NeutralReference(r Resource) bool {
 	return r.Kind == "skill" && (r.Name == "rust-style-reference" || r.Name == "decision-clarity-reference")
 }
 
-// ManagedSharedSkill is the exact owner-approved coexistence set. The callable
-// workflows are writing-editorial and the two shared parallel-work primitives;
-// no other workflow inherits it. Discovery must still prove complete, unchanged
-// managed payload equivalence.
+// ManagedSharedSkill is the exact owner-approved coexistence set. Discovery
+// must still prove that the complete managed payloads are equivalent.
 func ManagedSharedSkill(r Resource) bool {
 	if NeutralReference(r) {
 		return true
@@ -303,7 +301,7 @@ func ManagedSharedSkill(r Resource) bool {
 		return false
 	}
 	switch r.Name {
-	case "writing-editorial", "dispatching-parallel-subagents", "using-git-worktrees":
+	case "writing-editorial", "explain-simply", "dispatching-parallel-subagents", "using-git-worktrees":
 		return true
 	}
 	return false
