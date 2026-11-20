@@ -3,8 +3,8 @@ family: artifact
 type: skill
 role: capability
 name: explain-simply
-description: Explain a topic, result, or decision to a human in plain language. Use when explaining what their answer will change or guiding them through several decisions one question at a time.
-version: 1.5.0
+description: Explain a topic, result, or decision in plain language. Use when someone asks for a visual explanation, needs to understand what their answer will change, or wants guidance through several decisions one question at a time.
+version: 1.6.0
 entry: SKILL.md
 targets: [claude, codex, opencode, pi]
 defaults:

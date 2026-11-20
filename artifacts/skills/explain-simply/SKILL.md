@@ -1,6 +1,6 @@
 ---
 name: explain-simply
-description: Explain a topic, result, or decision to a human in plain language. Use when explaining what their answer will change or guiding them through several decisions one question at a time.
+description: Explain a topic, result, or decision in plain language. Use when someone asks for a visual explanation, needs to understand what their answer will change, or wants guidance through several decisions one question at a time.
 ---
 
 # Explain simply
@@ -47,12 +47,31 @@ would someone have to know already for this conclusion to follow?” Supply
 that fact in the answer. If a technical term matters, explain it the first
 time you use it, using words the reader already has.
 
-Include an ASCII diagram in each explanation, including when you explain a
-question you are asking. Choose the representation that best illustrates the
-point. Keep it small for a simple idea and use a medium-sized diagram when
-the human needs to see more relationships. Put it in a fenced `text` block
-so the spacing survives in chat. Honor an explicit request for a format
-that rules out a diagram.
+Draw what the reader would otherwise have to picture. Include a diagram on
+your own initiative when it makes a point easier to grasp, and whenever the
+reader asks to see it (“show me”, “draw this”, “diagram”), even for a simple
+idea. Use diagrams by default for complex concepts, workflows, and decisions.
+When explaining a question you are asking, show what the answer changes.
+Honor the reader’s requested format, including a request for prose alone.
+
+Choose a shape that shows the relationship. A bar can show proportion, a
+line can show order, and connected boxes can show how parts depend on one
+another. Label the detail the reader should notice. If a complex diagram
+would wrap, split it into an overview and a closer view of the relevant part.
+Put the finished drawing in a fenced `text` block to preserve its alignment.
+
+For a quick sketch, draw it by hand. For a medium or complex diagram that
+Mermaid can express and `mermaid-ascii` supports, check whether the command
+is available. If it is, run `mermaid-ascii -f -` with the Mermaid source on
+standard input. Check that the rendered labels and connections read clearly.
+
+Use Unicode lines, arrows, and blocks wherever the reader’s terminal can
+display them, including Ghostty, kitty, WezTerm, and Windows Terminal. If
+the renderer is missing, deliver the hand-drawn diagram in the same reply
+and offer to install `mermaid-ascii`. Install only if the reader accepts.
+If they decline, keep drawing by hand. Also draw by hand when the renderer
+cannot express the idea clearly. For an ASCII-only terminal or an explicit
+ASCII request, use `mermaid-ascii --ascii` or sketch with ASCII characters.
 
 Use one concrete example when it makes the explanation easier to follow.
 Prefer a familiar situation or a detail the reader supplied. Signal an
